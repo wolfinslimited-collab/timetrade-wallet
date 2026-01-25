@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { BottomNav } from "@/components/BottomNav";
 import { WalletHeader } from "@/components/WalletHeader";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
@@ -6,6 +8,34 @@ import { QuickActions } from "@/components/QuickActions";
 import { WalletTabs } from "@/components/WalletTabs";
 
 const Index = () => {
+  const [hasWallet, setHasWallet] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Check if wallet exists in localStorage
+    const walletCreated = localStorage.getItem("timetrade_wallet_created");
+    setHasWallet(walletCreated === "true");
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem("timetrade_wallet_created", "true");
+    setHasWallet(true);
+  };
+
+  // Loading state
+  if (hasWallet === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show onboarding if no wallet
+  if (!hasWallet) {
+    return <WalletOnboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  // Main wallet view
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative">
       {/* Status bar simulation */}
