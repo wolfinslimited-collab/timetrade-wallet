@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, Loader2, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { getChainInfo, formatBalance as formatCryptoBalance } from "@/hooks/useBlockchain";
 
 interface BalanceDisplayProps {
   balance: number;
@@ -8,7 +9,16 @@ interface BalanceDisplayProps {
 }
 
 export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) => {
-  const { isConnected, totalBalanceUsd, isLoadingBalance, balanceError } = useBlockchainContext();
+  const { 
+    isConnected, 
+    totalBalanceUsd, 
+    isLoadingBalance, 
+    balanceError,
+    selectedChain,
+    balance: walletBalance,
+  } = useBlockchainContext();
+  
+  const chainInfo = getChainInfo(selectedChain);
   
   // Use real balance if connected, otherwise use mock
   const displayBalance = isConnected ? totalBalanceUsd : balance;
@@ -23,6 +33,11 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
     }).format(value).replace('$', '');
   };
 
+  // Get native crypto balance
+  const nativeBalance = walletBalance?.native 
+    ? formatCryptoBalance(walletBalance.native.balance, walletBalance.native.decimals)
+    : '0';
+
   return (
     <div className="px-4 py-2">
       <div className="flex items-center gap-2 mb-1">
@@ -30,9 +45,15 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
           Total Balance
         </p>
         {isConnected ? (
-          <div className="flex items-center gap-1 text-xs text-primary">
+          <div 
+            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+            style={{ 
+              backgroundColor: `${chainInfo.color}20`,
+              color: chainInfo.color,
+            }}
+          >
             <Wifi className="w-3 h-3" />
-            <span>Live</span>
+            <span>{chainInfo.name}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -77,7 +98,13 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
       </div>
       {isConnected && !isLoadingBalance && !balanceError && (
         <p className="text-xs text-muted-foreground mt-1">
-          Sepolia Testnet • Updated just now
+          <span 
+            className="font-medium"
+            style={{ color: chainInfo.color }}
+          >
+            {nativeBalance} {chainInfo.symbol}
+          </span>
+          {' '}• {chainInfo.testnetName} Testnet
         </p>
       )}
     </div>

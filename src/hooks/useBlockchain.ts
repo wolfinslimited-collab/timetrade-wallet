@@ -1,8 +1,60 @@
-import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon';
+
+export interface ChainInfo {
+  id: Chain;
+  name: string;
+  symbol: string;
+  icon: string;
+  color: string;
+  decimals: number;
+  testnetName: string;
+}
+
+export const SUPPORTED_CHAINS: ChainInfo[] = [
+  { 
+    id: 'ethereum', 
+    name: 'Ethereum', 
+    symbol: 'ETH', 
+    icon: '⟠', 
+    color: '#627EEA',
+    decimals: 18,
+    testnetName: 'Sepolia',
+  },
+  { 
+    id: 'polygon', 
+    name: 'Polygon', 
+    symbol: 'MATIC', 
+    icon: '⬡', 
+    color: '#8247E5',
+    decimals: 18,
+    testnetName: 'Amoy',
+  },
+  { 
+    id: 'bitcoin', 
+    name: 'Bitcoin', 
+    symbol: 'BTC', 
+    icon: '₿', 
+    color: '#F7931A',
+    decimals: 8,
+    testnetName: 'Testnet',
+  },
+  { 
+    id: 'solana', 
+    name: 'Solana', 
+    symbol: 'SOL', 
+    icon: '◎', 
+    color: '#9945FF',
+    decimals: 9,
+    testnetName: 'Devnet',
+  },
+];
+
+export function getChainInfo(chain: Chain): ChainInfo {
+  return SUPPORTED_CHAINS.find(c => c.id === chain) || SUPPORTED_CHAINS[0];
+}
 
 export interface TokenBalance {
   symbol: string;
@@ -14,8 +66,11 @@ export interface TokenBalance {
 }
 
 export interface WalletBalance {
+  chain: Chain;
   native: TokenBalance;
   tokens: TokenBalance[];
+  explorerUrl: string;
+  error?: string;
 }
 
 export interface Transaction {
@@ -25,13 +80,23 @@ export interface Transaction {
   value: string;
   timestamp: number;
   status: 'confirmed' | 'pending' | 'failed';
-  type: 'send' | 'receive' | 'swap';
+  blockNumber?: number;
+}
+
+export interface TransactionsResponse {
+  chain: Chain;
+  transactions: Transaction[];
+  explorerUrl: string;
+  error?: string;
 }
 
 export interface GasEstimate {
-  slow: { gasPrice: string; estimatedTime: number };
-  medium: { gasPrice: string; estimatedTime: number };
-  fast: { gasPrice: string; estimatedTime: number };
+  chain: Chain;
+  slow: { gasPrice?: string; fee?: string; estimatedTime: number };
+  medium: { gasPrice?: string; fee?: string; estimatedTime: number };
+  fast: { gasPrice?: string; fee?: string; estimatedTime: number };
+  baseFee?: string;
+  unit: string;
 }
 
 interface BlockchainResponse<T> {
@@ -69,15 +134,47 @@ export function useWalletBalance(address: string | null, chain: Chain = 'ethereu
     queryKey: ['walletBalance', chain, address],
     queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, true),
     enabled: !!address,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
+}
+
+export function useMultiChainBalances(address: string | null) {
+  const queryClient = useQueryClient();
+  
+  const queries = SUPPORTED_CHAINS.map(chain => ({
+    queryKey: ['walletBalance', chain.id, address],
+    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain.id, address!, true),
+    enabled: !!address,
+    staleTime: 30000,
+  }));
+
+  // Use individual queries for each chain
+  const ethereumBalance = useWalletBalance(address, 'ethereum');
+  const polygonBalance = useWalletBalance(address, 'polygon');
+  const bitcoinBalance = useWalletBalance(address, 'bitcoin');
+  const solanaBalance = useWalletBalance(address, 'solana');
+
+  return {
+    ethereum: ethereumBalance,
+    polygon: polygonBalance,
+    bitcoin: bitcoinBalance,
+    solana: solanaBalance,
+    isLoading: ethereumBalance.isLoading || polygonBalance.isLoading || 
+               bitcoinBalance.isLoading || solanaBalance.isLoading,
+    refetchAll: () => {
+      ethereumBalance.refetch();
+      polygonBalance.refetch();
+      bitcoinBalance.refetch();
+      solanaBalance.refetch();
+    },
+  };
 }
 
 export function useTransactions(address: string | null, chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['transactions', chain, address],
-    queryFn: () => callBlockchainFunction<Transaction[]>('getTransactions', chain, address!, true),
+    queryFn: () => callBlockchainFunction<TransactionsResponse>('getTransactions', chain, address!, true),
     enabled: !!address,
     staleTime: 30000,
     refetchInterval: 60000,
@@ -88,66 +185,16 @@ export function useGasEstimate(chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['gasEstimate', chain],
     queryFn: () => callBlockchainFunction<GasEstimate>('estimateGas', chain, '', true),
-    staleTime: 15000, // 15 seconds - gas prices change frequently
+    staleTime: 15000,
     refetchInterval: 30000,
   });
-}
-
-export function useBlockchain() {
-  const queryClient = useQueryClient();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [selectedChain, setSelectedChain] = useState<Chain>('ethereum');
-
-  const balanceQuery = useWalletBalance(walletAddress, selectedChain);
-  const transactionsQuery = useTransactions(walletAddress, selectedChain);
-  const gasQuery = useGasEstimate(selectedChain);
-
-  const refreshAll = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
-  }, [queryClient]);
-
-  const connectWallet = useCallback((address: string) => {
-    setWalletAddress(address);
-  }, []);
-
-  const disconnectWallet = useCallback(() => {
-    setWalletAddress(null);
-  }, []);
-
-  return {
-    // State
-    walletAddress,
-    selectedChain,
-    isConnected: !!walletAddress,
-
-    // Actions
-    connectWallet,
-    disconnectWallet,
-    setSelectedChain,
-    refreshAll,
-
-    // Balance data
-    balance: balanceQuery.data,
-    isLoadingBalance: balanceQuery.isLoading,
-    balanceError: balanceQuery.error,
-
-    // Transactions data
-    transactions: transactionsQuery.data,
-    isLoadingTransactions: transactionsQuery.isLoading,
-    transactionsError: transactionsQuery.error,
-
-    // Gas data
-    gasEstimate: gasQuery.data,
-    isLoadingGas: gasQuery.isLoading,
-    gasError: gasQuery.error,
-  };
 }
 
 // Helper to format balance with decimals
 export function formatBalance(balance: string, decimals: number = 18): string {
   const num = parseFloat(balance) / Math.pow(10, decimals);
+  if (num === 0) return '0';
+  if (num < 0.000001) return '<0.000001';
   return num.toLocaleString(undefined, { maximumFractionDigits: 6 });
 }
 
