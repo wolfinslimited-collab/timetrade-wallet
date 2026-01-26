@@ -9,7 +9,7 @@ const TATUM_API_KEY = Deno.env.get('TATUM_API_KEY');
 const TATUM_BASE_URL = 'https://api.tatum.io/v3';
 const TATUM_V4_BASE_URL = 'https://api.tatum.io/v4';
 
-type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon';
+type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron';
 
 type ActionType = 'getBalance' | 'getTransactions' | 'estimateGas' | 'getPrices' | 'broadcastTransaction';
 
@@ -69,7 +69,7 @@ const chainConfigs: Record<Chain, ChainConfig> = {
       `/bitcoin/address/balance/${address}${testnet ? '?testnet=true' : ''}`,
     txEndpoint: (address, testnet) => 
       `/bitcoin/transaction/address/${address}?pageSize=20${testnet ? '&testnet=true' : ''}`,
-    gasEndpoint: () => '/bitcoin/fee', // BTC doesn't have gas, returns fee recommendations
+    gasEndpoint: () => '/bitcoin/fee',
     explorerUrl: (testnet) => 
       testnet ? 'https://mempool.space/testnet' : 'https://mempool.space',
   },
@@ -80,9 +80,20 @@ const chainConfigs: Record<Chain, ChainConfig> = {
       `/solana/account/balance/${address}`,
     txEndpoint: (address) => 
       `/solana/account/transaction/${address}?pageSize=20`,
-    gasEndpoint: () => '/solana/fee', // Returns priority fee recommendations
+    gasEndpoint: () => '/solana/fee',
     explorerUrl: (testnet) => 
       testnet ? 'https://explorer.solana.com?cluster=devnet' : 'https://explorer.solana.com',
+  },
+  tron: {
+    symbol: 'TRX',
+    decimals: 6,
+    balanceEndpoint: (address) => 
+      `/tron/account/${address}`,
+    txEndpoint: (address) => 
+      `/tron/transaction/account/${address}?pageSize=20`,
+    gasEndpoint: () => '/tron/fee',
+    explorerUrl: (testnet) => 
+      testnet ? 'https://shasta.tronscan.org' : 'https://tronscan.org',
   },
 };
 
@@ -118,6 +129,30 @@ const KNOWN_SPL_TOKENS: Record<string, { name: string; symbol: string; decimals:
   // Gaming/NFT tokens
   'ATLASXmbPQxBUYbxPsV97usA3fPQYEqzQBUHgiFCUsXx': { name: 'Star Atlas', symbol: 'ATLAS', decimals: 8, logo: '🚀' },
   'poLisWXnNRwC6oBu1vHiuKQzFjGL4XDSu4g9qjz9qVk': { name: 'Star Atlas DAO', symbol: 'POLIS', decimals: 8, logo: '🏛️' },
+};
+
+// Known TRC-20 tokens on Tron (mainnet contract addresses)
+const KNOWN_TRC20_TOKENS: Record<string, { name: string; symbol: string; decimals: number; logo?: string }> = {
+  // Major stablecoins
+  'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
+  'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
+  'TUPM7K8REVzD2UdV4R5fe5M8XbnR2DdoJ6': { name: 'TrueUSD', symbol: 'TUSD', decimals: 18, logo: '💵' },
+  'TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT': { name: 'USDD', symbol: 'USDD', decimals: 18, logo: '💵' },
+  
+  // Wrapped tokens
+  'TXpw8XeWYeTUd4quDskoUqeQPowRh4jY65': { name: 'Wrapped BTC', symbol: 'WBTC', decimals: 8, logo: '₿' },
+  'THb4CqiFdwNHsWsQCs4JhzwjMWys4aqCbF': { name: 'Wrapped ETH', symbol: 'WETH', decimals: 18, logo: '⟠' },
+  'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR': { name: 'Wrapped TRX', symbol: 'WTRX', decimals: 6, logo: '◈' },
+  
+  // DeFi tokens
+  'TKkeiboTkxXKJpbmVFbv4a8ov5rAfRDMf9': { name: 'SunToken', symbol: 'SUN', decimals: 18, logo: '☀️' },
+  'TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7': { name: 'WINk', symbol: 'WIN', decimals: 6, logo: '🃏' },
+  'TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S': { name: 'JUST', symbol: 'JST', decimals: 18, logo: '⚖️' },
+  'TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4': { name: 'BitTorrent', symbol: 'BTT', decimals: 18, logo: '🔄' },
+  
+  // Other popular tokens
+  'TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3': { name: 'JUST Stablecoin', symbol: 'USDJ', decimals: 18, logo: '💵' },
+  'TCFLL5dx5ZJdKnWuesXxi1VPwjLVmWZZy9': { name: 'JUST', symbol: 'JST', decimals: 18, logo: '⚖️' },
 };
 
 async function tatumRequest(endpoint: string, options: RequestInit = {}) {
@@ -397,6 +432,57 @@ async function getSPLTokens(address: string): Promise<Array<{
   }
 }
 
+// Fetch TRC-20 tokens for Tron addresses
+async function getTRC20Tokens(address: string): Promise<Array<{
+  symbol: string;
+  name: string;
+  balance: string;
+  decimals: number;
+  contractAddress: string;
+  logo?: string;
+}>> {
+  try {
+    // Use Tatum v3 endpoint for TRC-20 tokens
+    const endpoint = `/tron/account/${address}`;
+    console.log(`Fetching TRC-20 tokens for tron address: ${address}`);
+    
+    const accountData = await tatumRequest(endpoint);
+    console.log(`Tron account data:`, JSON.stringify(accountData).slice(0, 1000));
+    
+    // TRC-20 tokens are in the trc20 array
+    const trc20Balances = accountData.trc20 || [];
+    
+    const tokens = trc20Balances
+      .map((tokenBalance: Record<string, string>) => {
+        // Each item is an object like { "contractAddress": "balance" }
+        const contractAddress = Object.keys(tokenBalance)[0];
+        const rawBalance = tokenBalance[contractAddress];
+        
+        if (!contractAddress || !rawBalance) return null;
+        
+        const knownToken = KNOWN_TRC20_TOKENS[contractAddress];
+        const decimals = knownToken?.decimals ?? 6; // Default to 6 for TRC-20
+        
+        return {
+          symbol: knownToken?.symbol || 'UNKNOWN',
+          name: knownToken?.name || 'Unknown Token',
+          balance: rawBalance, // Already in base units
+          decimals,
+          contractAddress,
+          logo: knownToken?.logo,
+        };
+      })
+      .filter((t: { balance: string } | null): t is { balance: string; symbol: string; name: string; decimals: number; contractAddress: string; logo?: string } => 
+        t !== null && isNonZeroBaseUnit(t.balance)
+      );
+
+    return tokens;
+  } catch (error) {
+    console.error(`Error fetching Tron TRC-20 tokens:`, error);
+    return [];
+  }
+}
+
 // Unified token fetching function
 async function getTokens(chain: Chain, address: string, testnet: boolean): Promise<Array<{
   symbol: string;
@@ -408,6 +494,8 @@ async function getTokens(chain: Chain, address: string, testnet: boolean): Promi
 }>> {
   if (chain === 'solana') {
     return getSPLTokens(address);
+  } else if (chain === 'tron') {
+    return getTRC20Tokens(address);
   } else if (chain === 'ethereum' || chain === 'polygon') {
     return getERC20Tokens(chain, address, testnet);
   }
@@ -428,7 +516,14 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
     
     // Normalize to base units so the frontend can safely divide by decimals.
     let rawBalance: string | number = '0';
-    if (typeof balanceData === 'object' && balanceData) {
+    
+    if (chain === 'tron') {
+      // Tron returns balance in sun (1 TRX = 1,000,000 sun)
+      // The balance field is already in sun (base units)
+      if (typeof balanceData === 'object' && balanceData) {
+        rawBalance = balanceData.balance ?? '0';
+      }
+    } else if (typeof balanceData === 'object' && balanceData) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const bd: any = balanceData;
       rawBalance = bd.balance ?? (bd.incoming ? (parseFloat(bd.incoming) - parseFloat(bd.outgoing || '0')) : '0');
@@ -436,7 +531,10 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
       rawBalance = balanceData;
     }
 
-    const balance = toBaseUnits(rawBalance, config.decimals);
+    // For Tron, balance is already in base units (sun), for others we need to convert
+    const balance = chain === 'tron' 
+      ? String(rawBalance) 
+      : toBaseUnits(rawBalance, config.decimals);
     
     return {
       chain,
@@ -481,23 +579,27 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
         hash?: string;
         txId?: string;
         signature?: string;
+        txID?: string;
         from?: string;
         to?: string;
         inputs?: Array<{ address?: string }>;
         outputs?: Array<{ address?: string }>;
+        ownerAddress?: string;
+        toAddress?: string;
         value?: string;
         amount?: string;
         timestamp?: number;
         blockTime?: number;
+        block_timestamp?: number;
         status?: string;
         blockNumber?: number;
         blockHeight?: number;
       }) => ({
-        hash: tx.hash || tx.txId || tx.signature,
-        from: tx.from || (tx.inputs && tx.inputs[0]?.address),
-        to: tx.to || (tx.outputs && tx.outputs[0]?.address),
+        hash: tx.hash || tx.txId || tx.signature || tx.txID,
+        from: tx.from || tx.ownerAddress || (tx.inputs && tx.inputs[0]?.address),
+        to: tx.to || tx.toAddress || (tx.outputs && tx.outputs[0]?.address),
         value: tx.value || tx.amount,
-        timestamp: tx.timestamp || tx.blockTime,
+        timestamp: tx.timestamp || tx.blockTime || tx.block_timestamp,
         status: tx.status || 'confirmed',
         blockNumber: tx.blockNumber || tx.blockHeight,
       })),
@@ -541,6 +643,15 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
         fast: { fee: gasData.high || '25000', estimatedTime: 10 },
         unit: 'lamports',
       };
+    } else if (chain === 'tron') {
+      // Tron uses bandwidth/energy, return static estimates
+      return {
+        chain,
+        slow: { fee: '1', estimatedTime: 60 },
+        medium: { fee: '5', estimatedTime: 30 },
+        fast: { fee: '10', estimatedTime: 10 },
+        unit: 'TRX',
+      };
     } else {
       // Ethereum/Polygon return gas price in gwei
       return {
@@ -580,6 +691,14 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
         fast: { fee: '25000', estimatedTime: 10 },
         unit: 'lamports',
       };
+    } else if (chain === 'tron') {
+      return {
+        chain,
+        slow: { fee: '1', estimatedTime: 60 },
+        medium: { fee: '5', estimatedTime: 30 },
+        fast: { fee: '10', estimatedTime: 10 },
+        unit: 'TRX',
+      };
     } else {
       return {
         chain,
@@ -598,6 +717,7 @@ const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
   SOL: 'solana',
   MATIC: 'matic-network',
+  TRX: 'tron',
   USDC: 'usd-coin',
   USDT: 'tether',
   DAI: 'dai',
@@ -607,6 +727,10 @@ const COINGECKO_IDS: Record<string, string> = {
   WETH: 'weth',
   WBTC: 'wrapped-bitcoin',
   WMATIC: 'wmatic',
+  BTT: 'bittorrent',
+  JST: 'just',
+  SUN: 'sun-token',
+  WIN: 'wink',
 };
 
 interface PriceData {
@@ -618,7 +742,7 @@ interface PriceData {
   lastUpdated: string;
 }
 
-async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC']): Promise<PriceData[]> {
+async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX']): Promise<PriceData[]> {
   try {
     // Map symbols to CoinGecko IDs
     const ids = symbols
@@ -716,6 +840,10 @@ async function broadcastTransaction(
       endpoint = `/solana/broadcast`;
       body = { txData: signedTransaction };
       break;
+    case 'tron':
+      endpoint = `/tron/broadcast`;
+      body = { txData: signedTransaction };
+      break;
     default:
       throw new Error(`Unsupported chain for broadcast: ${chain}`);
   }
@@ -742,6 +870,9 @@ async function broadcastTransaction(
       break;
     case 'solana':
       explorerUrl = `${explorerBase}/tx/${txHash}${testnet ? '?cluster=devnet' : ''}`;
+      break;
+    case 'tron':
+      explorerUrl = `${explorerBase}/#/transaction/${txHash}`;
       break;
     default:
       explorerUrl = `${explorerBase}/tx/${txHash}`;
@@ -807,7 +938,7 @@ serve(async (req) => {
 
       case 'getPrices':
         // CoinGecko doesn't require API key for basic usage
-        result = await getPrices(symbols || ['ETH', 'BTC', 'SOL', 'MATIC']);
+        result = await getPrices(symbols || ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX']);
         break;
 
       case 'broadcastTransaction':

@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon';
+export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron';
 
 export interface ChainInfo {
   id: Chain;
@@ -48,6 +48,15 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     icon: '◎', 
     color: '#9945FF',
     decimals: 9,
+    testnetName: 'Mainnet',
+  },
+  { 
+    id: 'tron', 
+    name: 'Tron', 
+    symbol: 'TRX', 
+    icon: '◈', 
+    color: '#FF0013',
+    decimals: 6,
     testnetName: 'Mainnet',
   },
 ];

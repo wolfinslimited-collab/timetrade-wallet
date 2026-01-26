@@ -31,6 +31,7 @@ const CHAIN_IDS: Record<Chain, { mainnet: number; testnet: number }> = {
   polygon: { mainnet: 137, testnet: 80002 }, // Amoy
   bitcoin: { mainnet: 0, testnet: 0 }, // Not EVM
   solana: { mainnet: 0, testnet: 0 }, // Not EVM
+  tron: { mainnet: 0, testnet: 0 }, // Not EVM (uses its own protocol)
 };
 
 // RPC URLs for different chains
@@ -45,6 +46,7 @@ const RPC_URLS: Record<Chain, { mainnet: string; testnet: string }> = {
   },
   bitcoin: { mainnet: '', testnet: '' },
   solana: { mainnet: '', testnet: '' },
+  tron: { mainnet: '', testnet: '' },
 };
 
 export function getChainId(chain: Chain, isTestnet: boolean): number {

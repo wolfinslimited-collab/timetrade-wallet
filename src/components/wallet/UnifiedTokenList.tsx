@@ -9,7 +9,7 @@ interface UnifiedTokenListProps {
 }
 
 // All supported chains to fetch
-const ALL_CHAINS: Chain[] = ['ethereum', 'solana', 'polygon'];
+const ALL_CHAINS: Chain[] = ['ethereum', 'solana', 'polygon', 'tron'];
 
 // Token icon mapping for common tokens
 const TOKEN_ICONS: Record<string, { icon: string; bgColor: string }> = {
@@ -27,6 +27,9 @@ const TOKEN_ICONS: Record<string, { icon: string; bgColor: string }> = {
   USDT: { icon: '₮', bgColor: 'bg-emerald-600' },
   DAI: { icon: '◈', bgColor: 'bg-amber-500' },
   BUSD: { icon: '$', bgColor: 'bg-yellow-500' },
+  USDD: { icon: '$', bgColor: 'bg-emerald-500' },
+  TUSD: { icon: '$', bgColor: 'bg-blue-400' },
+  USDJ: { icon: '$', bgColor: 'bg-purple-400' },
   
   // Popular tokens
   LINK: { icon: '⬡', bgColor: 'bg-blue-600' },
@@ -43,6 +46,15 @@ const TOKEN_ICONS: Record<string, { icon: string; bgColor: string }> = {
   RAY: { icon: '☀', bgColor: 'bg-purple-500' },
   SRM: { icon: '⚡', bgColor: 'bg-cyan-500' },
   BONK: { icon: '🐕', bgColor: 'bg-orange-500' },
+  JUP: { icon: '🪐', bgColor: 'bg-green-600' },
+  WIF: { icon: '🐶', bgColor: 'bg-amber-500' },
+  
+  // Tron tokens
+  SUN: { icon: '☀', bgColor: 'bg-yellow-500' },
+  JST: { icon: '⚖', bgColor: 'bg-blue-500' },
+  WIN: { icon: '🃏', bgColor: 'bg-purple-500' },
+  BTT: { icon: '🔄', bgColor: 'bg-pink-500' },
+  WTRX: { icon: '◈', bgColor: 'bg-red-600' },
 };
 
 const getTokenIcon = (symbol: string): { icon: string; bgColor: string } => {
@@ -59,6 +71,12 @@ const isLikelySolanaAddress = (address: string | null | undefined) => {
   if (!address) return false;
   // Base58 (no 0,O,I,l) and typical Solana pubkey length
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
+
+const isLikelyTronAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  // Tron addresses start with 'T' and are 34 characters (Base58)
+  return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address.trim());
 };
 
 interface UnifiedToken {
@@ -79,19 +97,22 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   const primaryAddress = localStorage.getItem('timetrade_wallet_address');
   const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
   const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+  const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
 
   // Backwards-compatible fallbacks for older sessions where only `timetrade_wallet_address` existed.
   const evmAddress = storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null);
   const solanaAddress = storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null);
+  const tronAddress = storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null);
 
   // Fetch balances for all chains in parallel
   const ethBalance = useWalletBalance(evmAddress, 'ethereum');
   const solBalance = useWalletBalance(solanaAddress, 'solana');
   const polyBalance = useWalletBalance(evmAddress, 'polygon');
+  const tronBalance = useWalletBalance(tronAddress, 'tron');
 
-  const isLoading = ethBalance.isLoading || solBalance.isLoading || polyBalance.isLoading;
+  const isLoading = ethBalance.isLoading || solBalance.isLoading || polyBalance.isLoading || tronBalance.isLoading;
 
-  if (!isConnected || (!evmAddress && !solanaAddress)) {
+  if (!isConnected || (!evmAddress && !solanaAddress && !tronAddress)) {
     return null;
   }
 
@@ -182,6 +203,34 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     }
   }
 
+  // Add Tron native + tokens
+  if (tronBalance.data && tronAddress) {
+    const chainInfo = getChainInfo('tron');
+    // Add native TRX
+    allTokens.push({
+      symbol: tronBalance.data.native.symbol,
+      name: chainInfo.name,
+      balance: tronBalance.data.native.balance,
+      decimals: tronBalance.data.native.decimals,
+      chain: 'tron',
+      isNative: true,
+      logo: chainInfo.icon,
+    });
+    // Add TRC-20 tokens
+    for (const token of tronBalance.data.tokens || []) {
+      allTokens.push({
+        symbol: token.symbol,
+        name: token.name,
+        balance: token.balance,
+        decimals: token.decimals,
+        chain: 'tron',
+        isNative: false,
+        contractAddress: token.contractAddress,
+        logo: token.logo,
+      });
+    }
+  }
+
   // Calculate USD values and sort by value (highest first)
   const tokensWithValue = allTokens.map(token => {
     const numericBalance = parseFloat(token.balance) / Math.pow(10, token.decimals);
@@ -261,6 +310,8 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
         return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
       case 'polygon':
         return 'bg-violet-500/20 text-violet-400 border-violet-500/30';
+      case 'tron':
+        return 'bg-red-500/20 text-red-400 border-red-500/30';
       default:
         return 'bg-muted text-muted-foreground';
     }
