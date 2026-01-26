@@ -104,20 +104,88 @@ async function tatumRequest(endpoint: string, options: RequestInit = {}) {
   }
 }
 
+// Popular testnet ERC-20 tokens for display
+const KNOWN_TOKENS: Record<string, { name: string; symbol: string; decimals: number; logo?: string }> = {
+  // Ethereum Sepolia testnet tokens
+  '0x779877a7b0d9e8603169ddbd7836e478b4624789': { name: 'Chainlink', symbol: 'LINK', decimals: 18, logo: '🔗' },
+  '0x1c7d4b196cb0c7b01d743fbc6116a902379c7238': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
+  '0xaa8e23fb1079ea71e0a56f48a2aa51851d8433d0': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
+  '0x7b79995e5f793a07bc00c21412e50ecae098e7f9': { name: 'Wrapped Ether', symbol: 'WETH', decimals: 18, logo: '⟠' },
+  // Polygon Amoy testnet tokens
+  '0x0fa8781a83e46826621b3bc094ea2a0212e71b23': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
+  '0x360ad4f9a9a8efe9a8dcb5f461c4cc1047e1dcf9': { name: 'Wrapped Matic', symbol: 'WMATIC', decimals: 18, logo: '⬡' },
+};
+
+async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): Promise<Array<{
+  symbol: string;
+  name: string;
+  balance: string;
+  decimals: number;
+  contractAddress: string;
+  logo?: string;
+}>> {
+  // Only fetch tokens for EVM chains
+  if (chain !== 'ethereum' && chain !== 'polygon') {
+    return [];
+  }
+
+  try {
+    // Use Tatum's fungible tokens endpoint for EVM chains
+    const chainPath = chain === 'ethereum' ? 'ethereum' : 'polygon';
+    const endpoint = `/data/tokens?chain=${chainPath}&addresses=${address}&tokenTypes=fungible${testnet ? '&testnet=true' : ''}`;
+    
+    console.log(`Fetching ERC-20 tokens for ${chain}: ${endpoint}`);
+    const tokenData = await tatumRequest(endpoint);
+    console.log(`${chain} tokens response:`, JSON.stringify(tokenData));
+
+    if (!Array.isArray(tokenData)) {
+      console.log('Token response is not an array, returning empty');
+      return [];
+    }
+
+    const tokens = tokenData
+      .filter((token: { balance?: string }) => token.balance && token.balance !== '0')
+      .map((token: { 
+        tokenAddress?: string; 
+        balance?: string; 
+        decimals?: number;
+        name?: string;
+        symbol?: string;
+      }) => {
+        const knownToken = KNOWN_TOKENS[token.tokenAddress?.toLowerCase() || ''];
+        return {
+          symbol: knownToken?.symbol || token.symbol || 'UNKNOWN',
+          name: knownToken?.name || token.name || 'Unknown Token',
+          balance: token.balance || '0',
+          decimals: knownToken?.decimals || token.decimals || 18,
+          contractAddress: token.tokenAddress || '',
+          logo: knownToken?.logo,
+        };
+      });
+
+    return tokens;
+  } catch (error) {
+    console.error(`Error fetching ${chain} ERC-20 tokens:`, error);
+    // Return empty array on error - don't fail the whole balance request
+    return [];
+  }
+}
+
 async function getBalance(chain: Chain, address: string, testnet: boolean = true) {
   const config = chainConfigs[chain];
   
   try {
-    const endpoint = config.balanceEndpoint(address, testnet);
-    const balanceData = await tatumRequest(endpoint);
+    // Fetch native balance and tokens in parallel for EVM chains
+    const [balanceData, tokens] = await Promise.all([
+      tatumRequest(config.balanceEndpoint(address, testnet)),
+      getERC20Tokens(chain, address, testnet),
+    ]);
+    
     console.log(`${chain} balance response:`, JSON.stringify(balanceData));
     
     // Different chains return balance in different formats
     let balance = '0';
     if (typeof balanceData === 'object') {
-      // Ethereum/Polygon return { balance: "..." }
-      // Bitcoin returns { incoming: "...", outgoing: "..." } or { balance: "..." }
-      // Solana returns { balance: "..." }
       balance = balanceData.balance || 
                 (balanceData.incoming ? String(parseFloat(balanceData.incoming) - parseFloat(balanceData.outgoing || '0')) : '0');
     } else if (typeof balanceData === 'string') {
@@ -131,7 +199,7 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
         balance,
         decimals: config.decimals,
       },
-      tokens: [], // Token balances would require additional API calls
+      tokens,
       explorerUrl: config.explorerUrl(testnet),
     };
   } catch (error) {

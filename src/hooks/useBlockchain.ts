@@ -63,6 +63,7 @@ export interface TokenBalance {
   contractAddress?: string;
   name?: string;
   price?: number;
+  logo?: string;
 }
 
 export interface WalletBalance {
