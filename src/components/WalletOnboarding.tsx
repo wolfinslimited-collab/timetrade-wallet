@@ -61,10 +61,10 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       const encryptedData = await encryptPrivateKey(phraseString, pin);
       localStorage.setItem("timetrade_seed_phrase", JSON.stringify(encryptedData));
 
-      // Derive all 5 accounts and connect the first one
+      // Derive all 5 accounts for EVM and connect the first one
       const accounts = deriveMultipleAccounts(seedPhrase, 5);
-      if (accounts.length > 0) {
-        connectWallet(accounts[0].address);
+      if (accounts.evm.length > 0) {
+        connectWallet(accounts.evm[0].address);
         localStorage.setItem('timetrade_active_account_index', '0');
       }
       setSelectedChain("ethereum");

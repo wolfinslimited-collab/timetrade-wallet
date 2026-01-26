@@ -3,7 +3,7 @@ import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance
 import { useCryptoPrices, getPriceForSymbol } from '@/hooks/useCryptoPrices';
 import { useQueryClient } from '@tanstack/react-query';
 import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
-import { deriveMultipleAccounts, DerivedAccount } from '@/utils/walletDerivation';
+import { deriveMultipleAccounts, DerivedAccount, MultiChainAccounts } from '@/utils/walletDerivation';
 
 interface BlockchainContextType {
   // Wallet state
@@ -55,8 +55,8 @@ interface BlockchainProviderProps {
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
   
-  // Multi-account state
-  const [derivedAccounts, setDerivedAccounts] = useState<DerivedAccount[]>([]);
+  // Multi-account state - stores both EVM and Solana accounts
+  const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [] });
   const [activeAccountIndex, setActiveAccountIndex] = useState<number>(() => {
     const stored = localStorage.getItem('timetrade_active_account_index');
     return stored ? parseInt(stored, 10) : 0;
@@ -88,17 +88,21 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
         const words = decryptedPhrase.split(/\s+/);
         
-        // Derive all 5 accounts
+        // Derive all 5 accounts for both EVM and Solana
         const accounts = deriveMultipleAccounts(words, 5);
         
         if (cancelled) return;
         
-        setDerivedAccounts(accounts);
+        setAllDerivedAccounts(accounts);
         
-        // Set wallet address from active account index
+        // Set wallet address from active account index and chain
         const storedIndex = localStorage.getItem('timetrade_active_account_index');
+        const storedChain = localStorage.getItem('timetrade_selected_chain') as Chain || 'ethereum';
         const index = storedIndex ? parseInt(storedIndex, 10) : 0;
-        const activeAccount = accounts[index] || accounts[0];
+        
+        // Get appropriate accounts based on chain
+        const chainAccounts = storedChain === 'solana' ? accounts.solana : accounts.evm;
+        const activeAccount = chainAccounts[index] || chainAccounts[0];
         
         if (activeAccount && !walletAddress) {
           setWalletAddress(activeAccount.address);
@@ -160,7 +164,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   const disconnectWallet = useCallback(() => {
     setWalletAddress(null);
-    setDerivedAccounts([]);
+    setAllDerivedAccounts({ evm: [], solana: [] });
     setActiveAccountIndex(0);
     localStorage.removeItem('timetrade_wallet_address');
     localStorage.removeItem('timetrade_active_account_index');
@@ -169,7 +173,18 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const handleSetSelectedChain = useCallback((chain: Chain) => {
     setSelectedChain(chain);
     localStorage.setItem('timetrade_selected_chain', chain);
-  }, []);
+    
+    // When switching chains, update wallet address to the correct chain's account
+    const chainAccounts = chain === 'solana' ? allDerivedAccounts.solana : allDerivedAccounts.evm;
+    if (chainAccounts.length > 0) {
+      const accountIndex = Math.min(activeAccountIndex, chainAccounts.length - 1);
+      const account = chainAccounts[accountIndex];
+      if (account) {
+        setWalletAddress(account.address);
+        localStorage.setItem('timetrade_wallet_address', account.address);
+      }
+    }
+  }, [allDerivedAccounts, activeAccountIndex]);
 
   const refreshAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
@@ -181,19 +196,25 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   // Extract transactions from response
   const transactionsData = transactionsQuery.data as TransactionsResponse | undefined;
 
+  // Get accounts for current chain
+  const derivedAccounts = React.useMemo(() => {
+    return selectedChain === 'solana' ? allDerivedAccounts.solana : allDerivedAccounts.evm;
+  }, [selectedChain, allDerivedAccounts]);
+
   // Handle switching active account
   const handleSetActiveAccountIndex = useCallback((index: number) => {
-    if (index < 0 || index >= derivedAccounts.length) return;
+    const accounts = selectedChain === 'solana' ? allDerivedAccounts.solana : allDerivedAccounts.evm;
+    if (index < 0 || index >= accounts.length) return;
     
     setActiveAccountIndex(index);
     localStorage.setItem('timetrade_active_account_index', String(index));
     
-    const account = derivedAccounts[index];
+    const account = accounts[index];
     if (account) {
       setWalletAddress(account.address);
       localStorage.setItem('timetrade_wallet_address', account.address);
     }
-  }, [derivedAccounts]);
+  }, [selectedChain, allDerivedAccounts]);
 
   const value: BlockchainContextType = {
     walletAddress,
