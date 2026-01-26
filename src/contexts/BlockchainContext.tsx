@@ -127,42 +127,90 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         // Get stored Solana derivation path preference
         let solanaPathStyle = localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath | null;
 
-        // If a path preference exists but yields no balance, re-detect.
-        // This fixes cases where an earlier default (or manual choice) was wrong.
-        const shouldAutoDetect = async (): Promise<boolean> => {
-          if (!solanaPathStyle) return true;
-          const candidate = deriveSolanaAddress(phrase, 0, solanaPathStyle);
-          const ok = await hasSolanaBalance(candidate);
-          return !ok;
+        // Scan a few common account indices as users often keep SOL/SPL on account #1+.
+        const SOLANA_SCAN_INDICES = [0, 1, 2, 3, 4];
+        const SOLANA_PATH_STYLES: SolanaDerivationPath[] = ['phantom', 'solflare', 'legacy'];
+
+        const findFirstBalanceForSpecificPath = async (
+          path: SolanaDerivationPath
+        ): Promise<{ index: number; address: string } | null> => {
+          const checks = await Promise.all(
+            SOLANA_SCAN_INDICES.map(async (i) => {
+              const address = deriveSolanaAddress(phrase, i, path);
+              const ok = await hasSolanaBalance(address);
+              return { index: i, address, ok };
+            })
+          );
+          const hit = checks.find((c) => c.ok);
+          return hit ? { index: hit.index, address: hit.address } : null;
         };
 
-        if (await shouldAutoDetect()) {
-          console.log('Auto-detecting Solana derivation path (no stored path or stored path has no balance)...');
+        const autoDetectSolanaPathAndIndex = async (): Promise<
+          { path: SolanaDerivationPath; index: number; address: string } | null
+        > => {
+          console.log('Auto-detecting Solana derivation path + account index (0-4)...');
 
-          const allPaths = deriveSolanaAddressesAllPaths(phrase, 0);
-          const pathStyles: SolanaDerivationPath[] = ['phantom', 'solflare', 'legacy'];
-          const addressChecks = pathStyles
-            .map((path) => {
-              const info = allPaths.find((p) => p.path === path);
-              return info ? { path, address: info.address, fullPath: info.fullPath } : null;
-            })
-            .filter(Boolean) as { path: SolanaDerivationPath; address: string; fullPath: string }[];
+          for (const i of SOLANA_SCAN_INDICES) {
+            const allPaths = deriveSolanaAddressesAllPaths(phrase, i);
 
-          for (const c of addressChecks) {
-            console.log(`Solana path ${c.path} (${c.fullPath}): ${c.address}`);
+            const addressChecks = SOLANA_PATH_STYLES
+              .map((path) => {
+                const info = allPaths.find((p) => p.path === path);
+                return info ? { path, address: info.address, fullPath: info.fullPath } : null;
+              })
+              .filter(Boolean) as { path: SolanaDerivationPath; address: string; fullPath: string }[];
+
+            for (const c of addressChecks) {
+              console.log(`Solana acct #${i} path ${c.path} (${c.fullPath}): ${c.address}`);
+            }
+
+            const balanceResults = await Promise.all(
+              addressChecks.map(async ({ path, address }) => ({
+                path,
+                address,
+                hasBalance: await hasSolanaBalance(address),
+              }))
+            );
+
+            const hit = balanceResults.find((r) => r.hasBalance);
+            if (hit) {
+              return { path: hit.path, index: i, address: hit.address };
+            }
           }
 
-          const balanceResults = await Promise.all(
-            addressChecks.map(async ({ path, address }) => ({
-              path,
-              hasBalance: await hasSolanaBalance(address),
-            }))
-          );
+          return null;
+        };
 
-          const detected = balanceResults.find((r) => r.hasBalance)?.path ?? 'legacy';
-          solanaPathStyle = detected;
+        let detectedSolanaAddress: string | null = null;
+        let detectedSolanaIndex: number | null = null;
+
+        // If a stored path exists, keep it if ANY of indices 0-4 has balance.
+        if (solanaPathStyle) {
+          const hit = await findFirstBalanceForSpecificPath(solanaPathStyle);
+          if (hit) {
+            detectedSolanaAddress = hit.address;
+            detectedSolanaIndex = hit.index;
+          } else {
+            // Stored path appears wrong (or user has no SPL/native on indices 0-4)
+            solanaPathStyle = null;
+          }
+        }
+
+        // If no valid stored path (or no balances), detect across common path styles.
+        if (!solanaPathStyle) {
+          const detected = await autoDetectSolanaPathAndIndex();
+          solanaPathStyle = detected?.path ?? 'legacy';
+          detectedSolanaAddress = detected?.address ?? null;
+          detectedSolanaIndex = detected?.index ?? null;
           localStorage.setItem('timetrade_solana_derivation_path', solanaPathStyle);
           console.log(`Saved Solana derivation path preference: ${solanaPathStyle}`);
+        }
+
+        // Persist the detected Solana address (used by UnifiedTokenList to fetch SPL tokens)
+        if (detectedSolanaAddress && typeof detectedSolanaIndex === 'number') {
+          localStorage.setItem('timetrade_wallet_address_solana', detectedSolanaAddress);
+          localStorage.setItem('timetrade_solana_balance_account_index', String(detectedSolanaIndex));
+          console.log(`Saved Solana balance address (acct #${detectedSolanaIndex}): ${detectedSolanaAddress}`);
         }
         
         // Derive all 5 accounts for both EVM and Solana with the correct path
@@ -183,7 +231,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         if (activeEvm) {
           localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
         }
-        if (activeSolana) {
+        // If we didn't detect a better Solana address with balance, keep storage aligned with active index.
+        if (activeSolana && !detectedSolanaAddress) {
           localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
         }
         
@@ -265,6 +314,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     localStorage.removeItem('timetrade_wallet_address');
     localStorage.removeItem('timetrade_wallet_address_evm');
     localStorage.removeItem('timetrade_wallet_address_solana');
+    localStorage.removeItem('timetrade_solana_balance_account_index');
     localStorage.removeItem('timetrade_active_account_index');
   }, []);
 
