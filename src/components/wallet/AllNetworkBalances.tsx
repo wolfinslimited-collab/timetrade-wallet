@@ -51,7 +51,8 @@ export const AllNetworkBalances = ({ className }: AllNetworkBalancesProps) => {
   const solBalance = useWalletBalance(solanaAddress, 'solana');
   const polyBalance = useWalletBalance(evmAddress, 'polygon');
 
-  if (!isConnected) {
+  // Don't show if not connected or no addresses derived
+  if (!isConnected || (!evmAddress && !solanaAddress)) {
     return null;
   }
 
@@ -59,7 +60,7 @@ export const AllNetworkBalances = ({ className }: AllNetworkBalancesProps) => {
     { chain: 'ethereum' as Chain, query: ethBalance, address: evmAddress },
     { chain: 'solana' as Chain, query: solBalance, address: solanaAddress },
     { chain: 'polygon' as Chain, query: polyBalance, address: evmAddress },
-  ];
+  ].filter(c => c.address);
 
   const isLoading = chainBalances.some(c => c.query.isLoading);
 
