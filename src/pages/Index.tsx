@@ -7,10 +7,12 @@ import { BalanceDisplay } from "@/components/BalanceDisplay";
 import { PortfolioChart } from "@/components/PortfolioChart";
 import { QuickActions } from "@/components/QuickActions";
 import { WalletTabs } from "@/components/WalletTabs";
+import { SettingsPage } from "./SettingsPage";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
   const [isLocked, setIsLocked] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     // Check if wallet exists in localStorage
@@ -50,6 +52,11 @@ const Index = () => {
     return <LockScreen onUnlock={handleUnlock} />;
   }
 
+  // Show settings page
+  if (showSettings) {
+    return <SettingsPage onBack={() => setShowSettings(false)} />;
+  }
+
   // Main wallet view
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative">
@@ -69,7 +76,7 @@ const Index = () => {
       </div>
 
       {/* Header */}
-      <WalletHeader userName="Alex" />
+      <WalletHeader userName="Alex" onSettingsClick={() => setShowSettings(true)} />
 
       {/* Balance */}
       <BalanceDisplay balance={12160.05} changePercent={2.5} />

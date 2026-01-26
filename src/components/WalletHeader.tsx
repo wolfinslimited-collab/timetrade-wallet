@@ -1,11 +1,12 @@
-import { Shield, MoreHorizontal } from "lucide-react";
+import { Shield, Settings } from "lucide-react";
 
 interface WalletHeaderProps {
   userName: string;
   avatarUrl?: string;
+  onSettingsClick?: () => void;
 }
 
-export const WalletHeader = ({ userName, avatarUrl }: WalletHeaderProps) => {
+export const WalletHeader = ({ userName, avatarUrl, onSettingsClick }: WalletHeaderProps) => {
   return (
     <header className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-3">
@@ -28,8 +29,11 @@ export const WalletHeader = ({ userName, avatarUrl }: WalletHeaderProps) => {
           </div>
         </div>
       </div>
-      <button className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors">
-        <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+      <button 
+        onClick={onSettingsClick}
+        className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+      >
+        <Settings className="w-5 h-5 text-muted-foreground" />
       </button>
     </header>
   );
