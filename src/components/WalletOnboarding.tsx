@@ -10,6 +10,8 @@ import { PinSetupStep } from "./onboarding/PinSetupStep";
 import { BiometricSetupStep } from "./onboarding/BiometricSetupStep";
 import { generateSeedPhrase } from "@/utils/seedPhrase";
 import { encryptPrivateKey } from "@/utils/encryption";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { deriveEvmAddressFromMnemonicWords } from "@/utils/walletDerivation";
 
 export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
@@ -18,6 +20,7 @@ interface WalletOnboardingProps {
 }
 
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
+  const { connectWallet, setSelectedChain } = useBlockchainContext();
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
@@ -57,6 +60,11 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       const phraseString = seedPhrase.join(" ");
       const encryptedData = await encryptPrivateKey(phraseString, pin);
       localStorage.setItem("timetrade_seed_phrase", JSON.stringify(encryptedData));
+
+      // Derive and connect an address from the mnemonic so the dashboard uses real data.
+      const derivedAddress = deriveEvmAddressFromMnemonicWords(seedPhrase);
+      connectWallet(derivedAddress);
+      setSelectedChain("ethereum");
     } catch (error) {
       console.error("Failed to encrypt seed phrase:", error);
     }

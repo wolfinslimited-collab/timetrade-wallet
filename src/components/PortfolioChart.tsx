@@ -1,124 +1,98 @@
+import { useMemo } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
-const generateChartData = () => {
-  const data = [];
-  let value1 = 8000;
-  let value2 = 5000;
-  let value3 = 3000;
-  
-  for (let i = 0; i < 30; i++) {
-    value1 += (Math.random() - 0.45) * 500;
-    value2 += (Math.random() - 0.48) * 300;
-    value3 += (Math.random() - 0.5) * 200;
-    
-    data.push({
-      day: i,
-      wallet1: Math.max(0, value1),
-      wallet2: Math.max(0, value2),
-      wallet3: Math.max(0, value3),
-    });
-  }
-  return data;
-};
-
-const chartData = generateChartData();
-
-interface WalletLabelProps {
-  name: string;
-  color: string;
-  x: number;
-  y: number;
+function formatUsd(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
-const WalletLabel = ({ name, x, y }: WalletLabelProps) => (
-  <div 
-    className="absolute text-xs text-muted-foreground bg-card/80 px-2 py-0.5 rounded border border-border"
-    style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
-  >
-    {name}
-  </div>
-);
-
 export const PortfolioChart = () => {
+  const { isConnected, balance, prices, totalBalanceUsd, isLoadingBalance, isLoadingPrices } =
+    useBlockchainContext();
+
+  const data = useMemo(() => {
+    if (!isConnected || !balance || !prices) return [];
+
+    // Estimate 24h-ago portfolio value using real 24h price changes (assumes holdings unchanged).
+    const getPrice = (symbol: string) => prices.find((p) => p.symbol === symbol)?.price ?? 0;
+    const getChange = (symbol: string) => prices.find((p) => p.symbol === symbol)?.change24h ?? 0;
+    const prevFactor = (symbol: string) => {
+      const ch = getChange(symbol);
+      const f = 1 + ch / 100;
+      return Number.isFinite(f) && f > 0 ? f : 1;
+    };
+
+    let prevTotal = 0;
+
+    // Native
+    const nativeAmount =
+      parseFloat(balance.native.balance) / Math.pow(10, balance.native.decimals);
+    const nativePriceNow = getPrice(balance.native.symbol);
+    prevTotal += nativeAmount * (nativePriceNow / prevFactor(balance.native.symbol));
+
+    // Tokens
+    for (const t of balance.tokens) {
+      const amount = parseFloat(t.balance) / Math.pow(10, t.decimals);
+      const priceNow = getPrice(t.symbol) || t.price || 0;
+      prevTotal += amount * (priceNow / prevFactor(t.symbol));
+    }
+
+    return [
+      { t: "24H", total: Math.max(0, prevTotal) },
+      { t: "NOW", total: Math.max(0, totalBalanceUsd) },
+    ];
+  }, [isConnected, balance, prices, totalBalanceUsd]);
+
+  const isLoading = isConnected && (isLoadingBalance || isLoadingPrices);
+
   return (
     <div className="relative px-4 py-2 h-48">
-      {/* Wallet labels */}
-      <div className="absolute right-8 top-4 z-10 flex flex-col gap-1 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary" />
-          <span>Wallet 1</span>
+      {!isConnected ? (
+        <div className="h-full rounded-xl border border-border bg-card flex items-center justify-center">
+          <p className="text-xs text-muted-foreground">Connect a wallet to see your portfolio</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-chart-2" />
-          <span>Wallet 2</span>
+      ) : isLoading ? (
+        <div className="h-full rounded-xl border border-border bg-card flex items-center justify-center">
+          <p className="text-xs text-muted-foreground">Loading chart…</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-chart-3" />
-          <span>Wallet 3</span>
-        </div>
-      </div>
-      
+      ) : (
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
-            <linearGradient id="gradientWallet1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="gradientWallet2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(280, 65%, 60%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(280, 65%, 60%)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="gradientWallet3" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(200, 80%, 55%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(200, 80%, 55%)" stopOpacity={0} />
+            <linearGradient id="gradientPortfolio" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <XAxis dataKey="day" hide />
-          <YAxis hide domain={['dataMin - 500', 'dataMax + 500']} />
+          <XAxis dataKey="t" hide />
+          <YAxis hide domain={['dataMin - 50', 'dataMax + 50']} />
           <Tooltip
             content={({ active, payload }) => {
               if (!active || !payload?.length) return null;
               return (
                 <div className="bg-card border border-border rounded-lg p-2 shadow-xl">
-                  {payload.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-2 text-xs">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span className="font-mono">
-                        ${Number(entry.value).toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span className="font-mono">{formatUsd(Number(payload[0]?.value ?? 0))}</span>
+                  </div>
                 </div>
               );
             }}
           />
           <Area
             type="monotone"
-            dataKey="wallet3"
-            stroke="hsl(200, 80%, 55%)"
-            strokeWidth={1.5}
-            fill="url(#gradientWallet3)"
-          />
-          <Area
-            type="monotone"
-            dataKey="wallet2"
-            stroke="hsl(280, 65%, 60%)"
-            strokeWidth={1.5}
-            fill="url(#gradientWallet2)"
-          />
-          <Area
-            type="monotone"
-            dataKey="wallet1"
-            stroke="hsl(160, 84%, 39%)"
+            dataKey="total"
+            stroke="hsl(var(--primary))"
             strokeWidth={2}
-            fill="url(#gradientWallet1)"
+            fill="url(#gradientPortfolio)"
           />
         </AreaChart>
       </ResponsiveContainer>
+      )}
     </div>
   );
 };

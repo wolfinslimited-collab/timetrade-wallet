@@ -1,28 +1,14 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { WalletCard } from "./WalletCard";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
 const tabs = ["MY WALLET", "WATCHLIST", "SMARTMONEY"] as const;
 type Tab = typeof tabs[number];
 
-const mockWallets = [
-  { address: "0xb24f8a31a", balance: 12158.29, transactions: 4 },
-  { address: "0x59b2d3o1", balance: 9050.00, transactions: 2 },
-  { address: "0xb24c56y", balance: 6609.00, transactions: 9 },
-];
-
-const mockWatchlist = [
-  { address: "0xb24f8a31a", balance: 12158.29, transactions: 4 },
-  { address: "0x59b2d3o1", balance: 9050.00, transactions: 2 },
-  { address: "0xb24c56y", balance: 6609.00, transactions: 9 },
-  { address: "0xb24f8a31a", balance: 50993.00, transactions: 0 },
-  { address: "0xb24c344", balance: 22991.00, transactions: 4 },
-];
-
 export const WalletTabs = () => {
   const [activeTab, setActiveTab] = useState<Tab>("MY WALLET");
-
-  const wallets = activeTab === "WATCHLIST" ? mockWatchlist : mockWallets;
+  const { isConnected, walletAddress, totalBalanceUsd, transactions } = useBlockchainContext();
 
   return (
     <div className="flex-1 flex flex-col">
@@ -52,15 +38,34 @@ export const WalletTabs = () => {
         {activeTab === "WATCHLIST" && (
           <h2 className="text-2xl font-bold tracking-tight mb-4">WATCHLIST</h2>
         )}
-        {wallets.map((wallet, index) => (
-          <WalletCard
-            key={`${wallet.address}-${index}`}
-            address={wallet.address}
-            balance={wallet.balance}
-            transactions={activeTab === "WATCHLIST" ? wallet.transactions : undefined}
-            showSparkline={activeTab === "MY WALLET"}
-          />
-        ))}
+
+        {activeTab === "MY WALLET" ? (
+          isConnected && walletAddress ? (
+            <WalletCard
+              address={walletAddress}
+              balance={totalBalanceUsd}
+              transactions={transactions?.length}
+              showSparkline
+            />
+          ) : (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-sm font-medium">No wallet connected</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Create or import a wallet to see your address here.
+              </p>
+            </div>
+          )
+        ) : activeTab === "WATCHLIST" ? (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-medium">Watchlist is empty</p>
+            <p className="text-xs text-muted-foreground mt-1">Add addresses to track later.</p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-medium">SmartMoney</p>
+            <p className="text-xs text-muted-foreground mt-1">Coming soon.</p>
+          </div>
+        )}
       </div>
     </div>
   );

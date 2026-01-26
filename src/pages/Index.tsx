@@ -145,7 +145,7 @@ const Index = () => {
         />
 
         {/* Balance */}
-        <BalanceDisplay key={`balance-${refreshKey}`} balance={12160.05} changePercent={2.5} />
+        <BalanceDisplay key={`balance-${refreshKey}`} balance={0} changePercent={0} />
 
         {/* Portfolio Chart */}
         <PortfolioChart key={`chart-${refreshKey}`} />
