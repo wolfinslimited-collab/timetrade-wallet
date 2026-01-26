@@ -5,9 +5,10 @@ import { SecurityWarningStep } from "./onboarding/SecurityWarningStep";
 import { SeedPhraseStep } from "./onboarding/SeedPhraseStep";
 import { VerifySeedStep } from "./onboarding/VerifySeedStep";
 import { SuccessStep } from "./onboarding/SuccessStep";
+import { ImportWalletStep } from "./onboarding/ImportWalletStep";
 import { generateSeedPhrase } from "@/utils/seedPhrase";
 
-export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "success";
+export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "success" | "import";
 
 interface WalletOnboardingProps {
   onComplete: () => void;
@@ -22,6 +23,15 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     const newSeedPhrase = generateSeedPhrase(12);
     setSeedPhrase(newSeedPhrase);
     setStep("security");
+  };
+
+  const handleImportWallet = () => {
+    setStep("import");
+  };
+
+  const handleImportComplete = (importedPhrase: string[]) => {
+    setSeedPhrase(importedPhrase);
+    setStep("success");
   };
 
   const handleSecurityAcknowledged = () => {
@@ -53,6 +63,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
           >
             <WelcomeStep 
               onCreateWallet={handleCreateWallet}
+              onImportWallet={handleImportWallet}
               walletName={walletName}
               setWalletName={setWalletName}
             />
@@ -102,6 +113,21 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
               seedPhrase={seedPhrase}
               onComplete={handleVerificationComplete}
               onBack={() => setStep("seedphrase")}
+            />
+          </motion.div>
+        )}
+
+        {step === "import" && (
+          <motion.div
+            key="import"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex-1"
+          >
+            <ImportWalletStep 
+              onImport={handleImportComplete}
+              onBack={() => setStep("welcome")}
             />
           </motion.div>
         )}

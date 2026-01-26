@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 
 interface WelcomeStepProps {
   onCreateWallet: () => void;
+  onImportWallet: () => void;
   walletName: string;
   setWalletName: (name: string) => void;
 }
 
-export const WelcomeStep = ({ onCreateWallet, walletName, setWalletName }: WelcomeStepProps) => {
+export const WelcomeStep = ({ onCreateWallet, onImportWallet, walletName, setWalletName }: WelcomeStepProps) => {
   return (
     <div className="flex flex-col min-h-screen p-6">
       {/* Logo & Title */}
@@ -56,6 +57,7 @@ export const WelcomeStep = ({ onCreateWallet, walletName, setWalletName }: Welco
 
         <Button
           variant="outline"
+          onClick={onImportWallet}
           className="w-full h-14 border-border bg-card hover:bg-secondary text-foreground font-medium text-base"
         >
           <Import className="w-5 h-5 mr-2" />
