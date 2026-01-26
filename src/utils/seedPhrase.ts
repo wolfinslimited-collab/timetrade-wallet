@@ -15,8 +15,8 @@ export const isValidBip39Word = (word: string): boolean => {
  * Gets autocomplete suggestions for a partial word input.
  */
 export const getWordSuggestions = (partial: string, limit: number = 8): string[] => {
-  if (!partial || partial.length < 1) return [];
   const lower = partial.toLowerCase().trim();
+  if (!lower || lower.length < 1) return [];
   return englishWordlist
     .filter(word => word.startsWith(lower))
     .slice(0, limit);
