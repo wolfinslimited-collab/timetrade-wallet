@@ -9,6 +9,7 @@ import { ImportWalletStep } from "./onboarding/ImportWalletStep";
 import { PinSetupStep } from "./onboarding/PinSetupStep";
 import { BiometricSetupStep } from "./onboarding/BiometricSetupStep";
 import { generateSeedPhrase } from "@/utils/seedPhrase";
+import { encryptPrivateKey } from "@/utils/encryption";
 
 export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
@@ -48,8 +49,18 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     setStep("pin");
   };
 
-  const handlePinComplete = (pin: string) => {
+  const handlePinComplete = async (pin: string) => {
     localStorage.setItem("timetrade_pin", pin);
+    
+    // Encrypt and store the seed phrase
+    try {
+      const phraseString = seedPhrase.join(" ");
+      const encryptedData = await encryptPrivateKey(phraseString, pin);
+      localStorage.setItem("timetrade_seed_phrase", JSON.stringify(encryptedData));
+    } catch (error) {
+      console.error("Failed to encrypt seed phrase:", error);
+    }
+    
     setStep("biometric");
   };
 

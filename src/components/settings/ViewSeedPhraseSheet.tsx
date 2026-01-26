@@ -1,20 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Copy, AlertTriangle, Lock, Shield } from "lucide-react";
+import { Eye, EyeOff, Copy, AlertTriangle, Lock, Shield, Loader2 } from "lucide-react";
+import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 
 interface ViewSeedPhraseSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-// Demo seed phrase - in production this would be retrieved securely
-const demoSeedPhrase = [
-  "abandon", "ability", "able", "about", "above", "absent",
-  "absorb", "abstract", "absurd", "abuse", "access", "accident"
-];
 
 export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetProps) => {
   const { toast } = useToast();
@@ -22,10 +17,12 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   const [pin, setPin] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
+  const [isDecrypting, setIsDecrypting] = useState(false);
 
   const storedPin = localStorage.getItem("timetrade_pin");
 
-  const handleKeyPress = (digit: string) => {
+  const handleKeyPress = async (digit: string) => {
     if (pin.length >= 6) return;
     
     const newPin = pin + digit;
@@ -34,7 +31,25 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
 
     if (newPin.length === 6) {
       if (newPin === storedPin) {
-        setAuthenticated(true);
+        // Decrypt the seed phrase
+        setIsDecrypting(true);
+        try {
+          const encryptedDataStr = localStorage.getItem("timetrade_seed_phrase");
+          if (encryptedDataStr) {
+            const encryptedData: EncryptedData = JSON.parse(encryptedDataStr);
+            const decryptedPhrase = await decryptPrivateKey(encryptedData, newPin);
+            setSeedPhrase(decryptedPhrase.split(" "));
+            setAuthenticated(true);
+          } else {
+            setError("No seed phrase found");
+            setPin("");
+          }
+        } catch (err) {
+          setError("Failed to decrypt seed phrase");
+          setPin("");
+        } finally {
+          setIsDecrypting(false);
+        }
       } else {
         setError("Incorrect PIN");
         setPin("");
@@ -48,7 +63,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(demoSeedPhrase.join(" "));
+    await navigator.clipboard.writeText(seedPhrase.join(" "));
     toast({
       title: "Copied!",
       description: "Seed phrase copied to clipboard. Keep it safe!",
@@ -62,6 +77,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
       setPin("");
       setRevealed(false);
       setError(null);
+      setSeedPhrase([]);
     }, 300);
   };
 
@@ -75,31 +91,42 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
 
           <div className="flex flex-col h-full px-6 pb-8">
             <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
-                <Lock className="w-10 h-10 text-primary" />
-              </div>
+              {isDecrypting ? (
+                <>
+                  <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                  </div>
+                  <p className="text-muted-foreground text-center">Decrypting...</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
+                    <Lock className="w-10 h-10 text-primary" />
+                  </div>
 
-              <p className="text-muted-foreground text-center mb-8 max-w-xs">
-                Enter your PIN to view your seed phrase
-              </p>
+                  <p className="text-muted-foreground text-center mb-8 max-w-xs">
+                    Enter your PIN to view your seed phrase
+                  </p>
 
-              {error && (
-                <p className="text-destructive text-sm mb-4">{error}</p>
+                  {error && (
+                    <p className="text-destructive text-sm mb-4">{error}</p>
+                  )}
+
+                  <div className="flex gap-4 mb-8">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          "w-4 h-4 rounded-full transition-all duration-200",
+                          index < pin.length
+                            ? error ? "bg-destructive" : "bg-primary scale-110"
+                            : "bg-muted border border-border"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
-
-              <div className="flex gap-4 mb-8">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      "w-4 h-4 rounded-full transition-all duration-200",
-                      index < pin.length
-                        ? error ? "bg-destructive" : "bg-primary scale-110"
-                        : "bg-muted border border-border"
-                    )}
-                  />
-                ))}
-              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -174,7 +201,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              {demoSeedPhrase.map((word, index) => (
+              {seedPhrase.map((word, index) => (
                 <div
                   key={index}
                   className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border"
