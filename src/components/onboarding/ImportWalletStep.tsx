@@ -47,7 +47,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
     if (!validateSeedPhrase(words)) {
       toast({
         title: "Invalid seed phrase",
-        description: "Some words are not valid BIP39 words. Please check your phrase.",
+        description: "Seed phrase is not a valid BIP39 mnemonic. Check spelling and word order.",
         variant: "destructive",
       });
       return;

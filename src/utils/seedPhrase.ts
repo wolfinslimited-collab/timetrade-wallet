@@ -1,50 +1,24 @@
-// BIP39 word list (simplified - first 256 common words for demo)
-// In production, use the full 2048 BIP39 wordlist
-const wordList = [
-  "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract",
-  "absurd", "abuse", "access", "accident", "account", "accuse", "achieve", "acid",
-  "acoustic", "acquire", "across", "act", "action", "actor", "actress", "actual",
-  "adapt", "add", "addict", "address", "adjust", "admit", "adult", "advance",
-  "advice", "aerobic", "affair", "afford", "afraid", "again", "age", "agent",
-  "agree", "ahead", "aim", "air", "airport", "aisle", "alarm", "album",
-  "alcohol", "alert", "alien", "all", "alley", "allow", "almost", "alone",
-  "alpha", "already", "also", "alter", "always", "amateur", "amazing", "among",
-  "amount", "amused", "analyst", "anchor", "ancient", "anger", "angle", "angry",
-  "animal", "ankle", "announce", "annual", "another", "answer", "antenna", "antique",
-  "anxiety", "any", "apart", "apology", "appear", "apple", "approve", "april",
-  "arch", "arctic", "area", "arena", "argue", "arm", "armed", "armor",
-  "army", "around", "arrange", "arrest", "arrive", "arrow", "art", "artefact",
-  "artist", "artwork", "ask", "aspect", "assault", "asset", "assist", "assume",
-  "asthma", "athlete", "atom", "attack", "attend", "attitude", "attract", "auction",
-  "audit", "august", "aunt", "author", "auto", "autumn", "average", "avocado",
-  "avoid", "awake", "aware", "away", "awesome", "awful", "awkward", "axis",
-  "baby", "bachelor", "bacon", "badge", "bag", "balance", "balcony", "ball",
-  "bamboo", "banana", "banner", "bar", "barely", "bargain", "barrel", "base",
-  "basic", "basket", "battle", "beach", "bean", "beauty", "because", "become",
-  "beef", "before", "begin", "behave", "behind", "believe", "below", "belt",
-  "bench", "benefit", "best", "betray", "better", "between", "beyond", "bicycle",
-  "bid", "bike", "bind", "biology", "bird", "birth", "bitter", "black",
-  "blade", "blame", "blanket", "blast", "bleak", "bless", "blind", "blood",
-  "blossom", "blouse", "blue", "blur", "blush", "board", "boat", "body",
-  "boil", "bomb", "bone", "bonus", "book", "boost", "border", "boring",
-  "borrow", "boss", "bottom", "bounce", "box", "boy", "bracket", "brain",
-  "brand", "brass", "brave", "bread", "breeze", "brick", "bridge", "brief",
-  "bright", "bring", "brisk", "broccoli", "broken", "bronze", "broom", "brother",
-  "brown", "brush", "bubble", "buddy", "budget", "buffalo", "build", "bulb",
-  "bulk", "bullet", "bundle", "bunker", "burden", "burger", "burst", "bus",
-  "business", "busy", "butter", "buyer", "buzz", "cabbage", "cabin", "cable",
-];
+import { generateMnemonic, validateMnemonic } from "@scure/bip39";
+import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 
+/**
+ * Generates a valid BIP39 English mnemonic.
+ *  - 12 words = 128-bit entropy
+ *  - 24 words = 256-bit entropy
+ */
 export const generateSeedPhrase = (wordCount: 12 | 24 = 12): string[] => {
-  const words: string[] = [];
-  for (let i = 0; i < wordCount; i++) {
-    const randomIndex = Math.floor(Math.random() * wordList.length);
-    words.push(wordList[randomIndex]);
-  }
-  return words;
+  const strength = wordCount === 12 ? 128 : 256;
+  return generateMnemonic(englishWordlist, strength).split(" ");
 };
 
+/**
+ * Validates a BIP39 English mnemonic, including checksum.
+ */
 export const validateSeedPhrase = (phrase: string[]): boolean => {
-  if (phrase.length !== 12 && phrase.length !== 24) return false;
-  return phrase.every(word => wordList.includes(word.toLowerCase()));
+  const normalized = phrase
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (normalized.length !== 12 && normalized.length !== 24) return false;
+  return validateMnemonic(normalized.join(" "), englishWordlist);
 };
