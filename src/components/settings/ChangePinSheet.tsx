@@ -9,7 +9,7 @@ import { Lock, Check } from "lucide-react";
 interface ChangePinSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (newPin?: string) => void;
 }
 
 type PinStep = "current" | "new" | "confirm";
@@ -70,7 +70,7 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
         
         localStorage.setItem("timetrade_pin", pin);
         handleClose();
-        onSuccess();
+        onSuccess(pin);
       } else {
         setError("PINs don't match");
         setConfirmPin("");
