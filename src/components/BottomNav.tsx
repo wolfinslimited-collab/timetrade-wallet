@@ -1,20 +1,27 @@
-import { Wallet, BarChart3, Compass, Settings } from "lucide-react";
+import { Wallet, BarChart3, Clock, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export type NavTab = "wallet" | "history" | "market" | "settings";
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
-  active?: boolean;
+  tab: NavTab;
 }
 
 const navItems: NavItem[] = [
-  { icon: Wallet, label: "Wallet", active: true },
-  { icon: BarChart3, label: "Market" },
-  { icon: Compass, label: "Explore" },
-  { icon: Settings, label: "Settings" },
+  { icon: Wallet, label: "Wallet", tab: "wallet" },
+  { icon: Clock, label: "History", tab: "history" },
+  { icon: BarChart3, label: "Market", tab: "market" },
+  { icon: Settings, label: "Settings", tab: "settings" },
 ];
 
-export const BottomNav = () => {
+interface BottomNavProps {
+  activeTab?: NavTab;
+  onTabChange?: (tab: NavTab) => void;
+}
+
+export const BottomNav = ({ activeTab = "wallet", onTabChange }: BottomNavProps) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border safe-bottom z-50">
       <div className="container max-w-md mx-auto">
@@ -22,9 +29,10 @@ export const BottomNav = () => {
           {navItems.map((item) => (
             <button
               key={item.label}
+              onClick={() => onTabChange?.(item.tab)}
               className={cn(
                 "flex flex-col items-center gap-1 px-4 py-1 transition-all duration-200",
-                item.active
+                activeTab === item.tab
                   ? "text-primary nav-active"
                   : "text-muted-foreground hover:text-foreground"
               )}
