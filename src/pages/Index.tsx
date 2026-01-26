@@ -13,6 +13,7 @@ import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { MarketPage } from "./MarketPage";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -20,6 +21,14 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAll,
+  } = useNotifications();
 
   useEffect(() => {
     // Check if wallet exists in localStorage
@@ -123,7 +132,16 @@ const Index = () => {
         </div>
 
         {/* Header */}
-        <WalletHeader userName="Alex" onSettingsClick={() => setActiveTab("settings")} />
+        <WalletHeader 
+          userName="Alex" 
+          onSettingsClick={() => setActiveTab("settings")}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onDeleteNotification={deleteNotification}
+          onClearAllNotifications={clearAll}
+        />
 
         {/* Balance */}
         <BalanceDisplay key={`balance-${refreshKey}`} balance={12160.05} changePercent={2.5} />
