@@ -9,7 +9,7 @@ import { PortfolioBreakdown } from "@/components/PortfolioBreakdown";
 import { QuickActions } from "@/components/QuickActions";
 import { WalletTabs } from "@/components/WalletTabs";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { AllNetworkBalances } from "@/components/wallet/AllNetworkBalances";
+import { TokenBalances } from "@/components/wallet/TokenBalances";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { MarketPage } from "./MarketPage";
@@ -153,8 +153,8 @@ const Index = () => {
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* All Network Balances */}
-        <AllNetworkBalances key={`networks-${refreshKey}`} />
+        {/* Token Balances for current chain */}
+        <TokenBalances key={`tokens-${refreshKey}`} />
 
         {/* Portfolio Breakdown */}
         <PortfolioBreakdown key={`breakdown-${refreshKey}`} />
