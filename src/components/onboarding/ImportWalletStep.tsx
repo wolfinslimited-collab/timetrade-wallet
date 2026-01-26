@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { ChevronLeft, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { ChevronLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { validateSeedPhrase } from "@/utils/seedPhrase";
+import { validateSeedPhrase, isValidBip39Word } from "@/utils/seedPhrase";
+import { SeedWordInput } from "./SeedWordInput";
 
 interface ImportWalletStepProps {
   onImport: (seedPhrase: string[]) => void;
@@ -13,32 +13,125 @@ interface ImportWalletStepProps {
 
 export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) => {
   const { toast } = useToast();
-  const [phraseInput, setPhraseInput] = useState("");
-  const [showPhrase, setShowPhrase] = useState(false);
   const [wordCount, setWordCount] = useState<12 | 24>(12);
+  const [words, setWords] = useState<string[]>(Array(12).fill(""));
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleInputChange = (value: string) => {
-    setPhraseInput(value);
+  // Update words array when word count changes
+  const handleWordCountChange = (count: 12 | 24) => {
+    setWordCount(count);
+    setWords(prev => {
+      if (count === 12) {
+        return prev.slice(0, 12);
+      } else {
+        return [...prev.slice(0, 12), ...Array(12).fill("")];
+      }
+    });
   };
 
-  const getWords = () => {
-    return phraseInput
+  const handleWordChange = useCallback((index: number, value: string) => {
+    setWords(prev => {
+      const newWords = [...prev];
+      newWords[index] = value;
+      return newWords;
+    });
+  }, []);
+
+  const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
+    // Handle paste of full seed phrase
+    if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
+      return; // Let the paste event handle it
+    }
+
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      const nextIndex = index + 1;
+      if (nextIndex < wordCount) {
+        const nextInput = document.querySelector(
+          `[data-word-index="${nextIndex}"]`
+        ) as HTMLInputElement;
+        nextInput?.focus();
+      }
+    }
+
+    if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      const prevIndex = index - 1;
+      if (prevIndex >= 0) {
+        const prevInput = document.querySelector(
+          `[data-word-index="${prevIndex}"]`
+        ) as HTMLInputElement;
+        prevInput?.focus();
+      }
+    }
+
+    if (e.key === "Backspace" && words[index] === "") {
+      e.preventDefault();
+      if (index > 0) {
+        const prevInput = document.querySelector(
+          `[data-word-index="${index - 1}"]`
+        ) as HTMLInputElement;
+        prevInput?.focus();
+      }
+    }
+
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      const nextIndex = index + 1;
+      if (nextIndex < wordCount) {
+        const nextInput = document.querySelector(
+          `[data-word-index="${nextIndex}"]`
+        ) as HTMLInputElement;
+        nextInput?.focus();
+      }
+    }
+  }, [wordCount, words]);
+
+  // Handle paste of full seed phrase
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const pastedText = e.clipboardData.getData("text");
+    const pastedWords = pastedText
       .toLowerCase()
       .trim()
       .split(/\s+/)
       .filter(word => word.length > 0);
-  };
 
-  const currentWordCount = getWords().length;
-  const isValidCount = currentWordCount === wordCount;
+    if (pastedWords.length >= 12) {
+      e.preventDefault();
+      const targetCount = pastedWords.length >= 24 ? 24 : 12;
+      setWordCount(targetCount);
+      setWords(pastedWords.slice(0, targetCount).concat(
+        Array(Math.max(0, targetCount - pastedWords.length)).fill("")
+      ));
+      toast({
+        title: "Seed phrase pasted",
+        description: `${Math.min(pastedWords.length, targetCount)} words detected`,
+      });
+    }
+  }, [toast]);
+
+  const filledWords = words.filter(w => w.length > 0);
+  const validWords = words.filter(w => isValidBip39Word(w));
+  const allFilled = filledWords.length === wordCount;
+  const allValid = validWords.length === wordCount;
 
   const handleImport = () => {
-    const words = getWords();
-    
-    if (words.length !== wordCount) {
+    if (!allFilled) {
       toast({
-        title: "Invalid word count",
-        description: `Please enter exactly ${wordCount} words`,
+        title: "Incomplete seed phrase",
+        description: `Please enter all ${wordCount} words`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!allValid) {
+      const invalidIndices = words
+        .map((w, i) => (!isValidBip39Word(w) ? i + 1 : null))
+        .filter(Boolean);
+      toast({
+        title: "Invalid words detected",
+        description: `Words at positions ${invalidIndices.join(", ")} are not valid BIP39 words`,
         variant: "destructive",
       });
       return;
@@ -47,7 +140,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
     if (!validateSeedPhrase(words)) {
       toast({
         title: "Invalid seed phrase",
-        description: "Seed phrase is not a valid BIP39 mnemonic. Check spelling and word order.",
+        description: "The checksum doesn't match. Please verify your words are in the correct order.",
         variant: "destructive",
       });
       return;
@@ -62,9 +155,9 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
   };
 
   return (
-    <div className="flex flex-col min-h-screen p-6">
+    <div className="flex flex-col min-h-screen p-6" onPaste={handlePaste}>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <button 
           onClick={onBack}
           className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
@@ -78,11 +171,11 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       </div>
 
       {/* Word Count Selector */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-4">
         <button
-          onClick={() => setWordCount(12)}
+          onClick={() => handleWordCountChange(12)}
           className={cn(
-            "flex-1 py-3 rounded-xl text-sm font-medium transition-all",
+            "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all",
             wordCount === 12
               ? "bg-primary text-primary-foreground"
               : "bg-card border border-border text-muted-foreground hover:border-primary/50"
@@ -91,9 +184,9 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
           12 Words
         </button>
         <button
-          onClick={() => setWordCount(24)}
+          onClick={() => handleWordCountChange(24)}
           className={cn(
-            "flex-1 py-3 rounded-xl text-sm font-medium transition-all",
+            "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all",
             wordCount === 24
               ? "bg-primary text-primary-foreground"
               : "bg-card border border-border text-muted-foreground hover:border-primary/50"
@@ -104,93 +197,64 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       </div>
 
       {/* Security Warning */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 mb-6">
-        <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-        <div className="text-sm">
-          <p className="font-medium text-destructive mb-1">Security Warning</p>
-          <p className="text-muted-foreground">
-            Never share your seed phrase with anyone. Timetrade will never ask for it outside of this import screen.
-          </p>
-        </div>
+      <div className="flex items-start gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20 mb-4">
+        <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-destructive">Security:</span> Never share your seed phrase. Timetrade will never ask for it outside this screen.
+        </p>
       </div>
 
-      {/* Seed Phrase Input */}
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs text-muted-foreground uppercase tracking-wider">
-            Secret Recovery Phrase
-          </label>
-          <button
-            onClick={() => setShowPhrase(!showPhrase)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showPhrase ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5" />
-                Hide
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5" />
-                Show
-              </>
-            )}
-          </button>
+      {/* Word Grid */}
+      <div className="flex-1 overflow-auto">
+        <div className="grid grid-cols-3 gap-2">
+          {words.map((word, index) => (
+            <div key={index} data-word-index={index}>
+              <SeedWordInput
+                index={index}
+                value={word}
+                onChange={handleWordChange}
+                onKeyDown={handleKeyDown}
+                autoFocus={index === 0}
+              />
+            </div>
+          ))}
         </div>
 
-        <div className="relative">
-          <Textarea
-            value={phraseInput}
-            onChange={(e) => handleInputChange(e.target.value)}
-            placeholder={`Enter your ${wordCount}-word seed phrase, separated by spaces...`}
-            className={cn(
-              "min-h-[160px] bg-card border-border font-mono text-sm resize-none",
-              !showPhrase && phraseInput && "text-security-disc"
-            )}
-            style={!showPhrase && phraseInput ? { 
-              WebkitTextSecurity: 'disc',
-              textSecurity: 'disc'
-            } as React.CSSProperties : undefined}
-          />
-        </div>
-
-        {/* Word Counter */}
-        <div className="flex items-center justify-between mt-3">
+        {/* Status */}
+        <div className="flex items-center justify-between mt-4 px-1">
           <span className={cn(
             "text-sm font-mono",
-            currentWordCount === 0 
+            filledWords.length === 0 
               ? "text-muted-foreground" 
-              : isValidCount 
+              : allValid 
                 ? "text-primary" 
-                : "text-destructive"
+                : "text-foreground"
           )}>
-            {currentWordCount} / {wordCount} words
+            {validWords.length} / {wordCount} valid
           </span>
-          {currentWordCount > 0 && !isValidCount && (
+          {filledWords.length > 0 && !allValid && (
             <span className="text-xs text-destructive">
-              {currentWordCount < wordCount 
-                ? `${wordCount - currentWordCount} more needed` 
-                : `${currentWordCount - wordCount} too many`}
+              {wordCount - validWords.length} invalid
             </span>
           )}
         </div>
 
         {/* Tips */}
-        <div className="mt-6 space-y-2">
+        <div className="mt-4 space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            💡 <span className="font-medium">Tip:</span> Enter words separated by spaces or paste your entire phrase at once
+            💡 Paste your entire phrase to auto-fill all words
           </p>
           <p className="text-xs text-muted-foreground">
-            🔒 Your phrase is stored locally and never leaves your device
+            ⌨️ Use Tab or Space to move between words
           </p>
         </div>
       </div>
 
       {/* Import Button */}
-      <div className="pt-6 pb-8">
+      <div className="pt-4 pb-6">
         <Button
           onClick={handleImport}
-          disabled={!isValidCount}
+          disabled={!allValid}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base disabled:opacity-50"
         >
           Import Wallet
