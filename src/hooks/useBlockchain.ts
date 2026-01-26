@@ -21,16 +21,16 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     icon: '⟠', 
     color: '#627EEA',
     decimals: 18,
-    testnetName: 'Sepolia',
+    testnetName: 'Mainnet',
   },
   { 
     id: 'polygon', 
     name: 'Polygon', 
-    symbol: 'MATIC', 
+    symbol: 'POL', 
     icon: '⬡', 
     color: '#8247E5',
     decimals: 18,
-    testnetName: 'Amoy',
+    testnetName: 'Mainnet',
   },
   { 
     id: 'bitcoin', 
@@ -39,7 +39,7 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     icon: '₿', 
     color: '#F7931A',
     decimals: 8,
-    testnetName: 'Testnet',
+    testnetName: 'Mainnet',
   },
   { 
     id: 'solana', 
@@ -48,7 +48,7 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     icon: '◎', 
     color: '#9945FF',
     decimals: 9,
-    testnetName: 'Devnet',
+    testnetName: 'Mainnet',
   },
 ];
 
@@ -133,7 +133,7 @@ async function callBlockchainFunction<T>(
 export function useWalletBalance(address: string | null, chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['walletBalance', chain, address],
-    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, true),
+    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, false),
     enabled: !!address,
     staleTime: 30000,
     refetchInterval: 60000,
@@ -145,7 +145,7 @@ export function useMultiChainBalances(address: string | null) {
   
   const queries = SUPPORTED_CHAINS.map(chain => ({
     queryKey: ['walletBalance', chain.id, address],
-    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain.id, address!, true),
+    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain.id, address!, false),
     enabled: !!address,
     staleTime: 30000,
   }));
@@ -175,7 +175,7 @@ export function useMultiChainBalances(address: string | null) {
 export function useTransactions(address: string | null, chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['transactions', chain, address],
-    queryFn: () => callBlockchainFunction<TransactionsResponse>('getTransactions', chain, address!, true),
+    queryFn: () => callBlockchainFunction<TransactionsResponse>('getTransactions', chain, address!, false),
     enabled: !!address,
     staleTime: 30000,
     refetchInterval: 60000,
@@ -185,7 +185,7 @@ export function useTransactions(address: string | null, chain: Chain = 'ethereum
 export function useGasEstimate(chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['gasEstimate', chain],
-    queryFn: () => callBlockchainFunction<GasEstimate>('estimateGas', chain, '', true),
+    queryFn: () => callBlockchainFunction<GasEstimate>('estimateGas', chain, '', false),
     staleTime: 15000,
     refetchInterval: 30000,
   });

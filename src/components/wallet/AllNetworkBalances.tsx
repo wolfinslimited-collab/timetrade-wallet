@@ -113,7 +113,7 @@ export const AllNetworkBalances = ({ className }: AllNetworkBalancesProps) => {
                   </div>
                   <div>
                     <span className="font-medium">{chainInfo.name}</span>
-                    <p className="text-xs text-muted-foreground">{chainInfo.testnetName}</p>
+                    <p className="text-xs text-muted-foreground">Loading...</p>
                   </div>
                 </div>
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />

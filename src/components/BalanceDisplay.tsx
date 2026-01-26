@@ -95,7 +95,7 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
           <span className="font-medium text-foreground">
             {nativeBalance} {chainInfo.symbol}
           </span>
-          {' '}• {chainInfo.testnetName} Testnet
+          {' '}• {chainInfo.testnetName}
         </p>
       )}
     </div>
