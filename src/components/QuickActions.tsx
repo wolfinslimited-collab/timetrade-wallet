@@ -36,19 +36,22 @@ export const QuickActions = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2 px-4 py-3">
+      <div className="flex items-center justify-center gap-4 px-4 py-4">
         {actions.map((action) => (
           <button
             key={action.label}
             onClick={() => handleAction(action.action)}
             className={cn(
-              "flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl",
-              "bg-primary/10 hover:bg-primary/15",
-              "transition-all duration-200 active:scale-95"
+              "flex flex-col items-center gap-2 p-3 rounded-xl",
+              "bg-card border border-border hover:border-primary/50",
+              "transition-all duration-200 hover:scale-105 active:scale-95",
+              "min-w-[72px]"
             )}
           >
-            <action.icon className="w-5 h-5 text-primary" />
-            <span className="text-xs font-medium text-primary">{action.label}</span>
+            <div className="p-2 rounded-full bg-primary/10">
+              <action.icon className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">{action.label}</span>
           </button>
         ))}
       </div>
