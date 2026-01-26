@@ -19,17 +19,14 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
 
   const chainInfo = getChainInfo(selectedChain);
 
-  // Get token symbols for price fetching
+  // Get token symbols for price fetching (including native + tokens like USDC)
   const tokenSymbols = balance?.tokens?.map(t => t.symbol) || [];
-  const allSymbols = [...new Set([chainInfo.symbol, ...tokenSymbols])];
+  const allSymbols = [...new Set([chainInfo.symbol, 'USDC', 'USDT', ...tokenSymbols])];
   
   // Fetch live prices
   const { data: prices, isLoading: isLoadingPrices } = useCryptoPrices(allSymbols);
 
-  // Only show for EVM chains (Ethereum and Polygon)
-  const isEVMChain = selectedChain === 'ethereum' || selectedChain === 'polygon';
-
-  if (!isConnected || !isEVMChain) {
+  if (!isConnected) {
     return null;
   }
 
@@ -49,6 +46,7 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
   }
 
   const tokens = balance?.tokens || [];
+  const tokenType = selectedChain === 'solana' ? 'SPL' : 'ERC-20';
 
   if (tokens.length === 0) {
     return (
@@ -61,10 +59,12 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
         </div>
         <div className="bg-muted/30 rounded-xl p-4 text-center">
           <p className="text-sm text-muted-foreground">
-            No ERC-20 tokens found on {chainInfo.testnetName}
+            No {tokenType} tokens found on {chainInfo.name}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-1">
-            Get testnet tokens from a faucet to see them here
+            {selectedChain === 'solana' 
+              ? 'Your SPL tokens (like USDC) will appear here'
+              : 'Your ERC-20 tokens will appear here'}
           </p>
         </div>
       </div>
