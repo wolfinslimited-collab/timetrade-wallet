@@ -4,12 +4,9 @@ import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
 import { WalletHeader } from "@/components/WalletHeader";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
-import { PortfolioChart } from "@/components/PortfolioChart";
-import { PortfolioBreakdown } from "@/components/PortfolioBreakdown";
 import { QuickActions } from "@/components/QuickActions";
-import { WalletTabs } from "@/components/WalletTabs";
+import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { AllNetworkBalances } from "@/components/wallet/AllNetworkBalances";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { MarketPage } from "./MarketPage";
@@ -113,28 +110,13 @@ const Index = () => {
     );
   }
 
-  // Main wallet view
+  // Main wallet view - Trust Wallet style
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative pb-20">
       <PullToRefresh onRefresh={handleRefresh}>
-        {/* Status bar simulation */}
-        <div className="flex items-center justify-between px-6 py-2 text-xs text-muted-foreground">
-          <span className="font-medium">9:41</span>
-          <div className="flex items-center gap-1">
-            <div className="flex gap-0.5">
-              <div className="w-1 h-2 bg-foreground rounded-sm" />
-              <div className="w-1 h-2.5 bg-foreground rounded-sm" />
-              <div className="w-1 h-3 bg-foreground rounded-sm" />
-              <div className="w-1 h-3.5 bg-foreground rounded-sm" />
-            </div>
-            <span className="ml-1">📶</span>
-            <span>🔋</span>
-          </div>
-        </div>
-
         {/* Header */}
         <WalletHeader 
-          userName="Alex" 
+          userName="Main Wallet" 
           onSettingsClick={() => setActiveTab("settings")}
           notifications={notifications}
           unreadCount={unreadCount}
@@ -144,23 +126,14 @@ const Index = () => {
           onClearAllNotifications={clearAll}
         />
 
-        {/* Balance */}
-        <BalanceDisplay key={`balance-${refreshKey}`} balance={0} changePercent={0} />
+        {/* Balance Display */}
+        <BalanceDisplay key={`balance-${refreshKey}`} />
 
-        {/* Portfolio Chart */}
-        <PortfolioChart key={`chart-${refreshKey}`} />
-
-        {/* Quick Actions */}
+        {/* Quick Actions - Trust Wallet style buttons */}
         <QuickActions />
 
-        {/* All Network Balances */}
-        <AllNetworkBalances key={`networks-${refreshKey}`} />
-
-        {/* Portfolio Breakdown */}
-        <PortfolioBreakdown key={`breakdown-${refreshKey}`} />
-
-        {/* Wallet Tabs & List */}
-        <WalletTabs />
+        {/* Unified Token List - all assets from all chains */}
+        <UnifiedTokenList key={`tokens-${refreshKey}`} />
       </PullToRefresh>
 
       {/* Bottom Navigation */}
