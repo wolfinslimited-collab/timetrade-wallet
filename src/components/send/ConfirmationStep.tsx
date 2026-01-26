@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { ChevronLeft, AlertTriangle, Shield, Zap, Wallet, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
@@ -11,6 +11,8 @@ import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { PrivateKeyModal } from "./PrivateKeyModal";
 import { PinUnlockModal } from "./PinUnlockModal";
 import { toast } from "@/hooks/use-toast";
+import { LiveFeeData, getFeeForSpeed } from "@/hooks/useLiveFeeEstimation";
+import { ethers } from "ethers";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -34,6 +36,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const [showPrivateKeyModal, setShowPrivateKeyModal] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [liveFeeData, setLiveFeeData] = useState<LiveFeeData | null>(null);
 
   const chainInfo = getChainInfo(selectedChain);
   const { signTransaction, isSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
@@ -43,7 +46,31 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const hasStoredKeyForAddress = storedKeyAddress ? hasStoredKey(storedKeyAddress, selectedChain) : false;
   const storedKeyInfo = storedKeyAddress ? getStoredKeyInfo(storedKeyAddress, selectedChain) : null;
 
+  // Handle fee data updates from FeeEstimator
+  const handleFeeDataUpdate = useCallback((feeData: LiveFeeData | null) => {
+    setLiveFeeData(feeData);
+  }, []);
+
+  // Calculate fee details using live data or fallback
   const feeDetails = useMemo(() => {
+    if (liveFeeData) {
+      // Use live RPC fee data
+      const tier = liveFeeData[gasSpeed];
+      const effectiveGas = liveFeeData.isEIP1559 ? tier.maxFee : tier.gasPrice;
+      const eth = (effectiveGas * transaction.gasEstimate) / 1e9;
+      const usd = eth * transaction.token.price;
+      return { 
+        gwei: tier.gasPrice, 
+        maxFee: tier.maxFee,
+        priorityFee: tier.priorityFee,
+        eth, 
+        usd, 
+        gasPriceGwei: String(tier.gasPrice),
+        isEIP1559: liveFeeData.isEIP1559,
+      };
+    }
+    
+    // Fallback to Tatum API data
     const gasMap: Record<GasSpeed, string | undefined> = {
       slow: gasEstimate?.slow?.gasPrice,
       standard: gasEstimate?.medium?.gasPrice,
@@ -56,8 +83,16 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     const gwei = baseGwei * multiplier;
     const eth = (gwei * transaction.gasEstimate) / 1e9;
     const usd = eth * transaction.token.price;
-    return { gwei, eth, usd, gasPriceGwei: String(gwei) };
-  }, [gasSpeed, transaction.gasEstimate, transaction.token.price, gasEstimate]);
+    return { 
+      gwei, 
+      maxFee: gwei,
+      priorityFee: gwei * 0.1,
+      eth, 
+      usd, 
+      gasPriceGwei: String(gwei),
+      isEIP1559: false,
+    };
+  }, [gasSpeed, transaction.gasEstimate, transaction.token.price, gasEstimate, liveFeeData]);
 
   const amountNum = parseFloat(transaction.amount);
   const amountUsd = amountNum * transaction.token.price;
@@ -136,13 +171,20 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         return;
       }
 
-      // Sign the transaction
-      const { signedTx } = await signTransaction(privateKey, {
+      // Sign the transaction with live fee data
+      const txParams = {
         to: transaction.recipient,
         value: transaction.amount,
         gasLimit: BigInt(transaction.gasEstimate),
-        gasPrice: feeDetails.gasPriceGwei,
-      });
+        ...(feeDetails.isEIP1559 ? {
+          maxFeePerGas: feeDetails.maxFee.toFixed(9),
+          maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
+        } : {
+          gasPrice: feeDetails.gasPriceGwei,
+        }),
+      };
+      
+      const { signedTx } = await signTransaction(privateKey, txParams);
 
       setShowPinModal(false);
       await onConfirm(signedTx);
@@ -166,12 +208,20 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const handleSignAndSend = async (privateKey: string, saveKey: boolean) => {
     setIsProcessing(true);
     try {
-      const { signedTx } = await signTransaction(privateKey, {
+      // Build transaction params with live fee data
+      const txParams = {
         to: transaction.recipient,
         value: transaction.amount,
         gasLimit: BigInt(transaction.gasEstimate),
-        gasPrice: feeDetails.gasPriceGwei,
-      });
+        ...(feeDetails.isEIP1559 ? {
+          maxFeePerGas: feeDetails.maxFee.toFixed(9),
+          maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
+        } : {
+          gasPrice: feeDetails.gasPriceGwei,
+        }),
+      };
+      
+      const { signedTx } = await signTransaction(privateKey, txParams);
 
       // Save the key if requested
       if (saveKey && storedKeyAddress) {
@@ -257,6 +307,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
           tokenPrice={transaction.token.price}
           selectedSpeed={gasSpeed}
           onSpeedChange={setGasSpeed}
+          onFeeDataUpdate={handleFeeDataUpdate}
           disabled={isProcessing}
         />
       </div>
