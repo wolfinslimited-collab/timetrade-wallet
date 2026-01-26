@@ -40,7 +40,7 @@ async function fetchPrices(symbols: string[]): Promise<PriceData[]> {
   return response.data || [];
 }
 
-export function useCryptoPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'USDC', 'USDT', 'LINK']) {
+export function useCryptoPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX', 'USDC', 'USDT', 'LINK']) {
   return useQuery({
     queryKey: ['cryptoPrices', symbols.join(',')],
     queryFn: () => fetchPrices(symbols),
