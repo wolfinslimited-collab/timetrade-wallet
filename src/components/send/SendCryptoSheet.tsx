@@ -5,6 +5,9 @@ import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionSuccessStep } from "./TransactionSuccessStep";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
+import { toast } from "@/hooks/use-toast";
 
 export type SendStep = "address" | "amount" | "confirm" | "success";
 
@@ -23,6 +26,7 @@ export interface TransactionData {
   gasEstimate: number;
   gasFee: number;
   txHash?: string;
+  explorerUrl?: string;
 }
 
 interface SendCryptoSheetProps {
@@ -39,6 +43,9 @@ const defaultToken: TokenInfo = {
 };
 
 export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) => {
+  const { selectedChain, isTestnet } = useBlockchainContext();
+  const broadcastMutation = useBroadcastTransaction();
+  
   const [step, setStep] = useState<SendStep>("address");
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
@@ -82,15 +89,52 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
     setStep("confirm");
   };
 
-  const handleConfirm = async () => {
-    // Simulate transaction
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    setTransaction((prev) => ({
-      ...prev,
-      txHash: "0x" + Math.random().toString(16).slice(2, 66),
-    }));
-    setStep("success");
+  const handleConfirm = async (signedTransaction?: string) => {
+    try {
+      if (signedTransaction) {
+        // Broadcast real transaction
+        const result = await broadcastMutation.mutateAsync({
+          chain: selectedChain,
+          signedTransaction,
+          testnet: isTestnet,
+        });
+
+        setTransaction((prev) => ({
+          ...prev,
+          txHash: result.txHash,
+          explorerUrl: result.explorerUrl,
+        }));
+
+        toast({
+          title: "Transaction Sent!",
+          description: `Your transaction has been broadcast to the ${selectedChain} network.`,
+        });
+      } else {
+        // Fallback: simulate transaction (for demo/testing without signed tx)
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        
+        setTransaction((prev) => ({
+          ...prev,
+          txHash: "0x" + Math.random().toString(16).slice(2, 66),
+          explorerUrl: `https://etherscan.io/tx/0x${Math.random().toString(16).slice(2, 66)}`,
+        }));
+
+        toast({
+          title: "Transaction Simulated",
+          description: "This is a simulated transaction. Connect a wallet to broadcast real transactions.",
+          variant: "default",
+        });
+      }
+      
+      setStep("success");
+    } catch (error) {
+      console.error("Transaction broadcast failed:", error);
+      toast({
+        title: "Transaction Failed",
+        description: error instanceof Error ? error.message : "Failed to broadcast transaction",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBack = () => {

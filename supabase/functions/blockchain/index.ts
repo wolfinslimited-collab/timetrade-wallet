@@ -10,12 +10,20 @@ const TATUM_BASE_URL = 'https://api.tatum.io/v3';
 
 type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon';
 
+type ActionType = 'getBalance' | 'getTransactions' | 'estimateGas' | 'getPrices' | 'broadcastTransaction';
+
 interface WalletBalanceRequest {
-  action: 'getBalance' | 'getTransactions' | 'estimateGas' | 'getPrices';
+  action: ActionType;
   chain: Chain;
   address: string;
   testnet?: boolean;
   symbols?: string[]; // For getPrices action
+  // For broadcastTransaction action
+  signedTransaction?: string;
+  to?: string;
+  amount?: string;
+  gasPrice?: string;
+  gasLimit?: string;
 }
 
 interface ChainConfig {
@@ -437,6 +445,77 @@ async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC']): Pr
   }
 }
 
+// Broadcast a signed transaction to the blockchain
+async function broadcastTransaction(
+  chain: Chain, 
+  signedTransaction: string, 
+  testnet: boolean = false
+): Promise<{ txHash: string; explorerUrl: string }> {
+  const config = chainConfigs[chain];
+  
+  if (!signedTransaction) {
+    throw new Error('Signed transaction hex is required');
+  }
+
+  console.log(`Broadcasting ${chain} transaction (testnet: ${testnet})`);
+
+  let endpoint: string;
+  let body: object;
+
+  switch (chain) {
+    case 'ethereum':
+      endpoint = `/ethereum/broadcast${testnet ? '?testnet=true' : ''}`;
+      body = { txData: signedTransaction };
+      break;
+    case 'polygon':
+      endpoint = `/polygon/broadcast${testnet ? '?testnet=true' : ''}`;
+      body = { txData: signedTransaction };
+      break;
+    case 'bitcoin':
+      endpoint = `/bitcoin/broadcast${testnet ? '?testnet=true' : ''}`;
+      body = { txData: signedTransaction };
+      break;
+    case 'solana':
+      endpoint = `/solana/broadcast`;
+      body = { txData: signedTransaction };
+      break;
+    default:
+      throw new Error(`Unsupported chain for broadcast: ${chain}`);
+  }
+
+  const result = await tatumRequest(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+
+  console.log(`${chain} broadcast response:`, JSON.stringify(result));
+
+  const txHash = result.txId || result.txHash || result.signatureId || result;
+  
+  if (!txHash) {
+    throw new Error('Failed to get transaction hash from broadcast response');
+  }
+
+  const explorerBase = config.explorerUrl(testnet);
+  let explorerUrl: string;
+
+  switch (chain) {
+    case 'bitcoin':
+      explorerUrl = `${explorerBase}/tx/${txHash}`;
+      break;
+    case 'solana':
+      explorerUrl = `${explorerBase}/tx/${txHash}${testnet ? '?cluster=devnet' : ''}`;
+      break;
+    default:
+      explorerUrl = `${explorerBase}/tx/${txHash}`;
+  }
+
+  return {
+    txHash: typeof txHash === 'string' ? txHash : JSON.stringify(txHash),
+    explorerUrl,
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -445,7 +524,7 @@ serve(async (req) => {
 
   try {
     const body: WalletBalanceRequest = await req.json();
-    const { action, chain, address, testnet = true, symbols } = body;
+    const { action, chain, address, testnet = true, symbols, signedTransaction } = body;
 
     console.log(`Processing ${action} for ${chain} address: ${address}, testnet: ${testnet}`);
 
@@ -492,6 +571,20 @@ serve(async (req) => {
       case 'getPrices':
         // CoinGecko doesn't require API key for basic usage
         result = await getPrices(symbols || ['ETH', 'BTC', 'SOL', 'MATIC']);
+        break;
+
+      case 'broadcastTransaction':
+        if (!TATUM_API_KEY) {
+          throw new Error('TATUM_API_KEY is not configured');
+        }
+        if (!signedTransaction) {
+          throw new Error('Signed transaction is required for broadcastTransaction');
+        }
+        if (!chainConfigs[chain]) {
+          throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
+        }
+        // For mainnet transactions, testnet defaults to false
+        result = await broadcastTransaction(chain, signedTransaction, testnet);
         break;
 
       default:

@@ -29,16 +29,17 @@ export const TransactionSuccessStep = ({ transaction, onClose }: TransactionSucc
   };
 
   const handleViewExplorer = () => {
-    // In production, this would open the actual block explorer
-    window.open(`https://etherscan.io/tx/${transaction.txHash}`, "_blank");
+    const explorerUrl = transaction.explorerUrl || `https://etherscan.io/tx/${transaction.txHash}`;
+    window.open(explorerUrl, "_blank");
   };
 
   const handleShare = async () => {
+    const explorerUrl = transaction.explorerUrl || `https://etherscan.io/tx/${transaction.txHash}`;
     if (navigator.share) {
       await navigator.share({
         title: "Transaction Sent",
         text: `Sent ${amountNum} ${transaction.token.symbol} via Timetrade`,
-        url: `https://etherscan.io/tx/${transaction.txHash}`,
+        url: explorerUrl,
       });
     } else {
       handleCopyTxHash();
