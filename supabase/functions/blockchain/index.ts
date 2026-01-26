@@ -85,6 +85,15 @@ const chainConfigs: Record<Chain, ChainConfig> = {
   },
 };
 
+// Known SPL tokens on Solana (mainnet mint addresses)
+const KNOWN_SPL_TOKENS: Record<string, { name: string; symbol: string; decimals: number; logo?: string }> = {
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
+  'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'WSOL', decimals: 9, logo: '◎' },
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { name: 'Bonk', symbol: 'BONK', decimals: 5, logo: '🐕' },
+  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': { name: 'Jupiter', symbol: 'JUP', decimals: 6, logo: '🪐' },
+};
+
 async function tatumRequest(endpoint: string, options: RequestInit = {}) {
   const url = `${TATUM_BASE_URL}${endpoint}`;
   console.log(`Tatum request: ${url}`);
@@ -180,14 +189,81 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
   }
 }
 
+// Fetch SPL tokens for Solana addresses
+async function getSPLTokens(address: string): Promise<Array<{
+  symbol: string;
+  name: string;
+  balance: string;
+  decimals: number;
+  contractAddress: string;
+  logo?: string;
+}>> {
+  try {
+    // Use Tatum's data API for Solana tokens
+    const endpoint = `/data/tokens?chain=solana&addresses=${address}&tokenTypes=fungible`;
+    
+    console.log(`Fetching SPL tokens for solana: ${endpoint}`);
+    const tokenData = await tatumRequest(endpoint);
+    console.log(`solana tokens response:`, JSON.stringify(tokenData));
+
+    if (!Array.isArray(tokenData)) {
+      console.log('SPL token response is not an array, returning empty');
+      return [];
+    }
+
+    const tokens = tokenData
+      .filter((token: { balance?: string }) => token.balance && token.balance !== '0')
+      .map((token: { 
+        tokenAddress?: string; 
+        balance?: string; 
+        decimals?: number;
+        name?: string;
+        symbol?: string;
+      }) => {
+        const knownToken = KNOWN_SPL_TOKENS[token.tokenAddress || ''];
+        return {
+          symbol: knownToken?.symbol || token.symbol || 'UNKNOWN',
+          name: knownToken?.name || token.name || 'Unknown Token',
+          balance: token.balance || '0',
+          decimals: knownToken?.decimals || token.decimals || 9,
+          contractAddress: token.tokenAddress || '',
+          logo: knownToken?.logo,
+        };
+      });
+
+    return tokens;
+  } catch (error) {
+    console.error(`Error fetching Solana SPL tokens:`, error);
+    // Return empty array on error - don't fail the whole balance request
+    return [];
+  }
+}
+
+// Unified token fetching function
+async function getTokens(chain: Chain, address: string, testnet: boolean): Promise<Array<{
+  symbol: string;
+  name: string;
+  balance: string;
+  decimals: number;
+  contractAddress: string;
+  logo?: string;
+}>> {
+  if (chain === 'solana') {
+    return getSPLTokens(address);
+  } else if (chain === 'ethereum' || chain === 'polygon') {
+    return getERC20Tokens(chain, address, testnet);
+  }
+  return [];
+}
+
 async function getBalance(chain: Chain, address: string, testnet: boolean = true) {
   const config = chainConfigs[chain];
   
   try {
-    // Fetch native balance and tokens in parallel for EVM chains
+    // Fetch native balance and tokens in parallel
     const [balanceData, tokens] = await Promise.all([
       tatumRequest(config.balanceEndpoint(address, testnet)),
-      getERC20Tokens(chain, address, testnet),
+      getTokens(chain, address, testnet),
     ]);
     
     console.log(`${chain} balance response:`, JSON.stringify(balanceData));
