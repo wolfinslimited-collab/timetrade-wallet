@@ -251,15 +251,26 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   }, [balanceQuery.data, pricesQuery.data]);
 
   const connectWallet = useCallback((address: string) => {
-    setWalletAddress(address);
-    localStorage.setItem('timetrade_wallet_address', address);
-  }, []);
+    const trimmed = address.trim();
+    setWalletAddress(trimmed);
+    localStorage.setItem('timetrade_wallet_address', trimmed);
+
+    // Ensure multi-chain views (like UnifiedTokenList) always have the right address keys.
+    // This is especially important for manual “Connect Wallet” flows (no mnemonic).
+    if (selectedChain === 'solana') {
+      localStorage.setItem('timetrade_wallet_address_solana', trimmed);
+    } else if (selectedChain === 'ethereum' || selectedChain === 'polygon') {
+      localStorage.setItem('timetrade_wallet_address_evm', trimmed);
+    }
+  }, [selectedChain]);
 
   const disconnectWallet = useCallback(() => {
     setWalletAddress(null);
     setAllDerivedAccounts({ evm: [], solana: [] });
     setActiveAccountIndex(0);
     localStorage.removeItem('timetrade_wallet_address');
+    localStorage.removeItem('timetrade_wallet_address_evm');
+    localStorage.removeItem('timetrade_wallet_address_solana');
     localStorage.removeItem('timetrade_active_account_index');
   }, []);
 
