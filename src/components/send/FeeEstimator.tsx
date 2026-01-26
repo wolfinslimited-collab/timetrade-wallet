@@ -1,15 +1,17 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Fuel, Clock, TrendingUp, TrendingDown, Minus, Info, RefreshCw, Zap } from "lucide-react";
+import { Fuel, Clock, TrendingUp, TrendingDown, Minus, Info, RefreshCw, Zap, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { getChainInfo } from "@/hooks/useBlockchain";
 
 export type GasSpeed = "slow" | "standard" | "fast" | "instant";
 
 interface GasOption {
   label: string;
   icon: React.ElementType;
-  time: string;
-  multiplier: number;
+  apiKey: "slow" | "medium" | "fast";
+  fallbackMultiplier: number;
   priority: string;
 }
 
@@ -17,38 +19,32 @@ export const gasOptions: Record<GasSpeed, GasOption> = {
   slow: { 
     label: "Eco", 
     icon: TrendingDown, 
-    time: "~10 min", 
-    multiplier: 0.7,
+    apiKey: "slow",
+    fallbackMultiplier: 0.7,
     priority: "Low priority"
   },
   standard: { 
     label: "Standard", 
     icon: Minus, 
-    time: "~3 min", 
-    multiplier: 1,
+    apiKey: "medium",
+    fallbackMultiplier: 1,
     priority: "Market rate"
   },
   fast: { 
     label: "Fast", 
     icon: TrendingUp, 
-    time: "~30 sec", 
-    multiplier: 1.4,
+    apiKey: "fast",
+    fallbackMultiplier: 1.4,
     priority: "High priority"
   },
   instant: { 
     label: "Instant", 
     icon: Zap, 
-    time: "~10 sec", 
-    multiplier: 2,
+    apiKey: "fast",
+    fallbackMultiplier: 2,
     priority: "Maximum priority"
   },
 };
-
-interface NetworkStatus {
-  congestion: "low" | "medium" | "high";
-  baseFee: number; // in gwei
-  lastUpdated: Date;
-}
 
 interface FeeEstimatorProps {
   baseGasLimit: number;
@@ -59,28 +55,9 @@ interface FeeEstimatorProps {
   disabled?: boolean;
 }
 
-// Simulate network status updates
-const generateNetworkStatus = (): NetworkStatus => {
-  const congestionLevel = Math.random();
-  let congestion: "low" | "medium" | "high";
-  let baseFee: number;
-  
-  if (congestionLevel < 0.4) {
-    congestion = "low";
-    baseFee = 15 + Math.random() * 10;
-  } else if (congestionLevel < 0.75) {
-    congestion = "medium";
-    baseFee = 30 + Math.random() * 20;
-  } else {
-    congestion = "high";
-    baseFee = 60 + Math.random() * 40;
-  }
-  
-  return {
-    congestion,
-    baseFee,
-    lastUpdated: new Date(),
-  };
+const formatTime = (seconds: number): string => {
+  if (seconds < 60) return `~${seconds} sec`;
+  return `~${Math.round(seconds / 60)} min`;
 };
 
 export const FeeEstimator = ({
@@ -91,38 +68,57 @@ export const FeeEstimator = ({
   onSpeedChange,
   disabled = false,
 }: FeeEstimatorProps) => {
-  const [networkStatus, setNetworkStatus] = useState<NetworkStatus>(generateNetworkStatus);
+  const { gasEstimate, isLoadingGas, gasError, selectedChain, refreshAll } = useBlockchainContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  // Auto-refresh network status
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNetworkStatus(generateNetworkStatus());
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
+  const chainInfo = getChainInfo(selectedChain);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setNetworkStatus(generateNetworkStatus());
+    refreshAll();
+    await new Promise((r) => setTimeout(r, 800));
     setIsRefreshing(false);
   };
 
+  // Determine network congestion based on gas prices
+  const networkCongestion = useMemo(() => {
+    if (!gasEstimate) return "medium";
+    const mediumGas = parseFloat(gasEstimate.medium.gasPrice || "20");
+    if (mediumGas < 15) return "low";
+    if (mediumGas < 50) return "medium";
+    return "high";
+  }, [gasEstimate]);
+
   const feeCalculations = useMemo(() => {
-    const baseGwei = networkStatus.baseFee;
-    const results: Record<GasSpeed, { gwei: number; eth: number; usd: number }> = {} as any;
+    const results: Record<GasSpeed, { gwei: number; eth: number; usd: number; time: string }> = {} as any;
     
+    // Use real gas data if available, otherwise use fallback
+    const slowGas = gasEstimate?.slow?.gasPrice ? parseFloat(gasEstimate.slow.gasPrice) : 10;
+    const mediumGas = gasEstimate?.medium?.gasPrice ? parseFloat(gasEstimate.medium.gasPrice) : 20;
+    const fastGas = gasEstimate?.fast?.gasPrice ? parseFloat(gasEstimate.fast.gasPrice) : 30;
+
+    const slowTime = gasEstimate?.slow?.estimatedTime || 300;
+    const mediumTime = gasEstimate?.medium?.estimatedTime || 60;
+    const fastTime = gasEstimate?.fast?.estimatedTime || 15;
+
+    // Map speeds to API data
+    const gasMap: Record<GasSpeed, { gwei: number; time: number }> = {
+      slow: { gwei: slowGas, time: slowTime },
+      standard: { gwei: mediumGas, time: mediumTime },
+      fast: { gwei: fastGas, time: fastTime },
+      instant: { gwei: fastGas * 1.5, time: Math.max(5, fastTime / 2) },
+    };
+
     (Object.keys(gasOptions) as GasSpeed[]).forEach((speed) => {
-      const gwei = baseGwei * gasOptions[speed].multiplier;
+      const { gwei, time } = gasMap[speed];
       const eth = (gwei * baseGasLimit) / 1e9;
       const usd = eth * tokenPrice;
-      results[speed] = { gwei, eth, usd };
+      results[speed] = { gwei, eth, usd, time: formatTime(time) };
     });
     
     return results;
-  }, [networkStatus.baseFee, baseGasLimit, tokenPrice]);
+  }, [gasEstimate, baseGasLimit, tokenPrice]);
 
   const selectedFee = feeCalculations[selectedSpeed];
   const congestionColors = {
@@ -131,6 +127,8 @@ export const FeeEstimator = ({
     high: "text-destructive",
   };
 
+  const isLiveData = !!gasEstimate && !gasError;
+
   return (
     <div className="space-y-3">
       {/* Header with Network Status */}
@@ -138,6 +136,11 @@ export const FeeEstimator = ({
         <div className="flex items-center gap-2">
           <Fuel className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Network Fee</span>
+          {isLiveData && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-medium">
+              LIVE
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
@@ -146,24 +149,32 @@ export const FeeEstimator = ({
               transition={{ repeat: Infinity, duration: 2 }}
               className={cn(
                 "w-2 h-2 rounded-full",
-                networkStatus.congestion === "low" && "bg-emerald-500",
-                networkStatus.congestion === "medium" && "bg-amber-500",
-                networkStatus.congestion === "high" && "bg-destructive"
+                networkCongestion === "low" && "bg-emerald-500",
+                networkCongestion === "medium" && "bg-amber-500",
+                networkCongestion === "high" && "bg-destructive"
               )}
             />
-            <span className={cn("text-xs capitalize", congestionColors[networkStatus.congestion])}>
-              {networkStatus.congestion}
+            <span className={cn("text-xs capitalize", congestionColors[networkCongestion])}>
+              {networkCongestion}
             </span>
           </div>
           <button
             onClick={handleRefresh}
-            disabled={disabled || isRefreshing}
+            disabled={disabled || isRefreshing || isLoadingGas}
             className="p-1 rounded-full hover:bg-secondary transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", (isRefreshing || isLoadingGas) && "animate-spin")} />
           </button>
         </div>
       </div>
+
+      {/* Error State */}
+      {gasError && (
+        <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <AlertCircle className="w-4 h-4 text-amber-500" />
+          <span className="text-xs text-amber-500">Using estimated fees (live data unavailable)</span>
+        </div>
+      )}
 
       {/* Speed Selector Grid */}
       <div className="grid grid-cols-4 gap-2">
@@ -203,7 +214,7 @@ export const FeeEstimator = ({
                 </p>
                 <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5 mt-0.5">
                   <Clock className="w-2.5 h-2.5" />
-                  {option.time}
+                  {fee.time}
                 </p>
               </div>
             </motion.button>
@@ -230,7 +241,7 @@ export const FeeEstimator = ({
             </div>
           </div>
           <div className="text-right">
-            <p className="font-semibold">{selectedFee.eth.toFixed(6)} ETH</p>
+            <p className="font-semibold">{selectedFee.eth.toFixed(6)} {chainInfo.symbol}</p>
             <p className="text-xs text-muted-foreground">
               ≈ ${selectedFee.usd.toFixed(2)}
             </p>
@@ -253,7 +264,7 @@ export const FeeEstimator = ({
                       <Info className="w-3 h-3" />
                       Gas Price
                     </span>
-                    <span className="font-mono">{selectedFee.gwei.toFixed(2)} Gwei</span>
+                    <span className="font-mono">{selectedFee.gwei.toFixed(2)} {gasEstimate?.unit || 'Gwei'}</span>
                   </div>
 
                   {/* Gas Limit */}
@@ -265,13 +276,13 @@ export const FeeEstimator = ({
                     <span className="font-mono">{baseGasLimit.toLocaleString()}</span>
                   </div>
 
-                  {/* Base Fee */}
+                  {/* Network */}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Info className="w-3 h-3" />
-                      Base Fee
+                      Network
                     </span>
-                    <span className="font-mono">{networkStatus.baseFee.toFixed(2)} Gwei</span>
+                    <span className="font-mono">{chainInfo.name} {chainInfo.testnetName}</span>
                   </div>
 
                   {/* Max Fee */}
@@ -280,7 +291,7 @@ export const FeeEstimator = ({
                       <Info className="w-3 h-3" />
                       Max Fee
                     </span>
-                    <span className="font-mono">{(selectedFee.gwei * 1.2).toFixed(2)} Gwei</span>
+                    <span className="font-mono">{(selectedFee.gwei * 1.2).toFixed(2)} {gasEstimate?.unit || 'Gwei'}</span>
                   </div>
                 </div>
 
@@ -311,7 +322,7 @@ export const FeeEstimator = ({
 
       {/* Network Info */}
       <p className="text-[10px] text-center text-muted-foreground">
-        Gas prices update every 15 seconds • Last updated {networkStatus.lastUpdated.toLocaleTimeString()}
+        {isLiveData ? "Live gas prices from blockchain" : "Estimated gas prices"} • {chainInfo.name} {chainInfo.testnetName}
       </p>
     </div>
   );
@@ -324,7 +335,7 @@ export const calculateFee = (
   speed: GasSpeed,
   tokenPrice: number
 ) => {
-  const gwei = baseFeeGwei * gasOptions[speed].multiplier;
+  const gwei = baseFeeGwei * gasOptions[speed].fallbackMultiplier;
   const eth = (gwei * baseGasLimit) / 1e9;
   const usd = eth * tokenPrice;
   return { gwei, eth, usd };
