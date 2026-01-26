@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Wallet, ExternalLink, Copy, Check, AlertCircle, ChevronRight } from "lucide-react";
+import { Wallet, ExternalLink, Copy, Check, AlertCircle, ChevronRight, Link2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { useToast } from "@/hooks/use-toast";
 import { SUPPORTED_CHAINS, getChainInfo } from "@/hooks/useBlockchain";
 import { ChainSelectorSheet } from "./ChainSelectorSheet";
@@ -32,6 +33,11 @@ export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetPro
     selectedChain,
     balance,
   } = useBlockchainContext();
+  const {
+    isWalletConnectConnected,
+    wcAddress,
+    openWalletConnectModal,
+  } = useWalletConnect();
   const { toast } = useToast();
 
   const chainInfo = getChainInfo(selectedChain);
@@ -215,6 +221,49 @@ export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetPro
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
               >
+                {/* WalletConnect Option for EVM chains */}
+                {(selectedChain === 'ethereum' || selectedChain === 'polygon') && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => {
+                        openWalletConnectModal();
+                      }}
+                      className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Link2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-medium">Connect with WalletConnect</div>
+                        <div className="text-xs text-muted-foreground">
+                          MetaMask, Trust Wallet, Rainbow, and more
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </button>
+
+                    {isWalletConnectConnected && wcAddress && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-green-500">
+                          WalletConnect active: {wcAddress.slice(0, 8)}...{wcAddress.slice(-6)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or enter address manually
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Input
                     placeholder={selectedChain === 'ethereum' || selectedChain === 'polygon' ? '0x...' : 'Enter address...'}

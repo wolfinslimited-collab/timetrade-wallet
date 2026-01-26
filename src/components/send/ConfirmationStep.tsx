@@ -1,22 +1,30 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, AlertTriangle, Shield, Zap } from "lucide-react";
+import { ChevronLeft, AlertTriangle, Shield, Zap, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo } from "@/hooks/useBlockchain";
 import { useTransactionSigning, isEvmChain } from "@/hooks/useTransactionSigning";
+import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { PrivateKeyModal } from "./PrivateKeyModal";
 import { toast } from "@/hooks/use-toast";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
-  onConfirm: (signedTransaction?: string) => Promise<void>;
+  onConfirm: (signedTransaction?: string, txHash?: string) => Promise<void>;
   onBack: () => void;
 }
 
 export const ConfirmationStep = ({ transaction, onConfirm, onBack }: ConfirmationStepProps) => {
   const { gasEstimate, selectedChain, isTestnet } = useBlockchainContext();
+  const { 
+    isWalletConnectConnected, 
+    wcAddress, 
+    openWalletConnectModal,
+    signTransactionWithWalletConnect,
+    isSigningWithWC 
+  } = useWalletConnect();
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPrivateKeyModal, setShowPrivateKeyModal] = useState(false);
@@ -51,8 +59,40 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     return `${addr.slice(0, 10)}...${addr.slice(-8)}`;
   };
 
+  const handleWalletConnectSign = async () => {
+    setIsProcessing(true);
+    try {
+      const result = await signTransactionWithWalletConnect({
+        to: transaction.recipient,
+        value: transaction.amount,
+        gasLimit: BigInt(transaction.gasEstimate),
+        gasPrice: feeDetails.gasPriceGwei,
+      });
+
+      toast({
+        title: "Transaction Sent",
+        description: "Your transaction has been sent via WalletConnect.",
+      });
+
+      // Pass txHash directly since WalletConnect sends the transaction
+      await onConfirm(undefined, result.txHash);
+    } catch (error) {
+      console.error('WalletConnect signing failed:', error);
+      toast({
+        title: "Transaction Failed",
+        description: error instanceof Error ? error.message : "Failed to send transaction",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleConfirmClick = () => {
-    if (isSigningAvailable) {
+    if (isWalletConnectConnected && isEvmChain(selectedChain)) {
+      // Use WalletConnect if connected
+      handleWalletConnectSign();
+    } else if (isSigningAvailable) {
       // Open private key modal for EVM chains
       setShowPrivateKeyModal(true);
     } else {
@@ -207,17 +247,52 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         </p>
       </div>
 
+      {/* WalletConnect Status */}
+      {isEvmChain(selectedChain) && (
+        <div className="mt-4">
+          {isWalletConnectConnected ? (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+              <Wallet className="w-5 h-5 text-green-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-500">WalletConnect Active</p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {wcAddress?.slice(0, 10)}...{wcAddress?.slice(-8)}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={openWalletConnectModal}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors border border-border"
+            >
+              <Wallet className="w-5 h-5 text-primary" />
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium">Connect with WalletConnect</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign with MetaMask, Trust Wallet, and more
+                </p>
+              </div>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Confirm Button */}
       <div className="mt-auto pt-4">
         <Button
           onClick={handleConfirmClick}
-          disabled={isProcessing}
+          disabled={isProcessing || isSigningWithWC}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
         >
-          {isProcessing ? (
+          {isProcessing || isSigningWithWC ? (
             <>
               <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
-              Processing...
+              {isSigningWithWC ? "Approve in Wallet..." : "Processing..."}
+            </>
+          ) : isWalletConnectConnected && isEvmChain(selectedChain) ? (
+            <>
+              <Wallet className="w-5 h-5 mr-2" />
+              Sign with Wallet
             </>
           ) : isSigningAvailable ? (
             "Sign & Send"
@@ -225,9 +300,14 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
             "Confirm & Send"
           )}
         </Button>
-        {!isSigningAvailable && (
+        {!isSigningAvailable && !isWalletConnectConnected && (
           <p className="text-xs text-muted-foreground text-center mt-2">
             Transaction signing for {chainInfo.name} coming soon
+          </p>
+        )}
+        {isEvmChain(selectedChain) && !isWalletConnectConnected && (
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Or connect WalletConnect above for easier signing
           </p>
         )}
       </div>

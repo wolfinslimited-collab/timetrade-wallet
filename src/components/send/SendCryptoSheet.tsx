@@ -89,9 +89,25 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
     setStep("confirm");
   };
 
-  const handleConfirm = async (signedTransaction?: string) => {
+  const handleConfirm = async (signedTransaction?: string, directTxHash?: string) => {
     try {
-      if (signedTransaction) {
+      if (directTxHash) {
+        // Transaction was sent directly via WalletConnect
+        const explorerUrl = isTestnet 
+          ? `https://sepolia.etherscan.io/tx/${directTxHash}`
+          : `https://etherscan.io/tx/${directTxHash}`;
+
+        setTransaction((prev) => ({
+          ...prev,
+          txHash: directTxHash,
+          explorerUrl,
+        }));
+
+        toast({
+          title: "Transaction Sent!",
+          description: `Your transaction has been broadcast to the ${selectedChain} network.`,
+        });
+      } else if (signedTransaction) {
         // Broadcast real transaction
         const result = await broadcastMutation.mutateAsync({
           chain: selectedChain,
