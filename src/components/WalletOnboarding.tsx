@@ -6,9 +6,11 @@ import { SeedPhraseStep } from "./onboarding/SeedPhraseStep";
 import { VerifySeedStep } from "./onboarding/VerifySeedStep";
 import { SuccessStep } from "./onboarding/SuccessStep";
 import { ImportWalletStep } from "./onboarding/ImportWalletStep";
+import { PinSetupStep } from "./onboarding/PinSetupStep";
+import { BiometricSetupStep } from "./onboarding/BiometricSetupStep";
 import { generateSeedPhrase } from "@/utils/seedPhrase";
 
-export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "success" | "import";
+export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
 interface WalletOnboardingProps {
   onComplete: () => void;
@@ -31,7 +33,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
 
   const handleImportComplete = (importedPhrase: string[]) => {
     setSeedPhrase(importedPhrase);
-    setStep("success");
+    setStep("pin");
   };
 
   const handleSecurityAcknowledged = () => {
@@ -43,6 +45,16 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   const handleVerificationComplete = () => {
+    setStep("pin");
+  };
+
+  const handlePinComplete = (pin: string) => {
+    localStorage.setItem("timetrade_pin", pin);
+    setStep("biometric");
+  };
+
+  const handleBiometricComplete = (enabled: boolean) => {
+    localStorage.setItem("timetrade_biometric", enabled ? "true" : "false");
     setStep("success");
   };
 
@@ -128,6 +140,36 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
             <ImportWalletStep 
               onImport={handleImportComplete}
               onBack={() => setStep("welcome")}
+            />
+          </motion.div>
+        )}
+
+        {step === "pin" && (
+          <motion.div
+            key="pin"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex-1"
+          >
+            <PinSetupStep 
+              onComplete={handlePinComplete}
+              onBack={() => setStep("verify")}
+            />
+          </motion.div>
+        )}
+
+        {step === "biometric" && (
+          <motion.div
+            key="biometric"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex-1"
+          >
+            <BiometricSetupStep 
+              onComplete={handleBiometricComplete}
+              onSkip={() => handleBiometricComplete(false)}
             />
           </motion.div>
         )}

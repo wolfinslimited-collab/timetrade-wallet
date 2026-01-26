@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
+import { LockScreen } from "@/components/LockScreen";
 import { BottomNav } from "@/components/BottomNav";
 import { WalletHeader } from "@/components/WalletHeader";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
@@ -9,16 +10,25 @@ import { WalletTabs } from "@/components/WalletTabs";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
+  const [isLocked, setIsLocked] = useState(true);
 
   useEffect(() => {
     // Check if wallet exists in localStorage
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
+    const hasPin = localStorage.getItem("timetrade_pin");
     setHasWallet(walletCreated === "true");
+    // Only show lock screen if wallet exists and has PIN
+    setIsLocked(walletCreated === "true" && !!hasPin);
   }, []);
 
   const handleOnboardingComplete = () => {
     localStorage.setItem("timetrade_wallet_created", "true");
     setHasWallet(true);
+    setIsLocked(false); // Don't show lock screen right after onboarding
+  };
+
+  const handleUnlock = () => {
+    setIsLocked(false);
   };
 
   // Loading state
@@ -33,6 +43,11 @@ const Index = () => {
   // Show onboarding if no wallet
   if (!hasWallet) {
     return <WalletOnboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  // Show lock screen if locked
+  if (isLocked) {
+    return <LockScreen onUnlock={handleUnlock} />;
   }
 
   // Main wallet view
