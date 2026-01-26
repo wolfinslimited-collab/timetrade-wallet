@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
@@ -64,9 +65,17 @@ export const PortfolioBreakdown = () => {
           />
         </button>
 
-        {/* Expandable Content */}
-        {isExpanded && (
-          <div className="px-5 pb-5 border-t border-border/50">
+        {/* Expandable Content with Animation */}
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="px-5 pb-5 border-t border-border/50">
             <div className="flex items-center gap-6 pt-4">
               {/* Donut Chart */}
               <div className="relative flex-shrink-0">
@@ -177,9 +186,12 @@ export const PortfolioBreakdown = () => {
                 ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </span>
             </div>
-          </div>
-        )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 };
+
