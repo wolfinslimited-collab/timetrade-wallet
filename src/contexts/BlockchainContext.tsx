@@ -93,25 +93,84 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         const encryptedData: EncryptedData = JSON.parse(encryptedDataStr);
         const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
         const words = decryptedPhrase.split(/\s+/);
+        const phrase = words.join(' ').toLowerCase().trim().replace(/\s+/g, ' ');
         
-        // Get stored Solana derivation path preference, or detect it
+        // Get stored Solana derivation path preference
         let solanaPathStyle = localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath | null;
         
-        // If no stored path preference, try to auto-detect by checking which path has balance
+        // If no stored path preference, auto-detect by checking which path has balance
         if (!solanaPathStyle) {
-          const phrase = words.join(' ').toLowerCase().trim().replace(/\s+/g, ' ');
-          const allPaths = deriveSolanaAddressesAllPaths(phrase, 0);
+          console.log('No stored Solana derivation path, starting auto-detection...');
           
-          // Store the first address from each path for potential balance checking
-          // Default to 'legacy' as it's commonly used by Trust Wallet
-          solanaPathStyle = 'legacy';
+          // Derive addresses for all three paths
+          const pathStyles: SolanaDerivationPath[] = ['phantom', 'solflare', 'legacy'];
+          const addressChecks: { path: SolanaDerivationPath; address: string }[] = [];
           
-          // Store all detected addresses for debugging
-          for (const pathInfo of allPaths) {
-            console.log(`Solana path ${pathInfo.path} (${pathInfo.fullPath}): ${pathInfo.address}`);
+          for (const pathStyle of pathStyles) {
+            const allPaths = deriveSolanaAddressesAllPaths(phrase, 0);
+            const pathInfo = allPaths.find(p => p.path === pathStyle);
+            if (pathInfo) {
+              addressChecks.push({ path: pathStyle, address: pathInfo.address });
+              console.log(`Solana path ${pathStyle} (${pathInfo.fullPath}): ${pathInfo.address}`);
+            }
           }
           
+          // Check balances for all paths in parallel using the Supabase edge function
+          const balanceResults = await Promise.allSettled(
+            addressChecks.map(async ({ path, address }) => {
+              try {
+                const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/blockchain`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    action: 'getBalance',
+                    chain: 'solana',
+                    address,
+                    testnet: false,
+                  }),
+                });
+                
+                if (!response.ok) {
+                  console.error(`Balance check failed for ${path}: ${response.status}`);
+                  return { path, hasBalance: false };
+                }
+                
+                const data = await response.json();
+                const nativeBalance = data?.data?.native?.balance || '0';
+                const tokens = data?.data?.tokens || [];
+                
+                const hasNativeBalance = nativeBalance !== '0' && parseFloat(nativeBalance) > 0;
+                const hasTokens = tokens.length > 0;
+                const hasBalance = hasNativeBalance || hasTokens;
+                
+                console.log(`Path ${path}: native=${nativeBalance}, tokens=${tokens.length}, hasBalance=${hasBalance}`);
+                
+                return { path, hasBalance };
+              } catch (err) {
+                console.error(`Error checking balance for ${path}:`, err);
+                return { path, hasBalance: false };
+              }
+            })
+          );
+          
+          // Find the first path with a balance
+          let detectedPath: SolanaDerivationPath = 'legacy'; // Default
+          
+          for (const result of balanceResults) {
+            if (result.status === 'fulfilled' && result.value.hasBalance) {
+              detectedPath = result.value.path;
+              console.log(`Auto-detected Solana derivation path: ${detectedPath} (has balance)`);
+              break;
+            }
+          }
+          
+          solanaPathStyle = detectedPath;
           localStorage.setItem('timetrade_solana_derivation_path', solanaPathStyle);
+          console.log(`Saved Solana derivation path preference: ${solanaPathStyle}`);
         }
         
         // Derive all 5 accounts for both EVM and Solana with the correct path
