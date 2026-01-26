@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const TATUM_API_KEY = Deno.env.get('TATUM_API_KEY');
 const TATUM_BASE_URL = 'https://api.tatum.io/v3';
+const TATUM_V4_BASE_URL = 'https://api.tatum.io/v4';
 
 type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon';
 
@@ -122,16 +123,99 @@ async function tatumRequest(endpoint: string, options: RequestInit = {}) {
   }
 }
 
+async function tatumRequestV4(endpoint: string, options: RequestInit = {}) {
+  const url = `${TATUM_V4_BASE_URL}${endpoint}`;
+  console.log(`Tatum v4 request: ${url}`);
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'x-api-key': TATUM_API_KEY!,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    console.error(`Tatum v4 API error: ${response.status} - ${responseText}`);
+    throw new Error(`Tatum v4 API error: ${response.status} - ${responseText}`);
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    console.log('Tatum v4 raw response:', responseText);
+    return responseText;
+  }
+}
+
+function toBaseUnits(value: string | number, decimals: number): string {
+  const s = String(value ?? '0').trim();
+  if (!s || s === '0') return '0';
+
+  const negative = s.startsWith('-');
+  const unsigned = negative ? s.slice(1) : s;
+
+  const [intPartRaw, fracRaw = ''] = unsigned.split('.');
+  const intPart = (intPartRaw || '0').replace(/^0+(?=\d)/, '') || '0';
+  const frac = fracRaw.padEnd(decimals, '0').slice(0, decimals);
+
+  // Combine and strip leading zeros
+  const combined = `${intPart}${frac}`.replace(/^0+(?=\d)/, '') || '0';
+  return negative ? `-${combined}` : combined;
+}
+
+function isNonZeroBaseUnit(balance: string): boolean {
+  return !!balance && balance !== '0';
+}
+
+type RawTokenBalance = {
+  tokenAddress?: string;
+  contractAddress?: string;
+  symbol?: string;
+  name?: string;
+  decimals?: number;
+  balance?: string | number;
+  type?: string;
+  tokenType?: string;
+};
+
+function extractV4Balances(raw: unknown): RawTokenBalance[] {
+  if (Array.isArray(raw)) {
+    // Either an array of balances OR an array of { balances: [...] }
+    const first = raw[0] as any;
+    if (first && Array.isArray(first.balances)) return first.balances;
+    return raw as RawTokenBalance[];
+  }
+
+  const obj = raw as any;
+  if (obj && Array.isArray(obj.balances)) return obj.balances;
+  if (obj && Array.isArray(obj.data)) return obj.data;
+  if (obj && Array.isArray(obj.result)) return obj.result;
+  return [];
+}
+
 // Popular testnet ERC-20 tokens for display
 const KNOWN_TOKENS: Record<string, { name: string; symbol: string; decimals: number; logo?: string }> = {
+  // Ethereum Mainnet
+  '0xdac17f958d2ee523a2206206994597c13d831ec7': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
+  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
+  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { name: 'Wrapped Ether', symbol: 'WETH', decimals: 18, logo: '⟠' },
+
   // Ethereum Sepolia testnet tokens
   '0x779877a7b0d9e8603169ddbd7836e478b4624789': { name: 'Chainlink', symbol: 'LINK', decimals: 18, logo: '🔗' },
   '0x1c7d4b196cb0c7b01d743fbc6116a902379c7238': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
   '0xaa8e23fb1079ea71e0a56f48a2aa51851d8433d0': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
   '0x7b79995e5f793a07bc00c21412e50ecae098e7f9': { name: 'Wrapped Ether', symbol: 'WETH', decimals: 18, logo: '⟠' },
+
   // Polygon Amoy testnet tokens
   '0x0fa8781a83e46826621b3bc094ea2a0212e71b23': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
   '0x360ad4f9a9a8efe9a8dcb5f461c4cc1047e1dcf9': { name: 'Wrapped Matic', symbol: 'WMATIC', decimals: 18, logo: '⬡' },
+
+  // Polygon Mainnet
+  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
 };
 
 async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): Promise<Array<{
@@ -148,43 +232,40 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
   }
 
   try {
-    // Use Tatum's fungible tokens endpoint for EVM chains
-    const chainPath = chain === 'ethereum' ? 'ethereum' : 'polygon';
-    const endpoint = `/data/tokens?chain=${chainPath}&addresses=${address}&tokenTypes=fungible${testnet ? '&testnet=true' : ''}`;
-    
-    console.log(`Fetching ERC-20 tokens for ${chain}: ${endpoint}`);
-    const tokenData = await tatumRequest(endpoint);
-    console.log(`${chain} tokens response:`, JSON.stringify(tokenData));
+    // ✅ Use Tatum v4 balances endpoint (v3 /data/tokens currently validates tokenAddress and fails)
+    const endpoint = `/data/balances?chain=${chain}&addresses=${encodeURIComponent(address)}`;
+    console.log(`Fetching ERC-20 tokens (v4) for ${chain}: ${endpoint}`);
 
-    if (!Array.isArray(tokenData)) {
-      console.log('Token response is not an array, returning empty');
-      return [];
-    }
+    const raw = await tatumRequestV4(endpoint);
+    const balances = extractV4Balances(raw);
 
-    const tokens = tokenData
-      .filter((token: { balance?: string }) => token.balance && token.balance !== '0')
-      .map((token: { 
-        tokenAddress?: string; 
-        balance?: string; 
-        decimals?: number;
-        name?: string;
-        symbol?: string;
-      }) => {
-        const knownToken = KNOWN_TOKENS[token.tokenAddress?.toLowerCase() || ''];
+    const tokens = balances
+      .filter((b) => {
+        const addr = (b.tokenAddress || b.contractAddress || '').toLowerCase();
+        // Keep only fungible token balances; exclude native
+        if (!addr || addr === 'native') return false;
+        return true;
+      })
+      .map((b) => {
+        const contractAddress = b.tokenAddress || b.contractAddress || '';
+        const decimals = typeof b.decimals === 'number' ? b.decimals : 18;
+        const knownToken = KNOWN_TOKENS[contractAddress.toLowerCase()];
+        const baseBalance = toBaseUnits(b.balance ?? '0', knownToken?.decimals ?? decimals);
+
         return {
-          symbol: knownToken?.symbol || token.symbol || 'UNKNOWN',
-          name: knownToken?.name || token.name || 'Unknown Token',
-          balance: token.balance || '0',
-          decimals: knownToken?.decimals || token.decimals || 18,
-          contractAddress: token.tokenAddress || '',
+          symbol: knownToken?.symbol || b.symbol || 'UNKNOWN',
+          name: knownToken?.name || b.name || 'Unknown Token',
+          balance: baseBalance,
+          decimals: knownToken?.decimals || decimals,
+          contractAddress,
           logo: knownToken?.logo,
         };
-      });
+      })
+      .filter((t) => isNonZeroBaseUnit(t.balance));
 
     return tokens;
   } catch (error) {
-    console.error(`Error fetching ${chain} ERC-20 tokens:`, error);
-    // Return empty array on error - don't fail the whole balance request
+    console.error(`Error fetching ${chain} ERC-20 tokens (v4):`, error);
     return [];
   }
 }
@@ -199,41 +280,39 @@ async function getSPLTokens(address: string): Promise<Array<{
   logo?: string;
 }>> {
   try {
-    // Use Tatum's data API for Solana tokens
-    const endpoint = `/data/tokens?chain=solana&addresses=${address}&tokenTypes=fungible`;
-    
-    console.log(`Fetching SPL tokens for solana: ${endpoint}`);
-    const tokenData = await tatumRequest(endpoint);
-    console.log(`solana tokens response:`, JSON.stringify(tokenData));
+    // ✅ Use Tatum v4 balances endpoint
+    const endpoint = `/data/balances?chain=solana&addresses=${encodeURIComponent(address)}`;
+    console.log(`Fetching SPL tokens (v4) for solana: ${endpoint}`);
 
-    if (!Array.isArray(tokenData)) {
-      console.log('SPL token response is not an array, returning empty');
-      return [];
-    }
+    const raw = await tatumRequestV4(endpoint);
+    const balances = extractV4Balances(raw);
 
-    const tokens = tokenData
-      .filter((token: { balance?: string }) => token.balance && token.balance !== '0')
-      .map((token: { 
-        tokenAddress?: string; 
-        balance?: string; 
-        decimals?: number;
-        name?: string;
-        symbol?: string;
-      }) => {
-        const knownToken = KNOWN_SPL_TOKENS[token.tokenAddress || ''];
+    const tokens = balances
+      .filter((b) => {
+        const addr = (b.tokenAddress || b.contractAddress || '').toLowerCase();
+        if (!addr || addr === 'native') return false;
+        return true;
+      })
+      .map((b) => {
+        const contractAddress = b.tokenAddress || b.contractAddress || '';
+        const knownToken = KNOWN_SPL_TOKENS[contractAddress] || undefined;
+        const decimals = knownToken?.decimals ?? (typeof b.decimals === 'number' ? b.decimals : 9);
+        const baseBalance = toBaseUnits(b.balance ?? '0', decimals);
+
         return {
-          symbol: knownToken?.symbol || token.symbol || 'UNKNOWN',
-          name: knownToken?.name || token.name || 'Unknown Token',
-          balance: token.balance || '0',
-          decimals: knownToken?.decimals || token.decimals || 9,
-          contractAddress: token.tokenAddress || '',
+          symbol: knownToken?.symbol || b.symbol || 'UNKNOWN',
+          name: knownToken?.name || b.name || 'Unknown Token',
+          balance: baseBalance,
+          decimals,
+          contractAddress,
           logo: knownToken?.logo,
         };
-      });
+      })
+      .filter((t) => isNonZeroBaseUnit(t.balance));
 
     return tokens;
   } catch (error) {
-    console.error(`Error fetching Solana SPL tokens:`, error);
+    console.error(`Error fetching Solana SPL tokens (v4):`, error);
     // Return empty array on error - don't fail the whole balance request
     return [];
   }
@@ -268,14 +347,17 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
     
     console.log(`${chain} balance response:`, JSON.stringify(balanceData));
     
-    // Different chains return balance in different formats
-    let balance = '0';
-    if (typeof balanceData === 'object') {
-      balance = balanceData.balance || 
-                (balanceData.incoming ? String(parseFloat(balanceData.incoming) - parseFloat(balanceData.outgoing || '0')) : '0');
-    } else if (typeof balanceData === 'string') {
-      balance = balanceData;
+    // Normalize to base units so the frontend can safely divide by decimals.
+    let rawBalance: string | number = '0';
+    if (typeof balanceData === 'object' && balanceData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bd: any = balanceData;
+      rawBalance = bd.balance ?? (bd.incoming ? (parseFloat(bd.incoming) - parseFloat(bd.outgoing || '0')) : '0');
+    } else if (typeof balanceData === 'string' || typeof balanceData === 'number') {
+      rawBalance = balanceData;
     }
+
+    const balance = toBaseUnits(rawBalance, config.decimals);
     
     return {
       chain,
