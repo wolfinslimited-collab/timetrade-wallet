@@ -11,10 +11,11 @@ const TATUM_BASE_URL = 'https://api.tatum.io/v3';
 type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon';
 
 interface WalletBalanceRequest {
-  action: 'getBalance' | 'getTransactions' | 'estimateGas';
+  action: 'getBalance' | 'getTransactions' | 'estimateGas' | 'getPrices';
   chain: Chain;
   address: string;
   testnet?: boolean;
+  symbols?: string[]; // For getPrices action
 }
 
 interface ChainConfig {
@@ -346,6 +347,96 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
   }
 }
 
+// CoinGecko ID mapping for symbols
+const COINGECKO_IDS: Record<string, string> = {
+  ETH: 'ethereum',
+  BTC: 'bitcoin',
+  SOL: 'solana',
+  MATIC: 'matic-network',
+  USDC: 'usd-coin',
+  USDT: 'tether',
+  DAI: 'dai',
+  LINK: 'chainlink',
+  UNI: 'uniswap',
+  AAVE: 'aave',
+  WETH: 'weth',
+  WBTC: 'wrapped-bitcoin',
+  WMATIC: 'wmatic',
+};
+
+interface PriceData {
+  symbol: string;
+  price: number;
+  change24h: number;
+  marketCap?: number;
+  volume24h?: number;
+  lastUpdated: string;
+}
+
+async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC']): Promise<PriceData[]> {
+  try {
+    // Map symbols to CoinGecko IDs
+    const ids = symbols
+      .map(s => COINGECKO_IDS[s.toUpperCase()])
+      .filter(Boolean)
+      .join(',');
+
+    if (!ids) {
+      console.log('No valid symbols to fetch prices for');
+      return symbols.map(s => ({
+        symbol: s,
+        price: 0,
+        change24h: 0,
+        lastUpdated: new Date().toISOString(),
+      }));
+    }
+
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`;
+    console.log(`Fetching prices from CoinGecko: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`CoinGecko API error: ${response.status} - ${errorText}`);
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('CoinGecko response:', JSON.stringify(data));
+
+    // Map back to symbols
+    const prices: PriceData[] = symbols.map(symbol => {
+      const geckoId = COINGECKO_IDS[symbol.toUpperCase()];
+      const priceData = geckoId ? data[geckoId] : null;
+
+      return {
+        symbol: symbol.toUpperCase(),
+        price: priceData?.usd || 0,
+        change24h: priceData?.usd_24h_change || 0,
+        marketCap: priceData?.usd_market_cap,
+        volume24h: priceData?.usd_24h_vol,
+        lastUpdated: new Date().toISOString(),
+      };
+    });
+
+    return prices;
+  } catch (error) {
+    console.error('Error fetching prices:', error);
+    // Return fallback prices
+    return symbols.map(symbol => ({
+      symbol: symbol.toUpperCase(),
+      price: 0,
+      change24h: 0,
+      lastUpdated: new Date().toISOString(),
+    }));
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -353,17 +444,8 @@ serve(async (req) => {
   }
 
   try {
-    if (!TATUM_API_KEY) {
-      throw new Error('TATUM_API_KEY is not configured');
-    }
-
     const body: WalletBalanceRequest = await req.json();
-    const { action, chain, address, testnet = true } = body;
-
-    // Validate chain
-    if (!chainConfigs[chain]) {
-      throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
-    }
+    const { action, chain, address, testnet = true, symbols } = body;
 
     console.log(`Processing ${action} for ${chain} address: ${address}, testnet: ${testnet}`);
 
@@ -371,21 +453,45 @@ serve(async (req) => {
 
     switch (action) {
       case 'getBalance':
+        if (!TATUM_API_KEY) {
+          throw new Error('TATUM_API_KEY is not configured');
+        }
         if (!address) {
           throw new Error('Address is required for getBalance');
+        }
+        // Validate chain for balance
+        if (!chainConfigs[chain]) {
+          throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
         }
         result = await getBalance(chain, address, testnet);
         break;
 
       case 'getTransactions':
+        if (!TATUM_API_KEY) {
+          throw new Error('TATUM_API_KEY is not configured');
+        }
         if (!address) {
           throw new Error('Address is required for getTransactions');
+        }
+        if (!chainConfigs[chain]) {
+          throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
         }
         result = await getTransactions(chain, address, testnet);
         break;
 
       case 'estimateGas':
+        if (!TATUM_API_KEY) {
+          throw new Error('TATUM_API_KEY is not configured');
+        }
+        if (!chainConfigs[chain]) {
+          throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
+        }
         result = await estimateGas(chain, testnet);
+        break;
+
+      case 'getPrices':
+        // CoinGecko doesn't require API key for basic usage
+        result = await getPrices(symbols || ['ETH', 'BTC', 'SOL', 'MATIC']);
         break;
 
       default:

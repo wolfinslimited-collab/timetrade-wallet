@@ -1,23 +1,12 @@
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo } from "@/hooks/useBlockchain";
-import { Loader2, Coins, ExternalLink } from "lucide-react";
+import { useCryptoPrices, getPriceForSymbol } from "@/hooks/useCryptoPrices";
+import { Loader2, Coins, ExternalLink, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TokenBalancesProps {
   className?: string;
 }
-
-// Mock USD prices for tokens (in production, fetch from price API)
-const TOKEN_PRICES: Record<string, number> = {
-  ETH: 3245.67,
-  MATIC: 0.85,
-  LINK: 14.50,
-  USDC: 1.00,
-  USDT: 1.00,
-  WETH: 3245.67,
-  WMATIC: 0.85,
-  DAI: 1.00,
-};
 
 export const TokenBalances = ({ className }: TokenBalancesProps) => {
   const { 
@@ -29,6 +18,13 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
   } = useBlockchainContext();
 
   const chainInfo = getChainInfo(selectedChain);
+
+  // Get token symbols for price fetching
+  const tokenSymbols = balance?.tokens?.map(t => t.symbol) || [];
+  const allSymbols = [...new Set([chainInfo.symbol, ...tokenSymbols])];
+  
+  // Fetch live prices
+  const { data: prices, isLoading: isLoadingPrices } = useCryptoPrices(allSymbols);
 
   // Only show for EVM chains (Ethereum and Polygon)
   const isEVMChain = selectedChain === 'ethereum' || selectedChain === 'polygon';
@@ -83,6 +79,9 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Token Holdings
           </h3>
+          {isLoadingPrices && (
+            <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+          )}
         </div>
         <span className="text-xs text-muted-foreground">
           {tokens.length} token{tokens.length !== 1 ? 's' : ''}
@@ -93,8 +92,10 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
         {tokens.map((token, index) => {
           const formattedBalance = formatBalance(token.balance, token.decimals);
           const numericBalance = parseFloat(token.balance) / Math.pow(10, token.decimals);
-          const price = TOKEN_PRICES[token.symbol] || 0;
+          const price = getPriceForSymbol(prices, token.symbol);
           const usdValue = numericBalance * price;
+          const priceData = prices?.find(p => p.symbol.toUpperCase() === token.symbol.toUpperCase());
+          const change24h = priceData?.change24h || 0;
 
           return (
             <div
@@ -124,7 +125,22 @@ export const TokenBalances = ({ className }: TokenBalancesProps) => {
                       </a>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">{token.name}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{token.name}</span>
+                    {price > 0 && change24h !== 0 && (
+                      <span className={cn(
+                        "text-xs flex items-center gap-0.5",
+                        change24h >= 0 ? "text-primary" : "text-destructive"
+                      )}>
+                        {change24h >= 0 ? (
+                          <TrendingUp className="w-2.5 h-2.5" />
+                        ) : (
+                          <TrendingDown className="w-2.5 h-2.5" />
+                        )}
+                        {Math.abs(change24h).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="text-right">

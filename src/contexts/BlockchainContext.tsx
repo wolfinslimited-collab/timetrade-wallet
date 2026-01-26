@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance, Transaction, GasEstimate, TransactionsResponse, SUPPORTED_CHAINS, getChainInfo } from '@/hooks/useBlockchain';
+import { useCryptoPrices, getPriceForSymbol } from '@/hooks/useCryptoPrices';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface BlockchainContextType {
@@ -31,6 +32,10 @@ interface BlockchainContextType {
   gasEstimate: GasEstimate | undefined;
   isLoadingGas: boolean;
   gasError: Error | null;
+
+  // Price data
+  prices: { symbol: string; price: number; change24h: number }[] | undefined;
+  isLoadingPrices: boolean;
 }
 
 const BlockchainContext = createContext<BlockchainContextType | undefined>(undefined);
@@ -38,16 +43,6 @@ const BlockchainContext = createContext<BlockchainContextType | undefined>(undef
 interface BlockchainProviderProps {
   children: ReactNode;
 }
-
-// Mock price data (in production, this would come from a price API)
-const TOKEN_PRICES: Record<string, number> = {
-  ETH: 3245.67,
-  BTC: 65000,
-  SOL: 150,
-  USDC: 1,
-  USDT: 1,
-  MATIC: 0.85,
-};
 
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
@@ -62,27 +57,35 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const balanceQuery = useWalletBalance(walletAddress, selectedChain);
   const transactionsQuery = useTransactions(walletAddress, selectedChain);
   const gasQuery = useGasEstimate(selectedChain);
+  
+  // Get chain info for price fetching
+  const chainInfo = getChainInfo(selectedChain);
+  const tokenSymbols = balanceQuery.data?.tokens?.map(t => t.symbol) || [];
+  const allSymbols = [...new Set(['ETH', 'BTC', 'SOL', 'MATIC', chainInfo.symbol, ...tokenSymbols])];
+  
+  // Fetch live prices
+  const pricesQuery = useCryptoPrices(allSymbols);
 
-  // Calculate total USD balance
+  // Calculate total USD balance using live prices
   const totalBalanceUsd = React.useMemo(() => {
     if (!balanceQuery.data) return 0;
     
     const { native, tokens } = balanceQuery.data;
     
-    // Calculate native balance in USD
+    // Calculate native balance in USD using live price
     const nativeBalance = parseFloat(native.balance) / Math.pow(10, native.decimals);
-    const nativePrice = TOKEN_PRICES[native.symbol] || 0;
+    const nativePrice = getPriceForSymbol(pricesQuery.data, native.symbol);
     let total = nativeBalance * nativePrice;
     
     // Add token balances
     for (const token of tokens) {
       const tokenBalance = parseFloat(token.balance) / Math.pow(10, token.decimals);
-      const tokenPrice = TOKEN_PRICES[token.symbol] || token.price || 0;
+      const tokenPrice = getPriceForSymbol(pricesQuery.data, token.symbol) || token.price || 0;
       total += tokenBalance * tokenPrice;
     }
     
     return total;
-  }, [balanceQuery.data]);
+  }, [balanceQuery.data, pricesQuery.data]);
 
   const connectWallet = useCallback((address: string) => {
     setWalletAddress(address);
@@ -103,6 +106,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
+    queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
   }, [queryClient]);
 
   // Extract transactions from response
@@ -132,6 +136,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     gasEstimate: gasQuery.data,
     isLoadingGas: gasQuery.isLoading,
     gasError: gasQuery.error,
+    
+    prices: pricesQuery.data,
+    isLoadingPrices: pricesQuery.isLoading,
   };
 
   return (
