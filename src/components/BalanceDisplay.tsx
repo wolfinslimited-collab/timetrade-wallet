@@ -39,17 +39,16 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
     : '0';
 
   return (
-    <div className="px-6 py-4">
-      {/* Header row with label and status */}
-      <div className="flex items-center gap-3 mb-2">
-        <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase font-medium">
+    <div className="px-4 py-2">
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-xs text-muted-foreground tracking-widest uppercase">
           Total Balance
         </p>
         {isConnected ? (
           <div 
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
             style={{ 
-              backgroundColor: `${chainInfo.color}15`,
+              backgroundColor: `${chainInfo.color}20`,
               color: chainInfo.color,
             }}
           >
@@ -57,15 +56,13 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
             <span>{chainInfo.name}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <WifiOff className="w-3 h-3" />
             <span>Demo</span>
           </div>
         )}
       </div>
-
-      {/* Balance and change indicator */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-baseline gap-3">
         {isLoadingBalance && isConnected ? (
           <div className="flex items-center gap-2">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -77,28 +74,30 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
           </div>
         ) : (
           <>
-            <h1 className="text-[2.75rem] font-bold tracking-tight leading-none">
-              <span className="text-foreground/60">$</span>
-              <span className="text-foreground">{formatBalance(displayBalance)}</span>
+            <h1 className="text-4xl font-bold font-mono tracking-tight">
+              <span className="text-muted-foreground">$</span>
+              {formatBalance(displayBalance)}
             </h1>
             {!isConnected && (
               <div className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold",
+                "flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-medium",
                 isPositive 
-                  ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/20" 
-                  : "text-red-400 bg-red-500/15 border border-red-500/20"
+                  ? "text-primary bg-primary/10" 
+                  : "text-destructive bg-destructive/10"
               )}>
-                <TrendingUp className="w-4 h-4" />
+                {isPositive ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
                 <span>{isPositive ? "+" : ""}{changePercent.toFixed(1)}%</span>
               </div>
             )}
           </>
         )}
       </div>
-
-      {/* Native balance info when connected */}
       {isConnected && !isLoadingBalance && !balanceError && (
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground mt-1">
           <span 
             className="font-medium"
             style={{ color: chainInfo.color }}
