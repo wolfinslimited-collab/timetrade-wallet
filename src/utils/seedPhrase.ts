@@ -1,6 +1,27 @@
 import { generateMnemonic, validateMnemonic } from "@scure/bip39";
 import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 
+// Export wordlist for autocomplete functionality
+export const bip39Wordlist = englishWordlist;
+
+/**
+ * Checks if a word is a valid BIP39 word.
+ */
+export const isValidBip39Word = (word: string): boolean => {
+  return englishWordlist.includes(word.toLowerCase().trim());
+};
+
+/**
+ * Gets autocomplete suggestions for a partial word input.
+ */
+export const getWordSuggestions = (partial: string, limit: number = 8): string[] => {
+  if (!partial || partial.length < 1) return [];
+  const lower = partial.toLowerCase().trim();
+  return englishWordlist
+    .filter(word => word.startsWith(lower))
+    .slice(0, limit);
+};
+
 /**
  * Generates a valid BIP39 English mnemonic.
  *  - 12 words = 128-bit entropy
