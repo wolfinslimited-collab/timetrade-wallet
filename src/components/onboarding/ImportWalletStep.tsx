@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback } from "react";
-import { ChevronLeft, AlertTriangle } from "lucide-react";
+import { useState, useCallback } from "react";
+import { ChevronLeft, AlertTriangle, Trash2, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { validateSeedPhrase, isValidBip39Word } from "@/utils/seedPhrase";
 import { SeedWordInput } from "./SeedWordInput";
+import { QRScannerModal } from "@/components/send/QRScannerModal";
 
 interface ImportWalletStepProps {
   onImport: (seedPhrase: string[]) => void;
@@ -15,7 +16,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
   const { toast } = useToast();
   const [wordCount, setWordCount] = useState<12 | 24>(12);
   const [words, setWords] = useState<string[]>(Array(12).fill(""));
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   // Update words array when word count changes
   const handleWordCountChange = (count: 12 | 24) => {
@@ -36,6 +37,42 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       return newWords;
     });
   }, []);
+
+  const handleClearAll = useCallback(() => {
+    setWords(Array(wordCount).fill(""));
+    toast({
+      title: "Cleared",
+      description: "All words have been cleared",
+    });
+  }, [wordCount, toast]);
+
+  const handleQRScan = useCallback((scannedData: string) => {
+    // Try to parse the scanned data as a seed phrase
+    const scannedWords = scannedData
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+
+    if (scannedWords.length >= 12) {
+      const targetCount = scannedWords.length >= 24 ? 24 : 12;
+      setWordCount(targetCount);
+      setWords(scannedWords.slice(0, targetCount).concat(
+        Array(Math.max(0, targetCount - scannedWords.length)).fill("")
+      ));
+      setShowQRScanner(false);
+      toast({
+        title: "Seed phrase scanned",
+        description: `${Math.min(scannedWords.length, targetCount)} words detected`,
+      });
+    } else {
+      toast({
+        title: "Invalid QR code",
+        description: "The QR code doesn't contain a valid seed phrase",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
     // Handle paste of full seed phrase
@@ -196,6 +233,25 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         </button>
       </div>
 
+      {/* Action Buttons */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setShowQRScanner(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-secondary transition-colors"
+        >
+          <QrCode className="w-4 h-4" />
+          Scan QR
+        </button>
+        <button
+          onClick={handleClearAll}
+          disabled={words.every(w => w === "")}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Trash2 className="w-4 h-4" />
+          Clear All
+        </button>
+      </div>
+
       {/* Security Warning */}
       <div className="flex items-start gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20 mb-4">
         <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
@@ -260,6 +316,13 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
           Import Wallet
         </Button>
       </div>
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        open={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onScan={handleQRScan}
+      />
     </div>
   );
 };
