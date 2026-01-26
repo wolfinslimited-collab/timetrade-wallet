@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, ChevronRight, Loader2, ExternalLink, WifiOff } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo, formatBalance, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
+import { TransactionFilterSheet, TransactionFilters } from "@/components/history/TransactionFilterSheet";
+import { Badge } from "@/components/ui/badge";
 
 export type TransactionType = "send" | "receive" | "swap";
 export type TransactionStatus = "completed" | "pending" | "failed";
@@ -64,18 +66,54 @@ const mockTransactions: Transaction[] = [
     txHash: "0x567890abcdef1234567890abcdef1234567890ab",
     networkFee: 0.003,
   },
+  {
+    id: "4",
+    type: "receive",
+    status: "pending",
+    amount: 0.25,
+    symbol: "ETH",
+    icon: "⟠",
+    usdValue: 811.42,
+    address: "0x9876543210fedcba9876543210fedcba98765432",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    txHash: "0xdef1234567890abcdef1234567890abcdef12345",
+    networkFee: 0,
+  },
+  {
+    id: "5",
+    type: "send",
+    status: "failed",
+    amount: 50,
+    symbol: "USDC",
+    icon: "$",
+    usdValue: 50,
+    address: "0x1111222233334444555566667777888899990000",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
+    txHash: "0x0000111122223333444455556666777788889999",
+    networkFee: 0.001,
+  },
 ];
 
-type FilterType = "all" | TransactionType;
+type QuickFilter = "all" | TransactionType;
 
 interface TransactionHistoryPageProps {
   onBack: () => void;
 }
 
+const defaultFilters: TransactionFilters = {
+  dateFrom: undefined,
+  dateTo: undefined,
+  types: [],
+  statuses: [],
+  tokens: [],
+};
+
 export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) => {
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [filters, setFilters] = useState<TransactionFilters>(defaultFilters);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   
   const { 
     isConnected, 
@@ -115,30 +153,82 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     ? blockchainTx.map(convertBlockchainTx)
     : mockTransactions;
 
-  const filteredTransactions = displayTransactions.filter((tx) => {
-    if (filter !== "all" && tx.type !== filter) return false;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        tx.symbol.toLowerCase().includes(query) ||
-        tx.address?.toLowerCase().includes(query) ||
-        tx.txHash.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
+  // Get available tokens for filter
+  const availableTokens = useMemo(() => {
+    const tokens = new Set<string>();
+    displayTransactions.forEach((tx) => {
+      tokens.add(tx.symbol);
+      if (tx.swapTo) tokens.add(tx.swapTo.symbol);
+    });
+    return Array.from(tokens);
+  }, [displayTransactions]);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.dateFrom) count++;
+    if (filters.dateTo) count++;
+    if (filters.types.length > 0) count++;
+    if (filters.statuses.length > 0) count++;
+    if (filters.tokens.length > 0) count++;
+    return count;
+  }, [filters]);
+
+  // Apply all filters
+  const filteredTransactions = useMemo(() => {
+    return displayTransactions.filter((tx) => {
+      // Quick filter (type tabs)
+      if (quickFilter !== "all" && tx.type !== quickFilter) return false;
+
+      // Advanced filters
+      if (filters.types.length > 0 && !filters.types.includes(tx.type)) return false;
+      if (filters.statuses.length > 0 && !filters.statuses.includes(tx.status)) return false;
+      if (filters.tokens.length > 0 && !filters.tokens.includes(tx.symbol)) return false;
+      
+      // Date filters
+      if (filters.dateFrom) {
+        const fromDate = new Date(filters.dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (tx.timestamp < fromDate) return false;
+      }
+      if (filters.dateTo) {
+        const toDate = new Date(filters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (tx.timestamp > toDate) return false;
+      }
+
+      // Search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          tx.symbol.toLowerCase().includes(query) ||
+          tx.address?.toLowerCase().includes(query) ||
+          tx.txHash.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [displayTransactions, quickFilter, filters, searchQuery]);
 
   // Group transactions by date
-  const groupedTransactions = filteredTransactions.reduce((groups, tx) => {
-    const date = tx.timestamp.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: tx.timestamp.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-    });
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(tx);
-    return groups;
-  }, {} as Record<string, Transaction[]>);
+  const groupedTransactions = useMemo(() => {
+    return filteredTransactions.reduce((groups, tx) => {
+      const date = tx.timestamp.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: tx.timestamp.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+      });
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(tx);
+      return groups;
+    }, {} as Record<string, Transaction[]>);
+  }, [filteredTransactions]);
+
+  const clearFilters = () => {
+    setFilters(defaultFilters);
+    setQuickFilter("all");
+    setSearchQuery("");
+  };
 
   const getIcon = (type: TransactionType) => {
     switch (type) {
@@ -192,29 +282,104 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
         )}
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar with Filter Button */}
       <div className="px-4 pt-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search transactions..."
-            className="w-full h-12 pl-10 pr-4 rounded-xl bg-card border border-border focus:border-primary/50 focus:outline-none text-sm"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search transactions..."
+              className="w-full h-12 pl-10 pr-4 rounded-xl bg-card border border-border focus:border-primary/50 focus:outline-none text-sm"
+            />
+          </div>
+          <button
+            onClick={() => setFilterSheetOpen(true)}
+            className={cn(
+              "h-12 w-12 rounded-xl border flex items-center justify-center transition-colors relative",
+              activeFilterCount > 0
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card border-border hover:border-primary/50"
+            )}
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Active Filter Tags */}
+      {activeFilterCount > 0 && (
+        <div className="px-4 pt-3 flex flex-wrap gap-2">
+          {filters.dateFrom && (
+            <Badge variant="secondary" className="gap-1">
+              From: {filters.dateFrom.toLocaleDateString()}
+              <X 
+                className="w-3 h-3 cursor-pointer" 
+                onClick={() => setFilters(f => ({ ...f, dateFrom: undefined }))}
+              />
+            </Badge>
+          )}
+          {filters.dateTo && (
+            <Badge variant="secondary" className="gap-1">
+              To: {filters.dateTo.toLocaleDateString()}
+              <X 
+                className="w-3 h-3 cursor-pointer" 
+                onClick={() => setFilters(f => ({ ...f, dateTo: undefined }))}
+              />
+            </Badge>
+          )}
+          {filters.types.map((type) => (
+            <Badge key={type} variant="secondary" className="gap-1 capitalize">
+              {type}
+              <X 
+                className="w-3 h-3 cursor-pointer" 
+                onClick={() => setFilters(f => ({ ...f, types: f.types.filter(t => t !== type) }))}
+              />
+            </Badge>
+          ))}
+          {filters.statuses.map((status) => (
+            <Badge key={status} variant="secondary" className="gap-1 capitalize">
+              {status}
+              <X 
+                className="w-3 h-3 cursor-pointer" 
+                onClick={() => setFilters(f => ({ ...f, statuses: f.statuses.filter(s => s !== status) }))}
+              />
+            </Badge>
+          ))}
+          {filters.tokens.map((token) => (
+            <Badge key={token} variant="secondary" className="gap-1">
+              {token}
+              <X 
+                className="w-3 h-3 cursor-pointer" 
+                onClick={() => setFilters(f => ({ ...f, tokens: f.tokens.filter(t => t !== token) }))}
+              />
+            </Badge>
+          ))}
+          <button
+            onClick={clearFilters}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* Quick Filter Tabs */}
       <div className="flex gap-2 px-4 py-4 overflow-x-auto">
-        {(["all", "send", "receive", "swap"] as FilterType[]).map((f) => (
+        {(["all", "send", "receive", "swap"] as QuickFilter[]).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => setQuickFilter(f)}
             className={cn(
               "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-              filter === f
+              quickFilter === f
                 ? "bg-primary text-primary-foreground"
                 : "bg-card border border-border text-muted-foreground hover:border-primary/50"
             )}
@@ -259,14 +424,18 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Filter className="w-12 h-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                {isConnected ? "No transactions found on this network" : "No transactions found"}
+                {activeFilterCount > 0 || searchQuery
+                  ? "No transactions match your filters"
+                  : isConnected 
+                    ? "No transactions found on this network" 
+                    : "No transactions found"}
               </p>
-              {searchQuery && (
+              {(searchQuery || activeFilterCount > 0) && (
                 <button
-                  onClick={() => setSearchQuery("")}
+                  onClick={clearFilters}
                   className="text-primary text-sm mt-2 hover:underline"
                 >
-                  Clear search
+                  Clear all filters
                 </button>
               )}
             </div>
@@ -348,6 +517,15 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
           )}
         </div>
       )}
+
+      {/* Filter Sheet */}
+      <TransactionFilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        filters={filters}
+        onApply={setFilters}
+        availableTokens={availableTokens}
+      />
     </div>
   );
 };
