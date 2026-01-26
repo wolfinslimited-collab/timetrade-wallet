@@ -11,6 +11,45 @@ interface UnifiedTokenListProps {
 // All supported chains to fetch
 const ALL_CHAINS: Chain[] = ['ethereum', 'solana', 'polygon'];
 
+// Token icon mapping for common tokens
+const TOKEN_ICONS: Record<string, { icon: string; bgColor: string }> = {
+  // Native coins
+  ETH: { icon: '⟠', bgColor: 'bg-slate-700' },
+  SOL: { icon: '◎', bgColor: 'bg-gradient-to-br from-purple-500 to-blue-500' },
+  POL: { icon: '⬡', bgColor: 'bg-purple-600' },
+  MATIC: { icon: '⬡', bgColor: 'bg-purple-600' },
+  BTC: { icon: '₿', bgColor: 'bg-orange-500' },
+  BNB: { icon: '◆', bgColor: 'bg-yellow-500' },
+  TRX: { icon: '◈', bgColor: 'bg-red-500' },
+  
+  // Stablecoins
+  USDC: { icon: '$', bgColor: 'bg-blue-500' },
+  USDT: { icon: '₮', bgColor: 'bg-emerald-600' },
+  DAI: { icon: '◈', bgColor: 'bg-amber-500' },
+  BUSD: { icon: '$', bgColor: 'bg-yellow-500' },
+  
+  // Popular tokens
+  LINK: { icon: '⬡', bgColor: 'bg-blue-600' },
+  UNI: { icon: '🦄', bgColor: 'bg-pink-500' },
+  AAVE: { icon: '👻', bgColor: 'bg-purple-500' },
+  SHIB: { icon: '🐕', bgColor: 'bg-orange-400' },
+  PEPE: { icon: '🐸', bgColor: 'bg-green-500' },
+  WETH: { icon: '⟠', bgColor: 'bg-slate-600' },
+  WBTC: { icon: '₿', bgColor: 'bg-orange-600' },
+  ARB: { icon: '◇', bgColor: 'bg-blue-400' },
+  OP: { icon: '⬟', bgColor: 'bg-red-500' },
+  
+  // Solana tokens
+  RAY: { icon: '☀', bgColor: 'bg-purple-500' },
+  SRM: { icon: '⚡', bgColor: 'bg-cyan-500' },
+  BONK: { icon: '🐕', bgColor: 'bg-orange-500' },
+};
+
+const getTokenIcon = (symbol: string): { icon: string; bgColor: string } => {
+  const upperSymbol = symbol.toUpperCase();
+  return TOKEN_ICONS[upperSymbol] || { icon: '🪙', bgColor: 'bg-secondary' };
+};
+
 interface UnifiedToken {
   symbol: string;
   name: string;
@@ -238,13 +277,21 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
               key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
               className="flex items-center justify-between p-3 bg-card rounded-xl border border-border hover:border-primary/30 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                {/* Token icon */}
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-lg bg-secondary"
-                >
-                  {token.isNative ? chainInfo.icon : (token.logo || '🪙')}
-                </div>
+            <div className="flex items-center gap-3">
+              {/* Token icon with proper styling */}
+              {(() => {
+                const tokenStyle = getTokenIcon(token.symbol);
+                return (
+                  <div 
+                    className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-lg",
+                      tokenStyle.bgColor
+                    )}
+                  >
+                    {tokenStyle.icon}
+                  </div>
+                );
+              })()}
                 
                 <div>
                   <div className="flex items-center gap-2">
