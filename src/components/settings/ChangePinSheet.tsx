@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { Lock, Check } from "lucide-react";
 
 interface ChangePinSheetProps {
@@ -15,11 +16,13 @@ type PinStep = "current" | "new" | "confirm";
 
 export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheetProps) => {
   const { toast } = useToast();
+  const { reEncryptWithNewPin, storedKeys } = useStoredKeys();
   const [step, setStep] = useState<PinStep>("current");
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isReEncrypting, setIsReEncrypting] = useState(false);
 
   const storedPin = localStorage.getItem("timetrade_pin");
   
@@ -38,7 +41,7 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
     }
   };
 
-  const handlePinComplete = (pin: string) => {
+  const handlePinComplete = async (pin: string) => {
     if (step === "current") {
       if (pin === storedPin) {
         setTimeout(() => setStep("new"), 300);
@@ -50,6 +53,21 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
       setTimeout(() => setStep("confirm"), 300);
     } else if (step === "confirm") {
       if (pin === newPin) {
+        // Re-encrypt stored keys with new PIN if any exist
+        if (storedKeys.length > 0 && currentPin) {
+          setIsReEncrypting(true);
+          const success = await reEncryptWithNewPin(currentPin, pin);
+          setIsReEncrypting(false);
+          
+          if (!success) {
+            setError("Failed to update stored keys. Please try again.");
+            setConfirmPin("");
+            setNewPin("");
+            setStep("new");
+            return;
+          }
+        }
+        
         localStorage.setItem("timetrade_pin", pin);
         handleClose();
         onSuccess();

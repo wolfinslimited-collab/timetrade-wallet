@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { ChangePinSheet } from "@/components/settings/ChangePinSheet";
 import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
 import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
@@ -49,6 +50,7 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
 
 export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const { toast } = useToast();
+  const { clearAllStoredKeys } = useStoredKeys();
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   
@@ -101,6 +103,9 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
     localStorage.removeItem("timetrade_pin");
     localStorage.removeItem("timetrade_biometric");
     localStorage.removeItem("timetrade_seed_phrase");
+    
+    // Clear stored encrypted keys
+    clearAllStoredKeys();
     
     // Reload the app
     window.location.reload();
