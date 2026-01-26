@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
+import { useWebNotifications } from "@/hooks/useWebNotifications";
 import { ChangePinSheet } from "@/components/settings/ChangePinSheet";
 import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
 import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
 import { ManageStoredKeysSheet } from "@/components/settings/ManageStoredKeysSheet";
 import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
+import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -70,6 +72,9 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [manageKeysOpen, setManageKeysOpen] = useState(false);
   const [biometricSetupOpen, setBiometricSetupOpen] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  
+  const { permission: notificationPermission, settings: notificationSettings } = useWebNotifications();
 
   useEffect(() => {
     refreshBiometricStatus();
@@ -191,7 +196,30 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
           </div>
         </div>
 
-        {/* Lock Settings */}
+        {/* Notifications Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Bell className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Notifications
+            </h2>
+          </div>
+          
+          <SettingItem
+            icon={Bell}
+            label="Push Notifications"
+            description={
+              notificationPermission === 'granted' && notificationSettings.enabled
+                ? "Enabled - receiving alerts"
+                : notificationPermission === 'denied'
+                ? "Blocked by browser"
+                : "Get alerts for prices & transactions"
+            }
+            onClick={() => setNotificationSettingsOpen(true)}
+          />
+        </div>
+
+        {/* Auto-Lock Section */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Lock className="w-4 h-4 text-primary" />
@@ -268,6 +296,11 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
         onOpenChange={setBiometricSetupOpen}
         onSuccess={handleBiometricSetupSuccess}
         onRegister={registerBiometric}
+      />
+      
+      <NotificationSettingsSheet
+        open={notificationSettingsOpen}
+        onOpenChange={setNotificationSettingsOpen}
       />
     </div>
   );
