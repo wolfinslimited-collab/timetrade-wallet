@@ -50,6 +50,17 @@ const getTokenIcon = (symbol: string): { icon: string; bgColor: string } => {
   return TOKEN_ICONS[upperSymbol] || { icon: '🪙', bgColor: 'bg-secondary' };
 };
 
+const isLikelyEvmAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  return /^0x[a-fA-F0-9]{40}$/.test(address.trim());
+};
+
+const isLikelySolanaAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  // Base58 (no 0,O,I,l) and typical Solana pubkey length
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
+
 interface UnifiedToken {
   symbol: string;
   name: string;
@@ -65,8 +76,13 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
   
   // Get addresses for each chain from localStorage
-  const evmAddress = localStorage.getItem('timetrade_wallet_address_evm');
-  const solanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+  const primaryAddress = localStorage.getItem('timetrade_wallet_address');
+  const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
+  const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+
+  // Backwards-compatible fallbacks for older sessions where only `timetrade_wallet_address` existed.
+  const evmAddress = storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null);
+  const solanaAddress = storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null);
 
   // Fetch balances for all chains in parallel
   const ethBalance = useWalletBalance(evmAddress, 'ethereum');
