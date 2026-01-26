@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface TokenAllocation {
   symbol: string;
@@ -23,6 +24,7 @@ const totalValue = portfolioData.reduce((sum, token) => sum + token.value, 0);
 
 export const PortfolioBreakdown = () => {
   const [activeToken, setActiveToken] = useState<TokenAllocation | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Calculate SVG arc paths for donut chart
   const size = 180;
@@ -54,7 +56,28 @@ export const PortfolioBreakdown = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
-        <h3 className="text-sm font-semibold text-muted-foreground mb-4">Portfolio Breakdown</h3>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
+        >
+          <h3 className="text-sm font-semibold text-muted-foreground">Portfolio Breakdown</h3>
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </motion.div>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
 
         <div className="flex items-center gap-6">
           {/* Donut Chart */}
@@ -222,6 +245,9 @@ export const PortfolioBreakdown = () => {
             ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
         </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
