@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { ChevronLeft, AlertTriangle, Fuel, Clock, Shield } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronLeft, AlertTriangle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { TransactionData } from "./SendCryptoSheet";
+import { FeeEstimator, GasSpeed, gasOptions } from "./FeeEstimator";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -10,24 +10,22 @@ interface ConfirmationStepProps {
   onBack: () => void;
 }
 
-type GasSpeed = "slow" | "standard" | "fast";
-
-const gasOptions: Record<GasSpeed, { label: string; time: string; multiplier: number }> = {
-  slow: { label: "Slow", time: "~10 min", multiplier: 0.8 },
-  standard: { label: "Standard", time: "~3 min", multiplier: 1 },
-  fast: { label: "Fast", time: "~30 sec", multiplier: 1.5 },
-};
-
 export const ConfirmationStep = ({ transaction, onConfirm, onBack }: ConfirmationStepProps) => {
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const actualGasFee = transaction.gasFee * gasOptions[gasSpeed].multiplier;
-  const gasFeeUsd = actualGasFee * transaction.token.price;
+  const feeDetails = useMemo(() => {
+    const baseGwei = 30; // Simulated base fee
+    const gwei = baseGwei * gasOptions[gasSpeed].multiplier;
+    const eth = (gwei * transaction.gasEstimate) / 1e9;
+    const usd = eth * 3245.67; // ETH price
+    return { gwei, eth, usd };
+  }, [gasSpeed, transaction.gasEstimate]);
+
   const amountNum = parseFloat(transaction.amount);
   const amountUsd = amountNum * transaction.token.price;
-  const totalCrypto = amountNum + (transaction.token.symbol === "ETH" ? actualGasFee : 0);
-  const totalUsd = amountUsd + gasFeeUsd;
+  const totalCrypto = amountNum + (transaction.token.symbol === "ETH" ? feeDetails.eth : 0);
+  const totalUsd = amountUsd + feeDetails.usd;
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 10)}...${addr.slice(-8)}`;
@@ -78,37 +76,16 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         </div>
       </div>
 
-      {/* Gas Fee Selector */}
+      {/* Gas Fee Estimator */}
       <div className="mt-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Fuel className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Network Fee</span>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-2">
-          {(Object.keys(gasOptions) as GasSpeed[]).map((speed) => (
-            <button
-              key={speed}
-              onClick={() => setGasSpeed(speed)}
-              disabled={isProcessing}
-              className={cn(
-                "p-3 rounded-xl border transition-all text-center",
-                gasSpeed === speed
-                  ? "bg-primary/10 border-primary"
-                  : "bg-card border-border hover:border-primary/50"
-              )}
-            >
-              <p className="text-sm font-medium">{gasOptions[speed].label}</p>
-              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                <Clock className="w-3 h-3" />
-                {gasOptions[speed].time}
-              </p>
-              <p className="text-xs font-mono mt-1">
-                {(actualGasFee * gasOptions[speed].multiplier / gasOptions[gasSpeed].multiplier).toFixed(6)} ETH
-              </p>
-            </button>
-          ))}
-        </div>
+        <FeeEstimator
+          baseGasLimit={transaction.gasEstimate}
+          tokenSymbol={transaction.token.symbol}
+          tokenPrice={3245.67}
+          selectedSpeed={gasSpeed}
+          onSpeedChange={setGasSpeed}
+          disabled={isProcessing}
+        />
       </div>
 
       {/* Fee Summary */}
@@ -119,7 +96,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Network Fee</span>
-          <span>{actualGasFee.toFixed(6)} ETH</span>
+          <span>{feeDetails.eth.toFixed(6)} ETH</span>
         </div>
         <div className="border-t border-border pt-3 flex justify-between font-medium">
           <span>Total</span>
