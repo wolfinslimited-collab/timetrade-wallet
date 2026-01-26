@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { ChangePinSheet } from "@/components/settings/ChangePinSheet";
 import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
 import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
+import { ManageStoredKeysSheet } from "@/components/settings/ManageStoredKeysSheet";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -50,7 +51,7 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
 
 export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const { toast } = useToast();
-  const { clearAllStoredKeys } = useStoredKeys();
+  const { storedKeys, clearAllStoredKeys } = useStoredKeys();
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   
@@ -58,6 +59,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const [changePinOpen, setChangePinOpen] = useState(false);
   const [viewSeedOpen, setViewSeedOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [manageKeysOpen, setManageKeysOpen] = useState(false);
 
   useEffect(() => {
     // Check biometric status
@@ -164,6 +166,13 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               description="Backup your recovery phrase"
               onClick={() => setViewSeedOpen(true)}
             />
+            
+            <SettingItem
+              icon={KeyRound}
+              label="Manage Stored Keys"
+              description={`${storedKeys.length} key${storedKeys.length !== 1 ? 's' : ''} saved for quick signing`}
+              onClick={() => setManageKeysOpen(true)}
+            />
           </div>
         </div>
 
@@ -232,6 +241,11 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
         open={resetDialogOpen} 
         onOpenChange={setResetDialogOpen}
         onConfirm={handleResetWallet}
+      />
+      
+      <ManageStoredKeysSheet
+        open={manageKeysOpen}
+        onOpenChange={setManageKeysOpen}
       />
     </div>
   );
