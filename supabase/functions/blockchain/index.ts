@@ -88,11 +88,36 @@ const chainConfigs: Record<Chain, ChainConfig> = {
 
 // Known SPL tokens on Solana (mainnet mint addresses)
 const KNOWN_SPL_TOKENS: Record<string, { name: string; symbol: string; decimals: number; logo?: string }> = {
+  // Major stablecoins
   'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { name: 'USD Coin', symbol: 'USDC', decimals: 6, logo: '💵' },
   'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
+  'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA': { name: 'USDS', symbol: 'USDS', decimals: 6, logo: '💵' },
+  'USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX': { name: 'USDH', symbol: 'USDH', decimals: 6, logo: '💵' },
+  
+  // Wrapped tokens
   'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'WSOL', decimals: 9, logo: '◎' },
-  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { name: 'Bonk', symbol: 'BONK', decimals: 5, logo: '🐕' },
+  '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E': { name: 'Wrapped BTC (Sollet)', symbol: 'BTC', decimals: 6, logo: '₿' },
+  '2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk': { name: 'Wrapped ETH (Sollet)', symbol: 'ETH', decimals: 6, logo: '⟠' },
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': { name: 'Wrapped ETH (Wormhole)', symbol: 'weETH', decimals: 8, logo: '⟠' },
+  '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh': { name: 'Wrapped BTC (Wormhole)', symbol: 'wBTC', decimals: 8, logo: '₿' },
+  
+  // Major DeFi tokens
   'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': { name: 'Jupiter', symbol: 'JUP', decimals: 6, logo: '🪐' },
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': { name: 'Marinade Staked SOL', symbol: 'mSOL', decimals: 9, logo: '🥩' },
+  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj': { name: 'Lido Staked SOL', symbol: 'stSOL', decimals: 9, logo: '🌊' },
+  'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL': { name: 'JTO', symbol: 'JTO', decimals: 9, logo: '🏛️' },
+  'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE': { name: 'Orca', symbol: 'ORCA', decimals: 6, logo: '🐋' },
+  'RasYALBDLb3vW7icNVHzkd9E6VHM7qQKoTkbUPSBvrd': { name: 'Raydium', symbol: 'RAY', decimals: 6, logo: '☀️' },
+  'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt': { name: 'Serum', symbol: 'SRM', decimals: 6, logo: '🧪' },
+  
+  // Meme coins
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { name: 'Bonk', symbol: 'BONK', decimals: 5, logo: '🐕' },
+  'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': { name: 'dogwifhat', symbol: 'WIF', decimals: 6, logo: '🐶' },
+  'ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzPJBY': { name: 'MOODENG', symbol: 'MOODENG', decimals: 6, logo: '🦛' },
+  
+  // Gaming/NFT tokens
+  'ATLASXmbPQxBUYbxPsV97usA3fPQYEqzQBUHgiFCUsXx': { name: 'Star Atlas', symbol: 'ATLAS', decimals: 8, logo: '🚀' },
+  'poLisWXnNRwC6oBu1vHiuKQzFjGL4XDSu4g9qjz9qVk': { name: 'Star Atlas DAO', symbol: 'POLIS', decimals: 8, logo: '🏛️' },
 };
 
 async function tatumRequest(endpoint: string, options: RequestInit = {}) {
@@ -270,7 +295,7 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
   }
 }
 
-// Fetch SPL tokens for Solana addresses
+// Fetch SPL tokens for Solana addresses using Tatum's Solana RPC endpoint
 async function getSPLTokens(address: string): Promise<Array<{
   symbol: string;
   name: string;
@@ -280,39 +305,93 @@ async function getSPLTokens(address: string): Promise<Array<{
   logo?: string;
 }>> {
   try {
-    // ✅ Use Tatum v4 balances endpoint
-    const endpoint = `/data/balances?chain=solana&addresses=${encodeURIComponent(address)}`;
-    console.log(`Fetching SPL tokens (v4) for solana: ${endpoint}`);
-
-    const raw = await tatumRequestV4(endpoint);
-    const balances = extractV4Balances(raw);
-
-    const tokens = balances
-      .filter((b) => {
-        const addr = (b.tokenAddress || b.contractAddress || '').toLowerCase();
-        if (!addr || addr === 'native') return false;
-        return true;
-      })
-      .map((b) => {
-        const contractAddress = b.tokenAddress || b.contractAddress || '';
+    // Use Tatum's Solana JSON-RPC endpoint with getTokenAccountsByOwner
+    // Token Program ID for SPL tokens
+    const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+    
+    const rpcBody = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getTokenAccountsByOwner',
+      params: [
+        address,
+        { programId: TOKEN_PROGRAM_ID },
+        { encoding: 'jsonParsed' }
+      ]
+    };
+    
+    console.log(`Fetching SPL tokens via RPC for solana address: ${address}`);
+    
+    const response = await fetch('https://api.tatum.io/v3/blockchain/node/SOL', {
+      method: 'POST',
+      headers: {
+        'x-api-key': TATUM_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(rpcBody),
+    });
+    
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      console.error(`Solana RPC error: ${response.status} - ${responseText}`);
+      return [];
+    }
+    
+    const rpcResult = JSON.parse(responseText);
+    console.log(`Solana SPL tokens RPC response:`, JSON.stringify(rpcResult).slice(0, 500));
+    
+    if (rpcResult.error) {
+      console.error(`Solana RPC error:`, rpcResult.error);
+      return [];
+    }
+    
+    const tokenAccounts = rpcResult.result?.value || [];
+    
+    const tokens = tokenAccounts
+      .map((account: { 
+        account: { 
+          data: { 
+            parsed: { 
+              info: { 
+                mint: string; 
+                tokenAmount: { 
+                  amount: string; 
+                  decimals: number; 
+                  uiAmountString: string;
+                } 
+              } 
+            } 
+          } 
+        } 
+      }) => {
+        const info = account.account?.data?.parsed?.info;
+        if (!info) return null;
+        
+        const contractAddress = info.mint;
+        const tokenAmount = info.tokenAmount;
         const knownToken = KNOWN_SPL_TOKENS[contractAddress] || undefined;
-        const decimals = knownToken?.decimals ?? (typeof b.decimals === 'number' ? b.decimals : 9);
-        const baseBalance = toBaseUnits(b.balance ?? '0', decimals);
+        const decimals = knownToken?.decimals ?? tokenAmount.decimals;
+        
+        // Use the raw amount (already in base units)
+        const balance = tokenAmount.amount;
 
         return {
-          symbol: knownToken?.symbol || b.symbol || 'UNKNOWN',
-          name: knownToken?.name || b.name || 'Unknown Token',
-          balance: baseBalance,
+          symbol: knownToken?.symbol || 'UNKNOWN',
+          name: knownToken?.name || 'Unknown Token',
+          balance,
           decimals,
           contractAddress,
           logo: knownToken?.logo,
         };
       })
-      .filter((t) => isNonZeroBaseUnit(t.balance));
+      .filter((t: { balance: string } | null): t is { balance: string; symbol: string; name: string; decimals: number; contractAddress: string; logo?: string } => 
+        t !== null && isNonZeroBaseUnit(t.balance)
+      );
 
     return tokens;
   } catch (error) {
-    console.error(`Error fetching Solana SPL tokens (v4):`, error);
+    console.error(`Error fetching Solana SPL tokens:`, error);
     // Return empty array on error - don't fail the whole balance request
     return [];
   }
