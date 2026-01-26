@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface TokenAllocation {
@@ -32,7 +33,6 @@ export const PortfolioBreakdown = () => {
 
   let cumulativePercentage = 0;
   const arcs = portfolioData.map((token) => {
-    const startAngle = (cumulativePercentage / 100) * 360 - 90;
     const arcLength = (token.percentage / 100) * circumference;
     const dashOffset = circumference - (cumulativePercentage / 100) * circumference;
     cumulativePercentage += token.percentage;
@@ -41,7 +41,6 @@ export const PortfolioBreakdown = () => {
       ...token,
       dashArray: `${arcLength} ${circumference - arcLength}`,
       dashOffset,
-      rotation: startAngle,
     };
   });
 
@@ -49,7 +48,12 @@ export const PortfolioBreakdown = () => {
 
   return (
     <div className="px-6 py-4">
-      <div className="bg-card rounded-2xl border border-border p-5">
+      <motion.div 
+        className="bg-card rounded-2xl border border-border p-5"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
         <h3 className="text-sm font-semibold text-muted-foreground mb-4">Portfolio Breakdown</h3>
 
         <div className="flex items-center gap-6">
@@ -67,62 +71,132 @@ export const PortfolioBreakdown = () => {
                 opacity={0.2}
               />
               
-              {/* Token arcs */}
-              {arcs.map((arc, index) => (
-                <circle
-                  key={arc.symbol}
-                  cx={center}
-                  cy={center}
-                  r={radius}
-                  fill="none"
-                  stroke={arc.color}
-                  strokeWidth={activeToken?.symbol === arc.symbol ? strokeWidth + 4 : strokeWidth}
-                  strokeDasharray={arc.dashArray}
-                  strokeDashoffset={arc.dashOffset}
-                  strokeLinecap="round"
-                  transform={`rotate(-90 ${center} ${center})`}
-                  className="transition-all duration-300 cursor-pointer"
-                  style={{ 
-                    opacity: activeToken && activeToken.symbol !== arc.symbol ? 0.4 : 1,
-                  }}
-                  onMouseEnter={() => setActiveToken(arc)}
-                  onMouseLeave={() => setActiveToken(null)}
-                  onClick={() => setActiveToken(activeToken?.symbol === arc.symbol ? null : arc)}
-                />
-              ))}
+              {/* Token arcs with animation */}
+              {arcs.map((arc, index) => {
+                const isActive = activeToken?.symbol === arc.symbol;
+                const isInactive = activeToken && activeToken.symbol !== arc.symbol;
+                
+                return (
+                  <motion.circle
+                    key={arc.symbol}
+                    cx={center}
+                    cy={center}
+                    r={radius}
+                    fill="none"
+                    stroke={arc.color}
+                    strokeLinecap="round"
+                    strokeDasharray={arc.dashArray}
+                    strokeDashoffset={arc.dashOffset}
+                    transform={`rotate(-90 ${center} ${center})`}
+                    className="cursor-pointer"
+                    initial={{ 
+                      strokeWidth: strokeWidth,
+                      opacity: 0,
+                      strokeDashoffset: circumference 
+                    }}
+                    animate={{ 
+                      strokeWidth: isActive ? strokeWidth + 6 : strokeWidth,
+                      opacity: isInactive ? 0.35 : 1,
+                      strokeDashoffset: arc.dashOffset,
+                      filter: isActive ? "drop-shadow(0 0 8px " + arc.color + ")" : "none"
+                    }}
+                    transition={{ 
+                      strokeWidth: { duration: 0.2, ease: "easeOut" },
+                      opacity: { duration: 0.2, ease: "easeOut" },
+                      strokeDashoffset: { duration: 0.8, delay: index * 0.1, ease: "easeOut" },
+                      filter: { duration: 0.2 }
+                    }}
+                    onMouseEnter={() => setActiveToken(arc)}
+                    onMouseLeave={() => setActiveToken(null)}
+                    onClick={() => setActiveToken(activeToken?.symbol === arc.symbol ? null : arc)}
+                    whileHover={{ scale: 1.02 }}
+                    style={{ transformOrigin: "center" }}
+                  />
+                );
+              })}
             </svg>
 
-            {/* Center content */}
+            {/* Center content with animation */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl">{displayToken.icon}</span>
-              <span className="text-lg font-bold mt-1">{displayToken.percentage}%</span>
-              <span className="text-xs text-muted-foreground">{displayToken.symbol}</span>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={displayToken.symbol}
+                  initial={{ opacity: 0, scale: 0.8, y: 5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: -5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex flex-col items-center"
+                >
+                  <motion.span 
+                    className="text-2xl"
+                    animate={{ 
+                      textShadow: activeToken 
+                        ? `0 0 12px ${displayToken.color}` 
+                        : "none" 
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {displayToken.icon}
+                  </motion.span>
+                  <span className="text-lg font-bold mt-1">{displayToken.percentage}%</span>
+                  <span className="text-xs text-muted-foreground">{displayToken.symbol}</span>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
 
           {/* Token List */}
           <div className="flex-1 space-y-2 min-w-0">
-            {portfolioData.map((token) => (
-              <button
+            {portfolioData.map((token, index) => (
+              <motion.button
                 key={token.symbol}
                 onClick={() => setActiveToken(activeToken?.symbol === token.symbol ? null : token)}
                 onMouseEnter={() => setActiveToken(token)}
                 onMouseLeave={() => setActiveToken(null)}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ 
+                  opacity: 1, 
+                  x: 0,
+                  backgroundColor: activeToken?.symbol === token.symbol 
+                    ? "hsl(var(--accent) / 0.2)" 
+                    : "transparent"
+                }}
+                transition={{ 
+                  opacity: { duration: 0.3, delay: index * 0.05 },
+                  x: { duration: 0.3, delay: index * 0.05 },
+                  backgroundColor: { duration: 0.2 }
+                }}
+                whileHover={{ scale: 1.02, x: 4 }}
+                whileTap={{ scale: 0.98 }}
                 className={cn(
-                  "w-full flex items-center gap-2 p-2 rounded-lg transition-all text-left",
-                  activeToken?.symbol === token.symbol 
-                    ? "bg-accent" 
-                    : "hover:bg-accent/50"
+                  "w-full flex items-center gap-2 p-2 rounded-lg text-left"
                 )}
               >
-                <div
+                <motion.div
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: token.color }}
+                  animate={{ 
+                    scale: activeToken?.symbol === token.symbol ? 1.3 : 1,
+                    boxShadow: activeToken?.symbol === token.symbol 
+                      ? `0 0 8px ${token.color}` 
+                      : "none"
+                  }}
+                  transition={{ duration: 0.2 }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium truncate">{token.symbol}</span>
-                    <span className="text-sm font-semibold">{token.percentage}%</span>
+                    <motion.span 
+                      className="text-sm font-semibold"
+                      animate={{ 
+                        color: activeToken?.symbol === token.symbol 
+                          ? token.color 
+                          : "hsl(var(--foreground))" 
+                      }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {token.percentage}%
+                    </motion.span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground truncate">{token.name}</span>
@@ -131,19 +205,24 @@ export const PortfolioBreakdown = () => {
                     </span>
                   </div>
                 </div>
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
 
         {/* Total */}
-        <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+        <motion.div 
+          className="mt-4 pt-4 border-t border-border flex items-center justify-between"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+        >
           <span className="text-sm text-muted-foreground">Total Portfolio Value</span>
           <span className="text-lg font-bold">
             ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
