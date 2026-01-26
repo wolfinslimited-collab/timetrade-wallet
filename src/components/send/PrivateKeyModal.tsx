@@ -3,23 +3,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Eye, EyeOff, Shield } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertTriangle, Eye, EyeOff, Shield, Key, Lock } from "lucide-react";
 
 interface PrivateKeyModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (privateKey: string) => void;
+  onSubmit: (privateKey: string, saveKey: boolean) => void;
   isLoading: boolean;
+  hasStoredKey?: boolean;
 }
 
 export const PrivateKeyModal = ({ 
   open, 
   onOpenChange, 
   onSubmit, 
-  isLoading 
+  isLoading,
+  hasStoredKey = false,
 }: PrivateKeyModalProps) => {
   const [privateKey, setPrivateKey] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const [saveKey, setSaveKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = () => {
@@ -41,12 +45,13 @@ export const PrivateKeyModal = ({
       return;
     }
     
-    onSubmit(key);
+    onSubmit(key, saveKey);
   };
 
   const handleClose = () => {
     setPrivateKey("");
     setShowKey(false);
+    setSaveKey(false);
     setError(null);
     onOpenChange(false);
   };
@@ -60,7 +65,7 @@ export const PrivateKeyModal = ({
             Sign Transaction
           </DialogTitle>
           <DialogDescription>
-            Enter your private key to sign this transaction. Your key is never stored or transmitted.
+            Enter your private key to sign this transaction. Your key is never stored or transmitted unless you choose to save it.
           </DialogDescription>
         </DialogHeader>
 
@@ -104,6 +109,27 @@ export const PrivateKeyModal = ({
               <p className="text-xs text-destructive">{error}</p>
             )}
           </div>
+
+          {/* Save Key Option */}
+          {!hasStoredKey && (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <Checkbox
+                id="saveKey"
+                checked={saveKey}
+                onCheckedChange={(checked) => setSaveKey(checked === true)}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <label htmlFor="saveKey" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-primary" />
+                  Save key for faster transactions
+                </label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Encrypts your key with your PIN for quick access. You'll only need to enter your PIN next time.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">
@@ -126,7 +152,10 @@ export const PrivateKeyModal = ({
                 Signing...
               </>
             ) : (
-              "Sign & Send"
+              <>
+                <Key className="w-4 h-4 mr-2" />
+                Sign & Send
+              </>
             )}
           </Button>
         </div>

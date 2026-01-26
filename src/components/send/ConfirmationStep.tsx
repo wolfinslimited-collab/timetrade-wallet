@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, AlertTriangle, Shield, Zap, Wallet } from "lucide-react";
+import { ChevronLeft, AlertTriangle, Shield, Zap, Wallet, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
@@ -7,7 +7,9 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo } from "@/hooks/useBlockchain";
 import { useTransactionSigning, isEvmChain } from "@/hooks/useTransactionSigning";
 import { useWalletConnect } from "@/contexts/WalletConnectContext";
+import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { PrivateKeyModal } from "./PrivateKeyModal";
+import { PinUnlockModal } from "./PinUnlockModal";
 import { toast } from "@/hooks/use-toast";
 
 interface ConfirmationStepProps {
@@ -17,7 +19,7 @@ interface ConfirmationStepProps {
 }
 
 export const ConfirmationStep = ({ transaction, onConfirm, onBack }: ConfirmationStepProps) => {
-  const { gasEstimate, selectedChain, isTestnet } = useBlockchainContext();
+  const { gasEstimate, selectedChain, isTestnet, walletAddress } = useBlockchainContext();
   const { 
     isWalletConnectConnected, 
     wcAddress, 
@@ -25,15 +27,23 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     signTransactionWithWalletConnect,
     isSigningWithWC 
   } = useWalletConnect();
+  const { hasStoredKey, retrievePrivateKey, storePrivateKey, getStoredKeyInfo } = useStoredKeys();
+  
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPrivateKeyModal, setShowPrivateKeyModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const chainInfo = getChainInfo(selectedChain);
   const { signTransaction, isSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
 
+  // Check if there's a stored key for the connected address
+  const storedKeyAddress = walletAddress || wcAddress;
+  const hasStoredKeyForAddress = storedKeyAddress ? hasStoredKey(storedKeyAddress, selectedChain) : false;
+  const storedKeyInfo = storedKeyAddress ? getStoredKeyInfo(storedKeyAddress, selectedChain) : null;
+
   const feeDetails = useMemo(() => {
-    // Use real gas data if available
     const gasMap: Record<GasSpeed, string | undefined> = {
       slow: gasEstimate?.slow?.gasPrice,
       standard: gasEstimate?.medium?.gasPrice,
@@ -74,7 +84,6 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         description: "Your transaction has been sent via WalletConnect.",
       });
 
-      // Pass txHash directly since WalletConnect sends the transaction
       await onConfirm(undefined, result.txHash);
     } catch (error) {
       console.error('WalletConnect signing failed:', error);
@@ -90,13 +99,15 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
 
   const handleConfirmClick = () => {
     if (isWalletConnectConnected && isEvmChain(selectedChain)) {
-      // Use WalletConnect if connected
       handleWalletConnectSign();
+    } else if (hasStoredKeyForAddress && isSigningAvailable) {
+      // Use stored key - prompt for PIN
+      setPinError(null);
+      setShowPinModal(true);
     } else if (isSigningAvailable) {
-      // Open private key modal for EVM chains
+      // No stored key - prompt for private key
       setShowPrivateKeyModal(true);
     } else {
-      // Fallback to simulated mode for non-EVM chains
       handleSimulatedTransaction();
     }
   };
@@ -110,23 +121,75 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     }
   };
 
-  const handleSignAndSend = async (privateKey: string) => {
+  const handlePinSubmit = async (pin: string) => {
+    if (!storedKeyAddress) return;
+    
     setIsProcessing(true);
+    setPinError(null);
+    
     try {
-      // Sign the transaction using ethers.js
-      const { signedTx, txHash } = await signTransaction(privateKey, {
+      const privateKey = await retrievePrivateKey(storedKeyAddress, selectedChain, pin);
+      
+      if (!privateKey) {
+        setPinError("No stored key found");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Sign the transaction
+      const { signedTx } = await signTransaction(privateKey, {
         to: transaction.recipient,
         value: transaction.amount,
         gasLimit: BigInt(transaction.gasEstimate),
         gasPrice: feeDetails.gasPriceGwei,
       });
 
-      console.log('Transaction signed:', { txHash });
+      setShowPinModal(false);
+      await onConfirm(signedTx);
 
-      // Close modal and broadcast
+      toast({
+        title: "Transaction Signed",
+        description: "Your transaction has been signed and is being broadcast.",
+      });
+    } catch (error) {
+      console.error('Signing with stored key failed:', error);
+      if (error instanceof Error && error.message === 'Invalid PIN') {
+        setPinError("Incorrect PIN. Please try again.");
+      } else {
+        setPinError(error instanceof Error ? error.message : "Failed to sign transaction");
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSignAndSend = async (privateKey: string, saveKey: boolean) => {
+    setIsProcessing(true);
+    try {
+      const { signedTx } = await signTransaction(privateKey, {
+        to: transaction.recipient,
+        value: transaction.amount,
+        gasLimit: BigInt(transaction.gasEstimate),
+        gasPrice: feeDetails.gasPriceGwei,
+      });
+
+      // Save the key if requested
+      if (saveKey && storedKeyAddress) {
+        const storedPin = localStorage.getItem("timetrade_pin");
+        if (storedPin) {
+          try {
+            await storePrivateKey(privateKey, storedPin, selectedChain);
+            toast({
+              title: "Key Saved",
+              description: "Your key has been encrypted and saved for faster transactions.",
+            });
+          } catch (saveError) {
+            console.error('Failed to save key:', saveError);
+          }
+        }
+      }
+
       setShowPrivateKeyModal(false);
-      
-      // Call onConfirm with the signed transaction
       await onConfirm(signedTx);
 
       toast({
@@ -143,6 +206,11 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleUsePrivateKeyInstead = () => {
+    setShowPinModal(false);
+    setShowPrivateKeyModal(true);
   };
 
   return (
@@ -171,13 +239,10 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
 
       {/* Transaction Details */}
       <div className="bg-card border border-border rounded-xl divide-y divide-border">
-        {/* To */}
         <div className="p-4">
           <p className="text-xs text-muted-foreground mb-1">To</p>
           <p className="font-mono text-sm">{formatAddress(transaction.recipient)}</p>
         </div>
-
-        {/* Network */}
         <div className="p-4">
           <p className="text-xs text-muted-foreground mb-1">Network</p>
           <p className="text-sm font-medium">{chainInfo.name} {chainInfo.testnetName}</p>
@@ -217,6 +282,19 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         </div>
       </div>
 
+      {/* Stored Key Indicator */}
+      {hasStoredKeyForAddress && isSigningAvailable && !isWalletConnectConnected && (
+        <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+          <Key className="w-5 h-5 text-green-500" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-green-500">Saved Key Available</p>
+            <p className="text-xs text-muted-foreground">
+              Enter your PIN to sign quickly
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Insurance Badge */}
       <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
         <Shield className="w-5 h-5 text-primary" />
@@ -226,7 +304,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         </div>
       </div>
 
-      {/* Mainnet/Testnet Indicator */}
+      {/* Mainnet Indicator */}
       {!isTestnet && (
         <div className="mt-4 flex items-start gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
           <Zap className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
@@ -248,7 +326,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
       </div>
 
       {/* WalletConnect Status */}
-      {isEvmChain(selectedChain) && (
+      {isEvmChain(selectedChain) && !hasStoredKeyForAddress && (
         <div className="mt-4">
           {isWalletConnectConnected ? (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
@@ -294,6 +372,11 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
               <Wallet className="w-5 h-5 mr-2" />
               Sign with Wallet
             </>
+          ) : hasStoredKeyForAddress && isSigningAvailable ? (
+            <>
+              <Key className="w-5 h-5 mr-2" />
+              Sign with PIN
+            </>
           ) : isSigningAvailable ? (
             "Sign & Send"
           ) : (
@@ -305,12 +388,18 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
             Transaction signing for {chainInfo.name} coming soon
           </p>
         )}
-        {isEvmChain(selectedChain) && !isWalletConnectConnected && (
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Or connect WalletConnect above for easier signing
-          </p>
-        )}
       </div>
+
+      {/* PIN Unlock Modal */}
+      <PinUnlockModal
+        open={showPinModal}
+        onOpenChange={setShowPinModal}
+        onSubmit={handlePinSubmit}
+        onUsePrivateKey={handleUsePrivateKeyInstead}
+        isLoading={isProcessing}
+        walletAddress={storedKeyAddress}
+        error={pinError}
+      />
 
       {/* Private Key Modal */}
       <PrivateKeyModal
@@ -318,6 +407,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         onOpenChange={setShowPrivateKeyModal}
         onSubmit={handleSignAndSend}
         isLoading={isProcessing}
+        hasStoredKey={hasStoredKeyForAddress}
       />
     </div>
   );
