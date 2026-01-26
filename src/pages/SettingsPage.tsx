@@ -5,10 +5,12 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { ChangePinSheet } from "@/components/settings/ChangePinSheet";
 import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
 import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
 import { ManageStoredKeysSheet } from "@/components/settings/ManageStoredKeysSheet";
+import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -52,47 +54,55 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
 export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const { toast } = useToast();
   const { storedKeys, clearAllStoredKeys } = useStoredKeys();
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const { 
+    isAvailable: biometricAvailable, 
+    isEnabled: biometricEnabled, 
+    isRegistered: biometricRegistered,
+    registerBiometric, 
+    removeBiometric,
+    updateStoredPin,
+    refreshStatus: refreshBiometricStatus,
+  } = useBiometricAuth();
   
   // Sheet states
   const [changePinOpen, setChangePinOpen] = useState(false);
   const [viewSeedOpen, setViewSeedOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [manageKeysOpen, setManageKeysOpen] = useState(false);
+  const [biometricSetupOpen, setBiometricSetupOpen] = useState(false);
 
   useEffect(() => {
-    // Check biometric status
-    const checkBiometric = async () => {
-      if (window.PublicKeyCredential) {
-        try {
-          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-          setBiometricAvailable(available);
-        } catch {
-          setBiometricAvailable(false);
-        }
-      }
-    };
-    checkBiometric();
-    
-    // Load biometric setting
-    const stored = localStorage.getItem("timetrade_biometric");
-    setBiometricEnabled(stored === "true");
-  }, []);
+    refreshBiometricStatus();
+  }, [refreshBiometricStatus]);
 
   const handleBiometricToggle = (enabled: boolean) => {
-    setBiometricEnabled(enabled);
-    localStorage.setItem("timetrade_biometric", enabled ? "true" : "false");
+    if (enabled) {
+      // Open setup dialog to verify PIN and register biometric
+      setBiometricSetupOpen(true);
+    } else {
+      // Disable biometrics
+      removeBiometric();
+      toast({
+        title: "Biometrics disabled",
+        description: "PIN will be required to unlock stored keys",
+      });
+    }
+  };
+
+  const handleBiometricSetupSuccess = () => {
+    refreshBiometricStatus();
     toast({
-      title: enabled ? "Biometrics enabled" : "Biometrics disabled",
-      description: enabled 
-        ? "You can now unlock with Face ID or fingerprint" 
-        : "PIN will be required to unlock",
+      title: "Biometrics enabled",
+      description: "You can now use Face ID or fingerprint to unlock stored keys",
     });
   };
 
-  const handlePinChanged = () => {
+  const handlePinChanged = (newPin?: string) => {
     setChangePinOpen(false);
+    // Update the biometric stored PIN if biometrics are registered
+    if (newPin && biometricRegistered) {
+      updateStoredPin(newPin);
+    }
     toast({
       title: "PIN updated",
       description: "Your new PIN has been saved",
@@ -105,6 +115,9 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
     localStorage.removeItem("timetrade_pin");
     localStorage.removeItem("timetrade_biometric");
     localStorage.removeItem("timetrade_seed_phrase");
+    
+    // Clear biometric registration
+    removeBiometric();
     
     // Clear stored encrypted keys
     clearAllStoredKeys();
@@ -148,12 +161,14 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               icon={Fingerprint}
               label="Biometric Unlock"
               description={biometricAvailable 
-                ? "Use Face ID or fingerprint to unlock" 
+                ? (biometricEnabled && biometricRegistered
+                    ? "Enabled - use Face ID or fingerprint"
+                    : "Use Face ID or fingerprint to unlock")
                 : "Not available on this device"}
               onClick={biometricAvailable ? () => handleBiometricToggle(!biometricEnabled) : undefined}
               rightElement={
                 <Switch
-                  checked={biometricEnabled}
+                  checked={biometricEnabled && biometricRegistered}
                   onCheckedChange={handleBiometricToggle}
                   disabled={!biometricAvailable}
                 />
@@ -246,6 +261,13 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
       <ManageStoredKeysSheet
         open={manageKeysOpen}
         onOpenChange={setManageKeysOpen}
+      />
+      
+      <BiometricSetupDialog
+        open={biometricSetupOpen}
+        onOpenChange={setBiometricSetupOpen}
+        onSuccess={handleBiometricSetupSuccess}
+        onRegister={registerBiometric}
       />
     </div>
   );

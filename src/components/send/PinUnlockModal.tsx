@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Lock, Delete, Key } from "lucide-react";
+import { Lock, Delete, Key, Fingerprint } from "lucide-react";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 
 interface PinUnlockModalProps {
   open: boolean;
@@ -23,6 +24,19 @@ export const PinUnlockModal = ({
   error,
 }: PinUnlockModalProps) => {
   const [pin, setPin] = useState("");
+  const [biometricError, setBiometricError] = useState<string | null>(null);
+  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric, refreshStatus } = useBiometricAuth();
+
+  const canUseBiometric = isAvailable && isEnabled && isRegistered;
+
+  // Refresh biometric status when modal opens
+  useEffect(() => {
+    if (open) {
+      refreshStatus();
+      setPin("");
+      setBiometricError(null);
+    }
+  }, [open, refreshStatus]);
 
   const handleKeyPress = (digit: string) => {
     if (pin.length >= 6) return;
@@ -41,7 +55,22 @@ export const PinUnlockModal = ({
 
   const handleClose = () => {
     setPin("");
+    setBiometricError(null);
     onOpenChange(false);
+  };
+
+  const handleBiometricAuth = async () => {
+    setBiometricError(null);
+    try {
+      const retrievedPin = await authenticateWithBiometric();
+      if (retrievedPin) {
+        onSubmit(retrievedPin);
+      } else {
+        setBiometricError("Biometric authentication failed");
+      }
+    } catch (err) {
+      setBiometricError("Biometric authentication failed");
+    }
   };
 
   const formatAddress = (addr: string) => {
@@ -54,18 +83,41 @@ export const PinUnlockModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" />
-            Enter PIN to Sign
+            Unlock to Sign
           </DialogTitle>
           <DialogDescription>
             {walletAddress ? (
-              <>Use your PIN to unlock the stored key for <span className="font-mono text-xs">{formatAddress(walletAddress)}</span></>
+              <>Authenticate to sign with <span className="font-mono text-xs">{formatAddress(walletAddress)}</span></>
             ) : (
-              "Enter your PIN to sign this transaction with your stored key."
+              "Authenticate to sign this transaction with your stored key."
             )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-6">
+          {/* Biometric Button */}
+          {canUseBiometric && (
+            <div className="mb-6">
+              <Button
+                variant="outline"
+                onClick={handleBiometricAuth}
+                disabled={isLoading}
+                className="w-full h-16 text-lg gap-3 border-primary/30 hover:border-primary hover:bg-primary/5"
+              >
+                <Fingerprint className="w-8 h-8 text-primary" />
+                Use Face ID / Fingerprint
+              </Button>
+              {biometricError && (
+                <p className="text-center text-sm text-destructive mt-2">{biometricError}</p>
+              )}
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or enter PIN</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            </div>
+          )}
+
           {/* PIN Dots */}
           <div className="flex justify-center gap-3 mb-8">
             {[...Array(6)].map((_, i) => (
