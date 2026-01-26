@@ -9,6 +9,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { WalletTabs } from "@/components/WalletTabs";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
+import { MarketPage } from "./MarketPage";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -72,6 +73,16 @@ const Index = () => {
     return (
       <>
         <TransactionHistoryPage onBack={() => setActiveTab("wallet")} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      </>
+    );
+  }
+
+  // Show market page
+  if (activeTab === "market") {
+    return (
+      <>
+        <MarketPage onBack={() => setActiveTab("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </>
     );
