@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Shield, Settings, Wallet, Loader2 } from "lucide-react";
+import { Shield, Settings, Wallet, Loader2, Users } from "lucide-react";
 import { NotificationCenter } from "./notifications/NotificationCenter";
 import { ConnectWalletSheet } from "./wallet/ConnectWalletSheet";
+import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import type { Notification } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,8 @@ export const WalletHeader = ({
   onClearAllNotifications,
 }: WalletHeaderProps) => {
   const [showConnectWallet, setShowConnectWallet] = useState(false);
-  const { isConnected, isLoadingBalance } = useBlockchainContext();
+  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+  const { isConnected, isLoadingBalance, derivedAccounts, activeAccountIndex } = useBlockchainContext();
 
   return (
     <>
@@ -67,6 +69,21 @@ export const WalletHeader = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Account Switcher Button */}
+          {derivedAccounts.length > 0 && (
+            <button
+              onClick={() => setShowAccountSwitcher(true)}
+              className={cn(
+                "relative p-2 rounded-full border transition-colors",
+                "bg-card border-border hover:bg-secondary text-muted-foreground"
+              )}
+            >
+              <Users className="w-5 h-5" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {activeAccountIndex + 1}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setShowConnectWallet(true)}
             className={cn(
@@ -102,6 +119,11 @@ export const WalletHeader = ({
       <ConnectWalletSheet 
         open={showConnectWallet} 
         onOpenChange={setShowConnectWallet} 
+      />
+      
+      <AccountSwitcherSheet
+        open={showAccountSwitcher}
+        onOpenChange={setShowAccountSwitcher}
       />
     </>
   );

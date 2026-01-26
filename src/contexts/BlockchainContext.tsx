@@ -3,7 +3,7 @@ import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance
 import { useCryptoPrices, getPriceForSymbol } from '@/hooks/useCryptoPrices';
 import { useQueryClient } from '@tanstack/react-query';
 import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
-import { deriveEvmAddressFromMnemonicWords } from '@/utils/walletDerivation';
+import { deriveMultipleAccounts, DerivedAccount } from '@/utils/walletDerivation';
 
 interface BlockchainContextType {
   // Wallet state
@@ -11,6 +11,12 @@ interface BlockchainContextType {
   selectedChain: Chain;
   isConnected: boolean;
   isTestnet: boolean;
+
+  // Multi-account support
+  derivedAccounts: DerivedAccount[];
+  activeAccountIndex: number;
+  setActiveAccountIndex: (index: number) => void;
+  isLoadingAccounts: boolean;
 
   // Actions
   connectWallet: (address: string) => void;
@@ -48,6 +54,15 @@ interface BlockchainProviderProps {
 
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
+  
+  // Multi-account state
+  const [derivedAccounts, setDerivedAccounts] = useState<DerivedAccount[]>([]);
+  const [activeAccountIndex, setActiveAccountIndex] = useState<number>(() => {
+    const stored = localStorage.getItem('timetrade_active_account_index');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  
   const [walletAddress, setWalletAddress] = useState<string | null>(() => {
     const stored = localStorage.getItem('timetrade_wallet_address');
     return stored && stored.trim().length > 0 ? stored : null;
@@ -56,28 +71,45 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     return (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
   });
 
-  // Auto-connect from the stored, encrypted mnemonic (removes demo mode without requiring re-onboarding).
+  // Auto-connect and derive accounts from the stored, encrypted mnemonic.
   useEffect(() => {
     let cancelled = false;
 
     async function autoConnectFromMnemonic() {
-      if (walletAddress) return;
-
       const storedPin = localStorage.getItem('timetrade_pin');
       const encryptedDataStr = localStorage.getItem('timetrade_seed_phrase');
 
       if (!storedPin || !encryptedDataStr) return;
 
+      setIsLoadingAccounts(true);
+      
       try {
         const encryptedData: EncryptedData = JSON.parse(encryptedDataStr);
         const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
-        const derivedAddress = deriveEvmAddressFromMnemonicWords(decryptedPhrase.split(/\s+/));
-
+        const words = decryptedPhrase.split(/\s+/);
+        
+        // Derive all 5 accounts
+        const accounts = deriveMultipleAccounts(words, 5);
+        
         if (cancelled) return;
-        setWalletAddress(derivedAddress);
-        localStorage.setItem('timetrade_wallet_address', derivedAddress);
+        
+        setDerivedAccounts(accounts);
+        
+        // Set wallet address from active account index
+        const storedIndex = localStorage.getItem('timetrade_active_account_index');
+        const index = storedIndex ? parseInt(storedIndex, 10) : 0;
+        const activeAccount = accounts[index] || accounts[0];
+        
+        if (activeAccount && !walletAddress) {
+          setWalletAddress(activeAccount.address);
+          localStorage.setItem('timetrade_wallet_address', activeAccount.address);
+        }
       } catch {
         // If anything fails (bad PIN, corrupted data), stay disconnected.
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAccounts(false);
+        }
       }
     }
 
@@ -85,7 +117,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [walletAddress]);
+  }, []);
 
   // Queries
   const balanceQuery = useWalletBalance(walletAddress, selectedChain);
@@ -128,7 +160,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   const disconnectWallet = useCallback(() => {
     setWalletAddress(null);
+    setDerivedAccounts([]);
+    setActiveAccountIndex(0);
     localStorage.removeItem('timetrade_wallet_address');
+    localStorage.removeItem('timetrade_active_account_index');
   }, []);
 
   const handleSetSelectedChain = useCallback((chain: Chain) => {
@@ -146,11 +181,31 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   // Extract transactions from response
   const transactionsData = transactionsQuery.data as TransactionsResponse | undefined;
 
+  // Handle switching active account
+  const handleSetActiveAccountIndex = useCallback((index: number) => {
+    if (index < 0 || index >= derivedAccounts.length) return;
+    
+    setActiveAccountIndex(index);
+    localStorage.setItem('timetrade_active_account_index', String(index));
+    
+    const account = derivedAccounts[index];
+    if (account) {
+      setWalletAddress(account.address);
+      localStorage.setItem('timetrade_wallet_address', account.address);
+    }
+  }, [derivedAccounts]);
+
   const value: BlockchainContextType = {
     walletAddress,
     selectedChain,
     isConnected: !!walletAddress,
     isTestnet: true,
+
+    // Multi-account support
+    derivedAccounts,
+    activeAccountIndex,
+    setActiveAccountIndex: handleSetActiveAccountIndex,
+    isLoadingAccounts,
 
     connectWallet,
     disconnectWallet,
