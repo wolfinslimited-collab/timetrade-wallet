@@ -5,6 +5,7 @@ import { BottomNav, NavTab } from "@/components/BottomNav";
 import { WalletHeader } from "@/components/WalletHeader";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
 import { PortfolioChart } from "@/components/PortfolioChart";
+import { PortfolioBreakdown } from "@/components/PortfolioBreakdown";
 import { QuickActions } from "@/components/QuickActions";
 import { WalletTabs } from "@/components/WalletTabs";
 import { SettingsPage } from "./SettingsPage";
@@ -117,6 +118,9 @@ const Index = () => {
 
       {/* Quick Actions */}
       <QuickActions />
+
+      {/* Portfolio Breakdown */}
+      <PortfolioBreakdown />
 
       {/* Wallet Tabs & List */}
       <WalletTabs />
