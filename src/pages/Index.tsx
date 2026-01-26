@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
@@ -8,14 +8,18 @@ import { PortfolioChart } from "@/components/PortfolioChart";
 import { PortfolioBreakdown } from "@/components/PortfolioBreakdown";
 import { QuickActions } from "@/components/QuickActions";
 import { WalletTabs } from "@/components/WalletTabs";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { MarketPage } from "./MarketPage";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
   const [isLocked, setIsLocked] = useState(true);
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check if wallet exists in localStorage
@@ -39,6 +43,16 @@ const Index = () => {
   const handleTabChange = (tab: NavTab) => {
     setActiveTab(tab);
   };
+
+  const handleRefresh = useCallback(async () => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setRefreshKey(prev => prev + 1);
+    toast({
+      title: "Prices updated",
+      description: "Portfolio data refreshed successfully",
+    });
+  }, [toast]);
 
   // Loading state
   if (hasWallet === null) {
@@ -92,38 +106,40 @@ const Index = () => {
   // Main wallet view
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative pb-20">
-      {/* Status bar simulation */}
-      <div className="flex items-center justify-between px-6 py-2 text-xs text-muted-foreground">
-        <span className="font-medium">9:41</span>
-        <div className="flex items-center gap-1">
-          <div className="flex gap-0.5">
-            <div className="w-1 h-2 bg-foreground rounded-sm" />
-            <div className="w-1 h-2.5 bg-foreground rounded-sm" />
-            <div className="w-1 h-3 bg-foreground rounded-sm" />
-            <div className="w-1 h-3.5 bg-foreground rounded-sm" />
+      <PullToRefresh onRefresh={handleRefresh}>
+        {/* Status bar simulation */}
+        <div className="flex items-center justify-between px-6 py-2 text-xs text-muted-foreground">
+          <span className="font-medium">9:41</span>
+          <div className="flex items-center gap-1">
+            <div className="flex gap-0.5">
+              <div className="w-1 h-2 bg-foreground rounded-sm" />
+              <div className="w-1 h-2.5 bg-foreground rounded-sm" />
+              <div className="w-1 h-3 bg-foreground rounded-sm" />
+              <div className="w-1 h-3.5 bg-foreground rounded-sm" />
+            </div>
+            <span className="ml-1">📶</span>
+            <span>🔋</span>
           </div>
-          <span className="ml-1">📶</span>
-          <span>🔋</span>
         </div>
-      </div>
 
-      {/* Header */}
-      <WalletHeader userName="Alex" onSettingsClick={() => setActiveTab("settings")} />
+        {/* Header */}
+        <WalletHeader userName="Alex" onSettingsClick={() => setActiveTab("settings")} />
 
-      {/* Balance */}
-      <BalanceDisplay balance={12160.05} changePercent={2.5} />
+        {/* Balance */}
+        <BalanceDisplay key={`balance-${refreshKey}`} balance={12160.05} changePercent={2.5} />
 
-      {/* Portfolio Chart */}
-      <PortfolioChart />
+        {/* Portfolio Chart */}
+        <PortfolioChart key={`chart-${refreshKey}`} />
 
-      {/* Quick Actions */}
-      <QuickActions />
+        {/* Quick Actions */}
+        <QuickActions />
 
-      {/* Portfolio Breakdown */}
-      <PortfolioBreakdown />
+        {/* Portfolio Breakdown */}
+        <PortfolioBreakdown key={`breakdown-${refreshKey}`} />
 
-      {/* Wallet Tabs & List */}
-      <WalletTabs />
+        {/* Wallet Tabs & List */}
+        <WalletTabs />
+      </PullToRefresh>
 
       {/* Bottom Navigation */}
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
