@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, AlertTriangle, Shield } from "lucide-react";
+import { ChevronLeft, AlertTriangle, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
@@ -8,12 +8,12 @@ import { getChainInfo } from "@/hooks/useBlockchain";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
-  onConfirm: () => Promise<void>;
+  onConfirm: (signedTransaction?: string) => Promise<void>;
   onBack: () => void;
 }
 
 export const ConfirmationStep = ({ transaction, onConfirm, onBack }: ConfirmationStepProps) => {
-  const { gasEstimate, selectedChain } = useBlockchainContext();
+  const { gasEstimate, selectedChain, isTestnet } = useBlockchainContext();
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -48,8 +48,14 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
 
   const handleConfirm = async () => {
     setIsProcessing(true);
-    await onConfirm();
-    setIsProcessing(false);
+    try {
+      // In a real wallet, you would sign the transaction here using the user's private key
+      // For now, we call onConfirm without a signed transaction (simulated mode)
+      // To broadcast a real transaction, pass a signed tx hex: await onConfirm(signedTxHex);
+      await onConfirm();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -132,6 +138,19 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
           <p className="text-xs text-muted-foreground">Transaction covered up to $10,000</p>
         </div>
       </div>
+
+      {/* Mainnet/Testnet Indicator */}
+      {!isTestnet && (
+        <div className="mt-4 flex items-start gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+          <Zap className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-destructive">Mainnet Transaction</p>
+            <p className="text-xs text-muted-foreground">
+              This transaction will use real funds on the {chainInfo.name} mainnet.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Warning */}
       <div className="mt-4 flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
