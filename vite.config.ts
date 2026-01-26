@@ -18,4 +18,18 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Polyfill for Node.js globals used by ed25519-hd-key and other crypto libraries
+    "process.env": {},
+    "process.browser": true,
+    "process.version": JSON.stringify(""),
+    global: "globalThis",
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: "globalThis",
+      },
+    },
+  },
 }));
