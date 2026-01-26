@@ -197,7 +197,7 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       usdValue,
       change24h,
     };
-  }).filter(t => t.numericBalance > 0) // Only show tokens with balance
+  }).filter(t => t.numericBalance > 0 && t.symbol.toUpperCase() !== 'UNKNOWN') // Only show tokens with balance, hide unknown/spam tokens
     .sort((a, b) => b.usdValue - a.usdValue); // Sort by USD value
 
   if (isLoading) {
