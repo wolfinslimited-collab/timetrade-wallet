@@ -44,14 +44,8 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
         <p className="text-xs text-muted-foreground tracking-widest uppercase">
           Total Balance
         </p>
-        {isConnected ? (
-          <div 
-            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
-            style={{ 
-              backgroundColor: `${chainInfo.color}20`,
-              color: chainInfo.color,
-            }}
-          >
+      {isConnected ? (
+          <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
             <Wifi className="w-3 h-3" />
             <span>{chainInfo.name}</span>
           </div>
@@ -98,10 +92,7 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
       </div>
       {isConnected && !isLoadingBalance && !balanceError && (
         <p className="text-xs text-muted-foreground mt-1">
-          <span 
-            className="font-medium"
-            style={{ color: chainInfo.color }}
-          >
+          <span className="font-medium text-foreground">
             {nativeBalance} {chainInfo.symbol}
           </span>
           {' '}• {chainInfo.testnetName} Testnet
