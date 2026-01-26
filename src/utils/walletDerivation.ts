@@ -3,6 +3,8 @@ import { Keypair } from "@solana/web3.js";
 import { derivePath } from "ed25519-hd-key";
 import { mnemonicToSeedSync } from "@scure/bip39";
 
+export type SolanaDerivationPath = "phantom" | "solflare" | "legacy";
+
 export interface DerivedAccount {
   index: number;
   address: string;
@@ -14,6 +16,22 @@ export interface MultiChainAccounts {
   evm: DerivedAccount[];
   solana: DerivedAccount[];
 }
+
+// Solana derivation path patterns used by different wallets
+export const SOLANA_DERIVATION_PATHS: Record<SolanaDerivationPath, { name: string; getPath: (index: number) => string }> = {
+  phantom: {
+    name: "Phantom / Solflare",
+    getPath: (index) => `m/44'/501'/${index}'/0'`,
+  },
+  solflare: {
+    name: "Solflare (alternate)",
+    getPath: (index) => `m/44'/501'/0'/${index}'`,
+  },
+  legacy: {
+    name: "Legacy / Trust Wallet",
+    getPath: (index) => `m/44'/501'/${index}'`,
+  },
+};
 
 /**
  * Derive an EVM (Ethereum/Polygon) address from a BIP39 mnemonic at a specific account index.
@@ -27,14 +45,38 @@ export function deriveEvmAddress(phrase: string, accountIndex: number = 0): stri
 
 /**
  * Derive a Solana address from a BIP39 mnemonic at a specific account index.
- * Uses standard BIP44 path: m/44'/501'/{index}'/0'
+ * Supports multiple derivation path styles used by different wallets.
  */
-export function deriveSolanaAddress(phrase: string, accountIndex: number = 0): string {
+export function deriveSolanaAddress(
+  phrase: string, 
+  accountIndex: number = 0,
+  pathStyle: SolanaDerivationPath = "phantom"
+): string {
   const seed = mnemonicToSeedSync(phrase);
-  const path = `m/44'/501'/${accountIndex}'/0'`;
+  const pathConfig = SOLANA_DERIVATION_PATHS[pathStyle];
+  const path = pathConfig.getPath(accountIndex);
   const derivedSeed = derivePath(path, Buffer.from(seed).toString("hex")).key;
   const keypair = Keypair.fromSeed(derivedSeed);
   return keypair.publicKey.toBase58();
+}
+
+/**
+ * Derive Solana addresses using all known derivation paths.
+ * Useful for finding which path was used by a user's original wallet.
+ */
+export function deriveSolanaAddressesAllPaths(phrase: string, accountIndex: number = 0): { path: SolanaDerivationPath; address: string; fullPath: string }[] {
+  const results: { path: SolanaDerivationPath; address: string; fullPath: string }[] = [];
+  
+  for (const [pathStyle, config] of Object.entries(SOLANA_DERIVATION_PATHS)) {
+    const address = deriveSolanaAddress(phrase, accountIndex, pathStyle as SolanaDerivationPath);
+    results.push({
+      path: pathStyle as SolanaDerivationPath,
+      address,
+      fullPath: config.getPath(accountIndex),
+    });
+  }
+  
+  return results;
 }
 
 /**
@@ -65,8 +107,13 @@ export function deriveMultipleEvmAccounts(words: string[], count: number = 5): D
 
 /**
  * Derive multiple Solana accounts (indices 0-4) from a BIP39 mnemonic.
+ * Uses the specified derivation path style.
  */
-export function deriveMultipleSolanaAccounts(words: string[], count: number = 5): DerivedAccount[] {
+export function deriveMultipleSolanaAccounts(
+  words: string[], 
+  count: number = 5,
+  pathStyle: SolanaDerivationPath = "phantom"
+): DerivedAccount[] {
   const phrase = words
     .join(" ")
     .toLowerCase()
@@ -75,9 +122,10 @@ export function deriveMultipleSolanaAccounts(words: string[], count: number = 5)
 
   const seed = mnemonicToSeedSync(phrase);
   const accounts: DerivedAccount[] = [];
+  const pathConfig = SOLANA_DERIVATION_PATHS[pathStyle];
   
   for (let i = 0; i < count; i++) {
-    const path = `m/44'/501'/${i}'/0'`;
+    const path = pathConfig.getPath(i);
     const derivedSeed = derivePath(path, Buffer.from(seed).toString("hex")).key;
     const keypair = Keypair.fromSeed(derivedSeed);
     accounts.push({
@@ -94,10 +142,14 @@ export function deriveMultipleSolanaAccounts(words: string[], count: number = 5)
 /**
  * Derive multiple accounts for both EVM and Solana chains from a BIP39 mnemonic.
  */
-export function deriveMultipleAccounts(words: string[], count: number = 5): MultiChainAccounts {
+export function deriveMultipleAccounts(
+  words: string[], 
+  count: number = 5,
+  solanaPathStyle: SolanaDerivationPath = "phantom"
+): MultiChainAccounts {
   return {
     evm: deriveMultipleEvmAccounts(words, count),
-    solana: deriveMultipleSolanaAccounts(words, count),
+    solana: deriveMultipleSolanaAccounts(words, count, solanaPathStyle),
   };
 }
 

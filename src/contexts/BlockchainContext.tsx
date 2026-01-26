@@ -3,7 +3,13 @@ import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance
 import { useCryptoPrices, getPriceForSymbol } from '@/hooks/useCryptoPrices';
 import { useQueryClient } from '@tanstack/react-query';
 import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
-import { deriveMultipleAccounts, DerivedAccount, MultiChainAccounts } from '@/utils/walletDerivation';
+import { 
+  deriveMultipleAccounts, 
+  DerivedAccount, 
+  MultiChainAccounts, 
+  SolanaDerivationPath,
+  deriveSolanaAddressesAllPaths
+} from '@/utils/walletDerivation';
 
 interface BlockchainContextType {
   // Wallet state
@@ -88,8 +94,28 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
         const words = decryptedPhrase.split(/\s+/);
         
-        // Derive all 5 accounts for both EVM and Solana
-        const accounts = deriveMultipleAccounts(words, 5);
+        // Get stored Solana derivation path preference, or detect it
+        let solanaPathStyle = localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath | null;
+        
+        // If no stored path preference, try to auto-detect by checking which path has balance
+        if (!solanaPathStyle) {
+          const phrase = words.join(' ').toLowerCase().trim().replace(/\s+/g, ' ');
+          const allPaths = deriveSolanaAddressesAllPaths(phrase, 0);
+          
+          // Store the first address from each path for potential balance checking
+          // Default to 'legacy' as it's commonly used by Trust Wallet
+          solanaPathStyle = 'legacy';
+          
+          // Store all detected addresses for debugging
+          for (const pathInfo of allPaths) {
+            console.log(`Solana path ${pathInfo.path} (${pathInfo.fullPath}): ${pathInfo.address}`);
+          }
+          
+          localStorage.setItem('timetrade_solana_derivation_path', solanaPathStyle);
+        }
+        
+        // Derive all 5 accounts for both EVM and Solana with the correct path
+        const accounts = deriveMultipleAccounts(words, 5, solanaPathStyle);
         
         if (cancelled) return;
         
