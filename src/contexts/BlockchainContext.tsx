@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance, Transaction, GasEstimate, TransactionsResponse, SUPPORTED_CHAINS, getChainInfo } from '@/hooks/useBlockchain';
 import { useCryptoPrices, getPriceForSymbol } from '@/hooks/useCryptoPrices';
 import { useQueryClient } from '@tanstack/react-query';
+import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
+import { deriveEvmAddressFromMnemonicWords } from '@/utils/walletDerivation';
 
 interface BlockchainContextType {
   // Wallet state
@@ -47,11 +49,43 @@ interface BlockchainProviderProps {
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
   const [walletAddress, setWalletAddress] = useState<string | null>(() => {
-    return localStorage.getItem('timetrade_wallet_address');
+    const stored = localStorage.getItem('timetrade_wallet_address');
+    return stored && stored.trim().length > 0 ? stored : null;
   });
   const [selectedChain, setSelectedChain] = useState<Chain>(() => {
     return (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
   });
+
+  // Auto-connect from the stored, encrypted mnemonic (removes demo mode without requiring re-onboarding).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function autoConnectFromMnemonic() {
+      if (walletAddress) return;
+
+      const storedPin = localStorage.getItem('timetrade_pin');
+      const encryptedDataStr = localStorage.getItem('timetrade_seed_phrase');
+
+      if (!storedPin || !encryptedDataStr) return;
+
+      try {
+        const encryptedData: EncryptedData = JSON.parse(encryptedDataStr);
+        const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
+        const derivedAddress = deriveEvmAddressFromMnemonicWords(decryptedPhrase.split(/\s+/));
+
+        if (cancelled) return;
+        setWalletAddress(derivedAddress);
+        localStorage.setItem('timetrade_wallet_address', derivedAddress);
+      } catch {
+        // If anything fails (bad PIN, corrupted data), stay disconnected.
+      }
+    }
+
+    autoConnectFromMnemonic();
+    return () => {
+      cancelled = true;
+    };
+  }, [walletAddress]);
 
   // Queries
   const balanceQuery = useWalletBalance(walletAddress, selectedChain);
