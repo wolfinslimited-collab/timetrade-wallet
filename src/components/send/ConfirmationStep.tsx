@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import { ChevronLeft, AlertTriangle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
-import { FeeEstimator, GasSpeed, gasOptions } from "./FeeEstimator";
+import { FeeEstimator, GasSpeed } from "./FeeEstimator";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { getChainInfo } from "@/hooks/useBlockchain";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -11,20 +13,33 @@ interface ConfirmationStepProps {
 }
 
 export const ConfirmationStep = ({ transaction, onConfirm, onBack }: ConfirmationStepProps) => {
+  const { gasEstimate, selectedChain } = useBlockchainContext();
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const chainInfo = getChainInfo(selectedChain);
+
   const feeDetails = useMemo(() => {
-    const baseGwei = 30; // Simulated base fee
-    const gwei = baseGwei * gasOptions[gasSpeed].multiplier;
+    // Use real gas data if available
+    const gasMap: Record<GasSpeed, string | undefined> = {
+      slow: gasEstimate?.slow?.gasPrice,
+      standard: gasEstimate?.medium?.gasPrice,
+      fast: gasEstimate?.fast?.gasPrice,
+      instant: gasEstimate?.fast?.gasPrice,
+    };
+    
+    const baseGwei = parseFloat(gasMap[gasSpeed] || "20");
+    const multiplier = gasSpeed === "instant" ? 1.5 : 1;
+    const gwei = baseGwei * multiplier;
     const eth = (gwei * transaction.gasEstimate) / 1e9;
-    const usd = eth * 3245.67; // ETH price
+    const usd = eth * transaction.token.price;
     return { gwei, eth, usd };
-  }, [gasSpeed, transaction.gasEstimate]);
+  }, [gasSpeed, transaction.gasEstimate, transaction.token.price, gasEstimate]);
 
   const amountNum = parseFloat(transaction.amount);
   const amountUsd = amountNum * transaction.token.price;
-  const totalCrypto = amountNum + (transaction.token.symbol === "ETH" ? feeDetails.eth : 0);
+  const isNativeToken = transaction.token.symbol === chainInfo.symbol;
+  const totalCrypto = amountNum + (isNativeToken ? feeDetails.eth : 0);
   const totalUsd = amountUsd + feeDetails.usd;
 
   const formatAddress = (addr: string) => {
@@ -72,7 +87,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         {/* Network */}
         <div className="p-4">
           <p className="text-xs text-muted-foreground mb-1">Network</p>
-          <p className="text-sm font-medium">Ethereum Mainnet</p>
+          <p className="text-sm font-medium">{chainInfo.name} {chainInfo.testnetName}</p>
         </div>
       </div>
 
@@ -81,7 +96,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         <FeeEstimator
           baseGasLimit={transaction.gasEstimate}
           tokenSymbol={transaction.token.symbol}
-          tokenPrice={3245.67}
+          tokenPrice={transaction.token.price}
           selectedSpeed={gasSpeed}
           onSpeedChange={setGasSpeed}
           disabled={isProcessing}
@@ -96,7 +111,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Network Fee</span>
-          <span>{feeDetails.eth.toFixed(6)} ETH</span>
+          <span>{feeDetails.eth.toFixed(6)} {chainInfo.symbol}</span>
         </div>
         <div className="border-t border-border pt-3 flex justify-between font-medium">
           <span>Total</span>
