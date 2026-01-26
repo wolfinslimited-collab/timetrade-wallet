@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance, Transaction, GasEstimate, formatBalance } from '@/hooks/useBlockchain';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance, Transaction, GasEstimate, TransactionsResponse, SUPPORTED_CHAINS, getChainInfo } from '@/hooks/useBlockchain';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface BlockchainContextType {
@@ -23,6 +23,7 @@ interface BlockchainContextType {
 
   // Transactions data
   transactions: Transaction[] | undefined;
+  transactionsExplorerUrl: string | undefined;
   isLoadingTransactions: boolean;
   transactionsError: Error | null;
 
@@ -51,10 +52,11 @@ const TOKEN_PRICES: Record<string, number> = {
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
   const [walletAddress, setWalletAddress] = useState<string | null>(() => {
-    // Restore from localStorage
     return localStorage.getItem('timetrade_wallet_address');
   });
-  const [selectedChain, setSelectedChain] = useState<Chain>('ethereum');
+  const [selectedChain, setSelectedChain] = useState<Chain>(() => {
+    return (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
+  });
 
   // Queries
   const balanceQuery = useWalletBalance(walletAddress, selectedChain);
@@ -92,21 +94,29 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     localStorage.removeItem('timetrade_wallet_address');
   }, []);
 
+  const handleSetSelectedChain = useCallback((chain: Chain) => {
+    setSelectedChain(chain);
+    localStorage.setItem('timetrade_selected_chain', chain);
+  }, []);
+
   const refreshAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
   }, [queryClient]);
 
+  // Extract transactions from response
+  const transactionsData = transactionsQuery.data as TransactionsResponse | undefined;
+
   const value: BlockchainContextType = {
     walletAddress,
     selectedChain,
     isConnected: !!walletAddress,
-    isTestnet: true, // Sepolia testnet
+    isTestnet: true,
 
     connectWallet,
     disconnectWallet,
-    setSelectedChain,
+    setSelectedChain: handleSetSelectedChain,
     refreshAll,
 
     balance: balanceQuery.data,
@@ -114,7 +124,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     balanceError: balanceQuery.error,
     totalBalanceUsd,
 
-    transactions: transactionsQuery.data as Transaction[] | undefined,
+    transactions: transactionsData?.transactions,
+    transactionsExplorerUrl: transactionsData?.explorerUrl,
     isLoadingTransactions: transactionsQuery.isLoading,
     transactionsError: transactionsQuery.error,
 
