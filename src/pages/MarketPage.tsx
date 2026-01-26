@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
-import { ArrowLeft, Search, Star, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, Search, Star, TrendingUp, TrendingDown, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkline } from "@/components/Sparkline";
 import { TokenDetailSheet } from "@/components/market/TokenDetailSheet";
+import { PriceAlertSheet } from "@/components/alerts/PriceAlertSheet";
+import { usePriceAlerts } from "@/hooks/usePriceAlerts";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface MarketPageProps {
@@ -161,6 +164,11 @@ export const MarketPage = ({ onBack }: MarketPageProps) => {
     return saved ? new Set(JSON.parse(saved)) : new Set(["bitcoin", "ethereum"]);
   });
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [alertSheetOpen, setAlertSheetOpen] = useState(false);
+  const [alertPreselectedToken, setAlertPreselectedToken] = useState<Token | null>(null);
+  
+  const { alerts, addAlert, deleteAlert } = usePriceAlerts();
+  const { toast } = useToast();
 
   const toggleFavorite = (tokenId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -205,20 +213,48 @@ export const MarketPage = ({ onBack }: MarketPageProps) => {
     return tokens;
   }, [searchQuery, activeFilter, favorites]);
 
+  const handleOpenAlertSheet = (token?: Token) => {
+    setAlertPreselectedToken(token || null);
+    setAlertSheetOpen(true);
+  };
+
+  const handleAddAlert = (alert: Parameters<typeof addAlert>[0]) => {
+    addAlert(alert);
+    toast({
+      title: "Price alert created",
+      description: `You'll be notified when ${alert.tokenSymbol} goes ${alert.condition} $${alert.targetPrice.toLocaleString()}`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto pb-20">
       {/* Header */}
-      <div className="flex items-center gap-4 px-6 py-4 border-b border-border">
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center hover:bg-accent transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold">Market</h1>
-          <p className="text-xs text-muted-foreground">Live crypto prices</p>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center hover:bg-accent transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold">Market</h1>
+            <p className="text-xs text-muted-foreground">Live crypto prices</p>
+          </div>
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => handleOpenAlertSheet()}
+          className="rounded-full relative"
+        >
+          <Bell className="w-5 h-5" />
+          {alerts.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+              {alerts.length}
+            </span>
+          )}
+        </Button>
       </div>
 
       {/* Search */}
@@ -340,6 +376,26 @@ export const MarketPage = ({ onBack }: MarketPageProps) => {
             toggleFavorite(selectedToken.id, { stopPropagation: () => {} } as React.MouseEvent);
           }
         }}
+        onSetPriceAlert={() => {
+          if (selectedToken) {
+            setSelectedToken(null);
+            setTimeout(() => handleOpenAlertSheet(selectedToken), 300);
+          }
+        }}
+      />
+
+      {/* Price Alert Sheet */}
+      <PriceAlertSheet
+        isOpen={alertSheetOpen}
+        onClose={() => {
+          setAlertSheetOpen(false);
+          setAlertPreselectedToken(null);
+        }}
+        tokens={mockTokens}
+        alerts={alerts}
+        onAddAlert={handleAddAlert}
+        onDeleteAlert={deleteAlert}
+        preselectedToken={alertPreselectedToken}
       />
     </div>
   );

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Star, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Bell } from "lucide-react";
 import { Token } from "@/pages/MarketPage";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ interface TokenDetailSheetProps {
   onClose: () => void;
   isFavorite: boolean;
   onToggleFavorite: () => void;
+  onSetPriceAlert?: () => void;
 }
 
 type TimeRange = "1H" | "1D" | "1W" | "1M" | "1Y" | "ALL";
@@ -52,6 +53,7 @@ export const TokenDetailSheet = ({
   onClose,
   isFavorite,
   onToggleFavorite,
+  onSetPriceAlert,
 }: TokenDetailSheetProps) => {
   const [timeRange, setTimeRange] = useState<TimeRange>("1D");
 
@@ -89,6 +91,14 @@ export const TokenDetailSheet = ({
                 <p className="text-sm text-muted-foreground">{token.symbol}</p>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onSetPriceAlert}
+              className="rounded-full"
+            >
+              <Bell className="w-5 h-5 text-muted-foreground" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
