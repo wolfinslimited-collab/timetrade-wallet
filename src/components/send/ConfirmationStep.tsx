@@ -5,6 +5,9 @@ import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo } from "@/hooks/useBlockchain";
+import { useTransactionSigning, isEvmChain } from "@/hooks/useTransactionSigning";
+import { PrivateKeyModal } from "./PrivateKeyModal";
+import { toast } from "@/hooks/use-toast";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -16,8 +19,10 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const { gasEstimate, selectedChain, isTestnet } = useBlockchainContext();
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPrivateKeyModal, setShowPrivateKeyModal] = useState(false);
 
   const chainInfo = getChainInfo(selectedChain);
+  const { signTransaction, isSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
 
   const feeDetails = useMemo(() => {
     // Use real gas data if available
@@ -33,7 +38,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     const gwei = baseGwei * multiplier;
     const eth = (gwei * transaction.gasEstimate) / 1e9;
     const usd = eth * transaction.token.price;
-    return { gwei, eth, usd };
+    return { gwei, eth, usd, gasPriceGwei: String(gwei) };
   }, [gasSpeed, transaction.gasEstimate, transaction.token.price, gasEstimate]);
 
   const amountNum = parseFloat(transaction.amount);
@@ -46,13 +51,55 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     return `${addr.slice(0, 10)}...${addr.slice(-8)}`;
   };
 
-  const handleConfirm = async () => {
+  const handleConfirmClick = () => {
+    if (isSigningAvailable) {
+      // Open private key modal for EVM chains
+      setShowPrivateKeyModal(true);
+    } else {
+      // Fallback to simulated mode for non-EVM chains
+      handleSimulatedTransaction();
+    }
+  };
+
+  const handleSimulatedTransaction = async () => {
     setIsProcessing(true);
     try {
-      // In a real wallet, you would sign the transaction here using the user's private key
-      // For now, we call onConfirm without a signed transaction (simulated mode)
-      // To broadcast a real transaction, pass a signed tx hex: await onConfirm(signedTxHex);
       await onConfirm();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSignAndSend = async (privateKey: string) => {
+    setIsProcessing(true);
+    try {
+      // Sign the transaction using ethers.js
+      const { signedTx, txHash } = await signTransaction(privateKey, {
+        to: transaction.recipient,
+        value: transaction.amount,
+        gasLimit: BigInt(transaction.gasEstimate),
+        gasPrice: feeDetails.gasPriceGwei,
+      });
+
+      console.log('Transaction signed:', { txHash });
+
+      // Close modal and broadcast
+      setShowPrivateKeyModal(false);
+      
+      // Call onConfirm with the signed transaction
+      await onConfirm(signedTx);
+
+      toast({
+        title: "Transaction Signed",
+        description: "Your transaction has been signed and is being broadcast.",
+      });
+    } catch (error) {
+      console.error('Signing failed:', error);
+      toast({
+        title: "Signing Failed",
+        description: error instanceof Error ? error.message : "Failed to sign transaction",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -163,7 +210,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
       {/* Confirm Button */}
       <div className="mt-auto pt-4">
         <Button
-          onClick={handleConfirm}
+          onClick={handleConfirmClick}
           disabled={isProcessing}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
         >
@@ -172,11 +219,26 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
               <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
               Processing...
             </>
+          ) : isSigningAvailable ? (
+            "Sign & Send"
           ) : (
             "Confirm & Send"
           )}
         </Button>
+        {!isSigningAvailable && (
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Transaction signing for {chainInfo.name} coming soon
+          </p>
+        )}
       </div>
+
+      {/* Private Key Modal */}
+      <PrivateKeyModal
+        open={showPrivateKeyModal}
+        onOpenChange={setShowPrivateKeyModal}
+        onSubmit={handleSignAndSend}
+        isLoading={isProcessing}
+      />
     </div>
   );
 };
