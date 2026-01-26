@@ -1,1 +1,4 @@
 project_id = "uxjpbjkgyphhbycrldui"
+
+[functions.blockchain]
+verify_jwt = false
