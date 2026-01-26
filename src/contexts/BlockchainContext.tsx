@@ -95,6 +95,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         
         setAllDerivedAccounts(accounts);
         
+        // Store addresses for each chain type for multi-chain display
+        if (accounts.evm.length > 0) {
+          localStorage.setItem('timetrade_wallet_address_evm', accounts.evm[0].address);
+        }
+        if (accounts.solana.length > 0) {
+          localStorage.setItem('timetrade_wallet_address_solana', accounts.solana[0].address);
+        }
+        
         // Set wallet address from active account index and chain
         const storedIndex = localStorage.getItem('timetrade_active_account_index');
         const storedChain = localStorage.getItem('timetrade_selected_chain') as Chain || 'ethereum';
