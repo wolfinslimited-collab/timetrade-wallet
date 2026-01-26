@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Send, ArrowDownToLine, ArrowRightLeft, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SendCryptoSheet } from "./send/SendCryptoSheet";
+import { ReceiveCryptoSheet } from "./receive/ReceiveCryptoSheet";
 
 interface QuickAction {
   icon: React.ElementType;
@@ -19,10 +20,13 @@ const actions: QuickAction[] = [
 
 export const QuickActions = () => {
   const [sendOpen, setSendOpen] = useState(false);
+  const [receiveOpen, setReceiveOpen] = useState(false);
 
   const handleAction = (action?: string) => {
     if (action === "send") {
       setSendOpen(true);
+    } else if (action === "receive") {
+      setReceiveOpen(true);
     }
     // Other actions can be added later
   };
@@ -50,6 +54,7 @@ export const QuickActions = () => {
       </div>
 
       <SendCryptoSheet open={sendOpen} onOpenChange={setSendOpen} />
+      <ReceiveCryptoSheet open={receiveOpen} onOpenChange={setReceiveOpen} />
     </>
   );
 };
