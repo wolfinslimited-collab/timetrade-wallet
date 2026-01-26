@@ -1,12 +1,30 @@
 import { Shield, Settings } from "lucide-react";
+import { NotificationCenter } from "./notifications/NotificationCenter";
+import type { Notification } from "@/hooks/useNotifications";
 
 interface WalletHeaderProps {
   userName: string;
   avatarUrl?: string;
   onSettingsClick?: () => void;
+  notifications: Notification[];
+  unreadCount: number;
+  onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead: () => void;
+  onDeleteNotification: (id: string) => void;
+  onClearAllNotifications: () => void;
 }
 
-export const WalletHeader = ({ userName, avatarUrl, onSettingsClick }: WalletHeaderProps) => {
+export const WalletHeader = ({ 
+  userName, 
+  avatarUrl, 
+  onSettingsClick,
+  notifications,
+  unreadCount,
+  onMarkAsRead,
+  onMarkAllAsRead,
+  onDeleteNotification,
+  onClearAllNotifications,
+}: WalletHeaderProps) => {
   return (
     <header className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-3">
@@ -29,12 +47,22 @@ export const WalletHeader = ({ userName, avatarUrl, onSettingsClick }: WalletHea
           </div>
         </div>
       </div>
-      <button 
-        onClick={onSettingsClick}
-        className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-      >
-        <Settings className="w-5 h-5 text-muted-foreground" />
-      </button>
+      <div className="flex items-center gap-2">
+        <NotificationCenter
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={onMarkAsRead}
+          onMarkAllAsRead={onMarkAllAsRead}
+          onDelete={onDeleteNotification}
+          onClearAll={onClearAllNotifications}
+        />
+        <button 
+          onClick={onSettingsClick}
+          className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
+      </div>
     </header>
   );
 };
