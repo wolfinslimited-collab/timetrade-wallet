@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface ConnectWalletSheetProps {
@@ -30,7 +29,6 @@ export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetPro
   const [copiedChain, setCopiedChain] = useState<string | null>(null);
   const [addresses, setAddresses] = useState<Record<string, string | null>>({});
   const { isConnected } = useBlockchainContext();
-  const { toast } = useToast();
 
   // Load addresses from localStorage
   useEffect(() => {
@@ -46,10 +44,6 @@ export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetPro
   const copyAddress = async (chainId: string, addr: string) => {
     await navigator.clipboard.writeText(addr);
     setCopiedChain(chainId);
-    toast({
-      title: "Address copied",
-      description: "Wallet address copied to clipboard",
-    });
     setTimeout(() => setCopiedChain(null), 2000);
   };
 
