@@ -6,11 +6,11 @@ import {
   SystemProgram,
   LAMPORTS_PER_SOL,
   Keypair,
-  sendAndConfirmRawTransaction,
   ComputeBudgetProgram,
 } from '@solana/web3.js';
-import { derivePath } from 'ed25519-hd-key';
 import { mnemonicToSeedSync } from '@scure/bip39';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha512 } from '@noble/hashes/sha2.js';
 import { SOLANA_DERIVATION_PATHS, SolanaDerivationPath } from '@/utils/walletDerivation';
 
 export interface SolanaTransactionParams {
@@ -38,6 +38,51 @@ const SOLANA_RPC = {
   devnet: 'https://api.devnet.solana.com',
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ED25519 BIP32 derivation – browser-compatible
+// ─────────────────────────────────────────────────────────────────────────────
+const ED25519_CURVE = "ed25519 seed";
+const HARDENED_OFFSET = 0x80000000;
+
+interface DerivedKey { key: Uint8Array; chainCode: Uint8Array; }
+
+function hexToBytes(hex: string): Uint8Array {
+  const len = hex.length / 2;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return bytes;
+}
+
+function getMasterKeyFromSeed(seedHex: string): DerivedKey {
+  const I = hmac(sha512, new TextEncoder().encode(ED25519_CURVE), hexToBytes(seedHex));
+  return { key: I.slice(0, 32), chainCode: I.slice(32) };
+}
+
+function CKDPriv({ key, chainCode }: DerivedKey, index: number): DerivedKey {
+  const indexBuffer = new Uint8Array(4);
+  new DataView(indexBuffer.buffer).setUint32(0, index, false);
+  const data = new Uint8Array(1 + 32 + 4);
+  data[0] = 0x00;
+  data.set(key, 1);
+  data.set(indexBuffer, 33);
+  const I = hmac(sha512, chainCode, data);
+  return { key: I.slice(0, 32), chainCode: I.slice(32) };
+}
+
+function derivePath(path: string, seedHex: string): DerivedKey {
+  const segments = path.replace("m/", "").split("/").map(seg => {
+    const isHardened = seg.endsWith("'");
+    return (isHardened ? parseInt(seg.slice(0, -1), 10) + HARDENED_OFFSET : parseInt(seg, 10));
+  });
+  let derived = getMasterKeyFromSeed(seedHex);
+  for (const idx of segments) derived = CKDPriv(derived, idx);
+  return derived;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 /**
  * Derive a Solana Keypair from a mnemonic phrase
  */
@@ -49,8 +94,8 @@ export function deriveSolanaKeypair(
   const seed = mnemonicToSeedSync(phrase);
   const pathConfig = SOLANA_DERIVATION_PATHS[pathStyle];
   const path = pathConfig.getPath(accountIndex);
-  const derivedSeed = derivePath(path, Buffer.from(seed).toString('hex')).key;
-  return Keypair.fromSeed(derivedSeed);
+  const { key } = derivePath(path, bytesToHex(seed));
+  return Keypair.fromSeed(key);
 }
 
 /**
