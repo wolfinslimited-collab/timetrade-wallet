@@ -57,7 +57,37 @@ interface BlockchainContextType {
   isLoadingPrices: boolean;
 }
 
-const BlockchainContext = createContext<BlockchainContextType | undefined>(undefined);
+// Create context with a default value to prevent "outside provider" errors during HMR/fast refresh
+const defaultContextValue: BlockchainContextType = {
+  walletAddress: null,
+  selectedChain: 'ethereum',
+  isConnected: false,
+  isTestnet: true,
+  derivedAccounts: [],
+  activeAccountIndex: 0,
+  setActiveAccountIndex: () => {},
+  isLoadingAccounts: false,
+  connectWallet: () => {},
+  disconnectWallet: () => {},
+  setSelectedChain: () => {},
+  refreshAll: () => {},
+  balance: undefined,
+  isLoadingBalance: false,
+  balanceError: null,
+  totalBalanceUsd: 0,
+  unifiedAssets: undefined,
+  transactions: undefined,
+  transactionsExplorerUrl: undefined,
+  isLoadingTransactions: false,
+  transactionsError: null,
+  gasEstimate: undefined,
+  isLoadingGas: false,
+  gasError: null,
+  prices: undefined,
+  isLoadingPrices: false,
+};
+
+const BlockchainContext = createContext<BlockchainContextType>(defaultContextValue);
 
 interface BlockchainProviderProps {
   children: ReactNode;
@@ -442,9 +472,5 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 }
 
 export function useBlockchainContext() {
-  const context = useContext(BlockchainContext);
-  if (context === undefined) {
-    throw new Error('useBlockchainContext must be used within a BlockchainProvider');
-  }
-  return context;
+  return useContext(BlockchainContext);
 }
