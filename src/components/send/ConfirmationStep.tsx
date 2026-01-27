@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { getChainInfo } from "@/hooks/useBlockchain";
+import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useTransactionSigning, isEvmChain, isTronChain, isSolanaChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
 import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
 import { useSolanaTransactionSigning } from "@/hooks/useSolanaTransactionSigning";
@@ -18,12 +18,14 @@ import { ethers } from "ethers";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
+  selectedChain: Chain;
+  isTestnet?: boolean;
   onConfirm: (signedTransaction?: string, txHash?: string) => Promise<void>;
   onBack: () => void;
 }
 
-export const ConfirmationStep = ({ transaction, onConfirm, onBack }: ConfirmationStepProps) => {
-  const { gasEstimate, selectedChain, isTestnet, walletAddress } = useBlockchainContext();
+export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false, onConfirm, onBack }: ConfirmationStepProps) => {
+  const { gasEstimate, walletAddress } = useBlockchainContext();
   const { 
     isWalletConnectConnected, 
     wcAddress, 

@@ -264,10 +264,12 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex-1"
+              className="flex-1 h-full overflow-hidden"
             >
               <ConfirmationStep
                 transaction={transaction}
+                selectedChain={selectedChain}
+                isTestnet={isTestnet}
                 onConfirm={handleConfirm}
                 onBack={handleBack}
               />
