@@ -61,12 +61,29 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       const encryptedData = await encryptPrivateKey(phraseString, pin);
       localStorage.setItem("timetrade_seed_phrase", JSON.stringify(encryptedData));
 
-      // Derive all 5 accounts for EVM and connect the first one
-      const accounts = deriveMultipleAccounts(seedPhrase, 5);
+      // Derive accounts for all chains and persist addresses immediately.
+      // (BlockchainContext auto-connect runs on initial mount only; without this, SOL/TRX may stay empty until refresh.)
+      const storedSolPath = localStorage.getItem("timetrade_solana_derivation_path") as any;
+      const accounts = deriveMultipleAccounts(seedPhrase, 5, storedSolPath || "legacy");
+
       if (accounts.evm.length > 0) {
         connectWallet(accounts.evm[0].address);
-        localStorage.setItem('timetrade_active_account_index', '0');
+        localStorage.setItem("timetrade_active_account_index", "0");
+
+        // Ensure chain-specific keys exist right away for Receive / unified views.
+        if (!localStorage.getItem("timetrade_wallet_address_evm")) {
+          localStorage.setItem("timetrade_wallet_address_evm", accounts.evm[0].address);
+        }
       }
+
+      if (accounts.solana?.[0]?.address && !localStorage.getItem("timetrade_wallet_address_solana")) {
+        localStorage.setItem("timetrade_wallet_address_solana", accounts.solana[0].address);
+      }
+
+      if (accounts.tron?.[0]?.address && !localStorage.getItem("timetrade_wallet_address_tron")) {
+        localStorage.setItem("timetrade_wallet_address_tron", accounts.tron[0].address);
+      }
+
       setSelectedChain("ethereum");
     } catch (error) {
       console.error("Failed to encrypt seed phrase:", error);
