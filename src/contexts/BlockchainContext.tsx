@@ -10,7 +10,8 @@ import {
   MultiChainAccounts, 
   SolanaDerivationPath,
   deriveSolanaAddressesAllPaths,
-  deriveSolanaAddress
+  deriveSolanaAddress,
+  deriveTronAddress
 } from '@/utils/walletDerivation';
 
 interface BlockchainContextType {
@@ -64,7 +65,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
   
   // Multi-account state - stores both EVM and Solana accounts
-  const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [] });
+  const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [], tron: [] });
   const [activeAccountIndex, setActiveAccountIndex] = useState<number>(() => {
     const stored = localStorage.getItem('timetrade_active_account_index');
     return stored ? parseInt(stored, 10) : 0;
@@ -228,12 +229,18 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         // Store addresses for each chain type for multi-chain display (match active index)
         const activeEvm = accounts.evm[index] || accounts.evm[0];
         const activeSolana = accounts.solana[index] || accounts.solana[0];
+        const activeTron = accounts.tron[index] || accounts.tron[0];
         if (activeEvm) {
           localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
         }
         // If we didn't detect a better Solana address with balance, keep storage aligned with active index.
         if (activeSolana && !detectedSolanaAddress) {
           localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
+        }
+        // Store Tron address for UnifiedTokenList
+        if (activeTron) {
+          localStorage.setItem('timetrade_wallet_address_tron', activeTron.address);
+          console.log(`Saved Tron address (acct #${index}): ${activeTron.address}`);
         }
         
         // Get appropriate accounts based on chain
@@ -309,11 +316,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   const disconnectWallet = useCallback(() => {
     setWalletAddress(null);
-    setAllDerivedAccounts({ evm: [], solana: [] });
+    setAllDerivedAccounts({ evm: [], solana: [], tron: [] });
     setActiveAccountIndex(0);
     localStorage.removeItem('timetrade_wallet_address');
     localStorage.removeItem('timetrade_wallet_address_evm');
     localStorage.removeItem('timetrade_wallet_address_solana');
+    localStorage.removeItem('timetrade_wallet_address_tron');
     localStorage.removeItem('timetrade_solana_balance_account_index');
     localStorage.removeItem('timetrade_active_account_index');
   }, []);
@@ -366,8 +374,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     // Keep multi-chain address keys in sync with the active index
     const evmAcc = allDerivedAccounts.evm[index];
     const solAcc = allDerivedAccounts.solana[index];
+    const tronAcc = allDerivedAccounts.tron[index];
     if (evmAcc) localStorage.setItem('timetrade_wallet_address_evm', evmAcc.address);
     if (solAcc) localStorage.setItem('timetrade_wallet_address_solana', solAcc.address);
+    if (tronAcc) localStorage.setItem('timetrade_wallet_address_tron', tronAcc.address);
   }, [selectedChain, allDerivedAccounts]);
 
   const value: BlockchainContextType = {
