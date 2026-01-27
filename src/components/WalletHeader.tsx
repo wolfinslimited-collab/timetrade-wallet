@@ -62,7 +62,7 @@ export const WalletHeader = ({
               {isConnected && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Sepolia
+                  Multi-Chain
                 </div>
               )}
             </div>
