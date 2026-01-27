@@ -5,7 +5,8 @@ import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo } from "@/hooks/useBlockchain";
-import { useTransactionSigning, isEvmChain } from "@/hooks/useTransactionSigning";
+import { useTransactionSigning, isEvmChain, isTronChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
+import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
 import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { PrivateKeyModal } from "./PrivateKeyModal";
@@ -39,7 +40,11 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const [liveFeeData, setLiveFeeData] = useState<LiveFeeData | null>(null);
 
   const chainInfo = getChainInfo(selectedChain);
-  const { signTransaction, isSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
+  const { signTransaction: signEvmTransaction, isSigningAvailable: isEvmSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
+  const { signTransaction: signTronTransaction, isSigningAvailable: isTronSigningAvailable } = useTronTransactionSigning(isTestnet);
+  
+  // Combined signing availability check
+  const isSigningAvailable = isSigningSupportedForChain(selectedChain);
 
   // Check if there's a stored key for the connected address
   const storedKeyAddress = walletAddress || wcAddress;
@@ -171,20 +176,39 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
         return;
       }
 
-      // Sign the transaction with live fee data
-      const txParams = {
-        to: transaction.recipient,
-        value: transaction.amount,
-        gasLimit: BigInt(transaction.gasEstimate),
-        ...(feeDetails.isEIP1559 ? {
-          maxFeePerGas: feeDetails.maxFee.toFixed(9),
-          maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
-        } : {
-          gasPrice: feeDetails.gasPriceGwei,
-        }),
-      };
-      
-      const { signedTx } = await signTransaction(privateKey, txParams);
+      let signedTx: string;
+
+      if (isTronChain(selectedChain)) {
+        // Tron transaction signing
+        const tronAddress = localStorage.getItem('timetrade_wallet_address_tron') || '';
+        const isToken = transaction.token.symbol !== 'TRX';
+        
+        const result = await signTronTransaction(privateKey, {
+          to: transaction.recipient,
+          amount: transaction.amount,
+          from: tronAddress,
+          isToken,
+          contractAddress: isToken ? (transaction.token as any).contractAddress : undefined,
+          decimals: transaction.token.symbol === 'USDT' ? 6 : 6, // TRC-20 tokens typically use 6 decimals
+        });
+        signedTx = result.signedTx;
+      } else {
+        // EVM transaction signing
+        const txParams = {
+          to: transaction.recipient,
+          value: transaction.amount,
+          gasLimit: BigInt(transaction.gasEstimate),
+          ...(feeDetails.isEIP1559 ? {
+            maxFeePerGas: feeDetails.maxFee.toFixed(9),
+            maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
+          } : {
+            gasPrice: feeDetails.gasPriceGwei,
+          }),
+        };
+        
+        const result = await signEvmTransaction(privateKey, txParams);
+        signedTx = result.signedTx;
+      }
 
       setShowPinModal(false);
       await onConfirm(signedTx);
@@ -208,20 +232,39 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const handleSignAndSend = async (privateKey: string, saveKey: boolean) => {
     setIsProcessing(true);
     try {
-      // Build transaction params with live fee data
-      const txParams = {
-        to: transaction.recipient,
-        value: transaction.amount,
-        gasLimit: BigInt(transaction.gasEstimate),
-        ...(feeDetails.isEIP1559 ? {
-          maxFeePerGas: feeDetails.maxFee.toFixed(9),
-          maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
-        } : {
-          gasPrice: feeDetails.gasPriceGwei,
-        }),
-      };
-      
-      const { signedTx } = await signTransaction(privateKey, txParams);
+      let signedTx: string;
+
+      if (isTronChain(selectedChain)) {
+        // Tron transaction signing
+        const tronAddress = localStorage.getItem('timetrade_wallet_address_tron') || '';
+        const isToken = transaction.token.symbol !== 'TRX';
+        
+        const result = await signTronTransaction(privateKey, {
+          to: transaction.recipient,
+          amount: transaction.amount,
+          from: tronAddress,
+          isToken,
+          contractAddress: isToken ? (transaction.token as any).contractAddress : undefined,
+          decimals: transaction.token.symbol === 'USDT' ? 6 : 6,
+        });
+        signedTx = result.signedTx;
+      } else {
+        // EVM transaction signing
+        const txParams = {
+          to: transaction.recipient,
+          value: transaction.amount,
+          gasLimit: BigInt(transaction.gasEstimate),
+          ...(feeDetails.isEIP1559 ? {
+            maxFeePerGas: feeDetails.maxFee.toFixed(9),
+            maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
+          } : {
+            gasPrice: feeDetails.gasPriceGwei,
+          }),
+        };
+        
+        const result = await signEvmTransaction(privateKey, txParams);
+        signedTx = result.signedTx;
+      }
 
       // Save the key if requested
       if (saveKey && storedKeyAddress) {

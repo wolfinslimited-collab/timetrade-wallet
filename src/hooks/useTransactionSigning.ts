@@ -63,6 +63,14 @@ export function isEvmChain(chain: Chain): boolean {
   return chain === 'ethereum' || chain === 'polygon';
 }
 
+export function isTronChain(chain: Chain): boolean {
+  return chain === 'tron';
+}
+
+export function isSigningSupportedForChain(chain: Chain): boolean {
+  return isEvmChain(chain) || isTronChain(chain);
+}
+
 export function useTransactionSigning(chain: Chain, isTestnet: boolean = true): UseTransactionSigningReturn {
   const [error, setError] = useState<string | null>(null);
 
