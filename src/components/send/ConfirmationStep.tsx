@@ -332,16 +332,22 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
     setShowPrivateKeyModal(true);
   };
 
+  // Get the correct fee symbol based on chain
+  const feeSymbol = chainInfo.symbol;
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto px-6 pb-8">
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        disabled={isProcessing}
-        className="absolute top-4 left-4 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors disabled:opacity-50"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
+    <div className="flex flex-col h-full overflow-y-auto px-6 pb-safe-bottom">
+      {/* Header with back button */}
+      <div className="flex items-center gap-3 py-4 -mx-6 px-6 sticky top-0 bg-background z-10">
+        <button
+          onClick={onBack}
+          disabled={isProcessing}
+          className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors disabled:opacity-50"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <h2 className="text-xl font-bold">Confirm Transaction</h2>
+      </div>
 
       {/* Amount Summary */}
       <div className="text-center mt-4 mb-6">
@@ -389,7 +395,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Network Fee</span>
-          <span>{feeDetails.eth.toFixed(6)} {chainInfo.symbol}</span>
+          <span>{feeDetails.eth.toFixed(6)} {feeSymbol}</span>
         </div>
         <div className="border-t border-border pt-3 flex justify-between font-medium">
           <span>Total</span>
@@ -475,8 +481,8 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         </div>
       )}
 
-      {/* Confirm Button */}
-      <div className="mt-auto pt-4">
+      {/* Confirm Button - Fixed at bottom with safe area */}
+      <div className="mt-auto pt-4 pb-6">
         <Button
           onClick={handleConfirmClick}
           disabled={isProcessing || isSigningWithWC}

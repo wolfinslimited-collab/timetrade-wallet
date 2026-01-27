@@ -201,12 +201,21 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
     }
   };
 
+  // Hide header and close button for confirm step (it has its own header)
+  const showHeader = step !== "confirm";
+
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0">
-        <SheetHeader className="px-6 pt-6 pb-2">
-          <SheetTitle className="text-xl font-bold">{getStepTitle()}</SheetTitle>
-        </SheetHeader>
+      <SheetContent 
+        side="bottom" 
+        className="h-[90vh] rounded-t-3xl bg-background border-border p-0 flex flex-col"
+        hideCloseButton={step === "confirm"}
+      >
+        {showHeader && (
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle className="text-xl font-bold">{getStepTitle()}</SheetTitle>
+          </SheetHeader>
+        )}
 
         <AnimatePresence mode="wait">
           {step === "select" && (
