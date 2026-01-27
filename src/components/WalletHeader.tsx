@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Shield, Settings, Wallet, Loader2, Users } from "lucide-react";
+import { Shield, Settings, Users } from "lucide-react";
 import { NotificationCenter } from "./notifications/NotificationCenter";
-import { ConnectWalletSheet } from "./wallet/ConnectWalletSheet";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import type { Notification } from "@/hooks/useNotifications";
@@ -30,9 +29,8 @@ export const WalletHeader = ({
   onDeleteNotification,
   onClearAllNotifications,
 }: WalletHeaderProps) => {
-  const [showConnectWallet, setShowConnectWallet] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
-  const { isConnected, isLoadingBalance, derivedAccounts, activeAccountIndex } = useBlockchainContext();
+  const { isConnected, derivedAccounts, activeAccountIndex } = useBlockchainContext();
 
   return (
     <>
@@ -84,21 +82,6 @@ export const WalletHeader = ({
               </span>
             </button>
           )}
-          <button
-            onClick={() => setShowConnectWallet(true)}
-            className={cn(
-              "p-2 rounded-full border transition-colors",
-              isConnected 
-                ? "bg-primary/10 border-primary/30 text-primary" 
-                : "bg-card border-border hover:bg-secondary text-muted-foreground"
-            )}
-          >
-            {isLoadingBalance ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Wallet className="w-5 h-5" />
-            )}
-          </button>
           <NotificationCenter
             notifications={notifications}
             unreadCount={unreadCount}
@@ -116,11 +99,6 @@ export const WalletHeader = ({
         </div>
       </header>
 
-      <ConnectWalletSheet 
-        open={showConnectWallet} 
-        onOpenChange={setShowConnectWallet} 
-      />
-      
       <AccountSwitcherSheet
         open={showAccountSwitcher}
         onOpenChange={setShowAccountSwitcher}
