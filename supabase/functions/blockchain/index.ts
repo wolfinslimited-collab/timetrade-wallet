@@ -834,8 +834,10 @@ async function broadcastTransaction(
       body = { txData: signedTransaction };
       break;
     case 'solana':
-      endpoint = `/solana/broadcast`;
+      // Tatum Solana broadcast endpoint - expects hex-encoded serialized transaction
+      endpoint = testnet ? '/solana/broadcast?testnet=true' : '/solana/broadcast';
       body = { txData: signedTransaction };
+      console.log(`Solana broadcast: endpoint=${endpoint}, txData length=${signedTransaction.length}`);
       break;
     case 'tron':
       endpoint = `/tron/broadcast`;
