@@ -23,24 +23,10 @@ const getAddressesFromStorage = () => {
   const storedSolanaAddress = localStorage.getItem("timetrade_wallet_address_solana");
   const storedTronAddress = localStorage.getItem("timetrade_wallet_address_tron");
 
-  const norm = (v: string | null) => {
-    const t = v?.trim();
-    return t && t.length > 0 ? t : null;
-  };
-
-  const evmFromKey = norm(storedEvmAddress);
-  const solFromKey = norm(storedSolanaAddress);
-  const tronFromKey = norm(storedTronAddress);
-
   return {
-    evmAddress: (evmFromKey && isEvmAddress(evmFromKey) ? evmFromKey : null) ||
-      (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    solanaAddress:
-      (solFromKey && isLikelySolanaAddress(solFromKey) ? solFromKey : null) ||
-      (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    tronAddress:
-      (tronFromKey && isTronAddress(tronFromKey) ? tronFromKey : null) ||
-      (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    evmAddress: storedEvmAddress || (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    solanaAddress: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    tronAddress: storedTronAddress || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
   };
 };
 

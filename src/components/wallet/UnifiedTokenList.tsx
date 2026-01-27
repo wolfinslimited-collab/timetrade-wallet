@@ -97,15 +97,11 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
     const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
     const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
-
-    const evmFromKey = storedEvmAddress && isLikelyEvmAddress(storedEvmAddress) ? storedEvmAddress.trim() : null;
-    const solFromKey = storedSolanaAddress && isLikelySolanaAddress(storedSolanaAddress) ? storedSolanaAddress.trim() : null;
-    const tronFromKey = storedTronAddress && isLikelyTronAddress(storedTronAddress) ? storedTronAddress.trim() : null;
     
     return {
-      evm: evmFromKey || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-      solana: solFromKey || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-      tron: tronFromKey || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
     };
   });
 
@@ -116,15 +112,11 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
       const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
       const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
-
-      const evmFromKey = storedEvmAddress && isLikelyEvmAddress(storedEvmAddress) ? storedEvmAddress.trim() : null;
-      const solFromKey = storedSolanaAddress && isLikelySolanaAddress(storedSolanaAddress) ? storedSolanaAddress.trim() : null;
-      const tronFromKey = storedTronAddress && isLikelyTronAddress(storedTronAddress) ? storedTronAddress.trim() : null;
       
       setAddresses({
-        evm: evmFromKey || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-        solana: solFromKey || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-        tron: tronFromKey || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
       });
     };
     
