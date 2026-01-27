@@ -140,6 +140,11 @@ interface BlockchainResponse<T> {
   error?: string;
 }
 
+const isLikelySolanaAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
+
 function normalizeAddressForChain(chain: Chain, address: string): string {
   if (chain !== 'tron') return address;
   const trimmed = (address ?? '').trim();
@@ -147,6 +152,27 @@ function normalizeAddressForChain(chain: Chain, address: string): string {
   if (isTronAddress(trimmed)) return trimmed;
   if (isEvmAddress(trimmed)) return evmToTronAddress(trimmed) ?? trimmed;
   return trimmed;
+}
+
+// Validate that address format matches the chain
+function isValidAddressForChain(chain: Chain, address: string | null): boolean {
+  if (!address) return false;
+  const trimmed = address.trim();
+  if (!trimmed) return false;
+  
+  switch (chain) {
+    case 'solana':
+      return isLikelySolanaAddress(trimmed);
+    case 'tron':
+      return isTronAddress(trimmed) || isEvmAddress(trimmed); // EVM can be converted
+    case 'ethereum':
+    case 'polygon':
+      return isEvmAddress(trimmed);
+    case 'bitcoin':
+      return trimmed.length > 25; // Basic check
+    default:
+      return true;
+  }
 }
 
 async function callBlockchainFunction<T>(
@@ -175,10 +201,13 @@ async function callBlockchainFunction<T>(
 }
 
 export function useWalletBalance(address: string | null, chain: Chain = 'ethereum') {
+  // Validate address format for the specific chain to prevent wrong-format queries
+  const isValidAddress = isValidAddressForChain(chain, address);
+  
   return useQuery({
     queryKey: ['walletBalance', chain, address],
     queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, false),
-    enabled: !!address,
+    enabled: !!address && isValidAddress,
     staleTime: 30000,
     refetchInterval: 60000,
   });
@@ -217,10 +246,13 @@ export function useMultiChainBalances(address: string | null) {
 }
 
 export function useTransactions(address: string | null, chain: Chain = 'ethereum') {
+  // Validate address format for the specific chain
+  const isValidAddress = isValidAddressForChain(chain, address);
+  
   return useQuery({
     queryKey: ['transactions', chain, address],
     queryFn: () => callBlockchainFunction<TransactionsResponse>('getTransactions', chain, address!, false),
-    enabled: !!address,
+    enabled: !!address && isValidAddress,
     staleTime: 30000,
     refetchInterval: 60000,
   });

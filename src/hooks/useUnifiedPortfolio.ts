@@ -2,6 +2,8 @@ import * as React from "react";
 import { getPriceForSymbol, useCryptoPrices } from "@/hooks/useCryptoPrices";
 import { Chain, useWalletBalance, WalletBalance } from "@/hooks/useBlockchain";
 import { isEvmAddress, isTronAddress } from "@/utils/tronAddress";
+import { deriveSolanaAddress, deriveTronAddress, SolanaDerivationPath } from "@/utils/walletDerivation";
+import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 
 export interface UnifiedAsset {
   symbol: string;
@@ -15,6 +17,21 @@ const isLikelySolanaAddress = (address: string | null | undefined) => {
   if (!address) return false;
   // Base58 (no 0,O,I,l) and typical Solana pubkey length
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
+
+// Synchronously derive Solana address from stored mnemonic if needed
+const deriveSolanaAddressSync = (): string | null => {
+  try {
+    const storedPin = localStorage.getItem('timetrade_pin');
+    const encryptedDataStr = localStorage.getItem('timetrade_seed_phrase');
+    if (!storedPin || !encryptedDataStr) return null;
+
+    // We can't decrypt synchronously, so we'll trigger async derivation
+    // and return null for now - the polling will pick it up
+    return null;
+  } catch {
+    return null;
+  }
 };
 
 const getAddressesFromStorage = () => {
@@ -32,15 +49,15 @@ const getAddressesFromStorage = () => {
   const solFromKey = norm(storedSolanaAddress);
   const tronFromKey = norm(storedTronAddress);
 
+  // Validate formats strictly - reject wrong format addresses
+  const validEvm = evmFromKey && isEvmAddress(evmFromKey) ? evmFromKey : null;
+  const validSol = solFromKey && isLikelySolanaAddress(solFromKey) ? solFromKey : null;
+  const validTron = tronFromKey && isTronAddress(tronFromKey) ? tronFromKey : null;
+
   return {
-    evmAddress: (evmFromKey && isEvmAddress(evmFromKey) ? evmFromKey : null) ||
-      (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    solanaAddress:
-      (solFromKey && isLikelySolanaAddress(solFromKey) ? solFromKey : null) ||
-      (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    tronAddress:
-      (tronFromKey && isTronAddress(tronFromKey) ? tronFromKey : null) ||
-      (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    evmAddress: validEvm || (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    solanaAddress: validSol || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    tronAddress: validTron || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
   };
 };
 
@@ -65,8 +82,17 @@ export function useUnifiedPortfolio(enabled: boolean) {
     
     // Poll for changes (BlockchainContext writes async after derivation)
     const interval = setInterval(() => {
-      setAddresses(getAddressesFromStorage());
-    }, 1000);
+      const newAddrs = getAddressesFromStorage();
+      setAddresses(prev => {
+        // Only update if addresses actually changed
+        if (prev.evmAddress !== newAddrs.evmAddress ||
+            prev.solanaAddress !== newAddrs.solanaAddress ||
+            prev.tronAddress !== newAddrs.tronAddress) {
+          return newAddrs;
+        }
+        return prev;
+      });
+    }, 500); // Poll faster
     
     return () => clearInterval(interval);
   }, [enabled]);
@@ -80,6 +106,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
         evm: evmAddress,
         solana: solanaAddress,
         tron: tronAddress,
+        rawSolanaStorage: localStorage.getItem('timetrade_wallet_address_solana'),
       });
     }
   }, [enabled, evmAddress, solanaAddress, tronAddress]);
