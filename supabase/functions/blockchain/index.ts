@@ -619,6 +619,18 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
 async function estimateGas(chain: Chain, testnet: boolean = true) {
   const config = chainConfigs[chain];
   
+  // Tron doesn't have a fee estimation endpoint in Tatum, return static values
+  if (chain === 'tron') {
+    console.log('Returning static Tron fee estimates (no API endpoint)');
+    return {
+      chain,
+      slow: { fee: '1', estimatedTime: 60 },      // ~1 TRX for basic transfer
+      medium: { fee: '5', estimatedTime: 30 },    // ~5 TRX for token transfer
+      fast: { fee: '10', estimatedTime: 10 },     // ~10 TRX for priority
+      unit: 'TRX',
+    };
+  }
+  
   try {
     const endpoint = config.gasEndpoint(testnet);
     const gasData = await tatumRequest(endpoint);
@@ -643,15 +655,7 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
         fast: { fee: gasData.high || '25000', estimatedTime: 10 },
         unit: 'lamports',
       };
-    } else if (chain === 'tron') {
-      // Tron uses bandwidth/energy, return static estimates
-      return {
-        chain,
-        slow: { fee: '1', estimatedTime: 60 },
-        medium: { fee: '5', estimatedTime: 30 },
-        fast: { fee: '10', estimatedTime: 10 },
-        unit: 'TRX',
-      };
+    // Note: Tron is handled at the top of the function, before the try block
     } else {
       // Ethereum/Polygon return gas price in gwei
       return {
@@ -691,14 +695,7 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
         fast: { fee: '25000', estimatedTime: 10 },
         unit: 'lamports',
       };
-    } else if (chain === 'tron') {
-      return {
-        chain,
-        slow: { fee: '1', estimatedTime: 60 },
-        medium: { fee: '5', estimatedTime: 30 },
-        fast: { fee: '10', estimatedTime: 10 },
-        unit: 'TRX',
-      };
+    // Note: Tron is handled at the top of the function, before the try block
     } else {
       return {
         chain,
