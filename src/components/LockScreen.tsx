@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Fingerprint, Wallet, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { EncryptedData, verifyPinCanDecrypt } from "@/utils/encryption";
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -55,38 +56,67 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
     setShowError(false);
 
     if (newPin.length === 6) {
-      setTimeout(() => verifyPin(newPin), 200);
+      setTimeout(() => void verifyPin(newPin), 200);
     }
   };
 
-  const verifyPin = (enteredPin: string) => {
+  const verifyPin = async (enteredPin: string) => {
+    // Prefer verifying the PIN by decrypting the stored seed phrase.
+    // This avoids "unlocked but can't derive Solana" when PIN was changed without re-encrypting.
+    const encryptedSeedStr = localStorage.getItem("timetrade_seed_phrase");
+
+    if (encryptedSeedStr) {
+      try {
+        const encryptedSeed = JSON.parse(encryptedSeedStr) as EncryptedData;
+        const canDecrypt = await verifyPinCanDecrypt(encryptedSeed, enteredPin);
+        if (canDecrypt) {
+          // Auto-repair stored PIN if needed
+          if (storedPin !== enteredPin) {
+            localStorage.setItem("timetrade_pin", enteredPin);
+            window.dispatchEvent(new Event("timetrade:pin-updated"));
+          }
+
+          toast({
+            title: "Welcome back!",
+            description: "Wallet unlocked successfully",
+          });
+          onUnlock();
+          return;
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    // Legacy fallback (no encrypted seed phrase)
     if (enteredPin === storedPin) {
       toast({
         title: "Welcome back!",
         description: "Wallet unlocked successfully",
       });
       onUnlock();
-    } else {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      setShowError(true);
-      setPin("");
+      return;
+    }
 
-      if (newAttempts >= 5) {
-        setIsLocked(true);
-        setLockTimer(30);
-        toast({
-          title: "Too many attempts",
-          description: "Please wait 30 seconds before trying again",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Incorrect PIN",
-          description: `${5 - newAttempts} attempts remaining`,
-          variant: "destructive",
-        });
-      }
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    setShowError(true);
+    setPin("");
+
+    if (newAttempts >= 5) {
+      setIsLocked(true);
+      setLockTimer(30);
+      toast({
+        title: "Too many attempts",
+        description: "Please wait 30 seconds before trying again",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Incorrect PIN",
+        description: `${5 - newAttempts} attempts remaining`,
+        variant: "destructive",
+      });
     }
   };
 
