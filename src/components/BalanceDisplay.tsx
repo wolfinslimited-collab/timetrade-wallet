@@ -79,14 +79,7 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
         <p className="text-xs text-muted-foreground tracking-widest uppercase">
           Total Balance
         </p>
-        {isConnected ? (
-          <NetworkIndicators activeNetworks={activeNetworks} showAll={true} />
-        ) : (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span className="opacity-50">✧</span>
-            <span>Demo</span>
-          </div>
-        )}
+        <NetworkIndicators activeNetworks={activeNetworks} showAll={true} />
       </div>
       <div className="flex items-baseline gap-3">
         {isLoadingBalance && isConnected ? (
