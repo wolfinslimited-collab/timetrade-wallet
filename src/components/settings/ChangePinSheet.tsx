@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
+import { decryptPrivateKey, EncryptedData, encryptPrivateKey } from "@/utils/encryption";
 import { Lock, Check } from "lucide-react";
 
 interface ChangePinSheetProps {
@@ -53,22 +54,44 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
       setTimeout(() => setStep("confirm"), 300);
     } else if (step === "confirm") {
       if (pin === newPin) {
-        // Re-encrypt stored keys with new PIN if any exist
-        if (storedKeys.length > 0 && currentPin) {
+        // IMPORTANT: Update BOTH stored signing keys AND the encrypted seed phrase.
+        // If we update only timetrade_pin, the app can no longer decrypt timetrade_seed_phrase,
+        // which prevents address derivation (Receive gets stuck on "Loading wallet address...").
+        if (currentPin) {
           setIsReEncrypting(true);
-          const success = await reEncryptWithNewPin(currentPin, pin);
-          setIsReEncrypting(false);
-          
-          if (!success) {
-            setError("Failed to update stored keys. Please try again.");
+          try {
+            // 1) Re-encrypt stored signing keys
+            if (storedKeys.length > 0) {
+              const ok = await reEncryptWithNewPin(currentPin, pin);
+              if (!ok) {
+                throw new Error("Failed to update stored keys");
+              }
+            }
+
+            // 2) Re-encrypt the seed phrase (if present)
+            const encryptedSeedStr = localStorage.getItem("timetrade_seed_phrase");
+            if (encryptedSeedStr) {
+              const encryptedSeed: EncryptedData = JSON.parse(encryptedSeedStr);
+              const decryptedSeed = await decryptPrivateKey(encryptedSeed, currentPin);
+              const reEncryptedSeed = await encryptPrivateKey(decryptedSeed, pin);
+              localStorage.setItem("timetrade_seed_phrase", JSON.stringify(reEncryptedSeed));
+            }
+
+            // 3) Update PIN and trigger re-derivation in the same tab
+            localStorage.setItem("timetrade_pin", pin);
+            window.dispatchEvent(new CustomEvent("timetrade:pin-updated", { detail: { pin } }));
+          } catch (e) {
+            console.error("[ChangePinSheet] Failed to re-encrypt with new PIN", e);
+            setError("Failed to update PIN securely. Please try again.");
             setConfirmPin("");
             setNewPin("");
             setStep("new");
             return;
+          } finally {
+            setIsReEncrypting(false);
           }
         }
-        
-        localStorage.setItem("timetrade_pin", pin);
+
         handleClose();
         onSuccess(pin);
       } else {
