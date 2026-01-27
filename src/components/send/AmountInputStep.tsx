@@ -1,91 +1,86 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronDown, ArrowDownUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { TokenInfo } from "./SendCryptoSheet";
+import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+import { AvailableAsset } from "./NetworkAssetSelector";
 
-// Get crypto logo URL from external API
-const getCryptoLogoUrl = (symbol: string): string => {
-  return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
-};
+// Logo helper
+const getCryptoLogoUrl = (symbol: string) => 
+  `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
 
 interface AmountInputStepProps {
   recipient: string;
-  selectedToken: TokenInfo;
-  onSubmit: (amount: string, token: TokenInfo) => void;
+  selectedAsset: AvailableAsset;
+  selectedChain: Chain;
+  onSubmit: (amount: string) => void;
   onBack: () => void;
 }
 
-const availableTokens: TokenInfo[] = [
-  { symbol: "ETH", name: "Ethereum", balance: 2.5847, price: 3245.67, icon: "eth" },
-  { symbol: "BTC", name: "Bitcoin", balance: 0.1523, price: 67890.12, icon: "btc" },
-  { symbol: "USDT", name: "Tether", balance: 1500.00, price: 1.00, icon: "usdt" },
-  { symbol: "USDC", name: "USD Coin", balance: 2350.50, price: 1.00, icon: "usdc" },
-];
-
-export const AmountInputStep = ({ recipient, selectedToken, onSubmit, onBack }: AmountInputStepProps) => {
+export const AmountInputStep = ({
+  recipient,
+  selectedAsset,
+  selectedChain,
+  onSubmit,
+  onBack,
+}: AmountInputStepProps) => {
   const [amount, setAmount] = useState("");
-  const [token, setToken] = useState<TokenInfo>(selectedToken);
-  const [showInUSD, setShowInUSD] = useState(false);
-  const [showTokens, setShowTokens] = useState(false);
+  const [isUsdMode, setIsUsdMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  const chainInfo = getChainInfo(selectedChain);
+
+  // Calculate display values
   const numericAmount = parseFloat(amount) || 0;
-  const usdValue = numericAmount * token.price;
-  const cryptoFromUsd = showInUSD ? numericAmount / token.price : numericAmount;
-  
-  const isInsufficientBalance = cryptoFromUsd > token.balance;
-  const isValidAmount = numericAmount > 0 && !isInsufficientBalance;
+  const cryptoAmount = isUsdMode 
+    ? (selectedAsset.price > 0 ? numericAmount / selectedAsset.price : 0)
+    : numericAmount;
+  const usdAmount = isUsdMode 
+    ? numericAmount 
+    : numericAmount * selectedAsset.price;
 
-  const handleKeyPress = (key: string) => {
-    if (key === "." && amount.includes(".")) return;
-    if (key === "." && amount === "") {
-      setAmount("0.");
+  // Validate amount
+  useEffect(() => {
+    if (!amount) {
+      setError(null);
       return;
     }
     
-    // Limit decimals
-    if (amount.includes(".")) {
-      const decimals = amount.split(".")[1];
-      if (decimals && decimals.length >= (showInUSD ? 2 : 8)) return;
-    }
-    
-    setAmount(amount + key);
-  };
-
-  const handleDelete = () => {
-    setAmount(amount.slice(0, -1));
-  };
-
-  const handleMax = () => {
-    if (showInUSD) {
-      setAmount((token.balance * token.price).toFixed(2));
+    if (cryptoAmount > selectedAsset.balance) {
+      setError("Insufficient balance");
+    } else if (cryptoAmount <= 0) {
+      setError("Enter a valid amount");
     } else {
-      setAmount(token.balance.toString());
+      setError(null);
     }
-  };
+  }, [amount, cryptoAmount, selectedAsset.balance]);
 
-  const handleToggleCurrency = () => {
-    if (showInUSD && numericAmount > 0) {
-      // Convert USD to crypto
-      setAmount((numericAmount / token.price).toFixed(8).replace(/\.?0+$/, ""));
-    } else if (!showInUSD && numericAmount > 0) {
-      // Convert crypto to USD
-      setAmount((numericAmount * token.price).toFixed(2));
+  const handlePercentage = (percent: number) => {
+    const value = selectedAsset.balance * (percent / 100);
+    if (isUsdMode) {
+      setAmount((value * selectedAsset.price).toFixed(2));
+    } else {
+      setAmount(value.toFixed(6));
     }
-    setShowInUSD(!showInUSD);
   };
 
   const handleSubmit = () => {
-    if (isValidAmount) {
-      const finalAmount = showInUSD 
-        ? (numericAmount / token.price).toFixed(8) 
-        : amount;
-      onSubmit(finalAmount, token);
+    if (cryptoAmount <= 0 || cryptoAmount > selectedAsset.balance) {
+      setError("Invalid amount");
+      return;
     }
+    // Always submit in crypto amount
+    onSubmit(cryptoAmount.toString());
   };
 
-  const formatRecipient = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const toggleMode = () => {
+    if (isUsdMode) {
+      // Convert USD to crypto
+      setAmount(cryptoAmount.toFixed(6));
+    } else {
+      // Convert crypto to USD
+      setAmount(usdAmount.toFixed(2));
+    }
+    setIsUsdMode(!isUsdMode);
   };
 
   return (
@@ -98,150 +93,108 @@ export const AmountInputStep = ({ recipient, selectedToken, onSubmit, onBack }: 
         <ChevronLeft className="w-5 h-5" />
       </button>
 
-      {/* Recipient Preview */}
-      <div className="mt-4 p-3 rounded-xl bg-card border border-border flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm">
-          👤
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground">Sending to</p>
-          <p className="font-mono text-sm truncate">{formatRecipient(recipient)}</p>
-        </div>
-      </div>
-
-      {/* Token Selector */}
-      <button
-        onClick={() => setShowTokens(!showTokens)}
-        className="mt-4 flex items-center justify-center gap-2 py-2"
-      >
-        <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
+      {/* Asset Info */}
+      <div className="mt-4 flex items-center gap-3 p-3 bg-card border border-border rounded-xl">
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
           <img 
-            src={getCryptoLogoUrl(token.symbol)}
-            alt={token.symbol}
+            src={getCryptoLogoUrl(selectedAsset.symbol)} 
+            alt={selectedAsset.symbol}
             className="w-full h-full object-contain p-1"
           />
         </div>
-        <span className="font-semibold">{token.symbol}</span>
-        <ChevronDown className={cn("w-4 h-4 transition-transform", showTokens && "rotate-180")} />
-      </button>
-
-      {/* Token Dropdown */}
-      {showTokens && (
-        <div className="bg-card border border-border rounded-xl p-2 space-y-1">
-          {availableTokens.map((t) => (
-            <button
-              key={t.symbol}
-              onClick={() => {
-                setToken(t);
-                setShowTokens(false);
-                setAmount("");
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg transition-colors",
-                t.symbol === token.symbol ? "bg-primary/10" : "hover:bg-secondary"
-              )}
-            >
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
-                <img 
-                  src={getCryptoLogoUrl(t.symbol)}
-                  alt={t.symbol}
-                  className="w-full h-full object-contain p-1"
-                />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-medium text-sm">{t.symbol}</p>
-                <p className="text-xs text-muted-foreground">{t.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-sm">{t.balance}</p>
-                <p className="text-xs text-muted-foreground">
-                  ${(t.balance * t.price).toLocaleString()}
-                </p>
-              </div>
-            </button>
-          ))}
+        <div className="flex-1">
+          <p className="font-medium">{selectedAsset.symbol}</p>
+          <p className="text-xs text-muted-foreground">on {chainInfo.name}</p>
         </div>
-      )}
+        <div className="text-right">
+          <p className="text-sm font-medium">
+            {selectedAsset.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+          </p>
+          <p className="text-xs text-muted-foreground">Available</p>
+        </div>
+      </div>
 
-      {/* Amount Display */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="text-center mb-2">
+      {/* Recipient display */}
+      <div className="mt-4 p-3 bg-card/50 border border-border rounded-xl">
+        <p className="text-xs text-muted-foreground mb-1">Sending to</p>
+        <p className="font-mono text-sm truncate">{recipient}</p>
+      </div>
+
+      {/* Amount Input */}
+      <div className="mt-6 text-center">
+        <div className="relative inline-block w-full max-w-xs mx-auto">
           <div className="flex items-center justify-center gap-2">
             <span className="text-2xl text-muted-foreground">
-              {showInUSD ? "$" : ""}
+              {isUsdMode ? "$" : ""}
             </span>
-            <span className={cn(
-              "font-bold transition-all",
-              amount.length > 8 ? "text-3xl" : "text-5xl",
-              isInsufficientBalance && "text-destructive"
-            )}>
-              {amount || "0"}
-            </span>
-            {!showInUSD && (
-              <span className="text-2xl text-muted-foreground">{token.symbol}</span>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+              className="bg-transparent text-5xl font-bold text-center outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              style={{ maxWidth: '200px' }}
+            />
+            {!isUsdMode && (
+              <span className="text-2xl text-muted-foreground">
+                {selectedAsset.symbol}
+              </span>
             )}
           </div>
           
-          {/* Secondary amount */}
-          <button 
-            onClick={handleToggleCurrency}
-            className="flex items-center gap-2 mx-auto mt-2 text-muted-foreground hover:text-foreground transition-colors"
+          {/* Converted value */}
+          <button
+            onClick={toggleMode}
+            className="mt-2 flex items-center justify-center gap-2 mx-auto text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowDownUp className="w-4 h-4" />
-            <span className="text-sm">
-              {showInUSD 
-                ? `${cryptoFromUsd.toFixed(6)} ${token.symbol}`
-                : `$${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            <ArrowUpDown className="w-4 h-4" />
+            <span className="text-lg">
+              {isUsdMode 
+                ? `${cryptoAmount.toFixed(6)} ${selectedAsset.symbol}`
+                : `$${usdAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               }
             </span>
           </button>
         </div>
 
-        {/* Balance */}
-        <div className="flex items-center gap-2 mt-4">
-          <span className="text-sm text-muted-foreground">
-            Balance: {token.balance} {token.symbol}
-          </span>
-          <button
-            onClick={handleMax}
-            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
-          >
-            MAX
-          </button>
-        </div>
-
-        {isInsufficientBalance && (
-          <p className="text-sm text-destructive mt-2">Insufficient balance</p>
+        {error && (
+          <p className="text-destructive text-sm mt-2">{error}</p>
         )}
       </div>
 
-      {/* Keypad */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0].map((key) => (
+      {/* Quick Percentage Buttons */}
+      <div className="mt-6 grid grid-cols-4 gap-2">
+        {[25, 50, 75, 100].map((percent) => (
           <button
-            key={key}
-            onClick={() => handleKeyPress(String(key))}
-            className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+            key={percent}
+            onClick={() => handlePercentage(percent)}
+            className="py-3 rounded-xl bg-card border border-border hover:border-primary/50 text-sm font-medium transition-colors"
           >
-            {key}
+            {percent}%
           </button>
         ))}
-        <button
-          onClick={handleDelete}
-          className="h-14 rounded-xl bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
-        >
-          Delete
-        </button>
+      </div>
+
+      {/* Balance Display */}
+      <div className="mt-4 text-center text-sm text-muted-foreground">
+        Balance: {selectedAsset.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} {selectedAsset.symbol}
+        {selectedAsset.price > 0 && (
+          <span className="ml-2">
+            (${(selectedAsset.balance * selectedAsset.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+          </span>
+        )}
       </div>
 
       {/* Continue Button */}
-      <Button
-        onClick={handleSubmit}
-        disabled={!isValidAmount}
-        className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
-      >
-        Preview Transaction
-      </Button>
+      <div className="mt-auto pt-6">
+        <Button
+          onClick={handleSubmit}
+          disabled={!amount || !!error}
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
+        >
+          Review Transaction
+        </Button>
+      </div>
     </div>
   );
 };
