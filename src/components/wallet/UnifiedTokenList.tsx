@@ -316,19 +316,19 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     );
   }
 
-  // Network badge colors
-  const getNetworkBadgeStyle = (chain: Chain) => {
+  // Network badge icons and colors
+  const getNetworkBadge = (chain: Chain) => {
     switch (chain) {
       case 'ethereum':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return { icon: '⟠', bg: 'bg-blue-500', label: 'ETH' };
       case 'solana':
-        return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+        return { icon: '◎', bg: 'bg-gradient-to-br from-purple-500 to-blue-500', label: 'SOL' };
       case 'polygon':
-        return 'bg-violet-500/20 text-violet-400 border-violet-500/30';
+        return { icon: '⬡', bg: 'bg-violet-500', label: 'POL' };
       case 'tron':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
+        return { icon: '◈', bg: 'bg-red-500', label: 'TRX' };
       default:
-        return 'bg-muted text-muted-foreground';
+        return { icon: '●', bg: 'bg-muted', label: chain };
     }
   };
 
@@ -360,30 +360,39 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
               className="flex items-center justify-between p-3 bg-card rounded-xl border border-border hover:border-primary/30 transition-colors"
             >
             <div className="flex items-center gap-3">
-              {/* Token icon with proper styling */}
+              {/* Token icon with network badge overlay */}
               {(() => {
                 const tokenStyle = getTokenIcon(token.symbol);
+                const networkBadge = getNetworkBadge(token.chain);
                 return (
-                  <div 
-                    className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-lg",
-                      tokenStyle.bgColor
-                    )}
-                  >
-                    {tokenStyle.icon}
+                  <div className="relative">
+                    <div 
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-lg",
+                        tokenStyle.bgColor
+                      )}
+                    >
+                      {tokenStyle.icon}
+                    </div>
+                    {/* Network icon badge - positioned bottom-right */}
+                    <div 
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white border-2 border-card shadow-sm",
+                        networkBadge.bg
+                      )}
+                      title={networkBadge.label}
+                    >
+                      {networkBadge.icon}
+                    </div>
                   </div>
                 );
               })()}
                 
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-medium">{token.symbol}</span>
-                    {/* Network Badge */}
-                    <span className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded border font-medium",
-                      getNetworkBadgeStyle(token.chain)
-                    )}>
-                      {chainInfo.name}
+                    <span className="text-xs text-muted-foreground">
+                      {token.name || chainInfo.name}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
