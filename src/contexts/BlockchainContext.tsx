@@ -254,9 +254,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         if (activeEvm) {
           localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
         }
-        // If we didn't detect a better Solana address with balance, keep storage aligned with active index.
-        if (activeSolana && !detectedSolanaAddress) {
-          localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
+        // Always ensure Solana address is stored (fallback if auto-detection didn't find a funded address)
+        if (activeSolana) {
+          // Only overwrite if we don't already have a detected address with balance
+          const existingSolanaAddr = localStorage.getItem('timetrade_wallet_address_solana');
+          if (!existingSolanaAddr || !detectedSolanaAddress) {
+            localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
+            console.log(`Saved Solana address (acct #${index}): ${activeSolana.address}`);
+          }
         }
         // Store Tron address for UnifiedTokenList
         if (activeTron) {
