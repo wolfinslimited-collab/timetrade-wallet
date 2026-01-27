@@ -60,7 +60,22 @@ const getTokenIcon = (symbol: string): { icon: string; bgColor: string } => {
   return TOKEN_ICONS[upperSymbol] || { icon: '🪙', bgColor: 'bg-secondary' };
 };
 
-// Address format validation is now handled by BlockchainContext - we read stored addresses directly
+const isLikelyEvmAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  return /^0x[a-fA-F0-9]{40}$/.test(address.trim());
+};
+
+const isLikelySolanaAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  // Base58 (no 0,O,I,l) and typical Solana pubkey length
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
+
+const isLikelyTronAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  // Tron addresses start with 'T' and are 34 characters (Base58)
+  return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address.trim());
+};
 
 interface UnifiedToken {
   symbol: string;
@@ -75,62 +90,34 @@ interface UnifiedToken {
 
 export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
-  const [tick, setTick] = useState(0);
   
   // Use state to track addresses reactively (re-reads on mount and when context changes)
   const [addresses, setAddresses] = useState(() => {
+    const primaryAddress = localStorage.getItem('timetrade_wallet_address');
     const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
     const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
     const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
     
-    console.log('[UnifiedTokenList] Initial addresses:', { storedEvmAddress, storedSolanaAddress, storedTronAddress });
-    
     return {
-      evm: storedEvmAddress || null,
-      solana: storedSolanaAddress || null,
-      tron: storedTronAddress || null,
+      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
     };
   });
 
-  // Re-read addresses from localStorage when connection state changes or periodically after mount
+  // Re-read addresses from localStorage when connection state changes
   useEffect(() => {
-    const readAddresses = () => {
-      const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
-      const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
-      const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
-      
-      console.log('[UnifiedTokenList] Reading addresses:', { storedEvmAddress, storedSolanaAddress, storedTronAddress });
-      
-      setAddresses(prev => {
-        // Only update if values changed
-        if (prev.evm !== storedEvmAddress || prev.solana !== storedSolanaAddress || prev.tron !== storedTronAddress) {
-          return {
-            evm: storedEvmAddress || null,
-            solana: storedSolanaAddress || null,
-            tron: storedTronAddress || null,
-          };
-        }
-        return prev;
-      });
-    };
+    const primaryAddress = localStorage.getItem('timetrade_wallet_address');
+    const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
+    const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+    const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
     
-    readAddresses();
-    
-    // Re-check after a short delay to catch async storage updates from BlockchainContext
-    const timer = setTimeout(readAddresses, 1000);
-    return () => clearTimeout(timer);
-  }, [isConnected, tick]);
-
-  // Poll for address changes (in case BlockchainContext updates them after initial render)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const storedSolana = localStorage.getItem('timetrade_wallet_address_solana');
-      if (storedSolana && !addresses.solana) {
-        setTick(t => t + 1);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [addresses.solana]);
+    setAddresses({
+      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    });
+  }, [isConnected]);
 
   // Fetch balances for all chains in parallel
   const ethBalance = useWalletBalance(addresses.evm, 'ethereum');

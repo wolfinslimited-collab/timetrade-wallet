@@ -256,11 +256,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         }
         // Always ensure Solana address is stored (fallback if auto-detection didn't find a funded address)
         if (activeSolana) {
-          // Always store the Solana address - don't skip if we already have one (it could be stale)
-          localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
-          console.log(`[BlockchainContext] Stored Solana address (acct #${index}): ${activeSolana.address}`);
-        } else {
-          console.warn('[BlockchainContext] No active Solana account found');
+          // Only overwrite if we don't already have a detected address with balance
+          const existingSolanaAddr = localStorage.getItem('timetrade_wallet_address_solana');
+          if (!existingSolanaAddr || !detectedSolanaAddress) {
+            localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
+            console.log(`Saved Solana address (acct #${index}): ${activeSolana.address}`);
+          }
         }
         // Store Tron address for UnifiedTokenList
         if (activeTron) {

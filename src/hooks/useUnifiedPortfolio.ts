@@ -1,6 +1,7 @@
 import * as React from "react";
 import { getPriceForSymbol, useCryptoPrices } from "@/hooks/useCryptoPrices";
 import { Chain, useWalletBalance, WalletBalance } from "@/hooks/useBlockchain";
+import { isEvmAddress, isTronAddress } from "@/utils/tronAddress";
 
 export interface UnifiedAsset {
   symbol: string;
@@ -10,7 +11,11 @@ export interface UnifiedAsset {
   valueUsd: number;
 }
 
-// Address detection is now handled by BlockchainContext
+const isLikelySolanaAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  // Base58 (no 0,O,I,l) and typical Solana pubkey length
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
 
 function toDecimalAmount(balance: string, decimals: number) {
   const n = parseFloat(balance);
@@ -21,39 +26,22 @@ function toDecimalAmount(balance: string, decimals: number) {
 const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
 
 export function useUnifiedPortfolio(enabled: boolean) {
-  const [tick, setTick] = React.useState(0);
-  
   // Addresses for each chain from localStorage (active account index already synced there)
-  const addresses = React.useMemo(() => {
-    const storedEvmAddress = localStorage.getItem("timetrade_wallet_address_evm");
-    const storedSolanaAddress = localStorage.getItem("timetrade_wallet_address_solana");
-    const storedTronAddress = localStorage.getItem("timetrade_wallet_address_tron");
+  const primaryAddress = localStorage.getItem("timetrade_wallet_address");
+  const storedEvmAddress = localStorage.getItem("timetrade_wallet_address_evm");
+  const storedSolanaAddress = localStorage.getItem("timetrade_wallet_address_solana");
+  const storedTronAddress = localStorage.getItem("timetrade_wallet_address_tron");
 
-    console.log('[useUnifiedPortfolio] Reading addresses:', { storedEvmAddress, storedSolanaAddress, storedTronAddress });
-    
-    return {
-      evm: storedEvmAddress || null,
-      solana: storedSolanaAddress || null,
-      tron: storedTronAddress || null,
-    };
-  }, [tick]);
-
-  // Poll for address changes (in case BlockchainContext updates them after initial render)
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      const storedSolana = localStorage.getItem('timetrade_wallet_address_solana');
-      if (storedSolana && !addresses.solana) {
-        setTick(t => t + 1);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [addresses.solana]);
+  const evmAddress = storedEvmAddress || (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null);
+  const solanaAddress =
+    storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null);
+  const tronAddress = storedTronAddress || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null);
 
   // Fetch balances in parallel (React Query)
-  const ethBalance = useWalletBalance(enabled ? addresses.evm : null, "ethereum");
-  const polyBalance = useWalletBalance(enabled ? addresses.evm : null, "polygon");
-  const solBalance = useWalletBalance(enabled ? addresses.solana : null, "solana");
-  const tronBalance = useWalletBalance(enabled ? addresses.tron : null, "tron");
+  const ethBalance = useWalletBalance(enabled ? evmAddress : null, "ethereum");
+  const polyBalance = useWalletBalance(enabled ? evmAddress : null, "polygon");
+  const solBalance = useWalletBalance(enabled ? solanaAddress : null, "solana");
+  const tronBalance = useWalletBalance(enabled ? tronAddress : null, "tron");
 
   const balances = React.useMemo(() => {
     const list: WalletBalance[] = [];
@@ -136,7 +124,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
     null;
 
   return {
-    addresses: { evmAddress: addresses.evm, solanaAddress: addresses.solana, tronAddress: addresses.tron },
+    addresses: { evmAddress, solanaAddress, tronAddress },
     chains: CHAINS,
     balances: { ethBalance, polyBalance, solBalance, tronBalance },
     assets,
