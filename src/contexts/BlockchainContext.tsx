@@ -381,10 +381,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
           setWalletAddress(activeAccount.address);
           localStorage.setItem('timetrade_wallet_address', activeAccount.address);
         }
-      } catch (err) {
+      } catch {
         // If anything fails (bad PIN, corrupted data), stay disconnected.
-        // Log it so we can debug cases where Solana address derivation never runs.
-        console.error('[BlockchainContext] autoConnectFromMnemonic failed:', err);
       } finally {
         if (!cancelled) {
           setIsLoadingAccounts(false);
@@ -393,16 +391,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     }
 
     autoConnectFromMnemonic();
-
-    // If the PIN is repaired/updated (e.g., during unlock), re-run derivation.
-    const onPinUpdated = () => {
-      if (cancelled) return;
-      autoConnectFromMnemonic();
-    };
-    window.addEventListener('timetrade:pin-updated', onPinUpdated);
     return () => {
       cancelled = true;
-      window.removeEventListener('timetrade:pin-updated', onPinUpdated);
     };
   }, []);
 

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
-import { decryptPrivateKey, encryptPrivateKey, EncryptedData } from "@/utils/encryption";
 import { Lock, Check } from "lucide-react";
 
 interface ChangePinSheetProps {
@@ -54,7 +53,7 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
       setTimeout(() => setStep("confirm"), 300);
     } else if (step === "confirm") {
       if (pin === newPin) {
-        // Re-encrypt stored keys + wallet seed phrase with new PIN
+        // Re-encrypt stored keys with new PIN if any exist
         if (storedKeys.length > 0 && currentPin) {
           setIsReEncrypting(true);
           const success = await reEncryptWithNewPin(currentPin, pin);
@@ -68,30 +67,8 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
             return;
           }
         }
-
-        // Re-encrypt the mnemonic (seed phrase) so address derivation continues to work after refresh.
-        // Without this, changing the PIN breaks Solana derivation because the seed can no longer be decrypted.
-        try {
-          const encryptedSeedStr = localStorage.getItem("timetrade_seed_phrase");
-          if (encryptedSeedStr && currentPin) {
-            setIsReEncrypting(true);
-            const encryptedSeed = JSON.parse(encryptedSeedStr) as EncryptedData;
-            const phrase = await decryptPrivateKey(encryptedSeed, currentPin);
-            const reEncrypted = await encryptPrivateKey(phrase, pin);
-            localStorage.setItem("timetrade_seed_phrase", JSON.stringify(reEncrypted));
-            setIsReEncrypting(false);
-          }
-        } catch {
-          setIsReEncrypting(false);
-          setError("Failed to update wallet encryption. Please verify your current PIN.");
-          setConfirmPin("");
-          setNewPin("");
-          setStep("new");
-          return;
-        }
         
         localStorage.setItem("timetrade_pin", pin);
-        window.dispatchEvent(new Event("timetrade:pin-updated"));
         handleClose();
         onSuccess(pin);
       } else {
