@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useWalletBalance, useTransactions, useGasEstimate, Chain, WalletBalance, Transaction, GasEstimate, TransactionsResponse, SUPPORTED_CHAINS, getChainInfo } from '@/hooks/useBlockchain';
-import { useCryptoPrices, getPriceForSymbol } from '@/hooks/useCryptoPrices';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
+import { useUnifiedPortfolio, UnifiedAsset } from '@/hooks/useUnifiedPortfolio';
 import { 
   deriveMultipleAccounts, 
   DerivedAccount, 
@@ -39,6 +39,7 @@ interface BlockchainContextType {
   isLoadingBalance: boolean;
   balanceError: Error | null;
   totalBalanceUsd: number;
+  unifiedAssets: UnifiedAsset[] | undefined;
 
   // Transactions data
   transactions: Transaction[] | undefined;
@@ -286,39 +287,27 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     };
   }, []);
 
-  // Queries
-  const balanceQuery = useWalletBalance(walletAddress, selectedChain);
-  const transactionsQuery = useTransactions(walletAddress, selectedChain);
-  const gasQuery = useGasEstimate(selectedChain);
-  
-  // Get chain info for price fetching
-  const chainInfo = getChainInfo(selectedChain);
-  const tokenSymbols = balanceQuery.data?.tokens?.map(t => t.symbol) || [];
-  const allSymbols = [...new Set(['ETH', 'BTC', 'SOL', 'MATIC', chainInfo.symbol, ...tokenSymbols])];
-  
-  // Fetch live prices
-  const pricesQuery = useCryptoPrices(allSymbols);
+  // Ensure selected-chain queries use the correct chain-specific address (Solana/Tron differ from EVM).
+  const selectedChainAddress = React.useMemo(() => {
+    const evm = localStorage.getItem('timetrade_wallet_address_evm');
+    const sol = localStorage.getItem('timetrade_wallet_address_solana');
+    const tron = localStorage.getItem('timetrade_wallet_address_tron');
 
-  // Calculate total USD balance using live prices
-  const totalBalanceUsd = React.useMemo(() => {
-    if (!balanceQuery.data) return 0;
-    
-    const { native, tokens } = balanceQuery.data;
-    
-    // Calculate native balance in USD using live price
-    const nativeBalance = parseFloat(native.balance) / Math.pow(10, native.decimals);
-    const nativePrice = getPriceForSymbol(pricesQuery.data, native.symbol);
-    let total = nativeBalance * nativePrice;
-    
-    // Add token balances
-    for (const token of tokens) {
-      const tokenBalance = parseFloat(token.balance) / Math.pow(10, token.decimals);
-      const tokenPrice = getPriceForSymbol(pricesQuery.data, token.symbol) || token.price || 0;
-      total += tokenBalance * tokenPrice;
-    }
-    
-    return total;
-  }, [balanceQuery.data, pricesQuery.data]);
+    if (selectedChain === 'solana') return sol || walletAddress;
+    if (selectedChain === 'tron') return tron || walletAddress;
+    if (selectedChain === 'ethereum' || selectedChain === 'polygon') return evm || walletAddress;
+    return walletAddress;
+  }, [selectedChain, walletAddress]);
+
+  // Queries (selected chain)
+  const balanceQuery = useWalletBalance(selectedChainAddress, selectedChain);
+  const transactionsQuery = useTransactions(selectedChainAddress, selectedChain);
+  const gasQuery = useGasEstimate(selectedChain);
+
+  // Unified (multi-chain) portfolio values for dashboard totals/allocations.
+  const unified = useUnifiedPortfolio(!!walletAddress);
+  const totalBalanceUsd = unified.totalUsd;
+  const unifiedAssets = unified.assets;
 
   const connectWallet = useCallback((address: string) => {
     const trimmed = address.trim();
@@ -422,9 +411,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     refreshAll,
 
     balance: balanceQuery.data,
-    isLoadingBalance: balanceQuery.isLoading,
-    balanceError: balanceQuery.error,
+    isLoadingBalance: balanceQuery.isLoading || unified.isLoadingBalances,
+    balanceError: (balanceQuery.error as Error | null) || unified.balanceError,
     totalBalanceUsd,
+    unifiedAssets,
 
     transactions: transactionsData?.transactions,
     transactionsExplorerUrl: transactionsData?.explorerUrl,
@@ -435,8 +425,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     isLoadingGas: gasQuery.isLoading,
     gasError: gasQuery.error,
     
-    prices: pricesQuery.data,
-    isLoadingPrices: pricesQuery.isLoading,
+    prices: unified.prices,
+    isLoadingPrices: unified.isLoadingPrices,
   };
 
   return (
