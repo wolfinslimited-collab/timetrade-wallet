@@ -13,33 +13,18 @@ interface NotificationItemProps {
 
 const typeConfig: Record<NotificationType, { 
   icon: React.ElementType; 
-  bgClass: string; 
-  iconClass: string;
-  borderClass: string;
 }> = {
   price_alert: {
     icon: TrendingUp,
-    bgClass: "bg-chart-1/10",
-    iconClass: "text-chart-1",
-    borderClass: "border-chart-1/30",
   },
   transaction: {
     icon: CheckCircle,
-    bgClass: "bg-chart-2/10",
-    iconClass: "text-chart-2",
-    borderClass: "border-chart-2/30",
   },
   security: {
     icon: Shield,
-    bgClass: "bg-destructive/10",
-    iconClass: "text-destructive",
-    borderClass: "border-destructive/30",
   },
   info: {
     icon: Info,
-    bgClass: "bg-primary/10",
-    iconClass: "text-primary",
-    borderClass: "border-primary/30",
   },
 };
 
@@ -66,8 +51,7 @@ export const NotificationItem = ({
       transition={{ delay: index * 0.05, duration: 0.2 }}
       onClick={handleClick}
       className={cn(
-        "relative p-4 rounded-xl border transition-all cursor-pointer group",
-        config.borderClass,
+        "relative p-4 rounded-xl border border-border transition-all cursor-pointer group",
         notification.read 
           ? "bg-card/50 opacity-70" 
           : "bg-card shadow-sm"
@@ -95,11 +79,8 @@ export const NotificationItem = ({
 
       <div className="flex gap-3">
         {/* Icon */}
-        <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-          config.bgClass
-        )}>
-          <Icon className={cn("w-5 h-5", config.iconClass)} />
+        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-secondary">
+          <Icon className="w-5 h-5 text-muted-foreground" />
         </div>
 
         {/* Content */}
