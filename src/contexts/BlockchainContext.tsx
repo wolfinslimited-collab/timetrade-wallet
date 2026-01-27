@@ -234,66 +234,6 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
           console.log(`Saved Solana balance address (acct #${detectedSolanaIndex}): ${detectedSolanaAddress}`);
         }
         
-        // === TRON BALANCE DETECTION ===
-        // Similar to Solana, scan indices 0-4 to find which Tron account has balance
-        const hasTronBalance = async (address: string): Promise<boolean> => {
-          try {
-            const { data, error } = await supabase.functions.invoke('blockchain', {
-              body: {
-                action: 'getBalance',
-                chain: 'tron',
-                address,
-                testnet: false,
-              },
-            });
-
-            if (error) {
-              console.error('Tron balance check invoke error:', error);
-              return false;
-            }
-
-            const nativeBalance = data?.data?.native?.balance || '0';
-            const tokens = data?.data?.tokens || [];
-            const hasNativeBalance = nativeBalance !== '0' && parseFloat(nativeBalance) > 0;
-            const hasTokens = Array.isArray(tokens) && tokens.length > 0;
-            return hasNativeBalance || hasTokens;
-          } catch (err) {
-            console.error('Tron balance check failed:', err);
-            return false;
-          }
-        };
-
-        const TRON_SCAN_INDICES = [0, 1, 2, 3, 4];
-        let detectedTronAddress: string | null = null;
-        let detectedTronIndex: number | null = null;
-
-        // Scan Tron accounts to find one with balance
-        console.log('Scanning Tron accounts for balance (indices 0-4)...');
-        const tronChecks = await Promise.all(
-          TRON_SCAN_INDICES.map(async (i) => {
-            const address = deriveTronAddress(phrase, i);
-            console.log(`Tron acct #${i}: ${address}`);
-            const ok = await hasTronBalance(address);
-            return { index: i, address, ok };
-          })
-        );
-
-        const tronHit = tronChecks.find((c) => c.ok);
-        if (tronHit) {
-          detectedTronAddress = tronHit.address;
-          detectedTronIndex = tronHit.index;
-          console.log(`Found Tron balance at acct #${tronHit.index}: ${tronHit.address}`);
-        } else {
-          console.log('No Tron balance found in scanned accounts');
-        }
-
-        // Persist the detected Tron address
-        if (detectedTronAddress && typeof detectedTronIndex === 'number') {
-          localStorage.setItem('timetrade_wallet_address_tron', detectedTronAddress);
-          localStorage.setItem('timetrade_tron_balance_account_index', String(detectedTronIndex));
-          console.log(`Saved Tron balance address (acct #${detectedTronIndex}): ${detectedTronAddress}`);
-        }
-        
         // Derive all 5 accounts for both EVM and Solana with the correct path
         const accounts = deriveMultipleAccounts(words, 5, solanaPathStyle);
         
@@ -317,10 +257,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         if (activeSolana && !detectedSolanaAddress) {
           localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
         }
-        // If we didn't detect a Tron address with balance, use the default derived one
-        if (activeTron && !detectedTronAddress) {
+        // Store Tron address for UnifiedTokenList
+        if (activeTron) {
           localStorage.setItem('timetrade_wallet_address_tron', activeTron.address);
-          console.log(`Saved default Tron address (acct #${index}): ${activeTron.address}`);
+          console.log(`Saved Tron address (acct #${index}): ${activeTron.address}`);
         }
         
         // Get appropriate accounts based on chain

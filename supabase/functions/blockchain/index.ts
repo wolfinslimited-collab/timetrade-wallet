@@ -183,41 +183,6 @@ async function tatumRequest(endpoint: string, options: RequestInit = {}) {
   }
 }
 
-// Tron-specific request that handles "account not found" gracefully
-async function tatumRequestTron(endpoint: string, options: RequestInit = {}): Promise<{ balance?: string | number; trc20?: Record<string, string>[]; exists: boolean }> {
-  const url = `${TATUM_BASE_URL}${endpoint}`;
-  console.log(`Tatum Tron request: ${url}`);
-  
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'x-api-key': TATUM_API_KEY!,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-  const responseText = await response.text();
-  
-  if (!response.ok) {
-    // Check if it's a "account not found" error - this is normal for addresses with no on-chain activity
-    if (response.status === 403 && responseText.includes('tron.account.not.found')) {
-      console.log(`Tron account not found (no on-chain activity yet): ${endpoint}`);
-      return { balance: '0', trc20: [], exists: false };
-    }
-    console.error(`Tatum Tron API error: ${response.status} - ${responseText}`);
-    throw new Error(`Tatum Tron API error: ${response.status} - ${responseText}`);
-  }
-
-  try {
-    const data = JSON.parse(responseText);
-    return { ...data, exists: true };
-  } catch {
-    console.log('Tron raw response:', responseText);
-    return { balance: responseText, exists: true };
-  }
-}
-
 async function tatumRequestV4(endpoint: string, options: RequestInit = {}) {
   const url = `${TATUM_V4_BASE_URL}${endpoint}`;
   console.log(`Tatum v4 request: ${url}`);
@@ -477,52 +442,39 @@ async function getTRC20Tokens(address: string): Promise<Array<{
   logo?: string;
 }>> {
   try {
-    // Use Tatum v3 endpoint for TRC-20 tokens with graceful 403 handling
+    // Use Tatum v3 endpoint for TRC-20 tokens
     const endpoint = `/tron/account/${address}`;
     console.log(`Fetching TRC-20 tokens for tron address: ${address}`);
     
-    const accountData = await tatumRequestTron(endpoint);
-    
-    // If account doesn't exist on chain, return empty
-    if (!accountData.exists) {
-      console.log(`Tron account ${address} has no on-chain activity yet`);
-      return [];
-    }
-    
+    const accountData = await tatumRequest(endpoint);
     console.log(`Tron account data:`, JSON.stringify(accountData).slice(0, 1000));
     
     // TRC-20 tokens are in the trc20 array
     const trc20Balances = accountData.trc20 || [];
     
-    const tokens: Array<{
-      symbol: string;
-      name: string;
-      balance: string;
-      decimals: number;
-      contractAddress: string;
-      logo?: string;
-    }> = [];
-    
-    for (const tokenBalance of trc20Balances) {
-      // Each item is an object like { "contractAddress": "balance" }
-      const contractAddress = Object.keys(tokenBalance)[0];
-      const rawBalance = tokenBalance[contractAddress];
-      
-      if (!contractAddress || !rawBalance) continue;
-      if (!isNonZeroBaseUnit(rawBalance)) continue;
-      
-      const knownToken = KNOWN_TRC20_TOKENS[contractAddress];
-      const decimals = knownToken?.decimals ?? 6; // Default to 6 for TRC-20
-      
-      tokens.push({
-        symbol: knownToken?.symbol || 'UNKNOWN',
-        name: knownToken?.name || 'Unknown Token',
-        balance: rawBalance, // Already in base units
-        decimals,
-        contractAddress,
-        logo: knownToken?.logo,
-      });
-    }
+    const tokens = trc20Balances
+      .map((tokenBalance: Record<string, string>) => {
+        // Each item is an object like { "contractAddress": "balance" }
+        const contractAddress = Object.keys(tokenBalance)[0];
+        const rawBalance = tokenBalance[contractAddress];
+        
+        if (!contractAddress || !rawBalance) return null;
+        
+        const knownToken = KNOWN_TRC20_TOKENS[contractAddress];
+        const decimals = knownToken?.decimals ?? 6; // Default to 6 for TRC-20
+        
+        return {
+          symbol: knownToken?.symbol || 'UNKNOWN',
+          name: knownToken?.name || 'Unknown Token',
+          balance: rawBalance, // Already in base units
+          decimals,
+          contractAddress,
+          logo: knownToken?.logo,
+        };
+      })
+      .filter((t: { balance: string } | null): t is { balance: string; symbol: string; name: string; decimals: number; contractAddress: string; logo?: string } => 
+        t !== null && isNonZeroBaseUnit(t.balance)
+      );
 
     return tokens;
   } catch (error) {
@@ -554,31 +506,7 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
   const config = chainConfigs[chain];
   
   try {
-    // For Tron, use the graceful 403 handling
-    if (chain === 'tron') {
-      const [balanceData, tokens] = await Promise.all([
-        tatumRequestTron(config.balanceEndpoint(address, testnet)),
-        getTokens(chain, address, testnet),
-      ]);
-      
-      console.log(`Tron balance response:`, JSON.stringify(balanceData));
-      
-      // Tron returns balance in sun (1 TRX = 1,000,000 sun)
-      const rawBalance = balanceData.balance ?? '0';
-      
-      return {
-        chain,
-        native: {
-          symbol: config.symbol,
-          balance: String(rawBalance),
-          decimals: config.decimals,
-        },
-        tokens,
-        explorerUrl: config.explorerUrl(testnet),
-      };
-    }
-    
-    // For other chains, use the standard request
+    // Fetch native balance and tokens in parallel
     const [balanceData, tokens] = await Promise.all([
       tatumRequest(config.balanceEndpoint(address, testnet)),
       getTokens(chain, address, testnet),
@@ -589,7 +517,13 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
     // Normalize to base units so the frontend can safely divide by decimals.
     let rawBalance: string | number = '0';
     
-    if (typeof balanceData === 'object' && balanceData) {
+    if (chain === 'tron') {
+      // Tron returns balance in sun (1 TRX = 1,000,000 sun)
+      // The balance field is already in sun (base units)
+      if (typeof balanceData === 'object' && balanceData) {
+        rawBalance = balanceData.balance ?? '0';
+      }
+    } else if (typeof balanceData === 'object' && balanceData) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const bd: any = balanceData;
       rawBalance = bd.balance ?? (bd.incoming ? (parseFloat(bd.incoming) - parseFloat(bd.outgoing || '0')) : '0');
@@ -597,7 +531,10 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
       rawBalance = balanceData;
     }
 
-    const balance = toBaseUnits(rawBalance, config.decimals);
+    // For Tron, balance is already in base units (sun), for others we need to convert
+    const balance = chain === 'tron' 
+      ? String(rawBalance) 
+      : toBaseUnits(rawBalance, config.decimals);
     
     return {
       chain,
