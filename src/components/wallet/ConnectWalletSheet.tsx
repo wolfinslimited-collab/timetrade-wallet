@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wallet, ExternalLink, Copy, Check } from "lucide-react";
+import { Wallet, Copy, Check } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -19,10 +19,10 @@ interface ConnectWalletSheetProps {
 
 // Chain configurations
 const CHAINS = [
-  { id: 'ethereum', name: 'Ethereum', icon: '⟠', addressKey: 'timetrade_wallet_address_evm', explorer: 'https://etherscan.io/address/' },
-  { id: 'polygon', name: 'Polygon', icon: '⬡', addressKey: 'timetrade_wallet_address_evm', explorer: 'https://polygonscan.com/address/' },
-  { id: 'solana', name: 'Solana', icon: '◎', addressKey: 'timetrade_wallet_address_solana', explorer: 'https://solscan.io/account/' },
-  { id: 'tron', name: 'Tron', icon: '◈', addressKey: 'timetrade_wallet_address_tron', explorer: 'https://tronscan.org/#/address/' },
+  { id: 'ethereum', name: 'Ethereum', icon: '⟠', addressKey: 'timetrade_wallet_address_evm' },
+  { id: 'polygon', name: 'Polygon', icon: '⬡', addressKey: 'timetrade_wallet_address_evm' },
+  { id: 'solana', name: 'Solana', icon: '◎', addressKey: 'timetrade_wallet_address_solana' },
+  { id: 'tron', name: 'Tron', icon: '◈', addressKey: 'timetrade_wallet_address_tron' },
 ];
 
 export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetProps) {
@@ -47,9 +47,6 @@ export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetPro
     setTimeout(() => setCopiedChain(null), 2000);
   };
 
-  const openExplorer = (chain: typeof CHAINS[0], addr: string) => {
-    window.open(`${chain.explorer}${addr}`, '_blank');
-  };
 
   if (!isConnected) {
     return null;
@@ -107,18 +104,6 @@ export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetPro
                     )}
                   </Button>
                 </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={() => openExplorer(chain, addr)}
-                >
-                  <ExternalLink className="w-3 h-3 mr-1.5" />
-                  View on {chain.name === 'Ethereum' ? 'Etherscan' : 
-                           chain.name === 'Polygon' ? 'Polygonscan' : 
-                           chain.name === 'Solana' ? 'Solscan' : 'Tronscan'}
-                </Button>
               </div>
             );
           })}
