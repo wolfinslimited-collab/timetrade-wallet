@@ -140,16 +140,6 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     }
   }, [walletAddress]);
 
-  // IMMEDIATE cleanup of corrupted Solana storage on mount (before any async derivation)
-  // This runs synchronously on first render to prevent bad addresses from being used
-  React.useMemo(() => {
-    const storedSol = localStorage.getItem('timetrade_wallet_address_solana');
-    if (storedSol && !isLikelySolanaAddress(storedSol)) {
-      console.warn(`[BlockchainContext] Removing invalid Solana address on mount: ${storedSol}`);
-      localStorage.removeItem('timetrade_wallet_address_solana');
-    }
-  }, []); // Empty deps = runs once on mount
-
   // Guard against corrupted Solana storage values (e.g. EVM 0x... accidentally saved under the Solana key)
   useEffect(() => {
     const storedSol = localStorage.getItem('timetrade_wallet_address_solana');

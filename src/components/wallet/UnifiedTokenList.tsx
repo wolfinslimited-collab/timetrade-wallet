@@ -121,31 +121,17 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       const solFromKey = storedSolanaAddress && isLikelySolanaAddress(storedSolanaAddress) ? storedSolanaAddress.trim() : null;
       const tronFromKey = storedTronAddress && isLikelyTronAddress(storedTronAddress) ? storedTronAddress.trim() : null;
       
-      // Debug logging
-      console.log('[UnifiedTokenList] Reading addresses:', {
-        rawSolana: storedSolanaAddress,
-        validatedSolana: solFromKey,
-        isValidSolana: storedSolanaAddress ? isLikelySolanaAddress(storedSolanaAddress) : 'null',
-      });
-      
-      setAddresses(prev => {
-        const next = {
-          evm: evmFromKey || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-          solana: solFromKey || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-          tron: tronFromKey || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
-        };
-        // Only update if changed
-        if (prev.evm !== next.evm || prev.solana !== next.solana || prev.tron !== next.tron) {
-          return next;
-        }
-        return prev;
+      setAddresses({
+        evm: evmFromKey || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        solana: solFromKey || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        tron: tronFromKey || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
       });
     };
     
     readAddresses();
     
-    // Poll for changes to catch BlockchainContext updates - faster polling
-    const interval = setInterval(readAddresses, 500);
+    // Poll for changes to catch BlockchainContext updates
+    const interval = setInterval(readAddresses, 1000);
     return () => clearInterval(interval);
   }, [isConnected]);
 
