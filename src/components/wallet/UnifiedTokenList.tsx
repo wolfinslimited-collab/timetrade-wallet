@@ -2,80 +2,25 @@ import { useState, useEffect } from "react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain, useWalletBalance } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AssetDetailSheet } from "./AssetDetailSheet";
 
-// Network logos as SVG components
-const EthereumLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
-    <path d="M16 0L6.5 16.5L16 22.5L25.5 16.5L16 0Z" opacity="0.6" />
-    <path d="M6.5 16.5L16 32L25.5 16.5L16 22.5L6.5 16.5Z" />
-  </svg>
-);
-
-const SolanaLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
-    <path d="M7.5 21.5c.2-.2.4-.3.7-.3h18.4c.4 0 .6.5.3.8l-3.7 3.7c-.2.2-.4.3-.7.3H4.1c-.4 0-.6-.5-.3-.8l3.7-3.7z" />
-    <path d="M7.5 6.3c.2-.2.4-.3.7-.3h18.4c.4 0 .6.5.3.8l-3.7 3.7c-.2.2-.4.3-.7.3H4.1c-.4 0-.6-.5-.3-.8l3.7-3.7z" />
-    <path d="M22.5 13.8c-.2-.2-.4-.3-.7-.3H3.4c-.4 0-.6.5-.3.8l3.7 3.7c.2.2.4.3.7.3h18.4c.4 0 .6-.5.3-.8l-3.7-3.7z" />
-  </svg>
-);
-
-const PolygonLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
-    <path d="M21.6 13.4c-.6-.3-1.3-.3-1.8 0l-4.2 2.4-2.8 1.6-4.2 2.4c-.6.3-1.3.3-1.8 0l-3.3-1.9c-.6-.3-.9-.9-.9-1.5v-3.7c0-.6.3-1.2.9-1.5l3.2-1.8c.6-.3 1.3-.3 1.8 0l3.2 1.8c.6.3.9.9.9 1.5v2.4l2.8-1.6v-2.4c0-.6-.3-1.2-.9-1.5l-6-3.4c-.6-.3-1.3-.3-1.8 0l-6.1 3.5c-.6.3-.9.9-.9 1.5v6.9c0 .6.3 1.2.9 1.5l6 3.4c.6.3 1.3.3 1.8 0l4.2-2.4 2.8-1.6 4.2-2.4c.6-.3 1.3-.3 1.8 0l3.2 1.8c.6.3.9.9.9 1.5v3.7c0 .6-.3 1.2-.9 1.5l-3.2 1.9c-.6.3-1.3.3-1.8 0l-3.2-1.8c-.6-.3-.9-.9-.9-1.5v-2.4l-2.8 1.6v2.4c0 .6.3 1.2.9 1.5l6 3.4c.6.3 1.3.3 1.8 0l6-3.4c.6-.3.9-.9.9-1.5v-6.9c0-.6-.3-1.2-.9-1.5l-6.1-3.4z" />
-  </svg>
-);
-
-const TronLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
-    <path d="M16 2L3 9v14l13 7 13-7V9L16 2zm0 3.5l9.5 5.2v10.6L16 26.5l-9.5-5.2V10.7L16 5.5z" />
-    <path d="M16 8v16l7-4V12l-7-4z" opacity="0.6" />
-  </svg>
-);
-
-const USDCLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className}>
-    <circle cx="16" cy="16" r="14" fill="#2775CA" />
-    <path d="M16 6a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z" fill="white" />
-    <path d="M17.5 13.5c0-1.1-.9-1.5-2-1.7v-1.3h-1v1.2c-.3 0-.5 0-.8.1v-1.3h-1v1.3c-.3 0-.5.1-.8.1H10v1.1h.8c.4 0 .6.2.6.5v4.5c0 .3-.1.4-.4.4H10v1.1l1.7.1c.3 0 .5.1.8.1v1.3h1v-1.2c.3 0 .5 0 .8-.1v1.3h1v-1.3c1.5-.2 2.5-.7 2.5-2 0-1-.6-1.5-1.5-1.8.6-.3 1.2-.8 1.2-1.5zm-2.2 3.5c0 .9-1.3 1-2 1v-2c.7 0 2 .1 2 1zm-.4-3c0 .8-1 .9-1.6.9v-1.8c.6 0 1.6.1 1.6.9z" fill="white" />
-  </svg>
-);
-
-const USDTLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className}>
-    <circle cx="16" cy="16" r="14" fill="#26A17B" />
-    <path d="M17.9 17.9v-.1c-.1 0-.8-.1-2-.1s-1.8.1-2 .1v.1c-3.5.2-6.1.7-6.1 1.4 0 .7 2.7 1.3 6.1 1.4v4.5h4v-4.5c3.4-.2 6-.7 6-1.4 0-.7-2.6-1.2-6-1.4zm-2 2.3c-3.7 0-6.7-.5-6.7-1.1 0-.5 2.1-.9 5-1v1.6c.5 0 1.1.1 1.7.1.6 0 1.2 0 1.7-.1v-1.6c2.9.1 5 .5 5 1 0 .6-3 1.1-6.7 1.1z" fill="white" />
-    <path d="M17.9 14.5v-2.7h4.4V8.5h-12v3.3h4.4v2.7c-3.9.2-6.9.9-6.9 1.8 0 1 3.4 1.8 7.6 1.8s7.6-.8 7.6-1.8c0-.9-3-1.6-6.9-1.8v-.2h1.8z" fill="white" />
-  </svg>
-);
-
-// Token display configs
-const TOKEN_CONFIGS: Record<string, { 
-  Logo: React.FC<{ className?: string }>;
-  bgColor: string;
-  color: string;
-}> = {
-  ETH: { Logo: EthereumLogo, bgColor: 'bg-slate-800', color: '#627EEA' },
-  SOL: { Logo: SolanaLogo, bgColor: 'bg-slate-900', color: '#14F195' },
-  POL: { Logo: PolygonLogo, bgColor: 'bg-purple-900', color: '#8247E5' },
-  MATIC: { Logo: PolygonLogo, bgColor: 'bg-purple-900', color: '#8247E5' },
-  TRX: { Logo: TronLogo, bgColor: 'bg-red-900', color: '#FF0013' },
-  USDC: { Logo: USDCLogo, bgColor: 'bg-blue-900', color: '#2775CA' },
-  USDT: { Logo: USDTLogo, bgColor: 'bg-emerald-900', color: '#26A17B' },
+// Get crypto logo URL from external API
+const getCryptoLogoUrl = (symbol: string): string => {
+  return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
 };
 
-const getTokenConfig = (symbol: string) => {
-  const upper = symbol.toUpperCase();
-  return TOKEN_CONFIGS[upper] || null;
+// Get network logo URL
+const getNetworkLogoUrl = (chain: Chain): string => {
+  const symbols: Record<Chain, string> = {
+    ethereum: "eth",
+    polygon: "matic",
+    solana: "sol",
+    tron: "trx",
+    bitcoin: "btc",
+  };
+  return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
 };
-
-// Fallback icon for unknown tokens
-const DefaultTokenIcon = ({ symbol, className }: { symbol: string; className?: string }) => (
-  <div className={cn("w-full h-full rounded-full bg-secondary flex items-center justify-center text-sm font-bold", className)}>
-    {symbol.slice(0, 2).toUpperCase()}
-  </div>
-);
 
 const isLikelyEvmAddress = (address: string | null | undefined) => {
   if (!address) return false;
@@ -102,6 +47,20 @@ interface UnifiedToken {
   contractAddress?: string;
   logo?: string;
 }
+
+interface TokenWithValue extends UnifiedToken {
+  numericBalance: number;
+  price: number;
+  usdValue: number;
+  change24h: number;
+}
+
+// Fallback icon for failed image loads
+const FallbackIcon = ({ symbol }: { symbol: string }) => (
+  <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground">
+    {symbol.slice(0, 2).toUpperCase()}
+  </div>
+);
 
 export const UnifiedTokenList = ({ className }: { className?: string }) => {
   const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
@@ -306,57 +265,97 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
     );
   }
 
+  const [selectedAsset, setSelectedAsset] = useState<TokenWithValue | null>(null);
+  const [showAssetDetail, setShowAssetDetail] = useState(false);
+
+  const handleAssetClick = (token: TokenWithValue) => {
+    setSelectedAsset(token);
+    setShowAssetDetail(true);
+  };
+
+  // Get address for selected chain
+  const getAddressForChain = (chain: Chain): string | null => {
+    if (chain === 'solana') return addresses.solana;
+    if (chain === 'tron') return addresses.tron;
+    return addresses.evm;
+  };
+
   return (
-    <div className={cn("px-4", className)}>
-      <div className="divide-y divide-border/50">
-        {tokensWithValue.map((token, index) => {
-          const formattedBalance = formatBalance(token.balance, token.decimals);
-          const tokenConfig = getTokenConfig(token.symbol);
-          const isPositive = token.change24h >= 0;
-          
-          return (
-            <div
-              key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-              className="flex items-center justify-between py-4"
-            >
-              <div className="flex items-center gap-3">
-                {/* Token icon */}
-                <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
-                  {tokenConfig ? (
-                    <div 
-                      className={cn("w-full h-full flex items-center justify-center", tokenConfig.bgColor)}
-                      style={{ color: tokenConfig.color }}
-                    >
-                      <tokenConfig.Logo className="w-6 h-6" />
+    <>
+      <div className={cn("px-4", className)}>
+        <div className="divide-y divide-border/50">
+          {tokensWithValue.map((token, index) => {
+            const formattedBalance = formatBalance(token.balance, token.decimals);
+            const isPositive = token.change24h >= 0;
+            const assetLogoUrl = getCryptoLogoUrl(token.symbol);
+            const networkLogoUrl = getNetworkLogoUrl(token.chain);
+            
+            return (
+              <button
+                key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
+                className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors rounded-lg -mx-2 px-2"
+                onClick={() => handleAssetClick(token)}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Token icon with network badge */}
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
+                      <img 
+                        src={assetLogoUrl}
+                        alt={token.symbol}
+                        className="w-full h-full object-contain p-1"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="hidden w-full h-full">
+                        <FallbackIcon symbol={token.symbol} />
+                      </div>
                     </div>
-                  ) : (
-                    <DefaultTokenIcon symbol={token.symbol} />
-                  )}
+                    {/* Network Badge */}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-secondary">
+                      <img 
+                        src={networkLogoUrl}
+                        alt={token.chain}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="text-left">
+                    <p className="font-medium">{token.name || token.symbol}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formattedBalance} {token.symbol}
+                    </p>
+                  </div>
                 </div>
                 
-                <div>
-                  <p className="font-medium">{token.name || token.symbol}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formattedBalance} {token.symbol}
+                <div className="text-right">
+                  <p className="font-medium">
+                    ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className={cn(
+                    "text-sm",
+                    isPositive ? "text-primary" : "text-destructive"
+                  )}>
+                    {isPositive ? "+" : ""}{token.change24h !== 0 ? `$${Math.abs(token.usdValue * token.change24h / 100).toFixed(2)}` : "$0.00"}
                   </p>
                 </div>
-              </div>
-              
-              <div className="text-right">
-                <p className="font-medium">
-                  ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className={cn(
-                  "text-sm",
-                  isPositive ? "text-primary" : "text-destructive"
-                )}>
-                  {isPositive ? "+" : ""}{token.change24h !== 0 ? `$${Math.abs(token.usdValue * token.change24h / 100).toFixed(2)}` : "$0.00"}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+
+      {/* Asset Detail Sheet */}
+      <AssetDetailSheet
+        open={showAssetDetail}
+        onOpenChange={setShowAssetDetail}
+        asset={selectedAsset}
+        address={selectedAsset ? getAddressForChain(selectedAsset.chain) : null}
+      />
+    </>
   );
 };
