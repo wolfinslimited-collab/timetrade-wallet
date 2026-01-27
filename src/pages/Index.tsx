@@ -4,10 +4,7 @@ import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
 import { WalletHeader } from "@/components/WalletHeader";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
-import { PortfolioChart } from "@/components/PortfolioChart";
-import { PortfolioBreakdown } from "@/components/PortfolioBreakdown";
 import { QuickActions } from "@/components/QuickActions";
-import { WalletTabs } from "@/components/WalletTabs";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
@@ -118,7 +115,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative pb-20">
       <PullToRefresh onRefresh={handleRefresh}>
 
-        {/* Header */}
+        {/* Minimal Header */}
         <WalletHeader 
           userName="Alex" 
           onSettingsClick={() => setActiveTab("settings")}
@@ -130,23 +127,14 @@ const Index = () => {
           onClearAllNotifications={clearAll}
         />
 
-        {/* Balance */}
-        <BalanceDisplay key={`balance-${refreshKey}`} balance={0} changePercent={0} />
-
-        {/* Portfolio Chart */}
-        <PortfolioChart key={`chart-${refreshKey}`} />
+        {/* Balance - Centered */}
+        <BalanceDisplay key={`balance-${refreshKey}`} />
 
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* Unified Token List - All networks with badges */}
+        {/* Token List */}
         <UnifiedTokenList key={`tokens-${refreshKey}`} />
-
-        {/* Portfolio Breakdown */}
-        <PortfolioBreakdown key={`breakdown-${refreshKey}`} />
-
-        {/* Wallet Tabs & List */}
-        <WalletTabs />
       </PullToRefresh>
 
       {/* Bottom Navigation */}
