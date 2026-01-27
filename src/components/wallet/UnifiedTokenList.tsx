@@ -2,63 +2,80 @@ import { useState, useEffect } from "react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain, useWalletBalance } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
-import { Loader2, Coins, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface UnifiedTokenListProps {
-  className?: string;
-}
+// Network logos as SVG components
+const EthereumLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
+    <path d="M16 0L6.5 16.5L16 22.5L25.5 16.5L16 0Z" opacity="0.6" />
+    <path d="M6.5 16.5L16 32L25.5 16.5L16 22.5L6.5 16.5Z" />
+  </svg>
+);
 
-// Token icon mapping for common tokens
-const TOKEN_ICONS: Record<string, { icon: string; bgColor: string }> = {
-  // Native coins
-  ETH: { icon: '⟠', bgColor: 'bg-slate-700' },
-  SOL: { icon: '◎', bgColor: 'bg-gradient-to-br from-purple-500 to-blue-500' },
-  POL: { icon: '⬡', bgColor: 'bg-purple-600' },
-  MATIC: { icon: '⬡', bgColor: 'bg-purple-600' },
-  BTC: { icon: '₿', bgColor: 'bg-orange-500' },
-  BNB: { icon: '◆', bgColor: 'bg-yellow-500' },
-  TRX: { icon: '◈', bgColor: 'bg-red-500' },
-  
-  // Stablecoins
-  USDC: { icon: '$', bgColor: 'bg-blue-500' },
-  USDT: { icon: '₮', bgColor: 'bg-emerald-600' },
-  DAI: { icon: '◈', bgColor: 'bg-amber-500' },
-  BUSD: { icon: '$', bgColor: 'bg-yellow-500' },
-  USDD: { icon: '$', bgColor: 'bg-emerald-500' },
-  TUSD: { icon: '$', bgColor: 'bg-blue-400' },
-  USDJ: { icon: '$', bgColor: 'bg-purple-400' },
-  
-  // Popular tokens
-  LINK: { icon: '⬡', bgColor: 'bg-blue-600' },
-  UNI: { icon: '🦄', bgColor: 'bg-pink-500' },
-  AAVE: { icon: '👻', bgColor: 'bg-purple-500' },
-  SHIB: { icon: '🐕', bgColor: 'bg-orange-400' },
-  PEPE: { icon: '🐸', bgColor: 'bg-green-500' },
-  WETH: { icon: '⟠', bgColor: 'bg-slate-600' },
-  WBTC: { icon: '₿', bgColor: 'bg-orange-600' },
-  ARB: { icon: '◇', bgColor: 'bg-blue-400' },
-  OP: { icon: '⬟', bgColor: 'bg-red-500' },
-  
-  // Solana tokens
-  RAY: { icon: '☀', bgColor: 'bg-purple-500' },
-  SRM: { icon: '⚡', bgColor: 'bg-cyan-500' },
-  BONK: { icon: '🐕', bgColor: 'bg-orange-500' },
-  JUP: { icon: '🪐', bgColor: 'bg-green-600' },
-  WIF: { icon: '🐶', bgColor: 'bg-amber-500' },
-  
-  // Tron tokens
-  SUN: { icon: '☀', bgColor: 'bg-yellow-500' },
-  JST: { icon: '⚖', bgColor: 'bg-blue-500' },
-  WIN: { icon: '🃏', bgColor: 'bg-purple-500' },
-  BTT: { icon: '🔄', bgColor: 'bg-pink-500' },
-  WTRX: { icon: '◈', bgColor: 'bg-red-600' },
+const SolanaLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
+    <path d="M7.5 21.5c.2-.2.4-.3.7-.3h18.4c.4 0 .6.5.3.8l-3.7 3.7c-.2.2-.4.3-.7.3H4.1c-.4 0-.6-.5-.3-.8l3.7-3.7z" />
+    <path d="M7.5 6.3c.2-.2.4-.3.7-.3h18.4c.4 0 .6.5.3.8l-3.7 3.7c-.2.2-.4.3-.7.3H4.1c-.4 0-.6-.5-.3-.8l3.7-3.7z" />
+    <path d="M22.5 13.8c-.2-.2-.4-.3-.7-.3H3.4c-.4 0-.6.5-.3.8l3.7 3.7c.2.2.4.3.7.3h18.4c.4 0 .6-.5.3-.8l-3.7-3.7z" />
+  </svg>
+);
+
+const PolygonLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
+    <path d="M21.6 13.4c-.6-.3-1.3-.3-1.8 0l-4.2 2.4-2.8 1.6-4.2 2.4c-.6.3-1.3.3-1.8 0l-3.3-1.9c-.6-.3-.9-.9-.9-1.5v-3.7c0-.6.3-1.2.9-1.5l3.2-1.8c.6-.3 1.3-.3 1.8 0l3.2 1.8c.6.3.9.9.9 1.5v2.4l2.8-1.6v-2.4c0-.6-.3-1.2-.9-1.5l-6-3.4c-.6-.3-1.3-.3-1.8 0l-6.1 3.5c-.6.3-.9.9-.9 1.5v6.9c0 .6.3 1.2.9 1.5l6 3.4c.6.3 1.3.3 1.8 0l4.2-2.4 2.8-1.6 4.2-2.4c.6-.3 1.3-.3 1.8 0l3.2 1.8c.6.3.9.9.9 1.5v3.7c0 .6-.3 1.2-.9 1.5l-3.2 1.9c-.6.3-1.3.3-1.8 0l-3.2-1.8c-.6-.3-.9-.9-.9-1.5v-2.4l-2.8 1.6v2.4c0 .6.3 1.2.9 1.5l6 3.4c.6.3 1.3.3 1.8 0l6-3.4c.6-.3.9-.9.9-1.5v-6.9c0-.6-.3-1.2-.9-1.5l-6.1-3.4z" />
+  </svg>
+);
+
+const TronLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
+    <path d="M16 2L3 9v14l13 7 13-7V9L16 2zm0 3.5l9.5 5.2v10.6L16 26.5l-9.5-5.2V10.7L16 5.5z" />
+    <path d="M16 8v16l7-4V12l-7-4z" opacity="0.6" />
+  </svg>
+);
+
+const USDCLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className}>
+    <circle cx="16" cy="16" r="14" fill="#2775CA" />
+    <path d="M16 6a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z" fill="white" />
+    <path d="M17.5 13.5c0-1.1-.9-1.5-2-1.7v-1.3h-1v1.2c-.3 0-.5 0-.8.1v-1.3h-1v1.3c-.3 0-.5.1-.8.1H10v1.1h.8c.4 0 .6.2.6.5v4.5c0 .3-.1.4-.4.4H10v1.1l1.7.1c.3 0 .5.1.8.1v1.3h1v-1.2c.3 0 .5 0 .8-.1v1.3h1v-1.3c1.5-.2 2.5-.7 2.5-2 0-1-.6-1.5-1.5-1.8.6-.3 1.2-.8 1.2-1.5zm-2.2 3.5c0 .9-1.3 1-2 1v-2c.7 0 2 .1 2 1zm-.4-3c0 .8-1 .9-1.6.9v-1.8c.6 0 1.6.1 1.6.9z" fill="white" />
+  </svg>
+);
+
+const USDTLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className}>
+    <circle cx="16" cy="16" r="14" fill="#26A17B" />
+    <path d="M17.9 17.9v-.1c-.1 0-.8-.1-2-.1s-1.8.1-2 .1v.1c-3.5.2-6.1.7-6.1 1.4 0 .7 2.7 1.3 6.1 1.4v4.5h4v-4.5c3.4-.2 6-.7 6-1.4 0-.7-2.6-1.2-6-1.4zm-2 2.3c-3.7 0-6.7-.5-6.7-1.1 0-.5 2.1-.9 5-1v1.6c.5 0 1.1.1 1.7.1.6 0 1.2 0 1.7-.1v-1.6c2.9.1 5 .5 5 1 0 .6-3 1.1-6.7 1.1z" fill="white" />
+    <path d="M17.9 14.5v-2.7h4.4V8.5h-12v3.3h4.4v2.7c-3.9.2-6.9.9-6.9 1.8 0 1 3.4 1.8 7.6 1.8s7.6-.8 7.6-1.8c0-.9-3-1.6-6.9-1.8v-.2h1.8z" fill="white" />
+  </svg>
+);
+
+// Token display configs
+const TOKEN_CONFIGS: Record<string, { 
+  Logo: React.FC<{ className?: string }>;
+  bgColor: string;
+  color: string;
+}> = {
+  ETH: { Logo: EthereumLogo, bgColor: 'bg-slate-800', color: '#627EEA' },
+  SOL: { Logo: SolanaLogo, bgColor: 'bg-slate-900', color: '#14F195' },
+  POL: { Logo: PolygonLogo, bgColor: 'bg-purple-900', color: '#8247E5' },
+  MATIC: { Logo: PolygonLogo, bgColor: 'bg-purple-900', color: '#8247E5' },
+  TRX: { Logo: TronLogo, bgColor: 'bg-red-900', color: '#FF0013' },
+  USDC: { Logo: USDCLogo, bgColor: 'bg-blue-900', color: '#2775CA' },
+  USDT: { Logo: USDTLogo, bgColor: 'bg-emerald-900', color: '#26A17B' },
 };
 
-const getTokenIcon = (symbol: string): { icon: string; bgColor: string } => {
-  const upperSymbol = symbol.toUpperCase();
-  return TOKEN_ICONS[upperSymbol] || { icon: '🪙', bgColor: 'bg-secondary' };
+const getTokenConfig = (symbol: string) => {
+  const upper = symbol.toUpperCase();
+  return TOKEN_CONFIGS[upper] || null;
 };
+
+// Fallback icon for unknown tokens
+const DefaultTokenIcon = ({ symbol, className }: { symbol: string; className?: string }) => (
+  <div className={cn("w-full h-full rounded-full bg-secondary flex items-center justify-center text-sm font-bold", className)}>
+    {symbol.slice(0, 2).toUpperCase()}
+  </div>
+);
 
 const isLikelyEvmAddress = (address: string | null | undefined) => {
   if (!address) return false;
@@ -67,13 +84,11 @@ const isLikelyEvmAddress = (address: string | null | undefined) => {
 
 const isLikelySolanaAddress = (address: string | null | undefined) => {
   if (!address) return false;
-  // Base58 (no 0,O,I,l) and typical Solana pubkey length
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
 };
 
 const isLikelyTronAddress = (address: string | null | undefined) => {
   if (!address) return false;
-  // Tron addresses start with 'T' and are 34 characters (Base58)
   return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address.trim());
 };
 
@@ -88,10 +103,9 @@ interface UnifiedToken {
   logo?: string;
 }
 
-export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
+export const UnifiedTokenList = ({ className }: { className?: string }) => {
   const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
   
-  // Use state to track addresses reactively (re-reads on mount and when context changes)
   const [addresses, setAddresses] = useState(() => {
     const primaryAddress = localStorage.getItem('timetrade_wallet_address');
     const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
@@ -105,7 +119,6 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     };
   });
 
-  // Re-read addresses from localStorage when connection state changes or periodically
   useEffect(() => {
     const readAddresses = () => {
       const primaryAddress = localStorage.getItem('timetrade_wallet_address');
@@ -121,13 +134,10 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     };
     
     readAddresses();
-    
-    // Poll for changes to catch BlockchainContext updates
     const interval = setInterval(readAddresses, 1000);
     return () => clearInterval(interval);
   }, [isConnected]);
 
-  // Fetch balances for all chains in parallel
   const ethBalance = useWalletBalance(addresses.evm, 'ethereum');
   const solBalance = useWalletBalance(addresses.solana, 'solana');
   const polyBalance = useWalletBalance(addresses.evm, 'polygon');
@@ -139,13 +149,11 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     return null;
   }
 
-  // Combine all tokens from all chains into unified list
   const allTokens: UnifiedToken[] = [];
 
-  // Add Ethereum native + tokens
+  // Add Ethereum
   if (ethBalance.data && addresses.evm) {
     const chainInfo = getChainInfo('ethereum');
-    // Add native ETH
     allTokens.push({
       symbol: ethBalance.data.native.symbol,
       name: chainInfo.name,
@@ -155,7 +163,6 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       isNative: true,
       logo: chainInfo.icon,
     });
-    // Add ERC-20 tokens
     for (const token of ethBalance.data.tokens || []) {
       allTokens.push({
         symbol: token.symbol,
@@ -170,10 +177,9 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     }
   }
 
-  // Add Solana native + tokens
+  // Add Solana
   if (solBalance.data && addresses.solana) {
     const chainInfo = getChainInfo('solana');
-    // Add native SOL
     allTokens.push({
       symbol: solBalance.data.native.symbol,
       name: chainInfo.name,
@@ -183,7 +189,6 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       isNative: true,
       logo: chainInfo.icon,
     });
-    // Add SPL tokens
     for (const token of solBalance.data.tokens || []) {
       allTokens.push({
         symbol: token.symbol,
@@ -198,10 +203,9 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     }
   }
 
-  // Add Polygon native + tokens
+  // Add Polygon
   if (polyBalance.data && addresses.evm) {
     const chainInfo = getChainInfo('polygon');
-    // Add native POL/MATIC
     allTokens.push({
       symbol: polyBalance.data.native.symbol,
       name: chainInfo.name,
@@ -211,7 +215,6 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       isNative: true,
       logo: chainInfo.icon,
     });
-    // Add ERC-20 tokens on Polygon
     for (const token of polyBalance.data.tokens || []) {
       allTokens.push({
         symbol: token.symbol,
@@ -226,10 +229,9 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     }
   }
 
-  // Add Tron native + tokens
+  // Add Tron
   if (tronBalance.data && addresses.tron) {
     const chainInfo = getChainInfo('tron');
-    // Add native TRX
     allTokens.push({
       symbol: tronBalance.data.native.symbol,
       name: chainInfo.name,
@@ -239,7 +241,6 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       isNative: true,
       logo: chainInfo.icon,
     });
-    // Add TRC-20 tokens
     for (const token of tronBalance.data.tokens || []) {
       allTokens.push({
         symbol: token.symbol,
@@ -254,7 +255,6 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     }
   }
 
-  // Calculate USD values and sort by value (highest first)
   const tokensWithValue = allTokens.map(token => {
     const numericBalance = parseFloat(token.balance) / Math.pow(10, token.decimals);
     const price = getPriceForSymbol(prices as any, token.symbol);
@@ -269,32 +269,25 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
       usdValue,
       change24h,
     };
-  }).filter(t => t.numericBalance > 0 && t.symbol.toUpperCase() !== 'UNKNOWN') // Only show tokens with balance, hide unknown/spam tokens
-    .sort((a, b) => b.usdValue - a.usdValue); // Sort by USD value
+  }).filter(t => t.numericBalance > 0 && t.symbol.toUpperCase() !== 'UNKNOWN')
+    .sort((a, b) => b.usdValue - a.usdValue);
 
   if (isLoading) {
     return (
-      <div className={cn("px-4 py-3", className)}>
-        <div className="flex items-center gap-2 mb-3">
-          <Coins className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Crypto
-          </h3>
-          <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-        </div>
-        <div className="space-y-2">
+      <div className={cn("px-4", className)}>
+        <div className="space-y-1">
           {[1, 2, 3].map(i => (
-            <div key={i} className="flex items-center justify-between p-3 bg-card rounded-xl border border-border animate-pulse">
+            <div key={i} className="flex items-center justify-between py-4 animate-pulse">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-muted" />
                 <div className="space-y-2">
-                  <div className="w-16 h-4 bg-muted rounded" />
-                  <div className="w-24 h-3 bg-muted rounded" />
+                  <div className="w-20 h-4 bg-muted rounded" />
+                  <div className="w-16 h-3 bg-muted rounded" />
                 </div>
               </div>
               <div className="space-y-2 text-right">
-                <div className="w-12 h-4 bg-muted rounded ml-auto" />
-                <div className="w-16 h-3 bg-muted rounded ml-auto" />
+                <div className="w-14 h-4 bg-muted rounded ml-auto" />
+                <div className="w-10 h-3 bg-muted rounded ml-auto" />
               </div>
             </div>
           ))}
@@ -305,129 +298,59 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
 
   if (tokensWithValue.length === 0) {
     return (
-      <div className={cn("px-4 py-3", className)}>
-        <div className="flex items-center gap-2 mb-3">
-          <Coins className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Crypto
-          </h3>
-        </div>
-        <div className="bg-muted/30 rounded-xl p-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            No tokens found across any network
-          </p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
-            Your tokens will appear here once you have balances
-          </p>
-        </div>
+      <div className={cn("px-4 py-8 text-center", className)}>
+        <p className="text-sm text-muted-foreground">
+          No tokens found
+        </p>
       </div>
     );
   }
 
-  // Network badge icons and colors
-  const getNetworkBadge = (chain: Chain) => {
-    switch (chain) {
-      case 'ethereum':
-        return { icon: '⟠', bg: 'bg-blue-500', label: 'ETH' };
-      case 'solana':
-        return { icon: '◎', bg: 'bg-gradient-to-br from-purple-500 to-blue-500', label: 'SOL' };
-      case 'polygon':
-        return { icon: '⬡', bg: 'bg-violet-500', label: 'POL' };
-      case 'tron':
-        return { icon: '◈', bg: 'bg-red-500', label: 'TRX' };
-      default:
-        return { icon: '●', bg: 'bg-muted', label: chain };
-    }
-  };
-
   return (
-    <div className={cn("px-4 py-3", className)}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Coins className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Crypto
-          </h3>
-          {isLoadingPrices && (
-            <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-          )}
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {tokensWithValue.length} asset{tokensWithValue.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-
-      <div className="space-y-2">
+    <div className={cn("px-4", className)}>
+      <div className="divide-y divide-border/50">
         {tokensWithValue.map((token, index) => {
-          const chainInfo = getChainInfo(token.chain);
           const formattedBalance = formatBalance(token.balance, token.decimals);
+          const tokenConfig = getTokenConfig(token.symbol);
+          const isPositive = token.change24h >= 0;
           
           return (
             <div
               key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-              className="flex items-center justify-between p-3 bg-card rounded-xl border border-border hover:border-primary/30 transition-colors"
+              className="flex items-center justify-between py-4"
             >
-            <div className="flex items-center gap-3">
-              {/* Token icon with network badge overlay */}
-              {(() => {
-                const tokenStyle = getTokenIcon(token.symbol);
-                const networkBadge = getNetworkBadge(token.chain);
-                return (
-                  <div className="relative">
+              <div className="flex items-center gap-3">
+                {/* Token icon */}
+                <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+                  {tokenConfig ? (
                     <div 
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-lg",
-                        tokenStyle.bgColor
-                      )}
+                      className={cn("w-full h-full flex items-center justify-center", tokenConfig.bgColor)}
+                      style={{ color: tokenConfig.color }}
                     >
-                      {tokenStyle.icon}
+                      <tokenConfig.Logo className="w-6 h-6" />
                     </div>
-                    {/* Network icon badge - positioned bottom-right */}
-                    <div 
-                      className={cn(
-                        "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white border-2 border-card shadow-sm",
-                        networkBadge.bg
-                      )}
-                      title={networkBadge.label}
-                    >
-                      {networkBadge.icon}
-                    </div>
-                  </div>
-                );
-              })()}
+                  ) : (
+                    <DefaultTokenIcon symbol={token.symbol} />
+                  )}
+                </div>
                 
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium">{token.symbol}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {token.name || chainInfo.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">
-                      ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    {token.change24h !== 0 && (
-                      <span className={cn(
-                        "text-xs flex items-center gap-0.5",
-                        token.change24h >= 0 ? "text-primary" : "text-destructive"
-                      )}>
-                        {token.change24h >= 0 ? (
-                          <TrendingUp className="w-2.5 h-2.5" />
-                        ) : (
-                          <TrendingDown className="w-2.5 h-2.5" />
-                        )}
-                        {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(2)}%
-                      </span>
-                    )}
-                  </div>
+                  <p className="font-medium">{token.name || token.symbol}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formattedBalance} {token.symbol}
+                  </p>
                 </div>
               </div>
               
               <div className="text-right">
-                <p className="font-mono font-medium">{formattedBalance}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-medium">
                   ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className={cn(
+                  "text-sm",
+                  isPositive ? "text-primary" : "text-destructive"
+                )}>
+                  {isPositive ? "+" : ""}{token.change24h !== 0 ? `$${Math.abs(token.usdValue * token.change24h / 100).toFixed(2)}` : "$0.00"}
                 </p>
               </div>
             </div>
