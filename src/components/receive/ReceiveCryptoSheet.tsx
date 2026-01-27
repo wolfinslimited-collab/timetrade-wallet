@@ -170,7 +170,7 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetPro
 
         <div className="flex flex-col h-full px-6 pb-8">
           {/* Token Selector */}
-          <div className="mt-4">
+          <div className="mt-4 relative">
             <button
               onClick={() => setShowTokens(!showTokens)}
               className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors"
@@ -192,7 +192,7 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetPro
 
             {/* Token Dropdown */}
             {showTokens && (
-              <div className="mt-2 bg-card border border-border rounded-xl p-2 space-y-1 max-h-48 overflow-y-auto">
+              <div className="absolute left-0 right-0 mt-2 bg-card border border-border rounded-xl p-2 space-y-1 max-h-48 overflow-y-auto z-50 shadow-lg">
                 {tokens.map((token) => {
                   const Logo = token.Logo;
                   return (
