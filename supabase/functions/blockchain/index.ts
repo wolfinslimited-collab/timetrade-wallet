@@ -104,7 +104,6 @@ const KNOWN_SPL_TOKENS: Record<string, { name: string; symbol: string; decimals:
   'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
   'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA': { name: 'USDS', symbol: 'USDS', decimals: 6, logo: '💵' },
   'USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX': { name: 'USDH', symbol: 'USDH', decimals: 6, logo: '💵' },
-  'Ea5SjE2Y6yvCeW5dYTn7PYMuW5ikXkvbGdcmSnXeaLjS': { name: 'PayPal USD', symbol: 'PYUSD', decimals: 6, logo: '💵' },
   
   // Wrapped tokens
   'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'WSOL', decimals: 9, logo: '◎' },
@@ -112,7 +111,6 @@ const KNOWN_SPL_TOKENS: Record<string, { name: string; symbol: string; decimals:
   '2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk': { name: 'Wrapped ETH (Sollet)', symbol: 'ETH', decimals: 6, logo: '⟠' },
   '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': { name: 'Wrapped ETH (Wormhole)', symbol: 'weETH', decimals: 8, logo: '⟠' },
   '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh': { name: 'Wrapped BTC (Wormhole)', symbol: 'wBTC', decimals: 8, logo: '₿' },
-  'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij': { name: 'Coinbase Wrapped BTC', symbol: 'cbBTC', decimals: 8, logo: '₿' },
   
   // Major DeFi tokens
   'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': { name: 'Jupiter', symbol: 'JUP', decimals: 6, logo: '🪐' },
@@ -120,34 +118,17 @@ const KNOWN_SPL_TOKENS: Record<string, { name: string; symbol: string; decimals:
   '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj': { name: 'Lido Staked SOL', symbol: 'stSOL', decimals: 9, logo: '🌊' },
   'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL': { name: 'JTO', symbol: 'JTO', decimals: 9, logo: '🏛️' },
   'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE': { name: 'Orca', symbol: 'ORCA', decimals: 6, logo: '🐋' },
-  '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R': { name: 'Raydium', symbol: 'RAY', decimals: 6, logo: '☀️' },
+  'RasYALBDLb3vW7icNVHzkd9E6VHM7qQKoTkbUPSBvrd': { name: 'Raydium', symbol: 'RAY', decimals: 6, logo: '☀️' },
   'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt': { name: 'Serum', symbol: 'SRM', decimals: 6, logo: '🧪' },
-  'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3': { name: 'Pyth Network', symbol: 'PYTH', decimals: 6, logo: '🔮' },
-  'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof': { name: 'Render', symbol: 'RENDER', decimals: 8, logo: '🎨' },
-  'TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6': { name: 'Tensor', symbol: 'TNSR', decimals: 9, logo: '🔷' },
-  'WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk': { name: 'Wen', symbol: 'WEN', decimals: 5, logo: '📜' },
-  'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7': { name: 'Drift', symbol: 'DRIFT', decimals: 6, logo: '🌊' },
-  'KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS': { name: 'Kamino', symbol: 'KMNO', decimals: 6, logo: '🏔️' },
-  'MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5': { name: 'cat in a dogs world', symbol: 'MEW', decimals: 5, logo: '🐱' },
-  'ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82': { name: 'Blink', symbol: 'BLINK', decimals: 9, logo: '👁️' },
   
   // Meme coins
   'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { name: 'Bonk', symbol: 'BONK', decimals: 5, logo: '🐕' },
   'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': { name: 'dogwifhat', symbol: 'WIF', decimals: 6, logo: '🐶' },
   'ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzPJBY': { name: 'MOODENG', symbol: 'MOODENG', decimals: 6, logo: '🦛' },
-  'A8C3xuqscfmyLrte3VmTqrAq8kgMASius9AFNANwpump': { name: 'Fartcoin', symbol: 'FARTCOIN', decimals: 6, logo: '💨' },
-  '2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump': { name: 'Peanut the Squirrel', symbol: 'PNUT', decimals: 6, logo: '🥜' },
-  'Df6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump': { name: 'CHILLGUY', symbol: 'CHILLGUY', decimals: 6, logo: '😎' },
-  '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr': { name: 'POPCAT', symbol: 'POPCAT', decimals: 9, logo: '🐱' },
-  'CzLSujWBLFsSjncfkh59rUFqvafWcY5tzedWJSuypump': { name: 'GOAT', symbol: 'GOAT', decimals: 6, logo: '🐐' },
-  'GJAFwWjJ3vnTsrQVabjBVK2TYB1YtRCQXRDfDgUnpump': { name: 'ai16z', symbol: 'AI16Z', decimals: 6, logo: '🤖' },
-  'J3LqXVdpkqtCaXrNEJtP5FXuQGKsHvQcBhANZoV3VUL7': { name: 'Gigachad', symbol: 'GIGA', decimals: 5, logo: '💪' },
   
   // Gaming/NFT tokens
   'ATLASXmbPQxBUYbxPsV97usA3fPQYEqzQBUHgiFCUsXx': { name: 'Star Atlas', symbol: 'ATLAS', decimals: 8, logo: '🚀' },
   'poLisWXnNRwC6oBu1vHiuKQzFjGL4XDSu4g9qjz9qVk': { name: 'Star Atlas DAO', symbol: 'POLIS', decimals: 8, logo: '🏛️' },
-  'BLZEEuZUBVqFhj8adcCFPJvPVCiCyVmh3hkJMrU8KuJA': { name: 'Blaze', symbol: 'BLZE', decimals: 9, logo: '🔥' },
-  'SAMUds5kjabK3Q8x2rLPgMgjVgqJPXu43n8ppR5Spwi': { name: 'Samoyed Coin', symbol: 'SAMO', decimals: 9, logo: '🐕' },
 };
 
 // Known TRC-20 tokens on Tron (mainnet contract addresses)
