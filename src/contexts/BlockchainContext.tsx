@@ -15,6 +15,11 @@ import {
 } from '@/utils/walletDerivation';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
+const isLikelySolanaAddress = (address: string | null | undefined) => {
+  if (!address) return false;
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+};
+
 interface BlockchainContextType {
   // Wallet state
   walletAddress: string | null;
@@ -101,7 +106,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   useEffect(() => { setIsMounted(true); }, []);
 
   // Used to force a re-render when we update derived address keys in localStorage.
-  const [, bumpDerivedAddressTick] = useState(0);
+  const [derivedAddressTick, bumpDerivedAddressTick] = useState(0);
   
   // Multi-account state - stores both EVM and Solana accounts
   const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [], tron: [] });
@@ -134,6 +139,28 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       bumpDerivedAddressTick((t) => t + 1);
     }
   }, [walletAddress]);
+
+  // Guard against corrupted Solana storage values (e.g. EVM 0x... accidentally saved under the Solana key)
+  useEffect(() => {
+    const storedSol = localStorage.getItem('timetrade_wallet_address_solana');
+    if (!storedSol) return;
+    if (isLikelySolanaAddress(storedSol)) return;
+
+    const candidate =
+      allDerivedAccounts.solana[activeAccountIndex]?.address ||
+      allDerivedAccounts.solana[0]?.address ||
+      null;
+
+    if (candidate && isLikelySolanaAddress(candidate)) {
+      localStorage.setItem('timetrade_wallet_address_solana', candidate);
+      console.log(`Repaired Solana address in storage: ${candidate}`);
+    } else {
+      localStorage.removeItem('timetrade_wallet_address_solana');
+      console.warn('Removed invalid Solana address from storage (no valid derived candidate found).');
+    }
+
+    bumpDerivedAddressTick((t) => t + 1);
+  }, [activeAccountIndex, allDerivedAccounts]);
 
   // Auto-connect and derive accounts from the stored, encrypted mnemonic.
   useEffect(() => {
@@ -365,11 +392,23 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     const sol = localStorage.getItem('timetrade_wallet_address_solana');
     const tron = localStorage.getItem('timetrade_wallet_address_tron');
 
-    if (selectedChain === 'solana') return sol || walletAddress;
-    if (selectedChain === 'tron') return tron || walletAddress;
-    if (selectedChain === 'ethereum' || selectedChain === 'polygon') return evm || walletAddress;
+    if (selectedChain === 'solana') {
+      if (isLikelySolanaAddress(sol)) return sol!.trim();
+      if (isLikelySolanaAddress(walletAddress)) return walletAddress!.trim();
+      return null;
+    }
+    if (selectedChain === 'tron') {
+      if (isTronAddress(tron)) return tron!.trim();
+      if (isTronAddress(walletAddress)) return walletAddress!.trim();
+      return null;
+    }
+    if (selectedChain === 'ethereum' || selectedChain === 'polygon') {
+      if (isEvmAddress(evm)) return evm!.trim();
+      if (isEvmAddress(walletAddress)) return walletAddress!.trim();
+      return null;
+    }
     return walletAddress;
-  }, [selectedChain, walletAddress]);
+  }, [selectedChain, walletAddress, derivedAddressTick]);
 
   // Queries (selected chain) - only enable after mount to avoid HMR issues
   const balanceQuery = useWalletBalance(isMounted ? selectedChainAddress : null, selectedChain);
@@ -387,17 +426,34 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     setWalletAddress(trimmed);
     localStorage.setItem('timetrade_wallet_address', trimmed);
 
-    // Ensure multi-chain views (like UnifiedTokenList) always have the right address keys.
-    // This is especially important for manual “Connect Wallet” flows (no mnemonic).
-    if (selectedChain === 'solana') {
-      localStorage.setItem('timetrade_wallet_address_solana', trimmed);
-    } else if (selectedChain === 'ethereum' || selectedChain === 'polygon') {
-      localStorage.setItem('timetrade_wallet_address_evm', trimmed);
+    // Persist chain-specific keys ONLY if the address format matches that chain.
+    // This prevents EVM 0x... addresses from poisoning the Solana storage key.
+    const isSol = isLikelySolanaAddress(trimmed);
+    const isEvm = isEvmAddress(trimmed);
+    const isTron = isTronAddress(trimmed);
 
-      // Also persist a Tron-formatted address so Tron balances can be fetched/displayed.
+    if (isSol) {
+      localStorage.setItem('timetrade_wallet_address_solana', trimmed);
+    }
+
+    if (isEvm) {
+      localStorage.setItem('timetrade_wallet_address_evm', trimmed);
       const tron = evmToTronAddress(trimmed);
       if (tron) localStorage.setItem('timetrade_wallet_address_tron', tron);
     }
+
+    if (isTron) {
+      localStorage.setItem('timetrade_wallet_address_tron', trimmed);
+    }
+
+    // If format is ambiguous, fall back to the selected chain hint.
+    if (!isSol && !isEvm && !isTron) {
+      if (selectedChain === 'solana') localStorage.setItem('timetrade_wallet_address_solana', trimmed);
+      if (selectedChain === 'tron') localStorage.setItem('timetrade_wallet_address_tron', trimmed);
+      if (selectedChain === 'ethereum' || selectedChain === 'polygon') localStorage.setItem('timetrade_wallet_address_evm', trimmed);
+    }
+
+    bumpDerivedAddressTick((t) => t + 1);
   }, [selectedChain]);
 
   const disconnectWallet = useCallback(() => {
