@@ -1,15 +1,13 @@
+import { useState, useEffect } from "react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain, useWalletBalance } from "@/hooks/useBlockchain";
-import { useCryptoPrices, getPriceForSymbol } from "@/hooks/useCryptoPrices";
+import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { Loader2, Coins, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UnifiedTokenListProps {
   className?: string;
 }
-
-// All supported chains to fetch
-const ALL_CHAINS: Chain[] = ['ethereum', 'solana', 'polygon', 'tron'];
 
 // Token icon mapping for common tokens
 const TOKEN_ICONS: Record<string, { icon: string; bgColor: string }> = {
@@ -93,26 +91,43 @@ interface UnifiedToken {
 export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
   
-  // Get addresses for each chain from localStorage
-  const primaryAddress = localStorage.getItem('timetrade_wallet_address');
-  const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
-  const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
-  const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
+  // Use state to track addresses reactively (re-reads on mount and when context changes)
+  const [addresses, setAddresses] = useState(() => {
+    const primaryAddress = localStorage.getItem('timetrade_wallet_address');
+    const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
+    const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+    const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
+    
+    return {
+      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    };
+  });
 
-  // Backwards-compatible fallbacks for older sessions where only `timetrade_wallet_address` existed.
-  const evmAddress = storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null);
-  const solanaAddress = storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null);
-  const tronAddress = storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null);
+  // Re-read addresses from localStorage when connection state changes
+  useEffect(() => {
+    const primaryAddress = localStorage.getItem('timetrade_wallet_address');
+    const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
+    const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+    const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
+    
+    setAddresses({
+      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    });
+  }, [isConnected]);
 
   // Fetch balances for all chains in parallel
-  const ethBalance = useWalletBalance(evmAddress, 'ethereum');
-  const solBalance = useWalletBalance(solanaAddress, 'solana');
-  const polyBalance = useWalletBalance(evmAddress, 'polygon');
-  const tronBalance = useWalletBalance(tronAddress, 'tron');
+  const ethBalance = useWalletBalance(addresses.evm, 'ethereum');
+  const solBalance = useWalletBalance(addresses.solana, 'solana');
+  const polyBalance = useWalletBalance(addresses.evm, 'polygon');
+  const tronBalance = useWalletBalance(addresses.tron, 'tron');
 
   const isLoading = ethBalance.isLoading || solBalance.isLoading || polyBalance.isLoading || tronBalance.isLoading;
 
-  if (!isConnected || (!evmAddress && !solanaAddress && !tronAddress)) {
+  if (!isConnected || (!addresses.evm && !addresses.solana && !addresses.tron)) {
     return null;
   }
 
@@ -120,7 +135,7 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   const allTokens: UnifiedToken[] = [];
 
   // Add Ethereum native + tokens
-  if (ethBalance.data && evmAddress) {
+  if (ethBalance.data && addresses.evm) {
     const chainInfo = getChainInfo('ethereum');
     // Add native ETH
     allTokens.push({
@@ -148,7 +163,7 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   }
 
   // Add Solana native + tokens
-  if (solBalance.data && solanaAddress) {
+  if (solBalance.data && addresses.solana) {
     const chainInfo = getChainInfo('solana');
     // Add native SOL
     allTokens.push({
@@ -176,7 +191,7 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   }
 
   // Add Polygon native + tokens
-  if (polyBalance.data && evmAddress) {
+  if (polyBalance.data && addresses.evm) {
     const chainInfo = getChainInfo('polygon');
     // Add native POL/MATIC
     allTokens.push({
@@ -204,7 +219,7 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
   }
 
   // Add Tron native + tokens
-  if (tronBalance.data && tronAddress) {
+  if (tronBalance.data && addresses.tron) {
     const chainInfo = getChainInfo('tron');
     // Add native TRX
     allTokens.push({
