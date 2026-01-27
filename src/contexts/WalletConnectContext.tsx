@@ -1,33 +1,46 @@
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { createAppKit, useAppKit, useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
-import { EthersAdapter } from '@reown/appkit-adapter-ethers';
-import { mainnet, sepolia, polygon, polygonAmoy } from '@reown/appkit/networks';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { BrowserProvider, JsonRpcSigner, parseEther, parseUnits } from 'ethers';
 
-// Project ID from WalletConnect Cloud - this is a public project ID for demo purposes
-const projectId = 'f6fa3c95d1ee89fa25fbb3eb50fe5e03';
+// WalletConnect is optional - we'll try to initialize it but gracefully handle failures
+let appKitInitialized = false;
+let useAppKit: any = () => ({ open: () => console.warn('WalletConnect not available') });
+let useAppKitAccount: any = () => ({ address: undefined, isConnected: false });
+let useAppKitProvider: any = () => ({ walletProvider: null });
 
-// Metadata for the dApp
-const metadata = {
-  name: 'Timetrade Wallet',
-  description: 'Secure crypto wallet with WalletConnect support',
-  url: typeof window !== 'undefined' ? window.location.origin : '',
-  icons: ['https://avatars.githubusercontent.com/u/37784886']
-};
+// Try to initialize WalletConnect/AppKit
+try {
+  const appkit = require('@reown/appkit/react');
+  const ethersAdapter = require('@reown/appkit-adapter-ethers');
+  const networks = require('@reown/appkit/networks');
 
-// Create ethers adapter
-const ethersAdapter = new EthersAdapter();
+  const projectId = 'f6fa3c95d1ee89fa25fbb3eb50fe5e03';
+  
+  const metadata = {
+    name: 'Timetrade Wallet',
+    description: 'Secure crypto wallet with WalletConnect support',
+    url: typeof window !== 'undefined' ? window.location.origin : '',
+    icons: ['https://avatars.githubusercontent.com/u/37784886']
+  };
 
-// Initialize AppKit
-createAppKit({
-  adapters: [ethersAdapter],
-  networks: [mainnet, sepolia, polygon, polygonAmoy],
-  metadata,
-  projectId,
-  features: {
-    analytics: false,
-  }
-});
+  const adapter = new ethersAdapter.EthersAdapter();
+
+  appkit.createAppKit({
+    adapters: [adapter],
+    networks: [networks.mainnet, networks.sepolia, networks.polygon, networks.polygonAmoy],
+    metadata,
+    projectId,
+    features: {
+      analytics: false,
+    }
+  });
+
+  useAppKit = appkit.useAppKit;
+  useAppKitAccount = appkit.useAppKitAccount;
+  useAppKitProvider = appkit.useAppKitProvider;
+  appKitInitialized = true;
+} catch (error) {
+  console.warn('WalletConnect initialization failed:', error);
+}
 
 interface WalletConnectTransaction {
   to: string;
@@ -65,9 +78,15 @@ interface WalletConnectProviderProps {
 }
 
 export function WalletConnectProvider({ children }: WalletConnectProviderProps) {
-  const { open } = useAppKit();
-  const { address, isConnected } = useAppKitAccount();
-  const { walletProvider } = useAppKitProvider('eip155');
+  // Safely call hooks - they'll return defaults if AppKit isn't initialized
+  const appKit = useAppKit();
+  const account = useAppKitAccount();
+  const provider = useAppKitProvider('eip155');
+  
+  const open = appKit?.open;
+  const address = account?.address;
+  const isConnected = account?.isConnected ?? false;
+  const walletProvider = provider?.walletProvider;
   
   const [isSigningWithWC, setIsSigningWithWC] = useState(false);
   const [wcError, setWcError] = useState<string | null>(null);
@@ -75,13 +94,21 @@ export function WalletConnectProvider({ children }: WalletConnectProviderProps) 
   const clearWcError = useCallback(() => setWcError(null), []);
 
   const openWalletConnectModal = useCallback(() => {
-    open();
+    if (!appKitInitialized) {
+      setWcError('WalletConnect is not available. Please use the built-in wallet.');
+      return;
+    }
+    try {
+      open?.();
+    } catch (error) {
+      console.error('Failed to open WalletConnect modal:', error);
+      setWcError('Failed to open wallet connection. Please try again.');
+    }
   }, [open]);
 
   const disconnectWalletConnect = useCallback(async () => {
     try {
-      // AppKit handles disconnect internally
-      open({ view: 'Account' });
+      open?.({ view: 'Account' });
     } catch (error) {
       console.error('Failed to disconnect:', error);
     }
