@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+import { Chain, getChainInfo, useGasEstimate } from "@/hooks/useBlockchain";
 import { useTransactionSigning, isEvmChain, isTronChain, isSolanaChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
 import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
 import { useSolanaTransactionSigning } from "@/hooks/useSolanaTransactionSigning";
@@ -25,7 +25,7 @@ interface ConfirmationStepProps {
 }
 
 export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false, onConfirm, onBack }: ConfirmationStepProps) => {
-  const { gasEstimate, walletAddress } = useBlockchainContext();
+  const { walletAddress, prices } = useBlockchainContext();
   const { 
     isWalletConnectConnected, 
     wcAddress, 
@@ -43,6 +43,18 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   const [liveFeeData, setLiveFeeData] = useState<LiveFeeData | null>(null);
 
   const chainInfo = getChainInfo(selectedChain);
+  const gasEstimateQuery = useGasEstimate(selectedChain);
+  const chainGasEstimate = gasEstimateQuery.data;
+
+  // Use native token price for fee USD (fees are paid in the network native asset)
+  const nativePriceSymbol = selectedChain === 'polygon' ? 'MATIC' : chainInfo.symbol;
+  const nativeTokenPrice = useMemo(() => {
+    const p = prices?.find((x) => x.symbol.toUpperCase() === nativePriceSymbol.toUpperCase())?.price ?? 0;
+    if (p && p > 0) return p;
+    // Fallback: if user is sending the native token, its price is correct for fees
+    if (transaction.token.symbol.toUpperCase() === nativePriceSymbol.toUpperCase()) return transaction.token.price;
+    return transaction.token.price; // last-resort fallback
+  }, [prices, nativePriceSymbol, transaction.token.price, transaction.token.symbol]);
   const { signTransaction: signEvmTransaction, isSigningAvailable: isEvmSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
   const { signTransaction: signTronTransaction, isSigningAvailable: isTronSigningAvailable } = useTronTransactionSigning(isTestnet);
   const { signTransaction: signSolanaTransaction, isSigningAvailable: isSolanaSigningAvailable } = useSolanaTransactionSigning(isTestnet);
@@ -60,48 +72,103 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
     setLiveFeeData(feeData);
   }, []);
 
-  // Calculate fee details using live data or fallback
+  // Calculate fee details using chain-correct data (Solana/Tron are NOT gwei-based)
   const feeDetails = useMemo(() => {
-    if (liveFeeData) {
-      // Use live RPC fee data
+    // Solana: backend returns priority fee tiers in lamports
+    if (isSolanaChain(selectedChain)) {
+      const slowLamports = chainGasEstimate?.slow?.fee ? parseFloat(chainGasEstimate.slow.fee) : 5000;
+      const mediumLamports = chainGasEstimate?.medium?.fee ? parseFloat(chainGasEstimate.medium.fee) : 10000;
+      const fastLamports = chainGasEstimate?.fast?.fee ? parseFloat(chainGasEstimate.fast.fee) : 25000;
+
+      const lamportsForSpeed: Record<GasSpeed, number> = {
+        slow: slowLamports,
+        standard: mediumLamports,
+        fast: fastLamports,
+        instant: fastLamports * 2,
+      };
+
+      const sol = (lamportsForSpeed[gasSpeed] || mediumLamports) / 1e9;
+      const usd = sol * nativeTokenPrice;
+
+      return {
+        gwei: 0,
+        maxFee: 0,
+        priorityFee: 0,
+        eth: sol,
+        usd,
+        gasPriceGwei: "0",
+        isEIP1559: false,
+      };
+    }
+
+    // Tron: backend returns fee tiers in TRX
+    if (isTronChain(selectedChain)) {
+      const slowTrx = chainGasEstimate?.slow?.fee ? parseFloat(chainGasEstimate.slow.fee) : 1;
+      const mediumTrx = chainGasEstimate?.medium?.fee ? parseFloat(chainGasEstimate.medium.fee) : 5;
+      const fastTrx = chainGasEstimate?.fast?.fee ? parseFloat(chainGasEstimate.fast.fee) : 10;
+
+      const trxForSpeed: Record<GasSpeed, number> = {
+        slow: slowTrx,
+        standard: mediumTrx,
+        fast: fastTrx,
+        instant: fastTrx * 1.5,
+      };
+
+      const trx = trxForSpeed[gasSpeed] || mediumTrx;
+      const usd = trx * nativeTokenPrice;
+
+      return {
+        gwei: 0,
+        maxFee: 0,
+        priorityFee: 0,
+        eth: trx,
+        usd,
+        gasPriceGwei: "0",
+        isEIP1559: false,
+      };
+    }
+
+    // EVM: prefer live RPC fee data
+    if (liveFeeData && isEvmChain(selectedChain)) {
       const tier = liveFeeData[gasSpeed];
       const effectiveGas = liveFeeData.isEIP1559 ? tier.maxFee : tier.gasPrice;
       const eth = (effectiveGas * transaction.gasEstimate) / 1e9;
-      const usd = eth * transaction.token.price;
-      return { 
-        gwei: tier.gasPrice, 
+      const usd = eth * nativeTokenPrice;
+      return {
+        gwei: tier.gasPrice,
         maxFee: tier.maxFee,
         priorityFee: tier.priorityFee,
-        eth, 
-        usd, 
+        eth,
+        usd,
         gasPriceGwei: String(tier.gasPrice),
         isEIP1559: liveFeeData.isEIP1559,
       };
     }
-    
-    // Fallback to Tatum API data
+
+    // EVM fallback: backend estimates (gwei)
     const gasMap: Record<GasSpeed, string | undefined> = {
-      slow: gasEstimate?.slow?.gasPrice,
-      standard: gasEstimate?.medium?.gasPrice,
-      fast: gasEstimate?.fast?.gasPrice,
-      instant: gasEstimate?.fast?.gasPrice,
+      slow: chainGasEstimate?.slow?.gasPrice,
+      standard: chainGasEstimate?.medium?.gasPrice,
+      fast: chainGasEstimate?.fast?.gasPrice,
+      instant: chainGasEstimate?.fast?.gasPrice,
     };
-    
+
     const baseGwei = parseFloat(gasMap[gasSpeed] || "20");
     const multiplier = gasSpeed === "instant" ? 1.5 : 1;
     const gwei = baseGwei * multiplier;
     const eth = (gwei * transaction.gasEstimate) / 1e9;
-    const usd = eth * transaction.token.price;
-    return { 
-      gwei, 
+    const usd = eth * nativeTokenPrice;
+
+    return {
+      gwei,
       maxFee: gwei,
       priorityFee: gwei * 0.1,
-      eth, 
-      usd, 
+      eth,
+      usd,
       gasPriceGwei: String(gwei),
       isEIP1559: false,
     };
-  }, [gasSpeed, transaction.gasEstimate, transaction.token.price, gasEstimate, liveFeeData]);
+  }, [gasSpeed, selectedChain, chainGasEstimate, liveFeeData, transaction.gasEstimate, nativeTokenPrice]);
 
   const amountNum = parseFloat(transaction.amount);
   const amountUsd = amountNum * transaction.token.price;
@@ -378,12 +445,14 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       <div className="mt-4">
         <FeeEstimator
           baseGasLimit={transaction.gasEstimate}
-          tokenSymbol={transaction.token.symbol}
-          tokenPrice={transaction.token.price}
+          tokenSymbol={chainInfo.symbol}
+          tokenPrice={nativeTokenPrice}
           selectedSpeed={gasSpeed}
           onSpeedChange={setGasSpeed}
           onFeeDataUpdate={handleFeeDataUpdate}
           disabled={isProcessing}
+          chain={selectedChain}
+          isTestnet={isTestnet}
         />
       </div>
 
