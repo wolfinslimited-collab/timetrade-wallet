@@ -211,6 +211,41 @@ async function tatumRequestV4(endpoint: string, options: RequestInit = {}) {
   }
 }
 
+// Special Tatum request handler for Tron that gracefully handles 403 "account not found" errors
+// (Tron returns 403 for addresses that have never received any TRX)
+async function tatumRequestTron(endpoint: string, options: RequestInit = {}) {
+  const url = `${TATUM_BASE_URL}${endpoint}`;
+  console.log(`Tatum Tron request: ${url}`);
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'x-api-key': TATUM_API_KEY!,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  const responseText = await response.text();
+  
+  if (!response.ok) {
+    // Handle 403 "account not found" as zero balance (common for new/inactive Tron addresses)
+    if (response.status === 403 && responseText.includes('tron.account.not.found')) {
+      console.log('Tron account not found (never activated), returning zero balance');
+      return { balance: 0, trc20: [] };
+    }
+    console.error(`Tatum Tron API error: ${response.status} - ${responseText}`);
+    throw new Error(`Tatum API error: ${response.status} - ${responseText}`);
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    console.log('Tatum Tron raw response:', responseText);
+    return { balance: responseText };
+  }
+}
+
 function toBaseUnits(value: string | number, decimals: number): string {
   const s = String(value ?? '0').trim();
   if (!s || s === '0') return '0';
@@ -330,7 +365,55 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
   }
 }
 
-// Fetch SPL tokens for Solana addresses using Tatum's Solana RPC endpoint
+// Tatum Solana RPC Gateway endpoint
+const TATUM_SOLANA_RPC = 'https://solana-mainnet.gateway.tatum.io';
+
+// Fetch SOL balance using Tatum Solana RPC Gateway
+async function getSolanaBalance(address: string): Promise<string> {
+  try {
+    const rpcBody = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getBalance',
+      params: [address]
+    };
+    
+    console.log(`Fetching SOL balance via Tatum RPC Gateway for: ${address}`);
+    
+    const response = await fetch(TATUM_SOLANA_RPC, {
+      method: 'POST',
+      headers: {
+        'x-api-key': TATUM_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(rpcBody),
+    });
+    
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      console.error(`Solana RPC Gateway error: ${response.status} - ${responseText}`);
+      return '0';
+    }
+    
+    const rpcResult = JSON.parse(responseText);
+    console.log(`Solana balance RPC response:`, JSON.stringify(rpcResult));
+    
+    if (rpcResult.error) {
+      console.error(`Solana RPC error:`, rpcResult.error);
+      return '0';
+    }
+    
+    // Balance is returned in lamports
+    const lamports = rpcResult.result?.value ?? 0;
+    return String(lamports);
+  } catch (error) {
+    console.error(`Error fetching Solana balance via RPC:`, error);
+    return '0';
+  }
+}
+
+// Fetch SPL tokens for Solana addresses using Tatum's Solana RPC Gateway
 async function getSPLTokens(address: string): Promise<Array<{
   symbol: string;
   name: string;
@@ -340,7 +423,7 @@ async function getSPLTokens(address: string): Promise<Array<{
   logo?: string;
 }>> {
   try {
-    // Use Tatum's Solana JSON-RPC endpoint with getTokenAccountsByOwner
+    // Use Tatum's Solana RPC Gateway with getTokenAccountsByOwner
     // Token Program ID for SPL tokens
     const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
     
@@ -355,9 +438,9 @@ async function getSPLTokens(address: string): Promise<Array<{
       ]
     };
     
-    console.log(`Fetching SPL tokens via RPC for solana address: ${address}`);
+    console.log(`Fetching SPL tokens via Tatum RPC Gateway for: ${address}`);
     
-    const response = await fetch('https://api.tatum.io/v3/blockchain/node/SOL', {
+    const response = await fetch(TATUM_SOLANA_RPC, {
       method: 'POST',
       headers: {
         'x-api-key': TATUM_API_KEY!,
@@ -369,7 +452,7 @@ async function getSPLTokens(address: string): Promise<Array<{
     const responseText = await response.text();
     
     if (!response.ok) {
-      console.error(`Solana RPC error: ${response.status} - ${responseText}`);
+      console.error(`Solana RPC Gateway error: ${response.status} - ${responseText}`);
       return [];
     }
     
@@ -506,9 +589,32 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
   const config = chainConfigs[chain];
   
   try {
-    // Fetch native balance and tokens in parallel
+    // Handle Solana separately using RPC Gateway
+    if (chain === 'solana') {
+      const [solBalance, tokens] = await Promise.all([
+        getSolanaBalance(address),
+        getSPLTokens(address),
+      ]);
+      
+      console.log(`Solana balance via RPC Gateway: ${solBalance} lamports`);
+      
+      return {
+        chain,
+        native: {
+          symbol: config.symbol,
+          balance: solBalance,
+          decimals: config.decimals,
+        },
+        tokens,
+        explorerUrl: config.explorerUrl(testnet),
+      };
+    }
+    
+    // Fetch native balance and tokens in parallel for other chains
     const [balanceData, tokens] = await Promise.all([
-      tatumRequest(config.balanceEndpoint(address, testnet)),
+      chain === 'tron' 
+        ? tatumRequestTron(config.balanceEndpoint(address, testnet))
+        : tatumRequest(config.balanceEndpoint(address, testnet)),
       getTokens(chain, address, testnet),
     ]);
     
