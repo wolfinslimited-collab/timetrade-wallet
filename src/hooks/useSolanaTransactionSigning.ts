@@ -155,25 +155,46 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
 
       // Serialize the signed transaction
       const serialized = transaction.serialize();
-      const base64Tx = Buffer.from(serialized).toString('base64');
+      // Tatum expects hex-encoded transaction data
+      const hexTx = Buffer.from(serialized).toString('hex');
 
-      // Get the signature (transaction hash)
+      // Get the signature (transaction hash) - convert to base58 for display
       const signature = transaction.signature;
       if (!signature) {
         throw new Error('Failed to sign transaction');
       }
 
-      const txHash = Buffer.from(signature).toString('base64');
+      // The signature in base58 is used as the transaction hash on Solana
+      const bs58Chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      const toBase58 = (bytes: Uint8Array): string => {
+        let num = BigInt(0);
+        for (const byte of bytes) {
+          num = num * BigInt(256) + BigInt(byte);
+        }
+        let result = '';
+        while (num > 0) {
+          result = bs58Chars[Number(num % BigInt(58))] + result;
+          num = num / BigInt(58);
+        }
+        for (const byte of bytes) {
+          if (byte === 0) result = '1' + result;
+          else break;
+        }
+        return result || '1';
+      };
+      
+      const txHash = toBase58(signature);
 
       console.log('Solana transaction signed successfully:', {
         from: fromPubkey.toBase58(),
         to: toPubkey.toBase58(),
         lamports,
         blockhash,
+        txHash,
       });
 
       return {
-        signedTx: base64Tx,
+        signedTx: hexTx,
         txHash,
       };
     } catch (err) {
