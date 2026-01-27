@@ -49,49 +49,53 @@ export const PortfolioChart = () => {
 
   const isLoading = isConnected && (isLoadingBalance || isLoadingPrices);
 
+  // Don't render anything if no data available
+  if (!isConnected || data.length === 0) {
+    return null;
+  }
+
   return (
     <div className="relative px-4 py-2 h-48">
-      {!isConnected ? (
-        <div className="h-full rounded-xl border border-border bg-card flex items-center justify-center">
-          <p className="text-xs text-muted-foreground">Connect a wallet to see your portfolio</p>
-        </div>
-      ) : isLoading ? (
-        <div className="h-full rounded-xl border border-border bg-card flex items-center justify-center">
-          <p className="text-xs text-muted-foreground">Loading chart…</p>
+      {isLoading ? (
+        <div className="h-full rounded-xl border border-border/50 bg-card/50 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-muted-foreground">Loading chart…</p>
+          </div>
         </div>
       ) : (
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <defs>
-            <linearGradient id="gradientPortfolio" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="t" hide />
-          <YAxis hide domain={['dataMin - 50', 'dataMax + 50']} />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null;
-              return (
-                <div className="bg-card border border-border rounded-lg p-2 shadow-xl">
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="font-mono">{formatUsd(Number(payload[0]?.value ?? 0))}</span>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradientPortfolio" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="t" hide />
+            <YAxis hide domain={['dataMin - 50', 'dataMax + 50']} />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="bg-card border border-border rounded-lg p-2 shadow-xl">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="font-mono">{formatUsd(Number(payload[0]?.value ?? 0))}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            }}
-          />
-          <Area
-            type="monotone"
-            dataKey="total"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            fill="url(#gradientPortfolio)"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+                );
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="total"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill="url(#gradientPortfolio)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       )}
     </div>
   );
