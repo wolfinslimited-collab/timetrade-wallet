@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Fuel, Clock, TrendingUp, TrendingDown, Minus, Info, RefreshCw, Zap, AlertCircle, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { getChainInfo } from "@/hooks/useBlockchain";
+import { Chain, getChainInfo, useGasEstimate } from "@/hooks/useBlockchain";
 import { useLiveFeeEstimation, LiveFeeData } from "@/hooks/useLiveFeeEstimation";
 import { isEvmChain } from "@/hooks/useTransactionSigning";
 
@@ -46,6 +46,8 @@ interface FeeEstimatorProps {
   onSpeedChange: (speed: GasSpeed) => void;
   onFeeDataUpdate?: (feeData: LiveFeeData | null) => void;
   disabled?: boolean;
+  chain?: Chain;
+  isTestnet?: boolean;
 }
 
 const formatTime = (seconds: number): string => {
@@ -61,16 +63,27 @@ export const FeeEstimator = ({
   onSpeedChange,
   onFeeDataUpdate,
   disabled = false,
+  chain,
+  isTestnet,
 }: FeeEstimatorProps) => {
-  const { gasEstimate, isLoadingGas, gasError, selectedChain, isTestnet, refreshAll } = useBlockchainContext();
+  const { refreshAll, selectedChain: contextChain, isTestnet: contextTestnet } = useBlockchainContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
+  const effectiveChain = chain ?? contextChain;
+  const effectiveTestnet = isTestnet ?? contextTestnet;
+
+  // Always fetch gas/fee estimates for the effective chain (important for Send flow which can differ from dashboard chain)
+  const gasEstimateQuery = useGasEstimate(effectiveChain);
+  const gasEstimate = gasEstimateQuery.data;
+  const isLoadingGas = gasEstimateQuery.isLoading;
+  const gasError = gasEstimateQuery.error instanceof Error ? gasEstimateQuery.error : null;
+
   // Use live RPC fee estimation for EVM chains
   const { feeData: liveFeeData, isLoading: isLoadingLive, error: liveError, refresh: refreshLive, isLive } = 
-    useLiveFeeEstimation(selectedChain, isTestnet, isEvmChain(selectedChain));
+    useLiveFeeEstimation(effectiveChain, effectiveTestnet, isEvmChain(effectiveChain));
 
-  const chainInfo = getChainInfo(selectedChain);
+  const chainInfo = getChainInfo(effectiveChain);
 
   // Notify parent of fee data updates
   useEffect(() => {
@@ -81,6 +94,7 @@ export const FeeEstimator = ({
     setIsRefreshing(true);
     await Promise.all([
       refreshLive(),
+      gasEstimateQuery.refetch(),
       new Promise((r) => setTimeout(r, 500)),
     ]);
     refreshAll();
@@ -89,6 +103,7 @@ export const FeeEstimator = ({
 
   // Determine network congestion based on live or fallback data
   const networkCongestion = useMemo(() => {
+    if (!isEvmChain(effectiveChain)) return "medium";
     const baseGas = liveFeeData?.baseFeePerGasGwei || 
       (gasEstimate?.medium?.gasPrice ? parseFloat(gasEstimate.medium.gasPrice) : 20);
     
@@ -109,7 +124,7 @@ export const FeeEstimator = ({
       isEIP1559: boolean;
     }> = {} as any;
 
-    if (liveFeeData && isEvmChain(selectedChain)) {
+    if (liveFeeData && isEvmChain(effectiveChain)) {
       // Use live RPC data
       (Object.keys(gasOptions) as GasSpeed[]).forEach((speed) => {
         const tier = liveFeeData[speed];
@@ -127,8 +142,69 @@ export const FeeEstimator = ({
           isEIP1559: liveFeeData.isEIP1559,
         };
       });
+    } else if (effectiveChain === 'solana') {
+      // Solana fees are provided as lamports in gasEstimate.*.fee
+      const slowLamports = gasEstimate?.slow?.fee ? parseFloat(gasEstimate.slow.fee) : 5000;
+      const mediumLamports = gasEstimate?.medium?.fee ? parseFloat(gasEstimate.medium.fee) : 10000;
+      const fastLamports = gasEstimate?.fast?.fee ? parseFloat(gasEstimate.fast.fee) : 25000;
+
+      const slowTime = gasEstimate?.slow?.estimatedTime || 60;
+      const mediumTime = gasEstimate?.medium?.estimatedTime || 30;
+      const fastTime = gasEstimate?.fast?.estimatedTime || 10;
+
+      const lamportMap: Record<GasSpeed, { lamports: number; time: number }> = {
+        slow: { lamports: slowLamports, time: slowTime },
+        standard: { lamports: mediumLamports, time: mediumTime },
+        fast: { lamports: fastLamports, time: fastTime },
+        instant: { lamports: fastLamports * 2, time: Math.max(5, Math.floor(fastTime / 2)) },
+      };
+
+      (Object.keys(gasOptions) as GasSpeed[]).forEach((speed) => {
+        const { lamports, time } = lamportMap[speed];
+        const sol = lamports / 1e9;
+        const usd = sol * tokenPrice;
+        results[speed] = {
+          gwei: 0,
+          maxFee: 0,
+          priorityFee: 0,
+          eth: sol,
+          usd,
+          time: formatTime(time),
+          isEIP1559: false,
+        };
+      });
+    } else if (effectiveChain === 'tron') {
+      // Tron fees are provided directly in TRX in gasEstimate.*.fee
+      const slowTrx = gasEstimate?.slow?.fee ? parseFloat(gasEstimate.slow.fee) : 1;
+      const mediumTrx = gasEstimate?.medium?.fee ? parseFloat(gasEstimate.medium.fee) : 5;
+      const fastTrx = gasEstimate?.fast?.fee ? parseFloat(gasEstimate.fast.fee) : 10;
+
+      const slowTime = gasEstimate?.slow?.estimatedTime || 60;
+      const mediumTime = gasEstimate?.medium?.estimatedTime || 30;
+      const fastTime = gasEstimate?.fast?.estimatedTime || 10;
+
+      const trxMap: Record<GasSpeed, { trx: number; time: number }> = {
+        slow: { trx: slowTrx, time: slowTime },
+        standard: { trx: mediumTrx, time: mediumTime },
+        fast: { trx: fastTrx, time: fastTime },
+        instant: { trx: fastTrx * 1.5, time: Math.max(5, Math.floor(fastTime / 2)) },
+      };
+
+      (Object.keys(gasOptions) as GasSpeed[]).forEach((speed) => {
+        const { trx, time } = trxMap[speed];
+        const usd = trx * tokenPrice;
+        results[speed] = {
+          gwei: 0,
+          maxFee: 0,
+          priorityFee: 0,
+          eth: trx,
+          usd,
+          time: formatTime(time),
+          isEIP1559: false,
+        };
+      });
     } else {
-      // Fallback to Tatum API data
+      // EVM fallback: use backend estimates (gwei)
       const slowGas = gasEstimate?.slow?.gasPrice ? parseFloat(gasEstimate.slow.gasPrice) : 10;
       const mediumGas = gasEstimate?.medium?.gasPrice ? parseFloat(gasEstimate.medium.gasPrice) : 20;
       const fastGas = gasEstimate?.fast?.gasPrice ? parseFloat(gasEstimate.fast.gasPrice) : 30;
@@ -148,12 +224,12 @@ export const FeeEstimator = ({
         const { gwei, time } = gasMap[speed];
         const eth = (gwei * baseGasLimit) / 1e9;
         const usd = eth * tokenPrice;
-        results[speed] = { 
-          gwei, 
+        results[speed] = {
+          gwei,
           maxFee: gwei,
           priorityFee: gwei * 0.1,
-          eth, 
-          usd, 
+          eth,
+          usd,
           time: formatTime(time),
           isEIP1559: false,
         };
@@ -161,7 +237,7 @@ export const FeeEstimator = ({
     }
     
     return results;
-  }, [liveFeeData, gasEstimate, baseGasLimit, tokenPrice, selectedChain]);
+  }, [liveFeeData, gasEstimate, baseGasLimit, tokenPrice, effectiveChain]);
 
   const selectedFee = feeCalculations[selectedSpeed];
   const congestionColors = {
