@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Eye, EyeOff, Shield, Key, Lock } from "lucide-react";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
 interface PrivateKeyModalProps {
   open: boolean;
@@ -21,15 +22,44 @@ export const PrivateKeyModal = ({
   isLoading,
   hasStoredKey = false,
 }: PrivateKeyModalProps) => {
+  const { selectedChain } = useBlockchainContext();
   const [privateKey, setPrivateKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saveKey, setSaveKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isSolana = selectedChain === 'solana';
+
   const handleSubmit = () => {
     setError(null);
     
     let key = privateKey.trim();
+    
+    // For Solana, we accept either mnemonic (with spaces) or 32-byte hex key
+    if (isSolana) {
+      const isMnemonic = key.includes(' ');
+      if (isMnemonic) {
+        // Basic mnemonic validation: should have at least 12 words
+        const words = key.split(/\s+/).filter(Boolean);
+        if (words.length < 12) {
+          setError("Mnemonic must have at least 12 words.");
+          return;
+        }
+      } else {
+        // Hex private key - should be 32 bytes (64 hex chars)
+        if (!key.startsWith('0x')) {
+          key = '0x' + key;
+        }
+        if (key.length !== 66 || !/^0x[a-fA-F0-9]{64}$/.test(key)) {
+          setError("Invalid private key. For Solana, enter your 12/24-word mnemonic or 64-char hex key.");
+          return;
+        }
+      }
+      onSubmit(isMnemonic ? privateKey.trim() : key, saveKey);
+      return;
+    }
+    
+    // EVM / Tron: expect 64 hex chars
     if (!key.startsWith('0x')) {
       key = '0x' + key;
     }
@@ -65,7 +95,9 @@ export const PrivateKeyModal = ({
             Sign Transaction
           </DialogTitle>
           <DialogDescription>
-            Enter your private key to sign this transaction. Your key is never stored or transmitted unless you choose to save it.
+            {isSolana 
+              ? "Enter your 12/24-word mnemonic or private key to sign. Your key is never stored or transmitted unless you save it."
+              : "Enter your private key to sign this transaction. Your key is never stored or transmitted unless you choose to save it."}
           </DialogDescription>
         </DialogHeader>
 
@@ -79,9 +111,8 @@ export const PrivateKeyModal = ({
             </div>
           </div>
 
-          {/* Private Key Input */}
           <div className="space-y-2">
-            <Label htmlFor="privateKey">Private Key</Label>
+            <Label htmlFor="privateKey">{isSolana ? "Mnemonic or Private Key" : "Private Key"}</Label>
             <div className="relative">
               <Input
                 id="privateKey"
@@ -91,7 +122,7 @@ export const PrivateKeyModal = ({
                   setPrivateKey(e.target.value);
                   setError(null);
                 }}
-                placeholder="0x..."
+                placeholder={isSolana ? "Enter mnemonic or 0x..." : "0x..."}
                 className="pr-10 font-mono text-sm"
                 autoComplete="off"
                 autoCorrect="off"

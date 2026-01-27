@@ -67,8 +67,12 @@ export function isTronChain(chain: Chain): boolean {
   return chain === 'tron';
 }
 
+export function isSolanaChain(chain: Chain): boolean {
+  return chain === 'solana';
+}
+
 export function isSigningSupportedForChain(chain: Chain): boolean {
-  return isEvmChain(chain) || isTronChain(chain);
+  return isEvmChain(chain) || isTronChain(chain) || isSolanaChain(chain);
 }
 
 export function useTransactionSigning(chain: Chain, isTestnet: boolean = true): UseTransactionSigningReturn {

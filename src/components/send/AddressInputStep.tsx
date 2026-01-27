@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { QRScannerModal } from "./QRScannerModal";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { isValidSolanaAddress } from "@/hooks/useSolanaTransactionSigning";
 
 interface AddressInputStepProps {
   onSubmit: (address: string) => void;
@@ -18,16 +20,46 @@ const recentAddresses = [
   { address: "0x9876...5432", name: null, time: "3d ago" },
 ];
 
+// Validate address based on chain
+function validateAddressForChain(addr: string, chain: string): { valid: boolean; error?: string } {
+  const trimmed = addr.trim();
+  
+  switch (chain) {
+    case 'solana':
+      if (isValidSolanaAddress(trimmed)) {
+        return { valid: true };
+      }
+      return { valid: false, error: "Invalid Solana address format" };
+    
+    case 'tron':
+      // Tron addresses start with T and are 34 characters
+      if (/^T[a-zA-Z0-9]{33}$/.test(trimmed)) {
+        return { valid: true };
+      }
+      return { valid: false, error: "Invalid Tron address format (should start with T)" };
+    
+    case 'ethereum':
+    case 'polygon':
+    default:
+      // EVM addresses: 0x + 40 hex characters
+      if (/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+        return { valid: true };
+      }
+      return { valid: false, error: "Invalid wallet address format" };
+  }
+}
+
 export const AddressInputStep = ({ onSubmit, onClose }: AddressInputStepProps) => {
   const { toast } = useToast();
+  const { selectedChain } = useBlockchainContext();
   const [address, setAddress] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const validateAddress = (addr: string): boolean => {
-    // Basic Ethereum address validation
-    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
-      setError("Invalid wallet address format");
+    const result = validateAddressForChain(addr, selectedChain);
+    if (!result.valid) {
+      setError(result.error || "Invalid address");
       return false;
     }
     setError(null);

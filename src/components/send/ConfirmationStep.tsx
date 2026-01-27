@@ -5,8 +5,9 @@ import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo } from "@/hooks/useBlockchain";
-import { useTransactionSigning, isEvmChain, isTronChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
+import { useTransactionSigning, isEvmChain, isTronChain, isSolanaChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
 import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
+import { useSolanaTransactionSigning } from "@/hooks/useSolanaTransactionSigning";
 import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { PrivateKeyModal } from "./PrivateKeyModal";
@@ -42,6 +43,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   const chainInfo = getChainInfo(selectedChain);
   const { signTransaction: signEvmTransaction, isSigningAvailable: isEvmSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
   const { signTransaction: signTronTransaction, isSigningAvailable: isTronSigningAvailable } = useTronTransactionSigning(isTestnet);
+  const { signTransaction: signSolanaTransaction, isSigningAvailable: isSolanaSigningAvailable } = useSolanaTransactionSigning(isTestnet);
   
   // Combined signing availability check
   const isSigningAvailable = isSigningSupportedForChain(selectedChain);
@@ -178,7 +180,18 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
 
       let signedTx: string;
 
-      if (isTronChain(selectedChain)) {
+      if (isSolanaChain(selectedChain)) {
+        // Solana transaction signing
+        const solanaAddress = localStorage.getItem('timetrade_wallet_address_solana') || '';
+        
+        const result = await signSolanaTransaction(privateKey, {
+          to: transaction.recipient,
+          amount: transaction.amount,
+          from: solanaAddress,
+          priorityFee: gasSpeed === 'fast' ? 100000 : gasSpeed === 'instant' ? 500000 : undefined,
+        });
+        signedTx = result.signedTx;
+      } else if (isTronChain(selectedChain)) {
         // Tron transaction signing
         const tronAddress = localStorage.getItem('timetrade_wallet_address_tron') || '';
         const isToken = transaction.token.symbol !== 'TRX';
@@ -234,7 +247,18 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
     try {
       let signedTx: string;
 
-      if (isTronChain(selectedChain)) {
+      if (isSolanaChain(selectedChain)) {
+        // Solana transaction signing
+        const solanaAddress = localStorage.getItem('timetrade_wallet_address_solana') || '';
+        
+        const result = await signSolanaTransaction(privateKey, {
+          to: transaction.recipient,
+          amount: transaction.amount,
+          from: solanaAddress,
+          priorityFee: gasSpeed === 'fast' ? 100000 : gasSpeed === 'instant' ? 500000 : undefined,
+        });
+        signedTx = result.signedTx;
+      } else if (isTronChain(selectedChain)) {
         // Tron transaction signing
         const tronAddress = localStorage.getItem('timetrade_wallet_address_tron') || '';
         const isToken = transaction.token.symbol !== 'TRX';
