@@ -30,6 +30,7 @@ interface TokenOption {
   network: string;
   networkId: string;
   addressKey: "evm" | "solana" | "tron" | "btc";
+  isNativeToken?: boolean; // Native tokens don't show network badge
 }
 
 const tokens: TokenOption[] = [
@@ -38,42 +39,48 @@ const tokens: TokenOption[] = [
     name: "Ethereum", 
     network: "Ethereum Mainnet", 
     networkId: "ethereum",
-    addressKey: "evm"
+    addressKey: "evm",
+    isNativeToken: true
   },
   { 
     symbol: "POL", 
     name: "Polygon", 
     network: "Polygon Mainnet", 
     networkId: "polygon",
-    addressKey: "evm"
+    addressKey: "evm",
+    isNativeToken: true
   },
   { 
     symbol: "SOL", 
     name: "Solana", 
     network: "Solana Mainnet", 
     networkId: "solana",
-    addressKey: "solana"
+    addressKey: "solana",
+    isNativeToken: true
   },
   { 
     symbol: "TRX", 
     name: "Tron", 
     network: "Tron Mainnet", 
     networkId: "tron",
-    addressKey: "tron"
+    addressKey: "tron",
+    isNativeToken: true
   },
   { 
     symbol: "BTC", 
     name: "Bitcoin", 
     network: "Bitcoin Network", 
     networkId: "bitcoin",
-    addressKey: "btc"
+    addressKey: "btc",
+    isNativeToken: true
   },
   { 
     symbol: "USDT", 
     name: "Tether", 
     network: "Ethereum Mainnet", 
     networkId: "ethereum",
-    addressKey: "evm"
+    addressKey: "evm",
+    isNativeToken: false
   },
 ];
 
@@ -125,35 +132,25 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetPro
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl bg-background border-border p-0">
-        <SheetHeader className="px-6 pt-6 pb-2">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl bg-background border-border p-0 flex flex-col">
+        <SheetHeader className="px-6 pt-6 pb-2 shrink-0">
           <SheetTitle className="text-xl font-bold">Receive Crypto</SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col h-full px-6 pb-8">
+        <div className="flex flex-col flex-1 px-6 pb-8 overflow-y-auto">
           {/* Token Selector */}
-          <div className="mt-4 relative">
+          <div className="mt-4 relative shrink-0">
             <button
               onClick={() => setShowTokens(!showTokens)}
               className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
-                    <img 
-                      src={tokenLogoUrl}
-                      alt={selectedToken.symbol}
-                      className="w-full h-full object-contain p-1"
-                    />
-                  </div>
-                  {/* Network Badge */}
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-secondary">
-                    <img 
-                      src={networkLogoUrl}
-                      alt={selectedToken.networkId}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
+                  <img 
+                    src={tokenLogoUrl}
+                    alt={selectedToken.symbol}
+                    className="w-full h-full object-contain p-1"
+                  />
                 </div>
                 <div className="text-left">
                   <p className="font-semibold">{selectedToken.symbol}</p>
@@ -180,21 +177,12 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetPro
                         : "hover:bg-secondary"
                     )}
                   >
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
-                        <img 
-                          src={getCryptoLogoUrl(token.symbol)}
-                          alt={token.symbol}
-                          className="w-full h-full object-contain p-0.5"
-                        />
-                      </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border border-background overflow-hidden bg-secondary">
-                        <img 
-                          src={getNetworkLogoUrl(token.networkId)}
-                          alt={token.networkId}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
+                      <img 
+                        src={getCryptoLogoUrl(token.symbol)}
+                        alt={token.symbol}
+                        className="w-full h-full object-contain p-0.5"
+                      />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-medium text-sm">{token.symbol}</p>
