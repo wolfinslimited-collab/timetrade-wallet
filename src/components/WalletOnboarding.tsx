@@ -12,6 +12,7 @@ import { generateSeedPhrase } from "@/utils/seedPhrase";
 import { encryptPrivateKey } from "@/utils/encryption";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { deriveMultipleAccounts } from "@/utils/walletDerivation";
+import { useToast } from "@/hooks/use-toast";
 
 export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
@@ -21,6 +22,7 @@ interface WalletOnboardingProps {
 
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
+  const { toast } = useToast();
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
@@ -87,6 +89,12 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       setSelectedChain("ethereum");
     } catch (error) {
       console.error("Failed to encrypt seed phrase:", error);
+      toast({
+        title: "Setup failed",
+        description: "Could not secure your wallet. Please try again.",
+        variant: "destructive",
+      });
+      return;
     }
     
     setStep("biometric");

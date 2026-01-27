@@ -65,6 +65,12 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         title: "Welcome back!",
         description: "Wallet unlocked successfully",
       });
+      // Trigger address derivation after unlock (same-tab localStorage writes don't emit the `storage` event)
+      window.dispatchEvent(
+        new CustomEvent("timetrade:unlocked", {
+          detail: { pin: enteredPin },
+        })
+      );
       onUnlock();
     } else {
       const newAttempts = attempts + 1;
@@ -103,6 +109,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
       title: "Biometric verified!",
       description: "Welcome back",
     });
+    window.dispatchEvent(new CustomEvent("timetrade:unlocked"));
     onUnlock();
   };
 
