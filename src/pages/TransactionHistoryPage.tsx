@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo, formatBalance, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
 import { TransactionFilterSheet, TransactionFilters } from "@/components/history/TransactionFilterSheet";
+import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransactionDetailSheet";
 import { Badge } from "@/components/ui/badge";
 
 export type TransactionType = "send" | "receive" | "swap";
@@ -112,6 +113,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [selectedBlockchainTx, setSelectedBlockchainTx] = useState<BlockchainTransaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>(defaultFilters);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   
@@ -251,7 +253,16 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     return date.toLocaleDateString();
   };
 
-  const openInExplorer = (tx: Transaction) => {
+  const handleTxClick = (tx: Transaction) => {
+    // For Solana, open the detailed sheet with parsed instructions
+    if (selectedChain === 'solana' && isConnected && blockchainTx) {
+      const originalTx = blockchainTx.find(t => t.hash === tx.txHash);
+      if (originalTx) {
+        setSelectedBlockchainTx(originalTx);
+        return;
+      }
+    }
+    // For other chains or mock data, open in explorer
     const baseUrl = tx.explorerUrl || transactionsExplorerUrl || chainInfo.id === 'ethereum' 
       ? 'https://sepolia.etherscan.io' 
       : 'https://etherscan.io';
@@ -451,7 +462,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                     return (
                       <button
                         key={tx.id}
-                        onClick={() => openInExplorer(tx)}
+                        onClick={() => handleTxClick(tx)}
                         className="w-full flex items-center gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left"
                       >
                         {/* Icon */}
@@ -525,6 +536,13 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
         filters={filters}
         onApply={setFilters}
         availableTokens={availableTokens}
+      />
+
+      {/* Solana Transaction Detail Sheet */}
+      <SolanaTransactionDetailSheet
+        transaction={selectedBlockchainTx}
+        userAddress={walletAddress}
+        onClose={() => setSelectedBlockchainTx(null)}
       />
     </div>
   );
