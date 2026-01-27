@@ -4,6 +4,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TokenInfo } from "./SendCryptoSheet";
 
+// Get crypto logo URL from external API
+const getCryptoLogoUrl = (symbol: string): string => {
+  return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
+};
+
 interface AmountInputStepProps {
   recipient: string;
   selectedToken: TokenInfo;
@@ -12,10 +17,10 @@ interface AmountInputStepProps {
 }
 
 const availableTokens: TokenInfo[] = [
-  { symbol: "ETH", name: "Ethereum", balance: 2.5847, price: 3245.67, icon: "⟠" },
-  { symbol: "BTC", name: "Bitcoin", balance: 0.1523, price: 67890.12, icon: "₿" },
-  { symbol: "USDT", name: "Tether", balance: 1500.00, price: 1.00, icon: "₮" },
-  { symbol: "USDC", name: "USD Coin", balance: 2350.50, price: 1.00, icon: "$" },
+  { symbol: "ETH", name: "Ethereum", balance: 2.5847, price: 3245.67, icon: "eth" },
+  { symbol: "BTC", name: "Bitcoin", balance: 0.1523, price: 67890.12, icon: "btc" },
+  { symbol: "USDT", name: "Tether", balance: 1500.00, price: 1.00, icon: "usdt" },
+  { symbol: "USDC", name: "USD Coin", balance: 2350.50, price: 1.00, icon: "usdc" },
 ];
 
 export const AmountInputStep = ({ recipient, selectedToken, onSubmit, onBack }: AmountInputStepProps) => {
@@ -109,7 +114,13 @@ export const AmountInputStep = ({ recipient, selectedToken, onSubmit, onBack }: 
         onClick={() => setShowTokens(!showTokens)}
         className="mt-4 flex items-center justify-center gap-2 py-2"
       >
-        <span className="text-2xl">{token.icon}</span>
+        <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
+          <img 
+            src={getCryptoLogoUrl(token.symbol)}
+            alt={token.symbol}
+            className="w-full h-full object-contain p-1"
+          />
+        </div>
         <span className="font-semibold">{token.symbol}</span>
         <ChevronDown className={cn("w-4 h-4 transition-transform", showTokens && "rotate-180")} />
       </button>
@@ -130,7 +141,13 @@ export const AmountInputStep = ({ recipient, selectedToken, onSubmit, onBack }: 
                 t.symbol === token.symbol ? "bg-primary/10" : "hover:bg-secondary"
               )}
             >
-              <span className="text-xl">{t.icon}</span>
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
+                <img 
+                  src={getCryptoLogoUrl(t.symbol)}
+                  alt={t.symbol}
+                  className="w-full h-full object-contain p-1"
+                />
+              </div>
               <div className="flex-1 text-left">
                 <p className="font-medium text-sm">{t.symbol}</p>
                 <p className="text-xs text-muted-foreground">{t.name}</p>
