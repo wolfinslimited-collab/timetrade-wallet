@@ -331,7 +331,7 @@ export const ConfirmationStep = ({ transaction, onConfirm, onBack }: Confirmatio
   };
 
   return (
-    <div className="flex flex-col h-full px-6 pb-8">
+    <div className="flex flex-col h-full overflow-y-auto px-6 pb-8">
       {/* Back button */}
       <button
         onClick={onBack}
