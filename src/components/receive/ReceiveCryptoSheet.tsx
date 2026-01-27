@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Copy, Share2, ChevronDown, Check, QrCode, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ const tokens: TokenOption[] = [
     networkId: "ethereum",
     color: "#627EEA",
     Logo: EthereumLogo,
-    addressKey: "timetrade_wallet_address_evm"
+    addressKey: "evm"
   },
   { 
     symbol: "POL", 
@@ -75,7 +75,7 @@ const tokens: TokenOption[] = [
     networkId: "polygon",
     color: "#8247E5",
     Logo: PolygonLogo,
-    addressKey: "timetrade_wallet_address_evm"
+    addressKey: "evm"
   },
   { 
     symbol: "SOL", 
@@ -84,7 +84,7 @@ const tokens: TokenOption[] = [
     networkId: "solana",
     color: "#14F195",
     Logo: SolanaLogo,
-    addressKey: "timetrade_wallet_address_solana"
+    addressKey: "solana"
   },
   { 
     symbol: "TRX", 
@@ -93,7 +93,7 @@ const tokens: TokenOption[] = [
     networkId: "tron",
     color: "#FF0013",
     Logo: TronLogo,
-    addressKey: "timetrade_wallet_address_tron"
+    addressKey: "tron"
   },
   { 
     symbol: "BTC", 
@@ -102,7 +102,7 @@ const tokens: TokenOption[] = [
     networkId: "bitcoin",
     color: "#F7931A",
     Logo: BitcoinLogo,
-    addressKey: "timetrade_wallet_address_btc"
+    addressKey: "btc"
   },
   { 
     symbol: "USDT", 
@@ -111,7 +111,7 @@ const tokens: TokenOption[] = [
     networkId: "ethereum",
     color: "#26A17B",
     Logo: USDTLogo,
-    addressKey: "timetrade_wallet_address_evm"
+    addressKey: "evm"
   },
 ];
 
@@ -125,29 +125,20 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetPro
   const [selectedToken, setSelectedToken] = useState(tokens[0]);
   const [showTokens, setShowTokens] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [walletAddresses, setWalletAddresses] = useState<Record<string, string>>({});
 
-  // Load wallet addresses from localStorage
-  useEffect(() => {
-    const addresses: Record<string, string> = {};
-    const keys = [
-      "timetrade_wallet_address_evm",
-      "timetrade_wallet_address_solana",
-      "timetrade_wallet_address_tron",
-      "timetrade_wallet_address_btc"
-    ];
+  // Get wallet addresses from localStorage reactively
+  const walletAddresses = useMemo(() => {
+    if (!open) return {};
     
-    keys.forEach(key => {
-      const addr = localStorage.getItem(key);
-      if (addr) {
-        addresses[key] = addr;
-      }
-    });
-    
-    setWalletAddresses(addresses);
+    return {
+      evm: localStorage.getItem('timetrade_wallet_address_evm') || localStorage.getItem('timetrade_wallet_address') || '',
+      solana: localStorage.getItem('timetrade_wallet_address_solana') || '',
+      tron: localStorage.getItem('timetrade_wallet_address_tron') || '',
+      btc: localStorage.getItem('timetrade_wallet_address_btc') || '',
+    };
   }, [open]);
 
-  const currentAddress = walletAddresses[selectedToken.addressKey] || "";
+  const currentAddress = walletAddresses[selectedToken.addressKey as keyof typeof walletAddresses] || "";
 
   const handleCopy = async () => {
     if (!currentAddress) return;
@@ -269,8 +260,7 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetPro
             ) : (
               <div className="text-center py-8">
                 <QrCode className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No wallet address found</p>
-                <p className="text-xs text-muted-foreground mt-1">Please import your wallet first</p>
+                <p className="text-muted-foreground">Loading wallet address...</p>
               </div>
             )}
           </div>
