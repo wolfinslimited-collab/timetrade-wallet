@@ -669,17 +669,59 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
 }
 
 // Fetch Solana transaction history using Tatum RPC Gateway
+// Token transfer interface for Solana
+interface SolanaTokenTransfer {
+  source: string;
+  destination: string;
+  amount: string;
+  decimals?: number;
+  mint?: string;
+  symbol?: string;
+}
+
+// Parsed instruction interface
+interface ParsedInstruction {
+  programId: string;
+  programName: string;
+  type: string;
+  info?: Record<string, unknown>;
+}
+
+// Extended Solana transaction with parsed details
+interface SolanaTransactionDetail {
+  hash: string;
+  from?: string;
+  to?: string;
+  value?: string;
+  timestamp: number;
+  status: string;
+  blockNumber?: number;
+  fee?: number;
+  // Solana-specific parsed details
+  parsedInstructions?: ParsedInstruction[];
+  tokenTransfers?: SolanaTokenTransfer[];
+  signers?: string[];
+  logs?: string[];
+}
+
+// Known Solana program IDs
+const PROGRAM_NAMES: Record<string, string> = {
+  '11111111111111111111111111111111': 'System Program',
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA': 'Token Program',
+  'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb': 'Token-2022',
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL': 'Associated Token',
+  'ComputeBudget111111111111111111111111111111': 'Compute Budget',
+  'Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo': 'Memo Program',
+  'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr': 'Memo Program v2',
+  'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4': 'Jupiter Aggregator',
+  'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc': 'Orca Whirlpool',
+  '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8': 'Raydium AMM',
+  'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX': 'Serum DEX',
+};
+
 async function getSolanaTransactions(address: string): Promise<{
   chain: string;
-  transactions: Array<{
-    hash: string;
-    from?: string;
-    to?: string;
-    value?: string;
-    timestamp: number;
-    status: string;
-    blockNumber?: number;
-  }>;
+  transactions: SolanaTransactionDetail[];
   explorerUrl: string;
   error?: string;
 }> {
@@ -744,15 +786,7 @@ async function getSolanaTransactions(address: string): Promise<{
     
     // Step 2: Fetch transaction details for each signature (batch up to 10)
     const transactionsToFetch = signatures.slice(0, 10);
-    const transactions: Array<{
-      hash: string;
-      from?: string;
-      to?: string;
-      value?: string;
-      timestamp: number;
-      status: string;
-      blockNumber?: number;
-    }> = [];
+    const transactions: SolanaTransactionDetail[] = [];
     
     for (const sig of transactionsToFetch) {
       try {
@@ -794,26 +828,91 @@ async function getSolanaTransactions(address: string): Promise<{
         const message = tx.transaction?.message;
         const accountKeys = message?.accountKeys || [];
         
+        // Parse all instructions
+        const parsedInstructions: ParsedInstruction[] = [];
+        const tokenTransfers: SolanaTokenTransfer[] = [];
+        const instructions = message?.instructions || [];
+        const innerInstructions = meta?.innerInstructions || [];
+        
+        // Combine main and inner instructions
+        const allInstructions = [
+          ...instructions,
+          ...innerInstructions.flatMap((inner: { instructions: unknown[] }) => inner.instructions || [])
+        ];
+        
         // Determine from/to addresses
         let from: string | undefined;
         let to: string | undefined;
         let value: string | undefined;
         
-        // Try to extract transfer info from parsed instructions
-        const instructions = message?.instructions || [];
-        for (const ix of instructions) {
-          if (ix.parsed?.type === 'transfer') {
-            const info = ix.parsed.info;
-            from = info.source;
-            to = info.destination;
-            value = info.lamports?.toString();
-            break;
-          } else if (ix.parsed?.type === 'transferChecked') {
-            const info = ix.parsed.info;
-            from = info.source;
-            to = info.destination;
-            value = info.tokenAmount?.amount;
-            break;
+        for (const ix of allInstructions) {
+          // Get program ID
+          const programId = ix.programId?.toString() || ix.program || '';
+          const programName = PROGRAM_NAMES[programId] || 'Unknown Program';
+          
+          if (ix.parsed) {
+            const parsedType = ix.parsed.type || 'unknown';
+            const info = ix.parsed.info || {};
+            
+            // Add to parsed instructions list
+            parsedInstructions.push({
+              programId,
+              programName,
+              type: parsedType,
+              info,
+            });
+            
+            // Extract transfer info
+            if (parsedType === 'transfer') {
+              const source = info.source as string;
+              const destination = info.destination as string;
+              const lamports = info.lamports as number;
+              
+              if (!from) from = source;
+              if (!to) to = destination;
+              if (!value) value = lamports?.toString();
+              
+              // Add as token transfer (SOL)
+              tokenTransfers.push({
+                source,
+                destination,
+                amount: lamports?.toString() || '0',
+                decimals: 9,
+                symbol: 'SOL',
+              });
+            } else if (parsedType === 'transferChecked') {
+              const source = info.source as string;
+              const destination = info.destination as string;
+              const tokenAmount = info.tokenAmount as { amount?: string; decimals?: number };
+              const mint = info.mint as string;
+              
+              if (!from) from = source;
+              if (!to) to = destination;
+              if (!value) value = tokenAmount?.amount;
+              
+              // Add as token transfer (SPL token)
+              tokenTransfers.push({
+                source,
+                destination,
+                amount: tokenAmount?.amount || '0',
+                decimals: tokenAmount?.decimals,
+                mint,
+              });
+            } else if (parsedType === 'createAccount' || parsedType === 'createAccountWithSeed') {
+              parsedInstructions.push({
+                programId,
+                programName,
+                type: parsedType,
+                info,
+              });
+            }
+          } else {
+            // Unparsed instruction
+            parsedInstructions.push({
+              programId,
+              programName,
+              type: 'instruction',
+            });
           }
         }
         
@@ -832,6 +931,17 @@ async function getSolanaTransactions(address: string): Promise<{
           }
         }
         
+        // Get signers
+        const signers: string[] = accountKeys
+          .filter((acc: { signer?: boolean }) => acc.signer)
+          .map((acc: { pubkey?: string }) => acc.pubkey || '');
+        
+        // Get transaction fee
+        const fee = meta?.fee || 0;
+        
+        // Get logs (limited to first 10)
+        const logs = (meta?.logMessages || []).slice(0, 10);
+        
         transactions.push({
           hash: sig.signature,
           from,
@@ -840,14 +950,18 @@ async function getSolanaTransactions(address: string): Promise<{
           timestamp: sig.blockTime || tx.blockTime || Math.floor(Date.now() / 1000),
           status: meta?.err ? 'failed' : 'confirmed',
           blockNumber: tx.slot,
+          fee,
+          parsedInstructions: parsedInstructions.slice(0, 20), // Limit to 20 instructions
+          tokenTransfers,
+          signers,
+          logs,
         });
       } catch (txError) {
         console.error(`Error processing tx ${sig.signature}:`, txError);
       }
     }
     
-    console.log(`Fetched ${transactions.length} Solana transactions`);
-    
+    console.log(`Fetched ${transactions.length} Solana transactions with detailed parsing`);
     return {
       chain: 'solana',
       transactions,

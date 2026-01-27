@@ -84,6 +84,24 @@ export interface WalletBalance {
   error?: string;
 }
 
+// Solana-specific token transfer
+export interface SolanaTokenTransfer {
+  source: string;
+  destination: string;
+  amount: string;
+  decimals?: number;
+  mint?: string;
+  symbol?: string;
+}
+
+// Solana-specific parsed instruction
+export interface ParsedInstruction {
+  programId: string;
+  programName: string;
+  type: string;
+  info?: Record<string, unknown>;
+}
+
 export interface Transaction {
   hash: string;
   from: string;
@@ -92,6 +110,12 @@ export interface Transaction {
   timestamp: number;
   status: 'confirmed' | 'pending' | 'failed';
   blockNumber?: number;
+  // Solana-specific fields
+  fee?: number;
+  parsedInstructions?: ParsedInstruction[];
+  tokenTransfers?: SolanaTokenTransfer[];
+  signers?: string[];
+  logs?: string[];
 }
 
 export interface TransactionsResponse {
