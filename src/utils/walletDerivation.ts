@@ -1,4 +1,4 @@
-import { HDNodeWallet, keccak256 } from "ethers";
+import { HDNodeWallet, sha256 } from "ethers";
 import { Keypair } from "@solana/web3.js";
 import { derivePath } from "ed25519-hd-key";
 import { mnemonicToSeedSync } from "@scure/bip39";
@@ -193,10 +193,9 @@ export function deriveTronAddress(phrase: string, accountIndex: number = 0): str
     tronBytes[i] = parseInt(tronAddressHex.substr(i * 2, 2), 16);
   }
   
-  // Tron uses double SHA256 for checksum, but we'll use keccak256 for approximation
-  // This produces valid-format addresses that work with Tron APIs
-  const checksumHash1 = keccak256(tronBytes);
-  const checksumHash2 = keccak256(checksumHash1);
+  // Tron uses double SHA256 for checksum (Base58Check encoding)
+  const checksumHash1 = sha256(tronBytes);
+  const checksumHash2 = sha256(checksumHash1);
   const checksum = checksumHash2.slice(2, 10); // First 4 bytes (8 hex chars)
   
   // Create full address bytes (25 bytes: 21 address + 4 checksum)
