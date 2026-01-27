@@ -105,18 +105,26 @@ export const UnifiedTokenList = ({ className }: UnifiedTokenListProps) => {
     };
   });
 
-  // Re-read addresses from localStorage when connection state changes
+  // Re-read addresses from localStorage when connection state changes or periodically
   useEffect(() => {
-    const primaryAddress = localStorage.getItem('timetrade_wallet_address');
-    const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
-    const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
-    const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
+    const readAddresses = () => {
+      const primaryAddress = localStorage.getItem('timetrade_wallet_address');
+      const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
+      const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
+      const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
+      
+      setAddresses({
+        evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+      });
+    };
     
-    setAddresses({
-      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    });
+    readAddresses();
+    
+    // Poll for changes to catch BlockchainContext updates
+    const interval = setInterval(readAddresses, 1000);
+    return () => clearInterval(interval);
   }, [isConnected]);
 
   // Fetch balances for all chains in parallel

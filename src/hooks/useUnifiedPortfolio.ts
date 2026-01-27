@@ -17,6 +17,19 @@ const isLikelySolanaAddress = (address: string | null | undefined) => {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
 };
 
+const getAddressesFromStorage = () => {
+  const primaryAddress = localStorage.getItem("timetrade_wallet_address");
+  const storedEvmAddress = localStorage.getItem("timetrade_wallet_address_evm");
+  const storedSolanaAddress = localStorage.getItem("timetrade_wallet_address_solana");
+  const storedTronAddress = localStorage.getItem("timetrade_wallet_address_tron");
+
+  return {
+    evmAddress: storedEvmAddress || (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    solanaAddress: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    tronAddress: storedTronAddress || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+  };
+};
+
 function toDecimalAmount(balance: string, decimals: number) {
   const n = parseFloat(balance);
   if (!Number.isFinite(n)) return 0;
@@ -26,29 +39,36 @@ function toDecimalAmount(balance: string, decimals: number) {
 const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
 
 export function useUnifiedPortfolio(enabled: boolean) {
-  // Addresses for each chain from localStorage (active account index already synced there)
-  const primaryAddress = localStorage.getItem("timetrade_wallet_address");
-  const storedEvmAddress = localStorage.getItem("timetrade_wallet_address_evm");
-  const storedSolanaAddress = localStorage.getItem("timetrade_wallet_address_solana");
-  const storedTronAddress = localStorage.getItem("timetrade_wallet_address_tron");
+  // Use state to reactively track addresses (re-read when localStorage might have changed)
+  const [addresses, setAddresses] = React.useState(() => getAddressesFromStorage());
+  
+  // Re-read addresses periodically to catch updates from BlockchainContext
+  React.useEffect(() => {
+    if (!enabled) return;
+    
+    // Initial read
+    setAddresses(getAddressesFromStorage());
+    
+    // Poll for changes (BlockchainContext writes async after derivation)
+    const interval = setInterval(() => {
+      setAddresses(getAddressesFromStorage());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [enabled]);
 
-  const evmAddress = storedEvmAddress || (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null);
-  const solanaAddress =
-    storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null);
-  const tronAddress = storedTronAddress || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null);
+  const { evmAddress, solanaAddress, tronAddress } = addresses;
 
   // Debug logging for address detection
   React.useEffect(() => {
     if (enabled) {
       console.log('[UnifiedPortfolio] Addresses:', {
-        primary: primaryAddress,
         evm: evmAddress,
         solana: solanaAddress,
         tron: tronAddress,
-        storedSolana: storedSolanaAddress,
       });
     }
-  }, [enabled, primaryAddress, evmAddress, solanaAddress, tronAddress, storedSolanaAddress]);
+  }, [enabled, evmAddress, solanaAddress, tronAddress]);
 
   // Fetch balances in parallel (React Query)
   const ethBalance = useWalletBalance(enabled ? evmAddress : null, "ethereum");

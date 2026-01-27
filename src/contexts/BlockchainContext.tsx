@@ -153,6 +153,37 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         const words = decryptedPhrase.split(/\s+/);
         const phrase = words.join(' ').toLowerCase().trim().replace(/\s+/g, ' ');
 
+        // Get stored settings
+        let solanaPathStyle = localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath | null;
+        const storedIndex = localStorage.getItem('timetrade_active_account_index');
+        const storedChain = localStorage.getItem('timetrade_selected_chain') as Chain || 'ethereum';
+        const index = storedIndex ? parseInt(storedIndex, 10) : 0;
+
+        // IMMEDIATELY derive and store addresses for all chains before any balance checking
+        // This ensures UnifiedTokenList/useUnifiedPortfolio have valid addresses right away
+        const initialPath = solanaPathStyle || 'legacy';
+        const initialAccounts = deriveMultipleAccounts(words, 5, initialPath);
+        
+        // Store addresses immediately (will be updated later if balance detection finds different funded address)
+        const initialEvm = initialAccounts.evm[index] || initialAccounts.evm[0];
+        const initialSolana = initialAccounts.solana[index] || initialAccounts.solana[0];
+        const initialTron = initialAccounts.tron[index] || initialAccounts.tron[0];
+        
+        if (initialEvm) {
+          localStorage.setItem('timetrade_wallet_address_evm', initialEvm.address);
+        }
+        if (initialSolana) {
+          localStorage.setItem('timetrade_wallet_address_solana', initialSolana.address);
+          console.log(`Initial Solana address stored: ${initialSolana.address}`);
+        }
+        if (initialTron) {
+          localStorage.setItem('timetrade_wallet_address_tron', initialTron.address);
+        }
+        
+        // Set accounts state immediately so UI can render
+        if (cancelled) return;
+        setAllDerivedAccounts(initialAccounts);
+
         const hasSolanaBalance = async (address: string): Promise<boolean> => {
           try {
             console.log(`Checking Solana balance for address: ${address}`);
@@ -174,10 +205,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
             const nativeBalance = data?.data?.native?.balance || '0';
             const tokens = data?.data?.tokens || [];
-            // Check native balance - could be in lamports (base units) or SOL
             const nativeBal = parseFloat(nativeBalance);
             const hasNativeBalance = nativeBalance !== '0' && !isNaN(nativeBal) && nativeBal > 0;
-            // Check for any SPL tokens with balance
             const hasTokens = Array.isArray(tokens) && tokens.some((t: { balance?: string }) => {
               const bal = parseFloat(t?.balance || '0');
               return !isNaN(bal) && bal > 0;
@@ -189,9 +218,6 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
             return false;
           }
         };
-        
-        // Get stored Solana derivation path preference
-        let solanaPathStyle = localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath | null;
 
         // Scan a few common account indices as users often keep SOL/SPL on account #1+.
         const SOLANA_SCAN_INDICES = [0, 1, 2, 3, 4];
@@ -281,33 +307,30 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
           console.log(`Saved Solana balance address (acct #${detectedSolanaIndex}): ${detectedSolanaAddress}`);
         }
         
-        // Derive all 5 accounts for both EVM and Solana with the correct path
+        // Re-derive accounts with the (potentially updated) Solana path after balance detection
         const accounts = deriveMultipleAccounts(words, 5, solanaPathStyle);
         
         if (cancelled) return;
         
         setAllDerivedAccounts(accounts);
         
-        // Set wallet address from active account index and chain
-        const storedIndex = localStorage.getItem('timetrade_active_account_index');
-        const storedChain = localStorage.getItem('timetrade_selected_chain') as Chain || 'ethereum';
-        const index = storedIndex ? parseInt(storedIndex, 10) : 0;
-
-        // Store addresses for each chain type for multi-chain display (match active index)
+        // Update addresses if balance detection found a funded Solana address on a different account
         const activeEvm = accounts.evm[index] || accounts.evm[0];
         const activeSolana = accounts.solana[index] || accounts.solana[0];
         const activeTron = accounts.tron[index] || accounts.tron[0];
+        
         if (activeEvm) {
           localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
         }
-        // Always ensure Solana address is stored (fallback if auto-detection didn't find a funded address)
-        if (activeSolana) {
-          // Use the detected address with balance if available, otherwise use the active index address
-          const solanaAddressToStore = detectedSolanaAddress || activeSolana.address;
-          localStorage.setItem('timetrade_wallet_address_solana', solanaAddressToStore);
-          console.log(`Saved Solana address: ${solanaAddressToStore} (detected: ${!!detectedSolanaAddress}, active index: ${index})`);
+        // Update Solana address if we detected a funded one
+        if (detectedSolanaAddress) {
+          localStorage.setItem('timetrade_wallet_address_solana', detectedSolanaAddress);
+          console.log(`Updated Solana address to funded account: ${detectedSolanaAddress}`);
+        } else if (activeSolana) {
+          // Keep the initially stored address (already set above)
+          console.log(`Keeping initial Solana address: ${activeSolana.address}`);
         }
-        // Store Tron address for UnifiedTokenList
+        // Store Tron address
         if (activeTron) {
           localStorage.setItem('timetrade_wallet_address_tron', activeTron.address);
           console.log(`Saved Tron address (acct #${index}): ${activeTron.address}`);
