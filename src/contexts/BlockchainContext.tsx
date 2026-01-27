@@ -13,6 +13,7 @@ import {
   deriveSolanaAddress,
   deriveTronAddress
 } from '@/utils/walletDerivation';
+import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
 interface BlockchainContextType {
   // Wallet state
@@ -63,6 +64,9 @@ interface BlockchainProviderProps {
 
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
+
+  // Used to force a re-render when we update derived address keys in localStorage.
+  const [, bumpDerivedAddressTick] = useState(0);
   
   // Multi-account state - stores both EVM and Solana accounts
   const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [], tron: [] });
@@ -79,6 +83,22 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const [selectedChain, setSelectedChain] = useState<Chain>(() => {
     return (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
   });
+
+  // Ensure we always have a valid Tron address stored for unified multi-chain views.
+  // This covers existing sessions and manual connect flows that only provide an EVM address.
+  useEffect(() => {
+    if (!walletAddress) return;
+    if (!isEvmAddress(walletAddress)) return;
+
+    const existing = localStorage.getItem('timetrade_wallet_address_tron');
+    if (existing && isTronAddress(existing)) return;
+
+    const derived = evmToTronAddress(walletAddress);
+    if (derived) {
+      localStorage.setItem('timetrade_wallet_address_tron', derived);
+      bumpDerivedAddressTick((t) => t + 1);
+    }
+  }, [walletAddress]);
 
   // Auto-connect and derive accounts from the stored, encrypted mnemonic.
   useEffect(() => {
@@ -311,6 +331,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       localStorage.setItem('timetrade_wallet_address_solana', trimmed);
     } else if (selectedChain === 'ethereum' || selectedChain === 'polygon') {
       localStorage.setItem('timetrade_wallet_address_evm', trimmed);
+
+      // Also persist a Tron-formatted address so Tron balances can be fetched/displayed.
+      const tron = evmToTronAddress(trimmed);
+      if (tron) localStorage.setItem('timetrade_wallet_address_tron', tron);
     }
   }, [selectedChain]);
 

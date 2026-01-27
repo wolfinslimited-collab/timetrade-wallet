@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
 export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron';
 
@@ -115,14 +116,24 @@ interface BlockchainResponse<T> {
   error?: string;
 }
 
+function normalizeAddressForChain(chain: Chain, address: string): string {
+  if (chain !== 'tron') return address;
+  const trimmed = (address ?? '').trim();
+  if (!trimmed) return trimmed;
+  if (isTronAddress(trimmed)) return trimmed;
+  if (isEvmAddress(trimmed)) return evmToTronAddress(trimmed) ?? trimmed;
+  return trimmed;
+}
+
 async function callBlockchainFunction<T>(
   action: string,
   chain: Chain,
   address: string,
   testnet: boolean = true
 ): Promise<T> {
+  const normalizedAddress = normalizeAddressForChain(chain, address);
   const { data, error } = await supabase.functions.invoke('blockchain', {
-    body: { action, chain, address, testnet },
+    body: { action, chain, address: normalizedAddress, testnet },
   });
 
   if (error) {
