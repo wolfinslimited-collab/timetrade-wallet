@@ -151,6 +151,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
         const hasSolanaBalance = async (address: string): Promise<boolean> => {
           try {
+            console.log(`Checking Solana balance for address: ${address}`);
             const { data, error } = await supabase.functions.invoke('blockchain', {
               body: {
                 action: 'getBalance',
@@ -165,10 +166,19 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
               return false;
             }
 
+            console.log(`Solana balance response for ${address}:`, data);
+
             const nativeBalance = data?.data?.native?.balance || '0';
             const tokens = data?.data?.tokens || [];
-            const hasNativeBalance = nativeBalance !== '0' && parseFloat(nativeBalance) > 0;
-            const hasTokens = Array.isArray(tokens) && tokens.length > 0;
+            // Check native balance - could be in lamports (base units) or SOL
+            const nativeBal = parseFloat(nativeBalance);
+            const hasNativeBalance = nativeBalance !== '0' && !isNaN(nativeBal) && nativeBal > 0;
+            // Check for any SPL tokens with balance
+            const hasTokens = Array.isArray(tokens) && tokens.some((t: { balance?: string }) => {
+              const bal = parseFloat(t?.balance || '0');
+              return !isNaN(bal) && bal > 0;
+            });
+            console.log(`Address ${address}: hasNative=${hasNativeBalance}, hasTokens=${hasTokens}`);
             return hasNativeBalance || hasTokens;
           } catch (err) {
             console.error('Solana balance check failed:', err);
@@ -250,12 +260,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
         // If no valid stored path (or no balances), detect across common path styles.
         if (!solanaPathStyle) {
+          console.log('No stored Solana path, running auto-detection...');
           const detected = await autoDetectSolanaPathAndIndex();
+          // Default to 'legacy' for Trust Wallet compatibility if no balance found
           solanaPathStyle = detected?.path ?? 'legacy';
           detectedSolanaAddress = detected?.address ?? null;
           detectedSolanaIndex = detected?.index ?? null;
           localStorage.setItem('timetrade_solana_derivation_path', solanaPathStyle);
-          console.log(`Saved Solana derivation path preference: ${solanaPathStyle}`);
+          console.log(`Saved Solana derivation path preference: ${solanaPathStyle}, detected address: ${detectedSolanaAddress}`);
         }
 
         // Persist the detected Solana address (used by UnifiedTokenList to fetch SPL tokens)
@@ -286,12 +298,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         }
         // Always ensure Solana address is stored (fallback if auto-detection didn't find a funded address)
         if (activeSolana) {
-          // Only overwrite if we don't already have a detected address with balance
-          const existingSolanaAddr = localStorage.getItem('timetrade_wallet_address_solana');
-          if (!existingSolanaAddr || !detectedSolanaAddress) {
-            localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
-            console.log(`Saved Solana address (acct #${index}): ${activeSolana.address}`);
-          }
+          // Use the detected address with balance if available, otherwise use the active index address
+          const solanaAddressToStore = detectedSolanaAddress || activeSolana.address;
+          localStorage.setItem('timetrade_wallet_address_solana', solanaAddressToStore);
+          console.log(`Saved Solana address: ${solanaAddressToStore} (detected: ${!!detectedSolanaAddress}, active index: ${index})`);
         }
         // Store Tron address for UnifiedTokenList
         if (activeTron) {

@@ -37,6 +37,19 @@ export function useUnifiedPortfolio(enabled: boolean) {
     storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null);
   const tronAddress = storedTronAddress || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null);
 
+  // Debug logging for address detection
+  React.useEffect(() => {
+    if (enabled) {
+      console.log('[UnifiedPortfolio] Addresses:', {
+        primary: primaryAddress,
+        evm: evmAddress,
+        solana: solanaAddress,
+        tron: tronAddress,
+        storedSolana: storedSolanaAddress,
+      });
+    }
+  }, [enabled, primaryAddress, evmAddress, solanaAddress, tronAddress, storedSolanaAddress]);
+
   // Fetch balances in parallel (React Query)
   const ethBalance = useWalletBalance(enabled ? evmAddress : null, "ethereum");
   const polyBalance = useWalletBalance(enabled ? evmAddress : null, "polygon");
