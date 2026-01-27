@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
+import { NetworkAssetSelector, AvailableAsset } from "./NetworkAssetSelector";
 import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionSuccessStep } from "./TransactionSuccessStep";
-import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { toast } from "@/hooks/use-toast";
 
-export type SendStep = "address" | "amount" | "confirm" | "success";
+export type SendStep = "select" | "address" | "amount" | "confirm" | "success";
 
 export interface TokenInfo {
   symbol: string;
@@ -17,6 +18,9 @@ export interface TokenInfo {
   balance: number;
   price: number;
   icon: string;
+  contractAddress?: string;
+  decimals?: number;
+  isNative?: boolean;
 }
 
 export interface TransactionData {
@@ -34,40 +38,72 @@ interface SendCryptoSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const defaultToken: TokenInfo = {
-  symbol: "ETH",
-  name: "Ethereum",
-  balance: 2.5847,
-  price: 3245.67,
-  icon: "eth",
-};
-
 export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) => {
-  const { selectedChain, isTestnet } = useBlockchainContext();
   const broadcastMutation = useBroadcastTransaction();
   
-  const [step, setStep] = useState<SendStep>("address");
+  const [step, setStep] = useState<SendStep>("select");
+  const [selectedChain, setSelectedChain] = useState<Chain>("ethereum");
+  const [selectedAsset, setSelectedAsset] = useState<AvailableAsset | null>(null);
+  const [senderAddress, setSenderAddress] = useState<string>("");
+  const [isTestnet] = useState(false);
+  
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
     amount: "",
-    token: defaultToken,
+    token: {
+      symbol: "ETH",
+      name: "Ethereum",
+      balance: 0,
+      price: 0,
+      icon: "eth",
+    },
     gasEstimate: 21000,
     gasFee: 0.0012,
   });
 
   const handleClose = () => {
     onOpenChange(false);
-    // Reset state after animation
     setTimeout(() => {
-      setStep("address");
+      setStep("select");
+      setSelectedAsset(null);
+      setSenderAddress("");
       setTransaction({
         recipient: "",
         amount: "",
-        token: defaultToken,
+        token: {
+          symbol: "ETH",
+          name: "Ethereum",
+          balance: 0,
+          price: 0,
+          icon: "eth",
+        },
         gasEstimate: 21000,
         gasFee: 0.0012,
       });
     }, 300);
+  };
+
+  const handleNetworkAssetSelect = (network: Chain, asset: AvailableAsset, sender: string) => {
+    setSelectedChain(network);
+    setSelectedAsset(asset);
+    setSenderAddress(sender);
+    
+    // Convert to TokenInfo format
+    setTransaction((prev) => ({
+      ...prev,
+      token: {
+        symbol: asset.symbol,
+        name: asset.name,
+        balance: asset.balance,
+        price: asset.price,
+        icon: asset.symbol.toLowerCase(),
+        contractAddress: asset.contractAddress,
+        decimals: asset.decimals,
+        isNative: asset.isNative,
+      },
+    }));
+    
+    setStep("address");
   };
 
   const handleAddressSubmit = (address: string) => {
@@ -75,15 +111,13 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
     setStep("amount");
   };
 
-  const handleAmountSubmit = (amount: string, token: TokenInfo) => {
-    // Simulate gas calculation
-    const gasPrice = 0.000000045; // 45 gwei
+  const handleAmountSubmit = (amount: string) => {
+    const gasPrice = 0.000000045;
     const gasFee = transaction.gasEstimate * gasPrice;
     
     setTransaction((prev) => ({ 
       ...prev, 
-      amount, 
-      token,
+      amount,
       gasFee,
     }));
     setStep("confirm");
@@ -92,7 +126,7 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
   const handleConfirm = async (signedTransaction?: string, directTxHash?: string) => {
     try {
       if (directTxHash) {
-        // Transaction was sent directly via WalletConnect
+        const chainInfo = getChainInfo(selectedChain);
         const explorerUrl = isTestnet 
           ? `https://sepolia.etherscan.io/tx/${directTxHash}`
           : `https://etherscan.io/tx/${directTxHash}`;
@@ -105,10 +139,9 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
 
         toast({
           title: "Transaction Sent!",
-          description: `Your transaction has been broadcast to the ${selectedChain} network.`,
+          description: `Your transaction has been broadcast to the ${chainInfo.name} network.`,
         });
       } else if (signedTransaction) {
-        // Broadcast real transaction
         const result = await broadcastMutation.mutateAsync({
           chain: selectedChain,
           signedTransaction,
@@ -123,10 +156,9 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
 
         toast({
           title: "Transaction Sent!",
-          description: `Your transaction has been broadcast to the ${selectedChain} network.`,
+          description: `Your transaction has been broadcast to the network.`,
         });
       } else {
-        // Fallback: simulate transaction (for demo/testing without signed tx)
         await new Promise((resolve) => setTimeout(resolve, 2000));
         
         setTransaction((prev) => ({
@@ -137,7 +169,7 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
 
         toast({
           title: "Transaction Simulated",
-          description: "This is a simulated transaction. Connect a wallet to broadcast real transactions.",
+          description: "This is a simulated transaction.",
           variant: "default",
         });
       }
@@ -154,23 +186,44 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
   };
 
   const handleBack = () => {
-    if (step === "amount") setStep("address");
+    if (step === "address") setStep("select");
+    else if (step === "amount") setStep("address");
     else if (step === "confirm") setStep("amount");
+  };
+
+  const getStepTitle = () => {
+    switch (step) {
+      case "select": return "Send Crypto";
+      case "address": return "Recipient Address";
+      case "amount": return "Enter Amount";
+      case "confirm": return "Confirm Transaction";
+      case "success": return "Transaction Sent";
+    }
   };
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0">
         <SheetHeader className="px-6 pt-6 pb-2">
-          <SheetTitle className="text-xl font-bold">
-            {step === "address" && "Send Crypto"}
-            {step === "amount" && "Enter Amount"}
-            {step === "confirm" && "Confirm Transaction"}
-            {step === "success" && "Transaction Sent"}
-          </SheetTitle>
+          <SheetTitle className="text-xl font-bold">{getStepTitle()}</SheetTitle>
         </SheetHeader>
 
         <AnimatePresence mode="wait">
+          {step === "select" && (
+            <motion.div
+              key="select"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex-1"
+            >
+              <NetworkAssetSelector
+                onSubmit={handleNetworkAssetSelect}
+                onClose={handleClose}
+              />
+            </motion.div>
+          )}
+
           {step === "address" && (
             <motion.div
               key="address"
@@ -180,13 +233,14 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
               className="flex-1"
             >
               <AddressInputStep
+                selectedChain={selectedChain}
                 onSubmit={handleAddressSubmit}
-                onClose={handleClose}
+                onBack={handleBack}
               />
             </motion.div>
           )}
 
-          {step === "amount" && (
+          {step === "amount" && selectedAsset && (
             <motion.div
               key="amount"
               initial={{ opacity: 0, x: 20 }}
@@ -196,7 +250,8 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
             >
               <AmountInputStep
                 recipient={transaction.recipient}
-                selectedToken={transaction.token}
+                selectedAsset={selectedAsset}
+                selectedChain={selectedChain}
                 onSubmit={handleAmountSubmit}
                 onBack={handleBack}
               />
