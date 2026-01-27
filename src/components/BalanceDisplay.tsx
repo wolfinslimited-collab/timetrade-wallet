@@ -1,7 +1,9 @@
-import { TrendingUp, TrendingDown, Loader2, Wifi, WifiOff } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { getChainInfo, formatBalance as formatCryptoBalance } from "@/hooks/useBlockchain";
+import { getChainInfo, formatBalance as formatCryptoBalance, useWalletBalance } from "@/hooks/useBlockchain";
+import { NetworkIndicators } from "./NetworkIndicators";
+import { useMemo } from "react";
 
 interface BalanceDisplayProps {
   balance: number;
@@ -23,8 +25,41 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
   // Use real balance if connected, otherwise use mock
   const displayBalance = isConnected ? totalBalanceUsd : balance;
   const isPositive = changePercent >= 0;
+
+  // Get addresses from storage to check which chains have funds
+  const addresses = useMemo(() => ({
+    evm: localStorage.getItem("timetrade_wallet_address_evm"),
+    solana: localStorage.getItem("timetrade_wallet_address_solana"),
+    tron: localStorage.getItem("timetrade_wallet_address_tron"),
+  }), []);
+
+  // Query all chain balances to determine which are active
+  const ethBalance = useWalletBalance(isConnected ? addresses.evm : null, "ethereum");
+  const polyBalance = useWalletBalance(isConnected ? addresses.evm : null, "polygon");
+  const solBalance = useWalletBalance(isConnected ? addresses.solana : null, "solana");
+  const tronBalance = useWalletBalance(isConnected ? addresses.tron : null, "tron");
+
+  // Determine which networks have balances (are "active")
+  const activeNetworks = useMemo(() => {
+    const active: string[] = [];
+    
+    const hasBalance = (data: typeof ethBalance.data) => {
+      if (!data) return false;
+      const nativeBal = parseFloat(data.native?.balance || '0');
+      const hasNative = nativeBal > 0;
+      const hasTokens = (data.tokens || []).some(t => parseFloat(t?.balance || '0') > 0);
+      return hasNative || hasTokens;
+    };
+    
+    if (hasBalance(ethBalance.data)) active.push('ethereum');
+    if (hasBalance(polyBalance.data)) active.push('polygon');
+    if (hasBalance(solBalance.data)) active.push('solana');
+    if (hasBalance(tronBalance.data)) active.push('tron');
+    
+    return active;
+  }, [ethBalance.data, polyBalance.data, solBalance.data, tronBalance.data]);
   
-  const formatBalance = (value: number) => {
+  const formatBalanceValue = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -44,14 +79,11 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
         <p className="text-xs text-muted-foreground tracking-widest uppercase">
           Total Balance
         </p>
-      {isConnected ? (
-          <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-            <Wifi className="w-3 h-3" />
-            <span>All Networks</span>
-          </div>
+        {isConnected ? (
+          <NetworkIndicators activeNetworks={activeNetworks} showAll={true} />
         ) : (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <WifiOff className="w-3 h-3" />
+            <span className="opacity-50">✧</span>
             <span>Demo</span>
           </div>
         )}
@@ -70,7 +102,7 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
           <>
             <h1 className="text-4xl font-bold font-mono tracking-tight">
               <span className="text-muted-foreground">$</span>
-              {formatBalance(displayBalance)}
+              {formatBalanceValue(displayBalance)}
             </h1>
             {!isConnected && (
               <div className={cn(
