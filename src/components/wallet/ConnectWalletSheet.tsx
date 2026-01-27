@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wallet, ExternalLink, Copy, Check, AlertCircle, Link2 } from "lucide-react";
+import { Wallet, ExternalLink, Copy, Check } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -9,239 +9,134 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface ConnectWalletSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// Chain configurations
+const CHAINS = [
+  { id: 'ethereum', name: 'Ethereum', icon: '⟠', addressKey: 'timetrade_wallet_address_evm', explorer: 'https://etherscan.io/address/' },
+  { id: 'polygon', name: 'Polygon', icon: '⬡', addressKey: 'timetrade_wallet_address_evm', explorer: 'https://polygonscan.com/address/' },
+  { id: 'solana', name: 'Solana', icon: '◎', addressKey: 'timetrade_wallet_address_solana', explorer: 'https://solscan.io/account/' },
+  { id: 'tron', name: 'Tron', icon: '◈', addressKey: 'timetrade_wallet_address_tron', explorer: 'https://tronscan.org/#/address/' },
+];
+
 export function ConnectWalletSheet({ open, onOpenChange }: ConnectWalletSheetProps) {
-  const [address, setAddress] = useState("");
-  const [copied, setCopied] = useState(false);
-  const { 
-    connectWallet, 
-    isConnected, 
-    walletAddress, 
-    disconnectWallet, 
-    balance,
-  } = useBlockchainContext();
-  const {
-    isWalletConnectConnected,
-    wcAddress,
-    openWalletConnectModal,
-  } = useWalletConnect();
+  const [copiedChain, setCopiedChain] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<Record<string, string | null>>({});
+  const { isConnected } = useBlockchainContext();
   const { toast } = useToast();
 
-  const handleConnect = () => {
-    if (!address.trim()) {
-      toast({
-        title: "Invalid address",
-        description: "Please enter a valid wallet address",
-        variant: "destructive",
+  // Load addresses from localStorage
+  useEffect(() => {
+    if (open) {
+      const newAddresses: Record<string, string | null> = {};
+      CHAINS.forEach(chain => {
+        newAddresses[chain.id] = localStorage.getItem(chain.addressKey);
       });
-      return;
+      setAddresses(newAddresses);
     }
+  }, [open]);
 
-    // Basic validation for EVM address
-    if (address.startsWith("0x")) {
-      if (address.length !== 42) {
-        toast({
-          title: "Invalid address format",
-          description: "EVM addresses must be 42 characters",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
-    connectWallet(address);
-    toast({
-      title: "Wallet connected",
-      description: "Connected to multi-chain wallet",
-    });
-    onOpenChange(false);
-  };
-
-  const handleDisconnect = () => {
-    disconnectWallet();
-    setAddress("");
-    toast({
-      title: "Wallet disconnected",
-      description: "Your wallet has been disconnected",
-    });
-  };
-
-  const copyAddress = async (addr: string) => {
+  const copyAddress = async (chainId: string, addr: string) => {
     await navigator.clipboard.writeText(addr);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedChain(chainId);
+    toast({
+      title: "Address copied",
+      description: "Wallet address copied to clipboard",
+    });
+    setTimeout(() => setCopiedChain(null), 2000);
   };
 
-  const getExplorerUrl = () => {
-    if (!walletAddress) return '';
-    return balance?.explorerUrl 
-      ? `${balance.explorerUrl}/address/${walletAddress}`
-      : '';
+  const openExplorer = (chain: typeof CHAINS[0], addr: string) => {
+    window.open(`${chain.explorer}${addr}`, '_blank');
   };
+
+  if (!isConnected) {
+    return null;
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto rounded-t-3xl">
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
-            <Wallet className="w-5 h-5" />
-            {isConnected ? "Wallet Connected" : "Connect Wallet"}
+            <Wallet className="w-5 h-5 text-primary" />
+            Wallet Addresses
           </SheetTitle>
           <SheetDescription>
-            {isConnected
-              ? "Connected to all supported networks (Ethereum, Polygon, Solana, Tron)"
-              : "Your wallet will be connected to all supported networks automatically"}
+            Your multi-chain wallet addresses for all supported networks
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
-          {/* Multi-chain badge */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { name: 'Ethereum', icon: '⟠', color: '#627EEA' },
-              { name: 'Polygon', icon: '○', color: '#8247E5' },
-              { name: 'Solana', icon: '◎', color: '#00D18C' },
-              { name: 'Tron', icon: '◆', color: '#FF0013' },
-            ].map((chain) => (
-              <div 
-                key={chain.name}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                style={{ 
-                  backgroundColor: `${chain.color}15`,
-                  color: chain.color,
-                }}
-              >
-                <span>{chain.icon}</span>
-                <span>{chain.name}</span>
-              </div>
-            ))}
-          </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 space-y-3"
+        >
+          {CHAINS.map((chain) => {
+            const addr = addresses[chain.id];
+            const isCopied = copiedChain === chain.id;
+            
+            // Skip chains without addresses
+            if (!addr) return null;
 
-          {isConnected ? (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="bg-secondary/50 rounded-xl p-4">
-                <p className="text-sm text-muted-foreground mb-2">Connected Address</p>
+            return (
+              <div
+                key={chain.id}
+                className="bg-card border border-border rounded-xl p-4 space-y-3"
+              >
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-sm font-mono truncate">
-                    {walletAddress}
+                  <span className="text-lg">{chain.icon}</span>
+                  <span className="font-medium">{chain.name}</span>
+                </div>
+                
+                <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-3">
+                  <code className="flex-1 text-xs font-mono text-muted-foreground truncate">
+                    {addr}
                   </code>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
-                    onClick={() => copyAddress(walletAddress!)}
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => copyAddress(chain.id, addr)}
                   >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {isCopied ? (
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
                   </Button>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 p-3 rounded-lg text-sm bg-primary/10 text-primary">
-                <AlertCircle className="w-4 h-4" />
-                <span>Connected to all networks</span>
-              </div>
-
-              <div className="flex gap-3">
-                {getExplorerUrl() && (
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => window.open(getExplorerUrl(), '_blank')}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View on Explorer
-                  </Button>
-                )}
                 <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={handleDisconnect}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => openExplorer(chain, addr)}
                 >
-                  Disconnect
+                  <ExternalLink className="w-3 h-3 mr-1.5" />
+                  View on {chain.name === 'Ethereum' ? 'Etherscan' : 
+                           chain.name === 'Polygon' ? 'Polygonscan' : 
+                           chain.name === 'Solana' ? 'Solscan' : 'Tronscan'}
                 </Button>
               </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              {/* WalletConnect Option */}
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    openWalletConnectModal();
-                  }}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Link2 className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">Connect with WalletConnect</div>
-                    <div className="text-xs text-muted-foreground">
-                      MetaMask, Trust Wallet, Rainbow, and more
-                    </div>
-                  </div>
-                </button>
+            );
+          })}
 
-                {isWalletConnectConnected && wcAddress && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-500">
-                      WalletConnect active: {wcAddress.slice(0, 8)}...{wcAddress.slice(-6)}
-                    </span>
-                  </div>
-                )}
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or enter address manually
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Input
-                  placeholder="0x... (EVM address)"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="font-mono"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter your EVM address to view balances across all networks
-                </p>
-              </div>
-
-              <Button
-                onClick={handleConnect}
-                className="w-full"
-                disabled={!address.trim()}
-              >
-                Connect Wallet
-              </Button>
-            </motion.div>
+          {/* Show message if no addresses found */}
+          {Object.values(addresses).every(a => !a) && (
+            <div className="text-center py-8 text-muted-foreground">
+              <p className="text-sm">No wallet addresses found</p>
+              <p className="text-xs mt-1">Import a wallet to get started</p>
+            </div>
           )}
-        </div>
+        </motion.div>
       </SheetContent>
     </Sheet>
   );
