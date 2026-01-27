@@ -96,6 +96,10 @@ interface BlockchainProviderProps {
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
 
+  // Defer queries until after mount to avoid React HMR state corruption
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
   // Used to force a re-render when we update derived address keys in localStorage.
   const [, bumpDerivedAddressTick] = useState(0);
   
@@ -344,13 +348,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     return walletAddress;
   }, [selectedChain, walletAddress]);
 
-  // Queries (selected chain)
-  const balanceQuery = useWalletBalance(selectedChainAddress, selectedChain);
-  const transactionsQuery = useTransactions(selectedChainAddress, selectedChain);
+  // Queries (selected chain) - only enable after mount to avoid HMR issues
+  const balanceQuery = useWalletBalance(isMounted ? selectedChainAddress : null, selectedChain);
+  const transactionsQuery = useTransactions(isMounted ? selectedChainAddress : null, selectedChain);
   const gasQuery = useGasEstimate(selectedChain);
 
   // Unified (multi-chain) portfolio values for dashboard totals/allocations.
-  const unified = useUnifiedPortfolio(!!walletAddress);
+  // Only enable after mount to prevent "Should have a queue" React errors during HMR
+  const unified = useUnifiedPortfolio(isMounted && !!walletAddress);
   const totalBalanceUsd = unified.totalUsd;
   const unifiedAssets = unified.assets;
 
