@@ -6,8 +6,13 @@ const corsHeaders = {
 };
 
 const TATUM_API_KEY = Deno.env.get('TATUM_API_KEY');
+const HELIUS_API_KEY = Deno.env.get('HELIUS_API_KEY');
 const TATUM_BASE_URL = 'https://api.tatum.io/v3';
 const TATUM_V4_BASE_URL = 'https://api.tatum.io/v4';
+
+// Helius RPC endpoints
+const HELIUS_MAINNET_RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+const HELIUS_DEVNET_RPC = `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
 
 type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron';
 
@@ -36,7 +41,7 @@ interface ChainConfig {
   explorerUrl: (testnet: boolean) => string;
 }
 
-// Chain configurations for Tatum API v3
+// Chain configurations for Tatum API v3 (excluding Solana which uses Helius)
 const chainConfigs: Record<Chain, ChainConfig> = {
   ethereum: {
     symbol: 'ETH',
@@ -76,11 +81,9 @@ const chainConfigs: Record<Chain, ChainConfig> = {
   solana: {
     symbol: 'SOL',
     decimals: 9,
-    balanceEndpoint: (address) => 
-      `/solana/account/balance/${address}`,
-    txEndpoint: (address) => 
-      `/solana/account/transaction/${address}?pageSize=20`,
-    gasEndpoint: () => '/solana/fee',
+    balanceEndpoint: () => '', // Not used - Helius RPC
+    txEndpoint: () => '', // Not used - Helius RPC
+    gasEndpoint: () => '', // Not used - Helius RPC
     explorerUrl: (testnet) => 
       testnet ? 'https://explorer.solana.com?cluster=devnet' : 'https://explorer.solana.com',
   },
@@ -212,7 +215,6 @@ async function tatumRequestV4(endpoint: string, options: RequestInit = {}) {
 }
 
 // Special Tatum request handler for Tron that gracefully handles 403 "account not found" errors
-// (Tron returns 403 for addresses that have never received any TRX)
 async function tatumRequestTron(endpoint: string, options: RequestInit = {}) {
   const url = `${TATUM_BASE_URL}${endpoint}`;
   console.log(`Tatum Tron request: ${url}`);
@@ -244,6 +246,44 @@ async function tatumRequestTron(endpoint: string, options: RequestInit = {}) {
     console.log('Tatum Tron raw response:', responseText);
     return { balance: responseText };
   }
+}
+
+// Helius RPC request helper
+async function heliusRpcRequest(method: string, params: unknown[], testnet: boolean = false) {
+  const rpcUrl = testnet ? HELIUS_DEVNET_RPC : HELIUS_MAINNET_RPC;
+  
+  const rpcBody = {
+    jsonrpc: '2.0',
+    id: 1,
+    method,
+    params,
+  };
+  
+  console.log(`Helius RPC request: ${method} (${testnet ? 'devnet' : 'mainnet'})`);
+  
+  const response = await fetch(rpcUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(rpcBody),
+  });
+  
+  const responseText = await response.text();
+  
+  if (!response.ok) {
+    console.error(`Helius RPC error: ${response.status} - ${responseText}`);
+    throw new Error(`Helius RPC error: ${response.status} - ${responseText}`);
+  }
+  
+  const rpcResult = JSON.parse(responseText);
+  
+  if (rpcResult.error) {
+    console.error(`Helius RPC error:`, rpcResult.error);
+    throw new Error(rpcResult.error.message || 'Helius RPC error');
+  }
+  
+  return rpcResult.result;
 }
 
 function toBaseUnits(value: string | number, decimals: number): string {
@@ -279,7 +319,6 @@ type RawTokenBalance = {
 
 function extractV4Balances(raw: unknown): RawTokenBalance[] {
   if (Array.isArray(raw)) {
-    // Either an array of balances OR an array of { balances: [...] }
     const first = raw[0] as any;
     if (first && Array.isArray(first.balances)) return first.balances;
     return raw as RawTokenBalance[];
@@ -292,7 +331,7 @@ function extractV4Balances(raw: unknown): RawTokenBalance[] {
   return [];
 }
 
-// Popular testnet ERC-20 tokens for display
+// Popular ERC-20 tokens
 const KNOWN_TOKENS: Record<string, { name: string; symbol: string; decimals: number; logo?: string }> = {
   // Ethereum Mainnet
   '0xdac17f958d2ee523a2206206994597c13d831ec7': { name: 'Tether USD', symbol: 'USDT', decimals: 6, logo: '💲' },
@@ -327,7 +366,6 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
   }
 
   try {
-    // ✅ Use Tatum v4 balances endpoint (v3 /data/tokens currently validates tokenAddress and fails)
     const endpoint = `/data/balances?chain=${chain}&addresses=${encodeURIComponent(address)}`;
     console.log(`Fetching ERC-20 tokens (v4) for ${chain}: ${endpoint}`);
 
@@ -337,7 +375,6 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
     const tokens = balances
       .filter((b) => {
         const addr = (b.tokenAddress || b.contractAddress || '').toLowerCase();
-        // Keep only fungible token balances; exclude native
         if (!addr || addr === 'native') return false;
         return true;
       })
@@ -365,56 +402,26 @@ async function getERC20Tokens(chain: Chain, address: string, testnet: boolean): 
   }
 }
 
-// Tatum Solana RPC Gateway endpoint
-const TATUM_SOLANA_RPC = 'https://solana-mainnet.gateway.tatum.io';
+// ==================== HELIUS SOLANA FUNCTIONS ====================
 
-// Fetch SOL balance using Tatum Solana RPC Gateway
-async function getSolanaBalance(address: string): Promise<string> {
+// Fetch SOL balance using Helius RPC
+async function getSolanaBalance(address: string, testnet: boolean = false): Promise<string> {
   try {
-    const rpcBody = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getBalance',
-      params: [address]
-    };
+    console.log(`Fetching SOL balance via Helius RPC for: ${address}`);
     
-    console.log(`Fetching SOL balance via Tatum RPC Gateway for: ${address}`);
+    const result = await heliusRpcRequest('getBalance', [address], testnet);
+    const lamports = result?.value ?? 0;
     
-    const response = await fetch(TATUM_SOLANA_RPC, {
-      method: 'POST',
-      headers: {
-        'x-api-key': TATUM_API_KEY!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(rpcBody),
-    });
-    
-    const responseText = await response.text();
-    
-    if (!response.ok) {
-      console.error(`Solana RPC Gateway error: ${response.status} - ${responseText}`);
-      return '0';
-    }
-    
-    const rpcResult = JSON.parse(responseText);
-    console.log(`Solana balance RPC response:`, JSON.stringify(rpcResult));
-    
-    if (rpcResult.error) {
-      console.error(`Solana RPC error:`, rpcResult.error);
-      return '0';
-    }
-    
-    // Balance is returned in lamports
-    const lamports = rpcResult.result?.value ?? 0;
+    console.log(`Helius SOL balance: ${lamports} lamports`);
     return String(lamports);
   } catch (error) {
-    console.error(`Error fetching Solana balance via RPC:`, error);
+    console.error(`Error fetching Solana balance via Helius:`, error);
     return '0';
   }
 }
 
-// Fetch SPL tokens for Solana addresses using Tatum's Solana RPC Gateway
-async function getSPLTokens(address: string): Promise<Array<{
+// Fetch SPL tokens using Helius RPC
+async function getSPLTokens(address: string, testnet: boolean = false): Promise<Array<{
   symbol: string;
   name: string;
   balance: string;
@@ -423,48 +430,22 @@ async function getSPLTokens(address: string): Promise<Array<{
   logo?: string;
 }>> {
   try {
-    // Use Tatum's Solana RPC Gateway with getTokenAccountsByOwner
-    // Token Program ID for SPL tokens
+    console.log(`Fetching SPL tokens via Helius RPC for: ${address}`);
+    
     const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
     
-    const rpcBody = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getTokenAccountsByOwner',
-      params: [
+    const result = await heliusRpcRequest(
+      'getTokenAccountsByOwner',
+      [
         address,
         { programId: TOKEN_PROGRAM_ID },
         { encoding: 'jsonParsed' }
-      ]
-    };
+      ],
+      testnet
+    );
     
-    console.log(`Fetching SPL tokens via Tatum RPC Gateway for: ${address}`);
-    
-    const response = await fetch(TATUM_SOLANA_RPC, {
-      method: 'POST',
-      headers: {
-        'x-api-key': TATUM_API_KEY!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(rpcBody),
-    });
-    
-    const responseText = await response.text();
-    
-    if (!response.ok) {
-      console.error(`Solana RPC Gateway error: ${response.status} - ${responseText}`);
-      return [];
-    }
-    
-    const rpcResult = JSON.parse(responseText);
-    console.log(`Solana SPL tokens RPC response:`, JSON.stringify(rpcResult).slice(0, 500));
-    
-    if (rpcResult.error) {
-      console.error(`Solana RPC error:`, rpcResult.error);
-      return [];
-    }
-    
-    const tokenAccounts = rpcResult.result?.value || [];
+    const tokenAccounts = result?.value || [];
+    console.log(`Helius found ${tokenAccounts.length} SPL token accounts`);
     
     const tokens = tokenAccounts
       .map((account: { 
@@ -490,8 +471,6 @@ async function getSPLTokens(address: string): Promise<Array<{
         const tokenAmount = info.tokenAmount;
         const knownToken = KNOWN_SPL_TOKENS[contractAddress] || undefined;
         const decimals = knownToken?.decimals ?? tokenAmount.decimals;
-        
-        // Use the raw amount (already in base units)
         const balance = tokenAmount.amount;
 
         return {
@@ -509,8 +488,7 @@ async function getSPLTokens(address: string): Promise<Array<{
 
     return tokens;
   } catch (error) {
-    console.error(`Error fetching Solana SPL tokens:`, error);
-    // Return empty array on error - don't fail the whole balance request
+    console.error(`Error fetching Solana SPL tokens via Helius:`, error);
     return [];
   }
 }
@@ -525,31 +503,28 @@ async function getTRC20Tokens(address: string): Promise<Array<{
   logo?: string;
 }>> {
   try {
-    // Use Tatum v3 endpoint for TRC-20 tokens
     const endpoint = `/tron/account/${address}`;
     console.log(`Fetching TRC-20 tokens for tron address: ${address}`);
     
     const accountData = await tatumRequest(endpoint);
     console.log(`Tron account data:`, JSON.stringify(accountData).slice(0, 1000));
     
-    // TRC-20 tokens are in the trc20 array
     const trc20Balances = accountData.trc20 || [];
     
     const tokens = trc20Balances
       .map((tokenBalance: Record<string, string>) => {
-        // Each item is an object like { "contractAddress": "balance" }
         const contractAddress = Object.keys(tokenBalance)[0];
         const rawBalance = tokenBalance[contractAddress];
         
         if (!contractAddress || !rawBalance) return null;
         
         const knownToken = KNOWN_TRC20_TOKENS[contractAddress];
-        const decimals = knownToken?.decimals ?? 6; // Default to 6 for TRC-20
+        const decimals = knownToken?.decimals ?? 6;
         
         return {
           symbol: knownToken?.symbol || 'UNKNOWN',
           name: knownToken?.name || 'Unknown Token',
-          balance: rawBalance, // Already in base units
+          balance: rawBalance,
           decimals,
           contractAddress,
           logo: knownToken?.logo,
@@ -576,7 +551,7 @@ async function getTokens(chain: Chain, address: string, testnet: boolean): Promi
   logo?: string;
 }>> {
   if (chain === 'solana') {
-    return getSPLTokens(address);
+    return getSPLTokens(address, testnet);
   } else if (chain === 'tron') {
     return getTRC20Tokens(address);
   } else if (chain === 'ethereum' || chain === 'polygon') {
@@ -589,14 +564,14 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
   const config = chainConfigs[chain];
   
   try {
-    // Handle Solana separately using RPC Gateway
+    // Handle Solana separately using Helius RPC
     if (chain === 'solana') {
       const [solBalance, tokens] = await Promise.all([
-        getSolanaBalance(address),
-        getSPLTokens(address),
+        getSolanaBalance(address, testnet),
+        getSPLTokens(address, testnet),
       ]);
       
-      console.log(`Solana balance via RPC Gateway: ${solBalance} lamports`);
+      console.log(`Helius Solana balance: ${solBalance} lamports`);
       
       return {
         chain,
@@ -620,24 +595,19 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
     
     console.log(`${chain} balance response:`, JSON.stringify(balanceData));
     
-    // Normalize to base units so the frontend can safely divide by decimals.
     let rawBalance: string | number = '0';
     
     if (chain === 'tron') {
-      // Tron returns balance in sun (1 TRX = 1,000,000 sun)
-      // The balance field is already in sun (base units)
       if (typeof balanceData === 'object' && balanceData) {
         rawBalance = balanceData.balance ?? '0';
       }
     } else if (typeof balanceData === 'object' && balanceData) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const bd: any = balanceData;
       rawBalance = bd.balance ?? (bd.incoming ? (parseFloat(bd.incoming) - parseFloat(bd.outgoing || '0')) : '0');
     } else if (typeof balanceData === 'string' || typeof balanceData === 'number') {
       rawBalance = balanceData;
     }
 
-    // For Tron, balance is already in base units (sun), for others we need to convert
     const balance = chain === 'tron' 
       ? String(rawBalance) 
       : toBaseUnits(rawBalance, config.decimals);
@@ -668,8 +638,8 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
   }
 }
 
-// Fetch Solana transaction history using Tatum RPC Gateway
-// Token transfer interface for Solana
+// ==================== HELIUS SOLANA TRANSACTIONS ====================
+
 interface SolanaTokenTransfer {
   source: string;
   destination: string;
@@ -679,7 +649,6 @@ interface SolanaTokenTransfer {
   symbol?: string;
 }
 
-// Parsed instruction interface
 interface ParsedInstruction {
   programId: string;
   programName: string;
@@ -687,7 +656,6 @@ interface ParsedInstruction {
   info?: Record<string, unknown>;
 }
 
-// Extended Solana transaction with parsed details
 interface SolanaTransactionDetail {
   hash: string;
   from?: string;
@@ -697,14 +665,12 @@ interface SolanaTransactionDetail {
   status: string;
   blockNumber?: number;
   fee?: number;
-  // Solana-specific parsed details
   parsedInstructions?: ParsedInstruction[];
   tokenTransfers?: SolanaTokenTransfer[];
   signers?: string[];
   logs?: string[];
 }
 
-// Known Solana program IDs
 const PROGRAM_NAMES: Record<string, string> = {
   '11111111111111111111111111111111': 'System Program',
   'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA': 'Token Program',
@@ -719,134 +685,68 @@ const PROGRAM_NAMES: Record<string, string> = {
   'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX': 'Serum DEX',
 };
 
-async function getSolanaTransactions(address: string): Promise<{
+async function getSolanaTransactions(address: string, testnet: boolean = false): Promise<{
   chain: string;
   transactions: SolanaTransactionDetail[];
   explorerUrl: string;
   error?: string;
 }> {
   try {
-    console.log(`Fetching Solana transactions via Tatum RPC Gateway for: ${address}`);
+    console.log(`Fetching Solana transactions via Helius RPC for: ${address}`);
     
     // Step 1: Get recent transaction signatures
-    const signaturesBody = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getSignaturesForAddress',
-      params: [
-        address,
-        { limit: 20 }
-      ]
-    };
+    const signatures = await heliusRpcRequest(
+      'getSignaturesForAddress',
+      [address, { limit: 20 }],
+      testnet
+    );
     
-    const sigResponse = await fetch(TATUM_SOLANA_RPC, {
-      method: 'POST',
-      headers: {
-        'x-api-key': TATUM_API_KEY!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(signaturesBody),
-    });
+    console.log(`Helius found ${signatures?.length || 0} transaction signatures`);
     
-    const sigResponseText = await sigResponse.text();
-    
-    if (!sigResponse.ok) {
-      console.error(`Solana RPC Gateway error (signatures): ${sigResponse.status} - ${sigResponseText}`);
+    if (!signatures || signatures.length === 0) {
       return {
         chain: 'solana',
         transactions: [],
-        explorerUrl: 'https://explorer.solana.com',
-        error: sigResponseText,
+        explorerUrl: testnet ? 'https://explorer.solana.com?cluster=devnet' : 'https://explorer.solana.com',
       };
     }
     
-    const sigResult = JSON.parse(sigResponseText);
-    console.log(`Solana signatures response:`, JSON.stringify(sigResult).slice(0, 500));
-    
-    if (sigResult.error) {
-      console.error(`Solana RPC error (signatures):`, sigResult.error);
-      return {
-        chain: 'solana',
-        transactions: [],
-        explorerUrl: 'https://explorer.solana.com',
-        error: sigResult.error.message || 'RPC error',
-      };
-    }
-    
-    const signatures = sigResult.result || [];
-    
-    if (signatures.length === 0) {
-      console.log('No Solana transactions found for address');
-      return {
-        chain: 'solana',
-        transactions: [],
-        explorerUrl: 'https://explorer.solana.com',
-      };
-    }
-    
-    // Step 2: Fetch transaction details for each signature (batch up to 10)
+    // Step 2: Fetch transaction details (batch up to 10)
     const transactionsToFetch = signatures.slice(0, 10);
     const transactions: SolanaTransactionDetail[] = [];
     
     for (const sig of transactionsToFetch) {
       try {
-        const txBody = {
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getTransaction',
-          params: [
-            sig.signature,
-            { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
-          ]
-        };
+        const tx = await heliusRpcRequest(
+          'getTransaction',
+          [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
+          testnet
+        );
         
-        const txResponse = await fetch(TATUM_SOLANA_RPC, {
-          method: 'POST',
-          headers: {
-            'x-api-key': TATUM_API_KEY!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(txBody),
-        });
-        
-        const txResponseText = await txResponse.text();
-        
-        if (!txResponse.ok) {
-          console.error(`Error fetching tx ${sig.signature}:`, txResponseText);
+        if (!tx) {
+          console.log(`Skipping tx ${sig.signature}: no result`);
           continue;
         }
         
-        const txResult = JSON.parse(txResponseText);
-        
-        if (txResult.error || !txResult.result) {
-          console.log(`Skipping tx ${sig.signature}: no result or error`);
-          continue;
-        }
-        
-        const tx = txResult.result;
         const meta = tx.meta;
         const message = tx.transaction?.message;
         const accountKeys = message?.accountKeys || [];
         
-        // Parse all instructions
         const parsedInstructions: ParsedInstruction[] = [];
         const tokenTransfers: SolanaTokenTransfer[] = [];
         const instructions = message?.instructions || [];
         const innerInstructions = meta?.innerInstructions || [];
         
-        // Combine main and inner instructions
         const allInstructions = [
           ...instructions,
           ...innerInstructions.flatMap((inner: { instructions: unknown[] }) => inner.instructions || [])
         ];
         
-        // Determine from/to addresses
         let from: string | undefined;
         let to: string | undefined;
         let value: string | undefined;
         
         for (const ix of allInstructions) {
-          // Get program ID
           const programId = ix.programId?.toString() || ix.program || '';
           const programName = PROGRAM_NAMES[programId] || 'Unknown Program';
           
@@ -854,7 +754,6 @@ async function getSolanaTransactions(address: string): Promise<{
             const parsedType = ix.parsed.type || 'unknown';
             const info = ix.parsed.info || {};
             
-            // Add to parsed instructions list
             parsedInstructions.push({
               programId,
               programName,
@@ -862,7 +761,6 @@ async function getSolanaTransactions(address: string): Promise<{
               info,
             });
             
-            // Extract transfer info
             if (parsedType === 'transfer') {
               const source = info.source as string;
               const destination = info.destination as string;
@@ -872,7 +770,6 @@ async function getSolanaTransactions(address: string): Promise<{
               if (!to) to = destination;
               if (!value) value = lamports?.toString();
               
-              // Add as token transfer (SOL)
               tokenTransfers.push({
                 source,
                 destination,
@@ -890,7 +787,6 @@ async function getSolanaTransactions(address: string): Promise<{
               if (!to) to = destination;
               if (!value) value = tokenAmount?.amount;
               
-              // Add as token transfer (SPL token)
               tokenTransfers.push({
                 source,
                 destination,
@@ -907,7 +803,6 @@ async function getSolanaTransactions(address: string): Promise<{
               });
             }
           } else {
-            // Unparsed instruction
             parsedInstructions.push({
               programId,
               programName,
@@ -916,12 +811,10 @@ async function getSolanaTransactions(address: string): Promise<{
           }
         }
         
-        // Fallback: use first account as sender
         if (!from && accountKeys.length > 0) {
           from = accountKeys[0]?.pubkey || accountKeys[0];
         }
         
-        // Calculate SOL transfer from balance changes if no parsed transfer
         if (!value && meta?.preBalances && meta?.postBalances) {
           const preBalance = meta.preBalances[0] || 0;
           const postBalance = meta.postBalances[0] || 0;
@@ -931,15 +824,11 @@ async function getSolanaTransactions(address: string): Promise<{
           }
         }
         
-        // Get signers
         const signers: string[] = accountKeys
           .filter((acc: { signer?: boolean }) => acc.signer)
           .map((acc: { pubkey?: string }) => acc.pubkey || '');
         
-        // Get transaction fee
         const fee = meta?.fee || 0;
-        
-        // Get logs (limited to first 10)
         const logs = (meta?.logMessages || []).slice(0, 10);
         
         transactions.push({
@@ -951,7 +840,7 @@ async function getSolanaTransactions(address: string): Promise<{
           status: meta?.err ? 'failed' : 'confirmed',
           blockNumber: tx.slot,
           fee,
-          parsedInstructions: parsedInstructions.slice(0, 20), // Limit to 20 instructions
+          parsedInstructions: parsedInstructions.slice(0, 20),
           tokenTransfers,
           signers,
           logs,
@@ -961,18 +850,18 @@ async function getSolanaTransactions(address: string): Promise<{
       }
     }
     
-    console.log(`Fetched ${transactions.length} Solana transactions with detailed parsing`);
+    console.log(`Fetched ${transactions.length} Solana transactions via Helius`);
     return {
       chain: 'solana',
       transactions,
-      explorerUrl: 'https://explorer.solana.com',
+      explorerUrl: testnet ? 'https://explorer.solana.com?cluster=devnet' : 'https://explorer.solana.com',
     };
   } catch (error) {
-    console.error('Error fetching Solana transactions:', error);
+    console.error('Error fetching Solana transactions via Helius:', error);
     return {
       chain: 'solana',
       transactions: [],
-      explorerUrl: 'https://explorer.solana.com',
+      explorerUrl: testnet ? 'https://explorer.solana.com?cluster=devnet' : 'https://explorer.solana.com',
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -981,9 +870,9 @@ async function getSolanaTransactions(address: string): Promise<{
 async function getTransactions(chain: Chain, address: string, testnet: boolean = true) {
   const config = chainConfigs[chain];
   
-  // Use Solana RPC Gateway for Solana transactions
+  // Use Helius RPC for Solana transactions
   if (chain === 'solana') {
-    return getSolanaTransactions(address);
+    return getSolanaTransactions(address, testnet);
   }
   
   try {
@@ -991,7 +880,6 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
     const txData = await tatumRequest(endpoint);
     console.log(`${chain} transactions response:`, JSON.stringify(txData));
     
-    // Normalize transaction format across chains
     const transactions = Array.isArray(txData) ? txData : (txData.transactions || []);
     
     return {
@@ -1040,15 +928,49 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
 async function estimateGas(chain: Chain, testnet: boolean = true) {
   const config = chainConfigs[chain];
   
-  // Tron doesn't have a fee estimation endpoint in Tatum, return static values
+  // Tron doesn't have a fee estimation endpoint, return static values
   if (chain === 'tron') {
-    console.log('Returning static Tron fee estimates (no API endpoint)');
+    console.log('Returning static Tron fee estimates');
     return {
       chain,
-      slow: { fee: '1', estimatedTime: 60 },      // ~1 TRX for basic transfer
-      medium: { fee: '5', estimatedTime: 30 },    // ~5 TRX for token transfer
-      fast: { fee: '10', estimatedTime: 10 },     // ~10 TRX for priority
+      slow: { fee: '1', estimatedTime: 60 },
+      medium: { fee: '5', estimatedTime: 30 },
+      fast: { fee: '10', estimatedTime: 10 },
       unit: 'TRX',
+    };
+  }
+  
+  // Solana fee estimation via Helius
+  if (chain === 'solana') {
+    try {
+      console.log('Fetching Solana fee estimate via Helius RPC');
+      const result = await heliusRpcRequest('getRecentPrioritizationFees', [[]], testnet);
+      
+      // Get the average of recent priority fees
+      if (result && result.length > 0) {
+        const fees = result.map((f: { prioritizationFee: number }) => f.prioritizationFee);
+        const avgFee = Math.floor(fees.reduce((a: number, b: number) => a + b, 0) / fees.length);
+        const maxFee = Math.max(...fees);
+        
+        return {
+          chain,
+          slow: { fee: String(Math.max(5000, avgFee)), estimatedTime: 60 },
+          medium: { fee: String(Math.max(10000, avgFee * 2)), estimatedTime: 30 },
+          fast: { fee: String(Math.max(25000, maxFee)), estimatedTime: 10 },
+          unit: 'lamports',
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching Solana fee estimate:', error);
+    }
+    
+    // Fallback static values
+    return {
+      chain,
+      slow: { fee: '5000', estimatedTime: 60 },
+      medium: { fee: '10000', estimatedTime: 30 },
+      fast: { fee: '25000', estimatedTime: 10 },
+      unit: 'lamports',
     };
   }
   
@@ -1057,26 +979,14 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
     const gasData = await tatumRequest(endpoint);
     console.log(`${chain} gas estimate response:`, JSON.stringify(gasData));
     
-    // Normalize gas/fee response across chains
     if (chain === 'bitcoin') {
-      // Bitcoin returns fee in satoshis per byte
       return {
         chain,
-        slow: { fee: gasData.slow || '10', estimatedTime: 3600 }, // ~1 hour
-        medium: { fee: gasData.medium || '20', estimatedTime: 1800 }, // ~30 min
-        fast: { fee: gasData.fast || '50', estimatedTime: 600 }, // ~10 min
+        slow: { fee: gasData.slow || '10', estimatedTime: 3600 },
+        medium: { fee: gasData.medium || '20', estimatedTime: 1800 },
+        fast: { fee: gasData.fast || '50', estimatedTime: 600 },
         unit: 'sat/byte',
       };
-    } else if (chain === 'solana') {
-      // Solana returns priority fee in lamports
-      return {
-        chain,
-        slow: { fee: gasData.low || '5000', estimatedTime: 60 },
-        medium: { fee: gasData.medium || '10000', estimatedTime: 30 },
-        fast: { fee: gasData.high || '25000', estimatedTime: 10 },
-        unit: 'lamports',
-      };
-    // Note: Tron is handled at the top of the function, before the try block
     } else {
       // Ethereum/Polygon return gas price in gwei
       return {
@@ -1099,7 +1009,6 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
     }
   } catch (error) {
     console.error(`Error estimating ${chain} gas:`, error);
-    // Return fallback values
     if (chain === 'bitcoin') {
       return {
         chain,
@@ -1108,15 +1017,6 @@ async function estimateGas(chain: Chain, testnet: boolean = true) {
         fast: { fee: '50', estimatedTime: 600 },
         unit: 'sat/byte',
       };
-    } else if (chain === 'solana') {
-      return {
-        chain,
-        slow: { fee: '5000', estimatedTime: 60 },
-        medium: { fee: '10000', estimatedTime: 30 },
-        fast: { fee: '25000', estimatedTime: 10 },
-        unit: 'lamports',
-      };
-    // Note: Tron is handled at the top of the function, before the try block
     } else {
       return {
         chain,
@@ -1162,7 +1062,6 @@ interface PriceData {
 
 async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX']): Promise<PriceData[]> {
   try {
-    // Map symbols to CoinGecko IDs
     const ids = symbols
       .map(s => COINGECKO_IDS[s.toUpperCase()])
       .filter(Boolean)
@@ -1196,7 +1095,6 @@ async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX
     const data = await response.json();
     console.log('CoinGecko response:', JSON.stringify(data));
 
-    // Map back to symbols
     const prices: PriceData[] = symbols.map(symbol => {
       const geckoId = COINGECKO_IDS[symbol.toUpperCase()];
       const priceData = geckoId ? data[geckoId] : null;
@@ -1214,7 +1112,6 @@ async function getPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX
     return prices;
   } catch (error) {
     console.error('Error fetching prices:', error);
-    // Return fallback prices
     return symbols.map(symbol => ({
       symbol: symbol.toUpperCase(),
       price: 0,
@@ -1238,6 +1135,34 @@ async function broadcastTransaction(
 
   console.log(`Broadcasting ${chain} transaction (testnet: ${testnet})`);
 
+  // Solana broadcast via Helius
+  if (chain === 'solana') {
+    try {
+      console.log(`Broadcasting Solana transaction via Helius RPC`);
+      
+      const result = await heliusRpcRequest(
+        'sendRawTransaction',
+        [signedTransaction, { encoding: 'base64' }],
+        testnet
+      );
+      
+      const txHash = result;
+      console.log(`Helius Solana broadcast result: ${txHash}`);
+      
+      if (!txHash) {
+        throw new Error('Failed to get transaction signature from Helius');
+      }
+      
+      const explorerUrl = `${config.explorerUrl(testnet)}/tx/${txHash}${testnet ? '?cluster=devnet' : ''}`;
+      
+      return { txHash, explorerUrl };
+    } catch (error) {
+      console.error('Error broadcasting Solana transaction via Helius:', error);
+      throw error;
+    }
+  }
+
+  // Other chains use Tatum
   let endpoint: string;
   let body: object;
 
@@ -1253,12 +1178,6 @@ async function broadcastTransaction(
     case 'bitcoin':
       endpoint = `/bitcoin/broadcast${testnet ? '?testnet=true' : ''}`;
       body = { txData: signedTransaction };
-      break;
-    case 'solana':
-      // Tatum Solana broadcast endpoint - expects hex-encoded serialized transaction
-      endpoint = testnet ? '/solana/broadcast?testnet=true' : '/solana/broadcast';
-      body = { txData: signedTransaction };
-      console.log(`Solana broadcast: endpoint=${endpoint}, txData length=${signedTransaction.length}`);
       break;
     case 'tron':
       endpoint = `/tron/broadcast`;
@@ -1287,9 +1206,6 @@ async function broadcastTransaction(
   switch (chain) {
     case 'bitcoin':
       explorerUrl = `${explorerBase}/tx/${txHash}`;
-      break;
-    case 'solana':
-      explorerUrl = `${explorerBase}/tx/${txHash}${testnet ? '?cluster=devnet' : ''}`;
       break;
     case 'tron':
       explorerUrl = `${explorerBase}/#/transaction/${txHash}`;
@@ -1320,13 +1236,19 @@ serve(async (req) => {
 
     switch (action) {
       case 'getBalance':
-        if (!TATUM_API_KEY) {
-          throw new Error('TATUM_API_KEY is not configured');
+        // Check API keys based on chain
+        if (chain === 'solana') {
+          if (!HELIUS_API_KEY) {
+            throw new Error('HELIUS_API_KEY is not configured');
+          }
+        } else {
+          if (!TATUM_API_KEY) {
+            throw new Error('TATUM_API_KEY is not configured');
+          }
         }
         if (!address) {
           throw new Error('Address is required for getBalance');
         }
-        // Validate chain for balance
         if (!chainConfigs[chain]) {
           throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
         }
@@ -1334,8 +1256,14 @@ serve(async (req) => {
         break;
 
       case 'getTransactions':
-        if (!TATUM_API_KEY) {
-          throw new Error('TATUM_API_KEY is not configured');
+        if (chain === 'solana') {
+          if (!HELIUS_API_KEY) {
+            throw new Error('HELIUS_API_KEY is not configured');
+          }
+        } else {
+          if (!TATUM_API_KEY) {
+            throw new Error('TATUM_API_KEY is not configured');
+          }
         }
         if (!address) {
           throw new Error('Address is required for getTransactions');
@@ -1347,8 +1275,14 @@ serve(async (req) => {
         break;
 
       case 'estimateGas':
-        if (!TATUM_API_KEY) {
-          throw new Error('TATUM_API_KEY is not configured');
+        if (chain === 'solana') {
+          if (!HELIUS_API_KEY) {
+            throw new Error('HELIUS_API_KEY is not configured');
+          }
+        } else if (chain !== 'tron') {
+          if (!TATUM_API_KEY) {
+            throw new Error('TATUM_API_KEY is not configured');
+          }
         }
         if (!chainConfigs[chain]) {
           throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
@@ -1357,13 +1291,18 @@ serve(async (req) => {
         break;
 
       case 'getPrices':
-        // CoinGecko doesn't require API key for basic usage
         result = await getPrices(symbols || ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX']);
         break;
 
       case 'broadcastTransaction':
-        if (!TATUM_API_KEY) {
-          throw new Error('TATUM_API_KEY is not configured');
+        if (chain === 'solana') {
+          if (!HELIUS_API_KEY) {
+            throw new Error('HELIUS_API_KEY is not configured');
+          }
+        } else {
+          if (!TATUM_API_KEY) {
+            throw new Error('TATUM_API_KEY is not configured');
+          }
         }
         if (!signedTransaction) {
           throw new Error('Signed transaction is required for broadcastTransaction');
@@ -1371,7 +1310,6 @@ serve(async (req) => {
         if (!chainConfigs[chain]) {
           throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
         }
-        // For mainnet transactions, testnet defaults to false
         result = await broadcastTransaction(chain, signedTransaction, testnet);
         break;
 
