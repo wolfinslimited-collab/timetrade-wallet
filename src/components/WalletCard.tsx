@@ -1,6 +1,7 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Loader2 } from "lucide-react";
 import { Sparkline } from "./Sparkline";
 import { cn } from "@/lib/utils";
+import { useWalletAvatar } from "@/hooks/useWalletAvatar";
 
 interface WalletCardProps {
   address: string;
@@ -17,6 +18,8 @@ export const WalletCard = ({
   avatarGradient = "from-primary/50 to-accent/50",
   showSparkline = true 
 }: WalletCardProps) => {
+  const { avatarUrl, isLoading, placeholderColors } = useWalletAvatar(address);
+
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-3)}`;
   };
@@ -32,14 +35,30 @@ export const WalletCard = ({
 
   return (
     <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-primary/30 transition-all duration-200 group">
-      {/* Avatar */}
-      <div className={cn(
-        "w-12 h-12 rounded-lg bg-gradient-to-br flex items-center justify-center overflow-hidden shrink-0",
-        avatarGradient
-      )}>
-        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-          <span className="text-xl">🔮</span>
-        </div>
+      {/* AI Generated Avatar */}
+      <div 
+        className="w-12 h-12 rounded-lg overflow-hidden shrink-0 relative"
+        style={{
+          background: avatarUrl 
+            ? undefined 
+            : `linear-gradient(135deg, ${placeholderColors.from}, ${placeholderColors.to})`,
+        }}
+      >
+        {avatarUrl ? (
+          <img 
+            src={avatarUrl} 
+            alt="Wallet avatar" 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 text-white/80 animate-spin" />
+            ) : (
+              <span className="text-xl">🔮</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Info */}
