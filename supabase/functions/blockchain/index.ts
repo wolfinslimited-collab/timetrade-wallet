@@ -668,8 +668,209 @@ async function getBalance(chain: Chain, address: string, testnet: boolean = true
   }
 }
 
+// Fetch Solana transaction history using Tatum RPC Gateway
+async function getSolanaTransactions(address: string): Promise<{
+  chain: string;
+  transactions: Array<{
+    hash: string;
+    from?: string;
+    to?: string;
+    value?: string;
+    timestamp: number;
+    status: string;
+    blockNumber?: number;
+  }>;
+  explorerUrl: string;
+  error?: string;
+}> {
+  try {
+    console.log(`Fetching Solana transactions via Tatum RPC Gateway for: ${address}`);
+    
+    // Step 1: Get recent transaction signatures
+    const signaturesBody = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getSignaturesForAddress',
+      params: [
+        address,
+        { limit: 20 }
+      ]
+    };
+    
+    const sigResponse = await fetch(TATUM_SOLANA_RPC, {
+      method: 'POST',
+      headers: {
+        'x-api-key': TATUM_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(signaturesBody),
+    });
+    
+    const sigResponseText = await sigResponse.text();
+    
+    if (!sigResponse.ok) {
+      console.error(`Solana RPC Gateway error (signatures): ${sigResponse.status} - ${sigResponseText}`);
+      return {
+        chain: 'solana',
+        transactions: [],
+        explorerUrl: 'https://explorer.solana.com',
+        error: sigResponseText,
+      };
+    }
+    
+    const sigResult = JSON.parse(sigResponseText);
+    console.log(`Solana signatures response:`, JSON.stringify(sigResult).slice(0, 500));
+    
+    if (sigResult.error) {
+      console.error(`Solana RPC error (signatures):`, sigResult.error);
+      return {
+        chain: 'solana',
+        transactions: [],
+        explorerUrl: 'https://explorer.solana.com',
+        error: sigResult.error.message || 'RPC error',
+      };
+    }
+    
+    const signatures = sigResult.result || [];
+    
+    if (signatures.length === 0) {
+      console.log('No Solana transactions found for address');
+      return {
+        chain: 'solana',
+        transactions: [],
+        explorerUrl: 'https://explorer.solana.com',
+      };
+    }
+    
+    // Step 2: Fetch transaction details for each signature (batch up to 10)
+    const transactionsToFetch = signatures.slice(0, 10);
+    const transactions: Array<{
+      hash: string;
+      from?: string;
+      to?: string;
+      value?: string;
+      timestamp: number;
+      status: string;
+      blockNumber?: number;
+    }> = [];
+    
+    for (const sig of transactionsToFetch) {
+      try {
+        const txBody = {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getTransaction',
+          params: [
+            sig.signature,
+            { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
+          ]
+        };
+        
+        const txResponse = await fetch(TATUM_SOLANA_RPC, {
+          method: 'POST',
+          headers: {
+            'x-api-key': TATUM_API_KEY!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(txBody),
+        });
+        
+        const txResponseText = await txResponse.text();
+        
+        if (!txResponse.ok) {
+          console.error(`Error fetching tx ${sig.signature}:`, txResponseText);
+          continue;
+        }
+        
+        const txResult = JSON.parse(txResponseText);
+        
+        if (txResult.error || !txResult.result) {
+          console.log(`Skipping tx ${sig.signature}: no result or error`);
+          continue;
+        }
+        
+        const tx = txResult.result;
+        const meta = tx.meta;
+        const message = tx.transaction?.message;
+        const accountKeys = message?.accountKeys || [];
+        
+        // Determine from/to addresses
+        let from: string | undefined;
+        let to: string | undefined;
+        let value: string | undefined;
+        
+        // Try to extract transfer info from parsed instructions
+        const instructions = message?.instructions || [];
+        for (const ix of instructions) {
+          if (ix.parsed?.type === 'transfer') {
+            const info = ix.parsed.info;
+            from = info.source;
+            to = info.destination;
+            value = info.lamports?.toString();
+            break;
+          } else if (ix.parsed?.type === 'transferChecked') {
+            const info = ix.parsed.info;
+            from = info.source;
+            to = info.destination;
+            value = info.tokenAmount?.amount;
+            break;
+          }
+        }
+        
+        // Fallback: use first account as sender
+        if (!from && accountKeys.length > 0) {
+          from = accountKeys[0]?.pubkey || accountKeys[0];
+        }
+        
+        // Calculate SOL transfer from balance changes if no parsed transfer
+        if (!value && meta?.preBalances && meta?.postBalances) {
+          const preBalance = meta.preBalances[0] || 0;
+          const postBalance = meta.postBalances[0] || 0;
+          const diff = Math.abs(postBalance - preBalance);
+          if (diff > 0) {
+            value = diff.toString();
+          }
+        }
+        
+        transactions.push({
+          hash: sig.signature,
+          from,
+          to,
+          value,
+          timestamp: sig.blockTime || tx.blockTime || Math.floor(Date.now() / 1000),
+          status: meta?.err ? 'failed' : 'confirmed',
+          blockNumber: tx.slot,
+        });
+      } catch (txError) {
+        console.error(`Error processing tx ${sig.signature}:`, txError);
+      }
+    }
+    
+    console.log(`Fetched ${transactions.length} Solana transactions`);
+    
+    return {
+      chain: 'solana',
+      transactions,
+      explorerUrl: 'https://explorer.solana.com',
+    };
+  } catch (error) {
+    console.error('Error fetching Solana transactions:', error);
+    return {
+      chain: 'solana',
+      transactions: [],
+      explorerUrl: 'https://explorer.solana.com',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 async function getTransactions(chain: Chain, address: string, testnet: boolean = true) {
   const config = chainConfigs[chain];
+  
+  // Use Solana RPC Gateway for Solana transactions
+  if (chain === 'solana') {
+    return getSolanaTransactions(address);
+  }
   
   try {
     const endpoint = config.txEndpoint(address, testnet);
