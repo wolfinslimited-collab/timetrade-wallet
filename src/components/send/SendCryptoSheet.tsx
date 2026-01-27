@@ -39,7 +39,7 @@ const defaultToken: TokenInfo = {
   name: "Ethereum",
   balance: 2.5847,
   price: 3245.67,
-  icon: "⟠",
+  icon: "eth",
 };
 
 export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) => {
