@@ -47,7 +47,7 @@ export const BalanceDisplay = ({ balance, changePercent }: BalanceDisplayProps) 
       {isConnected ? (
           <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
             <Wifi className="w-3 h-3" />
-            <span>{chainInfo.name}</span>
+            <span>All Networks</span>
           </div>
         ) : (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
