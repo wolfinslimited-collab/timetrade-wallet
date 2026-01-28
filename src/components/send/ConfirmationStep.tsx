@@ -9,12 +9,13 @@ import { useTransactionSigning, isEvmChain, isTronChain, isSolanaChain, isSignin
 import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
 import { useSolanaTransactionSigning } from "@/hooks/useSolanaTransactionSigning";
 import { useWalletConnect } from "@/contexts/WalletConnectContext";
-import { useStoredKeys } from "@/hooks/useStoredKeys";
-import { PrivateKeyModal } from "./PrivateKeyModal";
 import { PinUnlockModal } from "./PinUnlockModal";
 import { toast } from "@/hooks/use-toast";
 import { LiveFeeData, getFeeForSpeed } from "@/hooks/useLiveFeeEstimation";
 import { ethers } from "ethers";
+import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
+import { derivePrivateKeyForChain, SolanaDerivationPath } from "@/utils/walletDerivation";
+import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -33,11 +34,8 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
     signTransactionWithWalletConnect,
     isSigningWithWC 
   } = useWalletConnect();
-  const { hasStoredKey, retrievePrivateKey, storePrivateKey, getStoredKeyInfo } = useStoredKeys();
-  
   const [gasSpeed, setGasSpeed] = useState<GasSpeed>("standard");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showPrivateKeyModal, setShowPrivateKeyModal] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
   const [liveFeeData, setLiveFeeData] = useState<LiveFeeData | null>(null);
@@ -45,6 +43,9 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   const chainInfo = getChainInfo(selectedChain);
   const gasEstimateQuery = useGasEstimate(selectedChain);
   const chainGasEstimate = gasEstimateQuery.data;
+
+  // Check if user has a mnemonic stored (for deriving private key)
+  const hasMnemonicStored = !!localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
 
   // Use native token price for fee USD (fees are paid in the network native asset)
   const nativePriceSymbol = selectedChain === 'polygon' ? 'MATIC' : chainInfo.symbol;
@@ -62,10 +63,8 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   // Combined signing availability check
   const isSigningAvailable = isSigningSupportedForChain(selectedChain);
 
-  // Check if there's a stored key for the connected address
+  // Check if there's a stored mnemonic for signing
   const storedKeyAddress = walletAddress || wcAddress;
-  const hasStoredKeyForAddress = storedKeyAddress ? hasStoredKey(storedKeyAddress, selectedChain) : false;
-  const storedKeyInfo = storedKeyAddress ? getStoredKeyInfo(storedKeyAddress, selectedChain) : null;
 
   // Handle fee data updates from FeeEstimator
   const handleFeeDataUpdate = useCallback((feeData: LiveFeeData | null) => {
@@ -211,13 +210,17 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   const handleConfirmClick = () => {
     if (isWalletConnectConnected && isEvmChain(selectedChain)) {
       handleWalletConnectSign();
-    } else if (hasStoredKeyForAddress && isSigningAvailable) {
-      // Use stored key - prompt for PIN
+    } else if (hasMnemonicStored && isSigningAvailable) {
+      // Use stored mnemonic - prompt for PIN
       setPinError(null);
       setShowPinModal(true);
     } else if (isSigningAvailable) {
-      // No stored key - prompt for private key
-      setShowPrivateKeyModal(true);
+      // No stored mnemonic - show error (shouldn't happen normally)
+      toast({
+        title: "Wallet Not Found",
+        description: "Please re-import your wallet to sign transactions.",
+        variant: "destructive",
+      });
     } else {
       handleSimulatedTransaction();
     }
@@ -233,25 +236,43 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   };
 
   const handlePinSubmit = async (pin: string) => {
-    if (!storedKeyAddress) return;
-    
     setIsProcessing(true);
     setPinError(null);
     
     try {
-      const privateKey = await retrievePrivateKey(storedKeyAddress, selectedChain, pin);
-      
-      if (!privateKey) {
-        setPinError("No stored key found");
+      // Get stored encrypted seed phrase
+      const encryptedSeedJson = localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
+      if (!encryptedSeedJson) {
+        setPinError("No wallet found. Please re-import your wallet.");
         setIsProcessing(false);
         return;
       }
+
+      // Decrypt the seed phrase
+      const encryptedData: EncryptedData = JSON.parse(encryptedSeedJson);
+      let mnemonic: string;
+      try {
+        mnemonic = await decryptPrivateKey(encryptedData, pin);
+      } catch (decryptError) {
+        setPinError("Incorrect PIN. Please try again.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Get account index (default 0)
+      const accountIndex = parseInt(localStorage.getItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX) || '0', 10);
+      
+      // Get Solana path style if applicable
+      const solanaPathStyle = (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) || 'phantom';
+
+      // Derive private key for the selected chain
+      const privateKey = derivePrivateKeyForChain(mnemonic, selectedChain, accountIndex, solanaPathStyle);
 
       let signedTx: string;
 
       if (isSolanaChain(selectedChain)) {
         // Solana transaction signing
-        const solanaAddress = localStorage.getItem('timetrade_wallet_address_solana') || '';
+        const solanaAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || '';
         
         const result = await signSolanaTransaction(privateKey, {
           to: transaction.recipient,
@@ -262,7 +283,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         signedTx = result.signedTx;
       } else if (isTronChain(selectedChain)) {
         // Tron transaction signing
-        const tronAddress = localStorage.getItem('timetrade_wallet_address_tron') || '';
+        const tronAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || '';
         const isToken = transaction.token.symbol !== 'TRX';
         
         const result = await signTronTransaction(privateKey, {
@@ -300,103 +321,11 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         description: "Your transaction has been signed and is being broadcast.",
       });
     } catch (error) {
-      console.error('Signing with stored key failed:', error);
-      if (error instanceof Error && error.message === 'Invalid PIN') {
-        setPinError("Incorrect PIN. Please try again.");
-      } else {
-        setPinError(error instanceof Error ? error.message : "Failed to sign transaction");
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSignAndSend = async (privateKey: string, saveKey: boolean) => {
-    setIsProcessing(true);
-    try {
-      let signedTx: string;
-
-      if (isSolanaChain(selectedChain)) {
-        // Solana transaction signing
-        const solanaAddress = localStorage.getItem('timetrade_wallet_address_solana') || '';
-        
-        const result = await signSolanaTransaction(privateKey, {
-          to: transaction.recipient,
-          amount: transaction.amount,
-          from: solanaAddress,
-          priorityFee: gasSpeed === 'fast' ? 100000 : gasSpeed === 'instant' ? 500000 : undefined,
-        });
-        signedTx = result.signedTx;
-      } else if (isTronChain(selectedChain)) {
-        // Tron transaction signing
-        const tronAddress = localStorage.getItem('timetrade_wallet_address_tron') || '';
-        const isToken = transaction.token.symbol !== 'TRX';
-        
-        const result = await signTronTransaction(privateKey, {
-          to: transaction.recipient,
-          amount: transaction.amount,
-          from: tronAddress,
-          isToken,
-          contractAddress: isToken ? (transaction.token as any).contractAddress : undefined,
-          decimals: transaction.token.symbol === 'USDT' ? 6 : 6,
-        });
-        signedTx = result.signedTx;
-      } else {
-        // EVM transaction signing
-        const txParams = {
-          to: transaction.recipient,
-          value: transaction.amount,
-          gasLimit: BigInt(transaction.gasEstimate),
-          ...(feeDetails.isEIP1559 ? {
-            maxFeePerGas: feeDetails.maxFee.toFixed(9),
-            maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
-          } : {
-            gasPrice: feeDetails.gasPriceGwei,
-          }),
-        };
-        
-        const result = await signEvmTransaction(privateKey, txParams);
-        signedTx = result.signedTx;
-      }
-
-      // Save the key if requested
-      if (saveKey && storedKeyAddress) {
-        const storedPin = localStorage.getItem("timetrade_pin");
-        if (storedPin) {
-          try {
-            await storePrivateKey(privateKey, storedPin, selectedChain);
-            toast({
-              title: "Key Saved",
-              description: "Your key has been encrypted and saved for faster transactions.",
-            });
-          } catch (saveError) {
-            console.error('Failed to save key:', saveError);
-          }
-        }
-      }
-
-      setShowPrivateKeyModal(false);
-      await onConfirm(signedTx);
-
-      toast({
-        title: "Transaction Signed",
-        description: "Your transaction has been signed and is being broadcast.",
-      });
-    } catch (error) {
       console.error('Signing failed:', error);
-      toast({
-        title: "Signing Failed",
-        description: error instanceof Error ? error.message : "Failed to sign transaction",
-        variant: "destructive",
-      });
+      setPinError(error instanceof Error ? error.message : "Failed to sign transaction");
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleUsePrivateKeyInstead = () => {
-    setShowPinModal(false);
-    setShowPrivateKeyModal(true);
   };
 
   // Get the correct fee symbol based on chain
@@ -477,14 +406,14 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         </div>
       </div>
 
-      {/* Stored Key Indicator */}
-      {hasStoredKeyForAddress && isSigningAvailable && !isWalletConnectConnected && (
+      {/* Wallet Ready Indicator */}
+      {hasMnemonicStored && isSigningAvailable && !isWalletConnectConnected && (
         <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
           <Key className="w-5 h-5 text-green-500" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-green-500">Saved Key Available</p>
+            <p className="text-sm font-medium text-green-500">Wallet Ready</p>
             <p className="text-xs text-muted-foreground">
-              Enter your PIN to sign quickly
+              Enter your PIN to sign this transaction
             </p>
           </div>
         </div>
@@ -521,7 +450,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       </div>
 
       {/* WalletConnect Status */}
-      {isEvmChain(selectedChain) && !hasStoredKeyForAddress && (
+      {isEvmChain(selectedChain) && !hasMnemonicStored && (
         <div className="mt-4">
           {isWalletConnectConnected ? (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
@@ -567,7 +496,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
               <Wallet className="w-5 h-5 mr-2" />
               Sign with Wallet
             </>
-          ) : hasStoredKeyForAddress && isSigningAvailable ? (
+          ) : hasMnemonicStored && isSigningAvailable ? (
             <>
               <Key className="w-5 h-5 mr-2" />
               Sign with PIN
@@ -590,19 +519,9 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         open={showPinModal}
         onOpenChange={setShowPinModal}
         onSubmit={handlePinSubmit}
-        onUsePrivateKey={handleUsePrivateKeyInstead}
         isLoading={isProcessing}
         walletAddress={storedKeyAddress}
         error={pinError}
-      />
-
-      {/* Private Key Modal */}
-      <PrivateKeyModal
-        open={showPrivateKeyModal}
-        onOpenChange={setShowPrivateKeyModal}
-        onSubmit={handleSignAndSend}
-        isLoading={isProcessing}
-        hasStoredKey={hasStoredKeyForAddress}
       />
     </div>
   );
