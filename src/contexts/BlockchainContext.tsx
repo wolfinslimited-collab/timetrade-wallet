@@ -166,135 +166,23 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       const phrase = words.join(' ').toLowerCase().trim().replace(/\s+/g, ' ');
 
       // Get stored settings
-      let solanaPathStyle = localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath | null;
+      const solanaPathStyle = (localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath) || 'legacy';
       const storedIndex = localStorage.getItem('timetrade_active_account_index');
       const storedChain = (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
       const index = storedIndex ? parseInt(storedIndex, 10) : 0;
 
-      // IMMEDIATELY derive and store addresses for all chains before any balance checking
-      const initialPath = solanaPathStyle || 'legacy';
-      const initialAccounts = deriveMultipleAccounts(words, 5, initialPath);
-      const initialEvm = initialAccounts.evm[index] || initialAccounts.evm[0];
-      const initialSolana = initialAccounts.solana[index] || initialAccounts.solana[0];
-      const initialTron = initialAccounts.tron[index] || initialAccounts.tron[0];
-
-      if (initialEvm) localStorage.setItem('timetrade_wallet_address_evm', initialEvm.address);
-      if (initialSolana) localStorage.setItem('timetrade_wallet_address_solana', initialSolana.address);
-      if (initialTron) localStorage.setItem('timetrade_wallet_address_tron', initialTron.address);
-
-      if (runId !== derivationRunRef.current) return;
-      setAllDerivedAccounts(initialAccounts);
-
-      const hasSolanaBalance = async (address: string): Promise<boolean> => {
-        try {
-          const { data, error } = await supabase.functions.invoke('blockchain', {
-            body: {
-              action: 'getBalance',
-              chain: 'solana',
-              address,
-              testnet: false,
-            },
-          });
-
-          if (error) return false;
-          const nativeBalance = data?.data?.native?.balance || '0';
-          const tokens = data?.data?.tokens || [];
-          const nativeBal = parseFloat(nativeBalance);
-          const hasNativeBalance = nativeBalance !== '0' && !isNaN(nativeBal) && nativeBal > 0;
-          const hasTokens = Array.isArray(tokens) && tokens.some((t: { balance?: string }) => {
-            const bal = parseFloat(t?.balance || '0');
-            return !isNaN(bal) && bal > 0;
-          });
-          return hasNativeBalance || hasTokens;
-        } catch {
-          return false;
-        }
-      };
-
-      const SOLANA_SCAN_INDICES = [0, 1, 2, 3, 4];
-      const SOLANA_PATH_STYLES: SolanaDerivationPath[] = ['phantom', 'solflare', 'legacy'];
-
-      const findFirstBalanceForSpecificPath = async (
-        path: SolanaDerivationPath
-      ): Promise<{ index: number; address: string } | null> => {
-        const checks = await Promise.all(
-          SOLANA_SCAN_INDICES.map(async (i) => {
-            const address = deriveSolanaAddress(phrase, i, path);
-            const ok = await hasSolanaBalance(address);
-            return { index: i, address, ok };
-          })
-        );
-        const hit = checks.find((c) => c.ok);
-        return hit ? { index: hit.index, address: hit.address } : null;
-      };
-
-      const autoDetectSolanaPathAndIndex = async (): Promise<
-        { path: SolanaDerivationPath; index: number; address: string } | null
-      > => {
-        for (const i of SOLANA_SCAN_INDICES) {
-          const allPaths = deriveSolanaAddressesAllPaths(phrase, i);
-          const addressChecks = SOLANA_PATH_STYLES
-            .map((path) => {
-              const info = allPaths.find((p) => p.path === path);
-              return info ? { path, address: info.address } : null;
-            })
-            .filter(Boolean) as { path: SolanaDerivationPath; address: string }[];
-
-          const balanceResults = await Promise.all(
-            addressChecks.map(async ({ path, address }) => ({
-              path,
-              address,
-              hasBalance: await hasSolanaBalance(address),
-            }))
-          );
-
-          const hit = balanceResults.find((r) => r.hasBalance);
-          if (hit) return { path: hit.path, index: i, address: hit.address };
-        }
-        return null;
-      };
-
-      let detectedSolanaAddress: string | null = null;
-      let detectedSolanaIndex: number | null = null;
-
-      if (solanaPathStyle) {
-        const hit = await findFirstBalanceForSpecificPath(solanaPathStyle);
-        if (hit) {
-          detectedSolanaAddress = hit.address;
-          detectedSolanaIndex = hit.index;
-        } else {
-          solanaPathStyle = null;
-        }
-      }
-
-      if (!solanaPathStyle) {
-        const detected = await autoDetectSolanaPathAndIndex();
-        solanaPathStyle = detected?.path ?? 'legacy';
-        detectedSolanaAddress = detected?.address ?? null;
-        detectedSolanaIndex = detected?.index ?? null;
-        localStorage.setItem('timetrade_solana_derivation_path', solanaPathStyle);
-      }
-
-      if (detectedSolanaAddress && typeof detectedSolanaIndex === 'number') {
-        localStorage.setItem('timetrade_wallet_address_solana', detectedSolanaAddress);
-        localStorage.setItem('timetrade_solana_balance_account_index', String(detectedSolanaIndex));
-      }
-
+      // Derive addresses using stored path (no expensive auto-detection on every unlock)
       const accounts = deriveMultipleAccounts(words, 5, solanaPathStyle);
-      if (runId !== derivationRunRef.current) return;
-      setAllDerivedAccounts(accounts);
-
       const activeEvm = accounts.evm[index] || accounts.evm[0];
       const activeSolana = accounts.solana[index] || accounts.solana[0];
       const activeTron = accounts.tron[index] || accounts.tron[0];
 
       if (activeEvm) localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
-      if (detectedSolanaAddress) {
-        localStorage.setItem('timetrade_wallet_address_solana', detectedSolanaAddress);
-      } else if (activeSolana) {
-        localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
-      }
+      if (activeSolana) localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
       if (activeTron) localStorage.setItem('timetrade_wallet_address_tron', activeTron.address);
+
+      if (runId !== derivationRunRef.current) return;
+      setAllDerivedAccounts(accounts);
 
       const chainAccounts = storedChain === 'solana' ? accounts.solana : accounts.evm;
       const activeAccount = chainAccounts[index] || chainAccounts[0];
