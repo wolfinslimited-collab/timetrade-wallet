@@ -68,7 +68,7 @@ export const WalletHeader = ({
             )} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">HELLO, {walletName.toUpperCase()}</p>
+            <p className="text-xs text-muted-foreground tracking-widest uppercase">{walletName.toUpperCase()}</p>
             <div className="flex items-center gap-2 mt-1">
               <div className="insurance-badge">
                 <Shield className="w-3 h-3 text-primary" />
