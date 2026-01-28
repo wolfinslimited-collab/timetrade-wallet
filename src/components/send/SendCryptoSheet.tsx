@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { NetworkAssetSelector, AvailableAsset } from "./NetworkAssetSelector";
 import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
@@ -54,6 +55,7 @@ interface SendCryptoSheetProps {
 export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCryptoSheetProps) => {
   const broadcastMutation = useBroadcastTransaction();
   const { addresses } = useWalletAddresses(open);
+  const { refreshAll } = useBlockchainContext();
   
   const [step, setStep] = useState<SendStep>("select");
   const [selectedChain, setSelectedChain] = useState<Chain>("ethereum");
@@ -236,6 +238,10 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
       }
       
       setStep("success");
+      
+      // Refresh blockchain data after successful transaction
+      console.log('%c[SEND CRYPTO] 🔄 Refreshing blockchain data after successful transaction', 'color: #10b981; font-weight: bold;');
+      refreshAll();
     } catch (error) {
       console.error("Transaction broadcast failed:", error);
       toast({
@@ -262,8 +268,9 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
     }
   };
 
-  // Hide header and close button for confirm step (it has its own header)
-  const showHeader = step !== "confirm";
+  // Hide header and close button for confirm and success steps
+  const showHeader = step !== "confirm" && step !== "success";
+  const hideSheetClose = step === "confirm" || step === "success";
   const canGoBack = step === "address" || step === "amount";
 
   const handleSheetOpenChange = (nextOpen: boolean) => {
@@ -280,7 +287,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
       <SheetContent 
         side="bottom" 
         className="h-[90vh] rounded-t-3xl bg-background border-border p-0 flex flex-col"
-        hideCloseButton={step === "confirm"}
+        hideCloseButton={hideSheetClose}
       >
         {showHeader && (
           <SheetHeader className="px-6 pt-6 pb-2 relative">
