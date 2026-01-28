@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Chain, SUPPORTED_CHAINS, getChainInfo } from "@/hooks/useBlockchain";
@@ -154,14 +154,6 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
 
   return (
     <div className="flex flex-col h-full px-6 pb-8">
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-      >
-        <X className="w-5 h-5" />
-      </button>
-
       {/* Network Selector */}
       <div className="mt-4">
         <label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">
