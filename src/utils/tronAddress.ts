@@ -66,3 +66,33 @@ export function evmToTronAddress(evmAddress: string): string | null {
 
   return encodeBase58(fullBytes);
 }
+
+/**
+ * Convert a Tron hex address (21-byte payload, typically starting with "41")
+ * to Tron Base58Check (T...) address.
+ */
+export function tronHexToBase58(tronHexAddress: string | null | undefined): string | null {
+  const raw = (tronHexAddress ?? '').trim().toLowerCase();
+  if (!raw) return null;
+
+  const hex = raw.startsWith('0x') ? raw.slice(2) : raw;
+  // Tron hex payload must be 21 bytes (42 hex chars) and start with 0x41
+  if (!/^41[a-f0-9]{40}$/.test(hex)) return null;
+
+  const payload = new Uint8Array(21);
+  for (let i = 0; i < 21; i++) {
+    payload[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+
+  const checksumHash1 = sha256(payload);
+  const checksumHash2 = sha256(checksumHash1);
+  const checksumHex = checksumHash2.slice(2, 10); // first 4 bytes
+
+  const fullHex = hex + checksumHex; // 25 bytes
+  const fullBytes = new Uint8Array(25);
+  for (let i = 0; i < 25; i++) {
+    fullBytes[i] = parseInt(fullHex.slice(i * 2, i * 2 + 2), 16);
+  }
+
+  return encodeBase58(fullBytes);
+}

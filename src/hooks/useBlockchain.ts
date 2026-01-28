@@ -111,6 +111,10 @@ export interface Transaction {
   timestamp: number;
   status: 'confirmed' | 'pending' | 'failed';
   blockNumber?: number;
+  // Tron-specific fields (optional)
+  contractType?: string;
+  contractAddress?: string;
+  contractAddressBase58?: string;
   // Solana-specific fields
   fee?: number;
   parsedInstructions?: ParsedInstruction[];
