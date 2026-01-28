@@ -97,10 +97,11 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
         return {
           symbol: asset.symbol,
           name: asset.name,
-          balance: String(Math.round(asset.amount * 1e18)), // Convert back to raw balance format
-          decimals: 18,
+          balance: asset.balance,
+          decimals: asset.decimals,
           chain: asset.chain, // Use chain directly from unified asset
-          isNative: ['ETH', 'SOL', 'TRX', 'POL', 'MATIC', 'BTC'].includes(asset.symbol),
+          isNative: asset.isNative,
+          contractAddress: asset.contractAddress,
           numericBalance: asset.amount,
           price: asset.price,
           usdValue: asset.valueUsd,
