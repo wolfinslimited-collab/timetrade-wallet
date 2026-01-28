@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Fingerprint, Wallet, AlertCircle } from "lucide-react";
+import { Fingerprint, AlertCircle, Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -106,39 +106,35 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto p-6">
-      {/* Status bar simulation */}
-      <div className="flex items-center justify-between px-0 py-2 text-xs text-muted-foreground">
-        <span className="font-medium">9:41</span>
-        <div className="flex items-center gap-1">
-          <div className="flex gap-0.5">
-            <div className="w-1 h-2 bg-foreground rounded-sm" />
-            <div className="w-1 h-2.5 bg-foreground rounded-sm" />
-            <div className="w-1 h-3 bg-foreground rounded-sm" />
-            <div className="w-1 h-3.5 bg-foreground rounded-sm" />
-          </div>
-          <span className="ml-1">📶</span>
-          <span>🔋</span>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="flex-1 flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        {/* App Logo */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="relative mb-8"
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="mb-10"
         >
-          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center glow-green">
-            <Wallet className="w-12 h-12 text-primary" />
-          </div>
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center">
-            <Lock className="w-4 h-4 text-muted-foreground" />
+          <div className="w-28 h-28 rounded-3xl overflow-hidden shadow-2xl ring-1 ring-border/50">
+            <img 
+              src="/app-logo.png" 
+              alt="Timetrade" 
+              className="w-full h-full object-cover"
+            />
           </div>
         </motion.div>
 
-        <h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
-        <p className="text-muted-foreground text-sm mb-8">Enter your PIN to unlock</p>
+        {/* Title */}
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="text-center mb-10"
+        >
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome Back</h1>
+          <p className="text-muted-foreground text-sm">Enter your PIN to unlock</p>
+        </motion.div>
 
         {/* Lock Timer */}
         <AnimatePresence>
@@ -147,10 +143,10 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive/10 border border-destructive/20 mb-6"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive/10 border border-destructive/20 mb-6"
             >
               <AlertCircle className="w-4 h-4 text-destructive" />
-              <span className="text-sm text-destructive">
+              <span className="text-sm text-destructive font-medium">
                 Try again in {lockTimer}s
               </span>
             </motion.div>
@@ -158,61 +154,74 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         </AnimatePresence>
 
         {/* PIN Dots */}
-        <div className="flex gap-4 mb-8">
+        <motion.div 
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="flex gap-3 mb-10"
+        >
           {[0, 1, 2, 3, 4, 5].map((index) => (
             <motion.div
               key={index}
               animate={showError ? { x: [-4, 4, -4, 4, 0] } : {}}
               transition={{ duration: 0.3 }}
               className={cn(
-                "w-4 h-4 rounded-full transition-all duration-200",
+                "w-3.5 h-3.5 rounded-full transition-all duration-200",
                 index < pin.length
                   ? showError 
-                    ? "bg-destructive" 
-                    : "bg-primary scale-110"
-                  : "bg-muted border border-border"
+                    ? "bg-destructive scale-125" 
+                    : "bg-primary scale-125"
+                  : "bg-muted-foreground/20"
               )}
             />
           ))}
-        </div>
+        </motion.div>
 
         {/* Biometric Button */}
         {biometricAvailable && !isLocked && (
-          <button
+          <motion.button
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
             onClick={handleBiometric}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-card border border-border hover:bg-secondary transition-colors mb-8"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-secondary border border-border hover:bg-secondary/80 transition-colors mb-8"
           >
             <Fingerprint className="w-5 h-5 text-primary" />
             <span className="text-sm font-medium">Use Biometrics</span>
-          </button>
+          </motion.button>
         )}
 
         {/* Keypad */}
-        <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="grid grid-cols-3 gap-4 w-full max-w-[280px]"
+        >
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <button
               key={digit}
               onClick={() => handleKeyPress(String(digit))}
               disabled={isLocked}
               className={cn(
-                "h-16 rounded-2xl bg-card border border-border text-2xl font-semibold transition-all",
+                "h-[72px] rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 text-2xl font-medium transition-all",
                 isLocked 
-                  ? "opacity-50 cursor-not-allowed" 
-                  : "hover:bg-secondary active:scale-95"
+                  ? "opacity-40 cursor-not-allowed" 
+                  : "hover:bg-secondary active:scale-95 active:bg-secondary/80"
               )}
             >
               {digit}
             </button>
           ))}
-          <div className="h-16" /> {/* Empty space */}
+          <div className="h-[72px]" /> {/* Empty space */}
           <button
             onClick={() => handleKeyPress("0")}
             disabled={isLocked}
             className={cn(
-              "h-16 rounded-2xl bg-card border border-border text-2xl font-semibold transition-all",
+              "h-[72px] rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 text-2xl font-medium transition-all",
               isLocked 
-                ? "opacity-50 cursor-not-allowed" 
-                : "hover:bg-secondary active:scale-95"
+                ? "opacity-40 cursor-not-allowed" 
+                : "hover:bg-secondary active:scale-95 active:bg-secondary/80"
             )}
           >
             0
@@ -221,21 +230,23 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             onClick={handleDelete}
             disabled={isLocked}
             className={cn(
-              "h-16 rounded-2xl bg-card border border-border text-sm font-medium text-muted-foreground transition-all",
+              "h-[72px] rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 flex items-center justify-center transition-all",
               isLocked 
-                ? "opacity-50 cursor-not-allowed" 
-                : "hover:bg-secondary"
+                ? "opacity-40 cursor-not-allowed" 
+                : "hover:bg-secondary active:scale-95"
             )}
           >
-            Delete
+            <Delete className="w-6 h-6 text-muted-foreground" />
           </button>
-        </div>
+        </motion.div>
       </div>
 
       {/* Footer */}
-      <p className="text-xs text-muted-foreground text-center pt-6">
-        Forgot PIN? Reset wallet from settings
-      </p>
+      <div className="pb-8 pt-4 px-6">
+        <p className="text-xs text-muted-foreground/60 text-center">
+          Forgot PIN? Reset wallet from settings
+        </p>
+      </div>
     </div>
   );
 };
