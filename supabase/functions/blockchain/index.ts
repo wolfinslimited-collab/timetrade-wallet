@@ -885,36 +885,83 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
     
     const transactions = Array.isArray(txData) ? txData : (txData.transactions || []);
     
-    return {
-      chain,
-      transactions: transactions.map((tx: {
-        hash?: string;
-        txId?: string;
-        signature?: string;
-        txID?: string;
-        from?: string;
-        to?: string;
-        inputs?: Array<{ address?: string }>;
-        outputs?: Array<{ address?: string }>;
-        ownerAddress?: string;
-        toAddress?: string;
-        value?: string;
-        amount?: string;
-        timestamp?: number;
-        blockTime?: number;
-        block_timestamp?: number;
-        status?: string;
-        blockNumber?: number;
-        blockHeight?: number;
-      }) => ({
+    // Transform transactions with chain-specific parsing
+    const parsedTransactions = transactions.map((tx: Record<string, unknown>) => {
+      // Handle Tron's nested structure
+      if (chain === 'tron' && tx.rawData) {
+        const rawData = tx.rawData as { 
+          contract?: Array<{ 
+            parameter?: { 
+              value?: { 
+                amount?: number; 
+                ownerAddressBase58?: string;
+                toAddressBase58?: string;
+                owner_address?: string;
+                to_address?: string;
+                data?: string;
+                contract_address?: string;
+              } 
+            };
+            type?: string;
+          }>;
+          timestamp?: number;
+        };
+        const contract = rawData.contract?.[0];
+        const paramValue = contract?.parameter?.value;
+        const contractType = contract?.type;
+        
+        // Extract value - for TRC-20 (TriggerSmartContract), decode from data field
+        let value = '0';
+        let to = paramValue?.toAddressBase58 || paramValue?.to_address;
+        
+        if (contractType === 'TriggerSmartContract' && paramValue?.data) {
+          // TRC-20 transfer: method signature (8 chars) + to address (64 chars) + amount (64 chars)
+          const data = paramValue.data;
+          if (data.startsWith('a9059cbb')) { // transfer(address,uint256)
+            // Extract amount from last 64 chars (hex)
+            const amountHex = data.slice(-64);
+            try {
+              value = BigInt('0x' + amountHex).toString();
+            } catch {
+              value = '0';
+            }
+            // Extract to address from middle 64 chars
+            const toAddressHex = data.slice(8, 72).slice(-40);
+            // Note: This is hex address, the Base58 version may be in paramValue
+          }
+        } else if (contractType === 'TransferContract') {
+          // Native TRX transfer
+          value = String(paramValue?.amount || 0);
+        }
+        
+        return {
+          hash: tx.txID as string,
+          from: paramValue?.ownerAddressBase58 || paramValue?.owner_address,
+          to: to,
+          value: value,
+          timestamp: rawData.timestamp ? Math.floor((rawData.timestamp as number) / 1000) : Math.floor(Date.now() / 1000),
+          status: (tx.ret as Array<{ contractRet?: string }>)?.[0]?.contractRet === 'SUCCESS' ? 'confirmed' : 'failed',
+          blockNumber: tx.blockNumber as number,
+          contractType: contractType,
+          contractAddress: paramValue?.contract_address,
+        };
+      }
+      
+      // Standard EVM/Bitcoin transaction format
+      return {
         hash: tx.hash || tx.txId || tx.signature || tx.txID,
-        from: tx.from || tx.ownerAddress || (tx.inputs && tx.inputs[0]?.address),
-        to: tx.to || tx.toAddress || (tx.outputs && tx.outputs[0]?.address),
+        from: tx.from || tx.ownerAddress || ((tx.inputs as Array<{ address?: string }>)?.[0]?.address),
+        to: tx.to || tx.toAddress || ((tx.outputs as Array<{ address?: string }>)?.[0]?.address),
         value: tx.value || tx.amount,
         timestamp: tx.timestamp || tx.blockTime || tx.block_timestamp,
         status: tx.status || 'confirmed',
         blockNumber: tx.blockNumber || tx.blockHeight,
-      })),
+      };
+    });
+    
+    return {
+      chain,
+      transactions: parsedTransactions,
       explorerUrl: config.explorerUrl(testnet),
     };
   } catch (error) {
