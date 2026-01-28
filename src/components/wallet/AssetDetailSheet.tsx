@@ -208,9 +208,9 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
             ) : (
               <div className="space-y-2">
                 {filteredTx.map((tx, index) => {
-                  const isSend = tx.from.toLowerCase() === address?.toLowerCase();
+                  const isSend = tx.from?.toLowerCase() === address?.toLowerCase();
                   const Icon = isSend ? ArrowUpRight : ArrowDownLeft;
-                  const formattedValue = parseFloat(tx.value) / Math.pow(10, asset.decimals);
+                  const formattedValue = parseFloat(tx.value || '0') / Math.pow(10, asset.decimals);
                   
                   return (
                     <a
