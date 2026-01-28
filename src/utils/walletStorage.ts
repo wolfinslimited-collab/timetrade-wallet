@@ -20,6 +20,7 @@ export const WALLET_STORAGE_KEYS = {
   
   // Account management
   USER_ACCOUNTS: 'timetrade_user_accounts',
+  ACTIVE_ACCOUNT_ID: 'timetrade_active_account_id',
   ACTIVE_ACCOUNT_INDEX: 'timetrade_active_account_index',
   WALLET_NAME: 'timetrade_wallet_name',
   
