@@ -494,7 +494,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
       {/* Transaction List */}
       {(!isConnected || (!unifiedTx.isLoading && !unifiedTx.error)) && (
-        <div className="flex-1 px-4 pb-8">
+        <div className="flex-1 px-4 pb-24">
           {Object.keys(groupedTransactions).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Filter className="w-12 h-12 text-muted-foreground mb-4" />

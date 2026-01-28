@@ -773,6 +773,29 @@ async function getSolanaTransactions(address: string, testnet: boolean = false):
         const meta = tx.meta;
         const message = tx.transaction?.message;
         const accountKeys = message?.accountKeys || [];
+
+        // Build a lookup for SPL token accounts so we can resolve mint/decimals/owners
+        // for Token Program `transfer` instructions (which don't include mint/decimals).
+        const tokenAccountInfo = new Map<string, { mint?: string; decimals?: number; owner?: string }>();
+        const tokenBalanceEntries = [
+          ...((meta?.preTokenBalances ?? []) as any[]),
+          ...((meta?.postTokenBalances ?? []) as any[]),
+        ];
+        for (const tb of tokenBalanceEntries) {
+          const idx = tb?.accountIndex;
+          const keyObj = typeof idx === 'number' ? accountKeys[idx] : undefined;
+          const tokenAccount = keyObj?.pubkey || keyObj;
+          if (!tokenAccount) continue;
+
+          const existing = tokenAccountInfo.get(tokenAccount) || {};
+          const decimals = tb?.uiTokenAmount?.decimals;
+
+          tokenAccountInfo.set(tokenAccount, {
+            mint: tb?.mint ?? existing.mint,
+            decimals: typeof decimals === 'number' ? decimals : existing.decimals,
+            owner: tb?.owner ?? existing.owner,
+          });
+        }
         
         const parsedInstructions: ParsedInstruction[] = [];
         const tokenTransfers: SolanaTokenTransfer[] = [];
@@ -806,35 +829,76 @@ async function getSolanaTransactions(address: string, testnet: boolean = false):
             if (parsedType === 'transfer') {
               const source = info.source as string;
               const destination = info.destination as string;
-              const lamports = info.lamports as number;
-              
-              if (!from) from = source;
-              if (!to) to = destination;
-              if (!value) value = lamports?.toString();
-              
-              tokenTransfers.push({
-                source,
-                destination,
-                amount: lamports?.toString() || '0',
-                decimals: 9,
-                symbol: 'SOL',
-              });
+
+              // System Program transfer = native SOL
+              if (programId === '11111111111111111111111111111111') {
+                const lamports = info.lamports as number;
+
+                if (!from) from = source;
+                if (!to) to = destination;
+                if (!value) value = lamports?.toString();
+
+                tokenTransfers.push({
+                  source,
+                  destination,
+                  amount: lamports?.toString() || '0',
+                  decimals: 9,
+                  symbol: 'SOL',
+                });
+              }
+
+              // Token Program transfer = SPL token (amount is base units)
+              if (
+                programId === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' ||
+                programId === 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
+              ) {
+                const amount = (info.amount as string) || '0';
+                const srcInfo = tokenAccountInfo.get(source) || {};
+                const dstInfo = tokenAccountInfo.get(destination) || {};
+                const mint = srcInfo.mint || dstInfo.mint;
+                const decimals = srcInfo.decimals ?? dstInfo.decimals;
+                const known = mint ? KNOWN_SPL_TOKENS[mint] : undefined;
+                const symbol = known?.symbol || 'SPL';
+
+                const sourceOwner = srcInfo.owner || source;
+                const destinationOwner = dstInfo.owner || destination;
+
+                if (!from) from = sourceOwner;
+                if (!to) to = destinationOwner;
+                if (!value) value = amount;
+
+                tokenTransfers.push({
+                  source: sourceOwner,
+                  destination: destinationOwner,
+                  amount,
+                  decimals,
+                  mint,
+                  symbol,
+                });
+              }
             } else if (parsedType === 'transferChecked') {
               const source = info.source as string;
               const destination = info.destination as string;
               const tokenAmount = info.tokenAmount as { amount?: string; decimals?: number };
               const mint = info.mint as string;
-              
-              if (!from) from = source;
-              if (!to) to = destination;
+
+              const srcInfo = tokenAccountInfo.get(source) || {};
+              const dstInfo = tokenAccountInfo.get(destination) || {};
+              const sourceOwner = srcInfo.owner || source;
+              const destinationOwner = dstInfo.owner || destination;
+              const known = mint ? KNOWN_SPL_TOKENS[mint] : undefined;
+
+              if (!from) from = sourceOwner;
+              if (!to) to = destinationOwner;
               if (!value) value = tokenAmount?.amount;
-              
+
               tokenTransfers.push({
-                source,
-                destination,
+                source: sourceOwner,
+                destination: destinationOwner,
                 amount: tokenAmount?.amount || '0',
-                decimals: tokenAmount?.decimals,
+                decimals: tokenAmount?.decimals ?? known?.decimals,
                 mint,
+                symbol: known?.symbol || 'SPL',
               });
             } else if (parsedType === 'createAccount' || parsedType === 'createAccountWithSeed') {
               parsedInstructions.push({
