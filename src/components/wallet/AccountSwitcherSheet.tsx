@@ -126,11 +126,13 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       localStorage.setItem("timetrade_wallet_name", account.name);
     }
     
-    // Set the active derivation index (for mnemonic-based accounts, this maps to derivation path index)
+    // Set the active derivation index - this will update addresses and dispatch events
     setActiveAccountIndex(accountIndex);
     
-    // Refresh all blockchain data for the new account
-    setTimeout(() => refreshAll(), 100);
+    // Extra refresh after a delay to ensure data is fetched with new addresses
+    setTimeout(() => {
+      refreshAll();
+    }, 200);
     
     toast.success(`Switched to ${name}`);
     onOpenChange(false);

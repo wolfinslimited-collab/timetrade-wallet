@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { getPriceForSymbol, useCryptoPrices } from "@/hooks/useCryptoPrices";
 import { Chain, useWalletBalance, WalletBalance } from "@/hooks/useBlockchain";
 import { isEvmAddress, isTronAddress } from "@/utils/tronAddress";
@@ -39,10 +40,12 @@ function toDecimalAmount(balance: string, decimals: number) {
 const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
 
 export function useUnifiedPortfolio(enabled: boolean) {
+  const queryClient = useQueryClient();
+  
   // Use state to reactively track addresses
   const [addresses, setAddresses] = React.useState(() => getAddressesFromStorage());
   
-  // Listen for account switch events instead of polling every second
+  // Listen for account switch events and refetch data
   React.useEffect(() => {
     if (!enabled) return;
     
@@ -51,7 +54,12 @@ export function useUnifiedPortfolio(enabled: boolean) {
     
     // Listen for custom events when accounts switch
     const handleAccountSwitch = () => {
-      setAddresses(getAddressesFromStorage());
+      const newAddresses = getAddressesFromStorage();
+      setAddresses(newAddresses);
+      
+      // Invalidate ALL balance queries to force refetch with new addresses
+      queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
     };
     
     window.addEventListener('timetrade:account-switched', handleAccountSwitch);
@@ -61,7 +69,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
       window.removeEventListener('timetrade:account-switched', handleAccountSwitch);
       window.removeEventListener('timetrade:unlocked', handleAccountSwitch);
     };
-  }, [enabled]);
+  }, [enabled, queryClient]);
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;
 
