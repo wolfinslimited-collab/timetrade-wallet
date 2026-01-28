@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import { NetworkAssetSelector, AvailableAsset } from "./NetworkAssetSelector";
 import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
@@ -263,17 +264,39 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
 
   // Hide header and close button for confirm step (it has its own header)
   const showHeader = step !== "confirm";
+  const canGoBack = step === "address" || step === "amount";
+
+  const handleSheetOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      handleClose();
+      return;
+    }
+    // Controlled open: forward the intent to parent
+    onOpenChange(true);
+  };
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent 
         side="bottom" 
         className="h-[90vh] rounded-t-3xl bg-background border-border p-0 flex flex-col"
         hideCloseButton={step === "confirm"}
       >
         {showHeader && (
-          <SheetHeader className="px-6 pt-6 pb-2">
-            <SheetTitle className="text-xl font-bold">{getStepTitle()}</SheetTitle>
+          <SheetHeader className="px-6 pt-6 pb-2 relative">
+            <div className="flex items-center justify-center">
+              {canGoBack && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="absolute left-6 top-1/2 -translate-y-1/2 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+                  aria-label="Back"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              <SheetTitle className="text-xl font-bold text-center">{getStepTitle()}</SheetTitle>
+            </div>
           </SheetHeader>
         )}
 
@@ -304,7 +327,6 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
               <AddressInputStep
                 selectedChain={selectedChain}
                 onSubmit={handleAddressSubmit}
-                onBack={handleBack}
               />
             </motion.div>
           )}
@@ -322,7 +344,6 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
                 selectedAsset={selectedAsset}
                 selectedChain={selectedChain}
                 onSubmit={handleAmountSubmit}
-                onBack={handleBack}
               />
             </motion.div>
           )}

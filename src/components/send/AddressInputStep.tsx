@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Scan, Clipboard, User, AlertCircle, ChevronLeft, Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
+import { Scan, Clipboard, User, AlertCircle, Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,6 @@ import { isValidSolanaAddress } from "@/hooks/useSolanaTransactionSigning";
 interface AddressInputStepProps {
   selectedChain: Chain;
   onSubmit: (address: string) => void;
-  onBack: () => void;
 }
 
 // Validate address based on chain
@@ -52,7 +51,7 @@ function validateAddressForChain(addr: string, chain: Chain): { valid: boolean; 
   }
 }
 
-export const AddressInputStep = ({ selectedChain, onSubmit, onBack }: AddressInputStepProps) => {
+export const AddressInputStep = ({ selectedChain, onSubmit }: AddressInputStepProps) => {
   const { toast } = useToast();
   const { addresses: savedAddresses, saveAddress, removeAddress, getAddressesForChain } = useSavedAddresses();
   
@@ -158,14 +157,6 @@ export const AddressInputStep = ({ selectedChain, onSubmit, onBack }: AddressInp
 
   return (
     <div className="flex flex-col h-full px-6 pb-8">
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="absolute top-4 left-4 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-
       {/* Network indicator */}
       <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
         <span>Sending on</span>

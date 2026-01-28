@@ -8,6 +8,7 @@ import {
   Keypair,
   ComputeBudgetProgram,
 } from '@solana/web3.js';
+import { supabase } from '@/integrations/supabase/client';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha512 } from '@noble/hashes/sha2.js';
@@ -171,7 +172,35 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
       }
 
       // Get recent blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+      // Public Solana RPCs can return 403 in some environments, so we fall back to our backend Solana RPC (Helius).
+      let blockhash: string;
+      try {
+        const latest = await connection.getLatestBlockhash('confirmed');
+        blockhash = latest.blockhash;
+      } catch (e) {
+        console.warn('[Solana] getLatestBlockhash failed on public RPC; falling back to backend RPC', e);
+        const { data, error: fnError } = await supabase.functions.invoke('blockchain', {
+          body: {
+            action: 'solanaRpc',
+            chain: 'solana',
+            address: '',
+            testnet: isTestnet,
+            rpcMethod: 'getLatestBlockhash',
+            rpcParams: [{ commitment: 'confirmed' }],
+          },
+        });
+        if (fnError) {
+          throw new Error(fnError.message || 'Failed to fetch Solana blockhash');
+        }
+        const response = data as { success: boolean; data?: any; error?: string };
+        if (!response?.success) {
+          throw new Error(response?.error || 'Failed to fetch Solana blockhash');
+        }
+        blockhash = response.data?.value?.blockhash || response.data?.blockhash;
+        if (!blockhash) {
+          throw new Error('Failed to fetch Solana blockhash');
+        }
+      }
 
       // Create transfer instruction
       const transferInstruction = SystemProgram.transfer({
