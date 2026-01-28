@@ -29,11 +29,18 @@ export const WalletHeader = ({
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   const { isConnected, derivedAccounts, activeAccountIndex, walletAddress } = useBlockchainContext();
   
-  // Get wallet name from localStorage (set during onboarding)
+  // Get wallet name from localStorage (set during onboarding) - refresh on account switch
   const [walletName, setWalletName] = useState("Wallet");
   useEffect(() => {
-    const stored = localStorage.getItem("timetrade_wallet_name");
-    if (stored) setWalletName(stored);
+    const loadName = () => {
+      const stored = localStorage.getItem("timetrade_wallet_name");
+      if (stored) setWalletName(stored);
+    };
+    loadName();
+    
+    // Re-read name when account switches
+    window.addEventListener('timetrade:account-switched', loadName);
+    return () => window.removeEventListener('timetrade:account-switched', loadName);
   }, []);
   
   // Get avatar from wallet address
@@ -61,7 +68,7 @@ export const WalletHeader = ({
             )} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">[ HELLO {walletName.toUpperCase()} ]</p>
+            <p className="text-xs text-muted-foreground tracking-widest uppercase">HELLO, {walletName.toUpperCase()}</p>
             <div className="flex items-center gap-2 mt-1">
               <div className="insurance-badge">
                 <Shield className="w-3 h-3 text-primary" />

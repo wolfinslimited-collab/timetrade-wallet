@@ -104,7 +104,7 @@ function useUserAccounts() {
 }
 
 export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherSheetProps) {
-  const { activeAccountIndex, setActiveAccountIndex, isLoadingAccounts } = useBlockchainContext();
+  const { activeAccountIndex, setActiveAccountIndex, isLoadingAccounts, refreshAll } = useBlockchainContext();
   
   const { accounts, addAccount, removeAccount, renameAccount } = useUserAccounts();
   const [addMode, setAddMode] = useState<AddAccountMode>(null);
@@ -121,12 +121,16 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     const account = accounts.find(a => a.id === accountId);
     const name = account?.name || `Account ${accountIndex + 1}`;
     
+    // Update wallet name in storage so header reflects the selected account
+    if (account?.name) {
+      localStorage.setItem("timetrade_wallet_name", account.name);
+    }
+    
     // Set the active derivation index (for mnemonic-based accounts, this maps to derivation path index)
-    // For private key accounts, we set index to the position in the account list
     setActiveAccountIndex(accountIndex);
     
-    // Dispatch event to notify other components about account switch
-    window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
+    // Refresh all blockchain data for the new account
+    setTimeout(() => refreshAll(), 100);
     
     toast.success(`Switched to ${name}`);
     onOpenChange(false);

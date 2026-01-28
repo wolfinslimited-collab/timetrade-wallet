@@ -338,12 +338,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     if (solAcc) localStorage.setItem('timetrade_wallet_address_solana', solAcc.address);
     if (tronAcc) localStorage.setItem('timetrade_wallet_address_tron', tronAcc.address);
     
-    // Dispatch event to notify other components (prevents polling)
+    // Dispatch event to notify other components (header, portfolio, etc.)
     window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
     
-    // Invalidate queries to refetch with new addresses
+    // Invalidate all queries to refetch with new addresses
     queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+    queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
   }, [selectedChain, allDerivedAccounts, queryClient]);
 
   const value: BlockchainContextType = {
