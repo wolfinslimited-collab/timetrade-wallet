@@ -39,22 +39,28 @@ function toDecimalAmount(balance: string, decimals: number) {
 const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
 
 export function useUnifiedPortfolio(enabled: boolean) {
-  // Use state to reactively track addresses (re-read when localStorage might have changed)
+  // Use state to reactively track addresses
   const [addresses, setAddresses] = React.useState(() => getAddressesFromStorage());
   
-  // Re-read addresses periodically to catch updates from BlockchainContext
+  // Listen for account switch events instead of polling every second
   React.useEffect(() => {
     if (!enabled) return;
     
     // Initial read
     setAddresses(getAddressesFromStorage());
     
-    // Poll for changes (BlockchainContext writes async after derivation)
-    const interval = setInterval(() => {
+    // Listen for custom events when accounts switch
+    const handleAccountSwitch = () => {
       setAddresses(getAddressesFromStorage());
-    }, 1000);
+    };
     
-    return () => clearInterval(interval);
+    window.addEventListener('timetrade:account-switched', handleAccountSwitch);
+    window.addEventListener('timetrade:unlocked', handleAccountSwitch);
+    
+    return () => {
+      window.removeEventListener('timetrade:account-switched', handleAccountSwitch);
+      window.removeEventListener('timetrade:unlocked', handleAccountSwitch);
+    };
   }, [enabled]);
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;

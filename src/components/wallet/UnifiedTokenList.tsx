@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { formatBalance, getChainInfo, Chain, useWalletBalance } from "@/hooks/useBlockchain";
+import { formatBalance, getChainInfo, Chain } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { cn } from "@/lib/utils";
 import { AssetDetailSheet } from "./AssetDetailSheet";
@@ -20,21 +20,6 @@ const getNetworkLogoUrl = (chain: Chain): string => {
     bitcoin: "btc",
   };
   return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
-};
-
-const isLikelyEvmAddress = (address: string | null | undefined) => {
-  if (!address) return false;
-  return /^0x[a-fA-F0-9]{40}$/.test(address.trim());
-};
-
-const isLikelySolanaAddress = (address: string | null | undefined) => {
-  if (!address) return false;
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
-};
-
-const isLikelyTronAddress = (address: string | null | undefined) => {
-  if (!address) return false;
-  return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address.trim());
 };
 
 interface UnifiedToken {
@@ -63,179 +48,81 @@ const FallbackIcon = ({ symbol }: { symbol: string }) => (
 );
 
 export const UnifiedTokenList = ({ className }: { className?: string }) => {
-  const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
+  // Use unified assets from context - NO DUPLICATE QUERIES
+  const { isConnected, unifiedAssets, prices, isLoadingBalance, isLoadingPrices } = useBlockchainContext();
   
   // All hooks MUST be at the top, before any conditional returns
   const [selectedAsset, setSelectedAsset] = useState<TokenWithValue | null>(null);
   const [showAssetDetail, setShowAssetDetail] = useState(false);
   
-  const [addresses, setAddresses] = useState(() => {
-    const primaryAddress = localStorage.getItem('timetrade_wallet_address');
-    const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
-    const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
-    const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
-    
-    return {
-      evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-      solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-      tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    };
-  });
+  // Read addresses from localStorage only once on mount, and on account switch events
+  const [addresses, setAddresses] = useState(() => ({
+    evm: localStorage.getItem('timetrade_wallet_address_evm'),
+    solana: localStorage.getItem('timetrade_wallet_address_solana'),
+    tron: localStorage.getItem('timetrade_wallet_address_tron'),
+  }));
 
+  // Listen for account switch events instead of polling
   useEffect(() => {
     const readAddresses = () => {
-      const primaryAddress = localStorage.getItem('timetrade_wallet_address');
-      const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
-      const storedSolanaAddress = localStorage.getItem('timetrade_wallet_address_solana');
-      const storedTronAddress = localStorage.getItem('timetrade_wallet_address_tron');
-      
       setAddresses({
-        evm: storedEvmAddress || (isLikelyEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-        solana: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-        tron: storedTronAddress || (isLikelyTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+        evm: localStorage.getItem('timetrade_wallet_address_evm'),
+        solana: localStorage.getItem('timetrade_wallet_address_solana'),
+        tron: localStorage.getItem('timetrade_wallet_address_tron'),
       });
     };
     
-    readAddresses();
-    const interval = setInterval(readAddresses, 1000);
-    return () => clearInterval(interval);
-  }, [isConnected]);
+    // Listen for custom events when accounts switch
+    window.addEventListener('timetrade:account-switched', readAddresses);
+    window.addEventListener('timetrade:unlocked', readAddresses);
+    
+    return () => {
+      window.removeEventListener('timetrade:account-switched', readAddresses);
+      window.removeEventListener('timetrade:unlocked', readAddresses);
+    };
+  }, []);
 
-  const ethBalance = useWalletBalance(addresses.evm, 'ethereum');
-  const solBalance = useWalletBalance(addresses.solana, 'solana');
-  const polyBalance = useWalletBalance(addresses.evm, 'polygon');
-  const tronBalance = useWalletBalance(addresses.tron, 'tron');
+  // Transform unified assets to token format for display
+  const tokensWithValue = useMemo(() => {
+    if (!unifiedAssets || unifiedAssets.length === 0) return [];
+    
+    // Map unified assets to display format
+    // unifiedAssets come from useUnifiedPortfolio which aggregates all chains
+    return unifiedAssets
+      .filter(asset => asset.amount > 0)
+      .map(asset => {
+        const priceData = prices?.find(p => p.symbol.toUpperCase() === asset.symbol.toUpperCase());
+        const change24h = priceData?.change24h || 0;
+        
+        // Determine chain from symbol (for native tokens)
+        let chain: Chain = 'ethereum';
+        if (asset.symbol === 'SOL') chain = 'solana';
+        else if (asset.symbol === 'TRX') chain = 'tron';
+        else if (asset.symbol === 'POL' || asset.symbol === 'MATIC') chain = 'polygon';
+        
+        return {
+          symbol: asset.symbol,
+          name: asset.name,
+          balance: String(Math.round(asset.amount * 1e18)), // Convert back to raw balance format
+          decimals: 18,
+          chain,
+          isNative: ['ETH', 'SOL', 'TRX', 'POL', 'MATIC', 'BTC'].includes(asset.symbol),
+          numericBalance: asset.amount,
+          price: asset.price,
+          usdValue: asset.valueUsd,
+          change24h,
+        } as TokenWithValue;
+      })
+      .sort((a, b) => b.usdValue - a.usdValue);
+  }, [unifiedAssets, prices]);
 
-  const isLoading = ethBalance.isLoading || solBalance.isLoading || polyBalance.isLoading || tronBalance.isLoading;
+  const isLoading = isLoadingBalance || isLoadingPrices;
 
   if (!isConnected || (!addresses.evm && !addresses.solana && !addresses.tron)) {
     return null;
   }
 
-  const allTokens: UnifiedToken[] = [];
-
-  // Add Ethereum
-  if (ethBalance.data && addresses.evm) {
-    const chainInfo = getChainInfo('ethereum');
-    allTokens.push({
-      symbol: ethBalance.data.native.symbol,
-      name: chainInfo.name,
-      balance: ethBalance.data.native.balance,
-      decimals: ethBalance.data.native.decimals,
-      chain: 'ethereum',
-      isNative: true,
-      logo: chainInfo.icon,
-    });
-    for (const token of ethBalance.data.tokens || []) {
-      allTokens.push({
-        symbol: token.symbol,
-        name: token.name,
-        balance: token.balance,
-        decimals: token.decimals,
-        chain: 'ethereum',
-        isNative: false,
-        contractAddress: token.contractAddress,
-        logo: token.logo,
-      });
-    }
-  }
-
-  // Add Solana
-  if (solBalance.data && addresses.solana) {
-    const chainInfo = getChainInfo('solana');
-    allTokens.push({
-      symbol: solBalance.data.native.symbol,
-      name: chainInfo.name,
-      balance: solBalance.data.native.balance,
-      decimals: solBalance.data.native.decimals,
-      chain: 'solana',
-      isNative: true,
-      logo: chainInfo.icon,
-    });
-    for (const token of solBalance.data.tokens || []) {
-      allTokens.push({
-        symbol: token.symbol,
-        name: token.name,
-        balance: token.balance,
-        decimals: token.decimals,
-        chain: 'solana',
-        isNative: false,
-        contractAddress: token.contractAddress,
-        logo: token.logo,
-      });
-    }
-  }
-
-  // Add Polygon
-  if (polyBalance.data && addresses.evm) {
-    const chainInfo = getChainInfo('polygon');
-    allTokens.push({
-      symbol: polyBalance.data.native.symbol,
-      name: chainInfo.name,
-      balance: polyBalance.data.native.balance,
-      decimals: polyBalance.data.native.decimals,
-      chain: 'polygon',
-      isNative: true,
-      logo: chainInfo.icon,
-    });
-    for (const token of polyBalance.data.tokens || []) {
-      allTokens.push({
-        symbol: token.symbol,
-        name: token.name,
-        balance: token.balance,
-        decimals: token.decimals,
-        chain: 'polygon',
-        isNative: false,
-        contractAddress: token.contractAddress,
-        logo: token.logo,
-      });
-    }
-  }
-
-  // Add Tron
-  if (tronBalance.data && addresses.tron) {
-    const chainInfo = getChainInfo('tron');
-    allTokens.push({
-      symbol: tronBalance.data.native.symbol,
-      name: chainInfo.name,
-      balance: tronBalance.data.native.balance,
-      decimals: tronBalance.data.native.decimals,
-      chain: 'tron',
-      isNative: true,
-      logo: chainInfo.icon,
-    });
-    for (const token of tronBalance.data.tokens || []) {
-      allTokens.push({
-        symbol: token.symbol,
-        name: token.name,
-        balance: token.balance,
-        decimals: token.decimals,
-        chain: 'tron',
-        isNative: false,
-        contractAddress: token.contractAddress,
-        logo: token.logo,
-      });
-    }
-  }
-
-  const tokensWithValue = allTokens.map(token => {
-    const numericBalance = parseFloat(token.balance) / Math.pow(10, token.decimals);
-    const price = getPriceForSymbol(prices as any, token.symbol);
-    const usdValue = numericBalance * price;
-    const priceData = prices?.find(p => p.symbol.toUpperCase() === token.symbol.toUpperCase());
-    const change24h = priceData?.change24h || 0;
-    
-    return {
-      ...token,
-      numericBalance,
-      price,
-      usdValue,
-      change24h,
-    };
-  }).filter(t => t.numericBalance > 0 && t.symbol.toUpperCase() !== 'UNKNOWN')
-    .sort((a, b) => b.usdValue - a.usdValue);
-
-  if (isLoading) {
+  if (isLoading && tokensWithValue.length === 0) {
     return (
       <div className={cn("px-4", className)}>
         <div className="space-y-1">
@@ -286,7 +173,10 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
       <div className={cn("px-4", className)}>
         <div className="divide-y divide-border/50">
           {tokensWithValue.map((token, index) => {
-            const formattedBalance = formatBalance(token.balance, token.decimals);
+            const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
+              minimumFractionDigits: 0, 
+              maximumFractionDigits: 6 
+            });
             const isPositive = token.change24h >= 0;
             const assetLogoUrl = getCryptoLogoUrl(token.symbol);
             const networkLogoUrl = getNetworkLogoUrl(token.chain);
