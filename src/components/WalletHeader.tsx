@@ -1,14 +1,13 @@
-import { useState } from "react";
-import { Shield, Settings, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Shield, Settings, CircleUser } from "lucide-react";
 import { NotificationCenter } from "./notifications/NotificationCenter";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { useWalletAvatar } from "@/hooks/useWalletAvatar";
 import type { Notification } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 
 interface WalletHeaderProps {
-  userName: string;
-  avatarUrl?: string;
   onSettingsClick?: () => void;
   notifications: Notification[];
   unreadCount: number;
@@ -19,8 +18,6 @@ interface WalletHeaderProps {
 }
 
 export const WalletHeader = ({ 
-  userName, 
-  avatarUrl, 
   onSettingsClick,
   notifications,
   unreadCount,
@@ -30,18 +27,31 @@ export const WalletHeader = ({
   onClearAllNotifications,
 }: WalletHeaderProps) => {
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
-  const { isConnected, derivedAccounts, activeAccountIndex } = useBlockchainContext();
+  const { isConnected, derivedAccounts, activeAccountIndex, walletAddress } = useBlockchainContext();
+  
+  // Get wallet name from localStorage (set during onboarding)
+  const [walletName, setWalletName] = useState("Wallet");
+  useEffect(() => {
+    const stored = localStorage.getItem("timetrade_wallet_name");
+    if (stored) setWalletName(stored);
+  }, []);
+  
+  // Get avatar from wallet address
+  const { avatarUrl, placeholderColors } = useWalletAvatar(walletAddress);
 
   return (
     <>
       <header className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center overflow-hidden border border-border">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-border"
+              style={!avatarUrl ? { background: `linear-gradient(135deg, ${placeholderColors.from}, ${placeholderColors.to})` } : undefined}
+            >
               {avatarUrl ? (
-                <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt={walletName} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-lg font-semibold">{userName.charAt(0)}</span>
+                <span className="text-lg font-semibold text-white">{walletName.charAt(0).toUpperCase()}</span>
               )}
             </div>
             {/* Online indicator */}
@@ -51,7 +61,7 @@ export const WalletHeader = ({
             )} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">[ HELLO {userName.toUpperCase()} ]</p>
+            <p className="text-xs text-muted-foreground tracking-widest uppercase">[ HELLO {walletName.toUpperCase()} ]</p>
             <div className="flex items-center gap-2 mt-1">
               <div className="insurance-badge">
                 <Shield className="w-3 h-3 text-primary" />
@@ -76,7 +86,7 @@ export const WalletHeader = ({
                 "bg-card border-border hover:bg-secondary text-muted-foreground"
               )}
             >
-              <Users className="w-5 h-5" />
+              <CircleUser className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                 {activeAccountIndex + 1}
               </span>

@@ -30,7 +30,7 @@ const Index = () => {
     clearAll,
   } = useNotifications();
   
-  const { isConnected, totalBalanceUsd, isLoadingBalance, prices } = useBlockchainContext();
+  const { isConnected, totalBalanceUsd, isLoadingBalance, prices, refreshAll } = useBlockchainContext();
 
   // Calculate display values - compute 24h change from prices
   const displayBalance = totalBalanceUsd || 0;
@@ -61,13 +61,15 @@ const Index = () => {
   };
 
   const handleRefresh = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Actually refetch blockchain data
+    refreshAll();
+    await new Promise(resolve => setTimeout(resolve, 1200));
     setRefreshKey(prev => prev + 1);
     toast({
       title: "Prices updated",
       description: "Portfolio data refreshed successfully",
     });
-  }, [toast]);
+  }, [toast, refreshAll]);
 
   const formatBalance = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -133,7 +135,6 @@ const Index = () => {
       <PullToRefresh onRefresh={handleRefresh}>
         {/* Minimal Header */}
         <WalletHeader 
-          userName="Alex" 
           onSettingsClick={() => setActiveTab("settings")}
           notifications={notifications}
           unreadCount={unreadCount}
