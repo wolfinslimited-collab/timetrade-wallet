@@ -74,29 +74,50 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
   // Filter transactions for this asset
   const transactions = txData?.transactions || [];
 
-  // Tron needs special filtering:
-  // - For TRC-20 tokens (USDT), show only TriggerSmartContract tx for the token contract
-  // - For native TRX, show only TransferContract
+  // Filter transactions by asset type:
+  // - For native tokens (SOL, TRX, ETH), show only native transfers
+  // - For SPL/TRC-20 tokens, show only transfers for that specific token contract
   const filteredTx = (() => {
-    if (asset.chain !== 'tron') return transactions.slice(0, 10);
-
     const tokenContract = asset.contractAddress;
-    const out = transactions.filter((tx) => {
-      const type = tx.contractType;
 
+    // Solana filtering
+    if (asset.chain === 'solana') {
       if (asset.isNative) {
-        return type ? type === 'TransferContract' : true;
+        // Native SOL: show only System Program transfers (no tokenTransfers with mint)
+        return transactions.filter((tx) => {
+          const hasTokenTransfer = tx.tokenTransfers?.some((tt: any) => tt.mint);
+          return !hasTokenTransfer;
+        }).slice(0, 10);
+      } else {
+        // SPL Token: filter by mint address in tokenTransfers
+        return transactions.filter((tx) => {
+          return tx.tokenTransfers?.some((tt: any) => tt.mint === tokenContract);
+        }).slice(0, 10);
       }
+    }
 
-      // Token view
-      if (!tokenContract) return type === 'TriggerSmartContract';
+    // Tron filtering
+    if (asset.chain === 'tron') {
+      const out = transactions.filter((tx) => {
+        const type = tx.contractType;
 
-      // contractAddress may be hex (41...) from API
-      const txContract = tx.contractAddressBase58 || tronHexToBase58(tx.contractAddress) || tx.contractAddress;
-      return type === 'TriggerSmartContract' && txContract === tokenContract;
-    });
+        if (asset.isNative) {
+          return type ? type === 'TransferContract' : true;
+        }
 
-    return out.slice(0, 10);
+        // Token view
+        if (!tokenContract) return type === 'TriggerSmartContract';
+
+        // contractAddress may be hex (41...) from API
+        const txContract = tx.contractAddressBase58 || tronHexToBase58(tx.contractAddress) || tx.contractAddress;
+        return type === 'TriggerSmartContract' && txContract === tokenContract;
+      });
+
+      return out.slice(0, 10);
+    }
+
+    // EVM chains - no special filtering yet, show all
+    return transactions.slice(0, 10);
   })();
 
   // Pre-selected data to pass to Send/Receive sheets
