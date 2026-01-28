@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
 import { validateSeedPhrase } from "@/utils/seedPhrase";
-import { deriveEvmAddress, deriveSolanaAddress, deriveTronAddress } from "@/utils/walletDerivation";
+import { deriveEvmAddress, deriveSolanaAddress, deriveTronAddress, SolanaDerivationPath } from "@/utils/walletDerivation";
 import { decryptPrivateKey, encryptPrivateKey } from "@/utils/encryption";
 import { Wallet as EthersWallet } from "ethers";
 import { evmToTronAddress } from "@/utils/tronAddress";
@@ -174,19 +174,52 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
           return;
         }
 
-        console.log(`%c[ACCOUNT SWITCHER] 🔐 Updating seed phrase in storage`, 'color: #22c55e;');
+        console.log(`%c[ACCOUNT SWITCHER] 🔐 Decrypting and deriving addresses`, 'color: #22c55e;');
+        
+        // Store the encrypted seed phrase
         localStorage.setItem("timetrade_seed_phrase", account.encryptedSeedPhrase);
         localStorage.setItem("timetrade_active_account_index", "0");
 
-        // Trigger re-derivation + UI sync
+        // CRITICAL: Decrypt and derive addresses NOW, before dispatching events
+        try {
+          const encryptedData = JSON.parse(account.encryptedSeedPhrase);
+          const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
+          const words = decryptedPhrase.split(/\s+/);
+          const phrase = words.join(" ").toLowerCase().trim();
+          
+          // Derive addresses for all chains
+          const evmAddress = deriveEvmAddress(phrase, 0);
+          const solAddress = deriveSolanaAddress(phrase, 0, "phantom");
+          const tronAddress = deriveTronAddress(phrase, 0);
+
+          console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e; font-weight: bold;', {
+            evm: evmAddress,
+            solana: solAddress,
+            tron: tronAddress,
+          });
+
+          // Store all addresses BEFORE dispatching events
+          localStorage.setItem("timetrade_wallet_address", evmAddress);
+          localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
+          localStorage.setItem("timetrade_wallet_address_solana", solAddress);
+          localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
+
+          console.log(`%c[ACCOUNT SWITCHER] 💾 Addresses stored in localStorage`, 'color: #10b981;');
+        } catch (decryptErr) {
+          console.error(`%c[ACCOUNT SWITCHER] ❌ Failed to decrypt/derive`, 'color: #ef4444;', decryptErr);
+          toast.error("Failed to decrypt wallet. Check your PIN.");
+          return;
+        }
+
+        // Now dispatch event - addresses are already in localStorage
         console.log(`%c[ACCOUNT SWITCHER] 📢 Dispatching account-switched event`, 'color: #eab308;');
         window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
-        // Refresh queries after addresses have been re-derived
+        // Refresh queries after a small delay to allow event handlers to run
         setTimeout(() => {
           console.log(`%c[ACCOUNT SWITCHER] 🔄 Calling refreshAll()`, 'color: #06b6d4;');
           refreshAll();
-        }, 300);
+        }, 100);
       } else {
         // Private-key accounts
         console.log(`%c[ACCOUNT SWITCHER] 🔑 Processing private key account`, 'color: #f97316;');
@@ -214,10 +247,11 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
           tron: tronAddress || '(none)',
         });
 
+        // Store addresses BEFORE dispatching events
         localStorage.setItem("timetrade_wallet_address", evmAddress);
         localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
         if (tronAddress) localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
-        localStorage.removeItem("timetrade_wallet_address_solana");
+        localStorage.removeItem("timetrade_wallet_address_solana"); // PK wallets don't have Solana
         localStorage.setItem("timetrade_active_account_index", "0");
 
         console.log(`%c[ACCOUNT SWITCHER] 📢 Dispatching account-switched event`, 'color: #eab308;');
@@ -226,7 +260,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         setTimeout(() => {
           console.log(`%c[ACCOUNT SWITCHER] 🔄 Calling refreshAll()`, 'color: #06b6d4;');
           refreshAll();
-        }, 250);
+        }, 100);
       }
 
       toast.success(`Switched to ${account.name}`);
