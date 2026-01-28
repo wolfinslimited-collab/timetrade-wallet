@@ -1143,9 +1143,17 @@ async function broadcastTransaction(
     try {
       console.log(`Broadcasting Solana transaction via Helius RPC`);
       
+      // Convert hex to base64 if needed (client sends hex, Helius expects base64)
+      let base64Tx = signedTransaction;
+      if (/^[0-9a-fA-F]+$/.test(signedTransaction)) {
+        // It's hex-encoded, convert to base64
+        const bytes = new Uint8Array(signedTransaction.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
+        base64Tx = btoa(String.fromCharCode(...bytes));
+      }
+      
       const result = await heliusRpcRequest(
-        'sendRawTransaction',
-        [signedTransaction, { encoding: 'base64' }],
+        'sendTransaction',
+        [base64Tx, { encoding: 'base64', skipPreflight: false, preflightCommitment: 'confirmed' }],
         testnet
       );
       
