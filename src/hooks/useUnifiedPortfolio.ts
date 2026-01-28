@@ -41,74 +41,46 @@ const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
 
 export function useUnifiedPortfolio(enabled: boolean) {
   const queryClient = useQueryClient();
-  
-  // Use state to reactively track addresses
-  const [addresses, setAddresses] = React.useState(() => getAddressesFromStorage());
-  
-  // Counter to force re-evaluation of addresses
-  const [refreshCounter, setRefreshCounter] = React.useState(0);
-  
-  // Listen for account switch events and refetch data
+
+  // Track addresses from storage reactively
+  const [addressKey, setAddressKey] = React.useState(0);
+  const addresses = React.useMemo(() => {
+    const result = getAddressesFromStorage();
+    console.log(`%c[UNIFIED PORTFOLIO] 📍 Addresses Loaded`, 'color: #a855f7; font-weight: bold;', {
+      evm: result.evmAddress || '(not set)',
+      solana: result.solanaAddress || '(not set)',
+      tron: result.tronAddress || '(not set)',
+      key: addressKey,
+      timestamp: new Date().toISOString(),
+    });
+    return result;
+  }, [addressKey]);
+
+  const { evmAddress, solanaAddress, tronAddress } = addresses;
+
+  // Re-read addresses when account switches or wallet unlocks
   React.useEffect(() => {
     if (!enabled) return;
-    
-    try {
-      // Initial read
-      const initialAddresses = getAddressesFromStorage();
-      setAddresses(initialAddresses);
-      console.log(`%c[UNIFIED PORTFOLIO] 🚀 Initial Load`, 'color: #06b6d4; font-weight: bold;', initialAddresses);
-    } catch (err) {
-      console.error(`%c[UNIFIED PORTFOLIO] ❌ Error reading initial addresses`, 'color: #ef4444;', err);
-    }
-    
-    // Listen for custom events when accounts switch
+
     const handleAccountSwitch = () => {
-      try {
-        // Small delay to ensure localStorage is updated
-        setTimeout(() => {
-          const newAddresses = getAddressesFromStorage();
-          console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Detected`, 'color: #f97316; font-weight: bold;', {
-            previous: addresses,
-            new: newAddresses,
-            timestamp: new Date().toISOString(),
-          });
-          setAddresses(newAddresses);
-          setRefreshCounter((c) => c + 1);
-          
-          // Invalidate ALL balance queries to force refetch with new addresses
-          console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308; font-weight: bold;');
-          queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-          queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
-        }, 100);
-      } catch (err) {
-        console.error(`%c[UNIFIED PORTFOLIO] ❌ Error handling account switch`, 'color: #ef4444;', err);
-      }
+      console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Event`, 'color: #f97316; font-weight: bold;', {
+        timestamp: new Date().toISOString(),
+      });
+      
+      setAddressKey((k) => k + 1);
+      
+      queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
     };
-    
+
     window.addEventListener('timetrade:account-switched', handleAccountSwitch);
     window.addEventListener('timetrade:unlocked', handleAccountSwitch);
-    
+
     return () => {
       window.removeEventListener('timetrade:account-switched', handleAccountSwitch);
       window.removeEventListener('timetrade:unlocked', handleAccountSwitch);
     };
   }, [enabled, queryClient]);
-
-  const { evmAddress, solanaAddress, tronAddress } = addresses;
-
-  // Debug logging for address detection - also triggers on refreshCounter changes
-  React.useEffect(() => {
-    if (enabled) {
-      console.log(`%c[UNIFIED PORTFOLIO] 🔍 Active Addresses`, 'color: #a855f7; font-weight: bold;', {
-        evm: evmAddress || '(not set)',
-        solana: solanaAddress || '(not set)',
-        tron: tronAddress || '(not set)',
-        enabled,
-        refreshCounter,
-        timestamp: new Date().toISOString(),
-      });
-    }
-  }, [enabled, evmAddress, solanaAddress, tronAddress, refreshCounter]);
 
   // Fetch balances in parallel (React Query)
   const ethBalance = useWalletBalance(enabled ? evmAddress : null, "ethereum");
