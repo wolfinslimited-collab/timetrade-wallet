@@ -109,10 +109,18 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   const [editNameInput, setEditNameInput] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const handleSelectAccount = (index: number) => {
-    setActiveAccountIndex(index);
-    const account = accounts[index];
-    const name = account?.name || `Account ${index + 1}`;
+  const handleSelectAccount = (accountId: string, accountIndex: number) => {
+    // Find the account to get its name for the toast
+    const account = accounts.find(a => a.id === accountId);
+    const name = account?.name || `Account ${accountIndex + 1}`;
+    
+    // Set the active derivation index (for mnemonic-based accounts, this maps to derivation path index)
+    // For private key accounts, we set index to the position in the account list
+    setActiveAccountIndex(accountIndex);
+    
+    // Dispatch event to notify other components about account switch
+    window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
+    
     toast.success(`Switched to ${name}`);
     onOpenChange(false);
   };
@@ -406,7 +414,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                     >
                       {/* Account Number */}
                       <button
-                        onClick={() => handleSelectAccount(index)}
+                        onClick={() => handleSelectAccount(account.id, index)}
                         className={cn(
                           "w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg shrink-0 transition-colors",
                           isActive
@@ -419,7 +427,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                       
                       {/* Account Info */}
                       <button
-                        onClick={() => handleSelectAccount(index)}
+                        onClick={() => handleSelectAccount(account.id, index)}
                         className="flex-1 text-left min-w-0"
                       >
                         {isEditing ? (

@@ -449,7 +449,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     if (evmAcc) localStorage.setItem('timetrade_wallet_address_evm', evmAcc.address);
     if (solAcc) localStorage.setItem('timetrade_wallet_address_solana', solAcc.address);
     if (tronAcc) localStorage.setItem('timetrade_wallet_address_tron', tronAcc.address);
-  }, [selectedChain, allDerivedAccounts]);
+    
+    // Dispatch event to notify other components (prevents polling)
+    window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
+    
+    // Invalidate queries to refetch with new addresses
+    queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+  }, [selectedChain, allDerivedAccounts, queryClient]);
 
   const value: BlockchainContextType = {
     walletAddress,
