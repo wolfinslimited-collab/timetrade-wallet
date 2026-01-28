@@ -21,10 +21,10 @@
     --popover: 240 5% 7%;
     --popover-foreground: 0 0% 98%;
 
-    /* Primary - Neon Emerald */
-    --primary: 160 84% 39%;
-    --primary-foreground: 0 0% 2%;
-    --primary-glow: 160 100% 50%;
+    /* Primary - Clean White */
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 6% 3%;
+    --primary-glow: 0 0% 100%;
 
     /* Secondary - Muted surface */
     --secondary: 240 4% 16%;
@@ -43,18 +43,18 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Success */
-    --success: 160 84% 39%;
+    --success: 160 84% 45%;
     --success-foreground: 0 0% 2%;
 
     /* Borders */
     --border: 240 4% 16%;
     --input: 240 4% 16%;
-    --ring: 160 84% 39%;
+    --ring: 0 0% 98%;
 
     --radius: 1rem;
 
     /* Chart colors */
-    --chart-1: 160 84% 39%;
+    --chart-1: 0 0% 98%;
     --chart-2: 280 65% 60%;
     --chart-3: 200 80% 55%;
     --chart-4: 24 95% 53%;
@@ -63,12 +63,12 @@
     /* Sidebar - for completeness */
     --sidebar-background: 240 6% 3%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 160 84% 39%;
-    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 6% 3%;
     --sidebar-accent: 240 4% 16%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-ring: 0 0% 98%;
   }
 }
 
@@ -91,13 +91,13 @@
 @layer components {
   /* Glow effects */
   .glow-green {
-    box-shadow: 0 0 20px hsl(160 84% 39% / 0.3),
-                0 0 40px hsl(160 84% 39% / 0.1);
+    box-shadow: 0 0 20px hsl(0 0% 98% / 0.2),
+                0 0 40px hsl(0 0% 98% / 0.1);
   }
 
   .glow-text-green {
-    text-shadow: 0 0 10px hsl(160 84% 39% / 0.5),
-                 0 0 20px hsl(160 84% 39% / 0.3);
+    text-shadow: 0 0 10px hsl(0 0% 98% / 0.5),
+                 0 0 20px hsl(0 0% 98% / 0.3);
   }
 
   /* Glass card effect */
