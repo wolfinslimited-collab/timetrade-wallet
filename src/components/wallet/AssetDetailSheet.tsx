@@ -68,6 +68,23 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
   const transactions = txData?.transactions || [];
   const filteredTx = transactions.slice(0, 10); // Show last 10 transactions
 
+  // Pre-selected data to pass to Send/Receive sheets
+  const preSelectedForSend = {
+    symbol: asset.symbol,
+    name: asset.name,
+    balance: asset.numericBalance,
+    decimals: asset.decimals,
+    chain: asset.chain,
+    isNative: asset.isNative,
+    contractAddress: asset.contractAddress,
+    price: asset.price,
+  };
+
+  const preSelectedForReceive = {
+    symbol: asset.symbol,
+    chain: asset.chain,
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -227,9 +244,17 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
         </SheetContent>
       </Sheet>
 
-      {/* Sub-sheets */}
-      <SendCryptoSheet open={showSend} onOpenChange={setShowSend} />
-      <ReceiveCryptoSheet open={showReceive} onOpenChange={setShowReceive} />
+      {/* Sub-sheets with pre-selected asset */}
+      <SendCryptoSheet 
+        open={showSend} 
+        onOpenChange={setShowSend} 
+        preSelectedAsset={preSelectedForSend}
+      />
+      <ReceiveCryptoSheet 
+        open={showReceive} 
+        onOpenChange={setShowReceive} 
+        preSelectedToken={preSelectedForReceive}
+      />
     </>
   );
 };

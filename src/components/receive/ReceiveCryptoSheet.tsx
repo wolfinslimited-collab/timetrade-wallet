@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Copy, Share2, ChevronDown, Check, QrCode, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,13 +87,61 @@ const tokens: TokenOption[] = [
 interface ReceiveCryptoSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Pre-selected token from AssetDetailSheet
+  preSelectedToken?: {
+    symbol: string;
+    chain: string;
+  } | null;
 }
 
-export const ReceiveCryptoSheet = ({ open, onOpenChange }: ReceiveCryptoSheetProps) => {
+export const ReceiveCryptoSheet = ({ open, onOpenChange, preSelectedToken }: ReceiveCryptoSheetProps) => {
   const { toast } = useToast();
-  const [selectedToken, setSelectedToken] = useState(tokens[0]);
   const [showTokens, setShowTokens] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Find matching token based on pre-selection or default to first
+  const getInitialToken = (): TokenOption => {
+    if (preSelectedToken) {
+      const match = tokens.find(
+        (t) => 
+          t.symbol.toUpperCase() === preSelectedToken.symbol.toUpperCase() &&
+          t.networkId === preSelectedToken.chain
+      );
+      if (match) return match;
+      
+      // If no exact match, try to find by network only (for native tokens)
+      const networkMatch = tokens.find(
+        (t) => t.networkId === preSelectedToken.chain && t.isNativeToken
+      );
+      if (networkMatch) return networkMatch;
+    }
+    return tokens[0];
+  };
+
+  const [selectedToken, setSelectedToken] = useState<TokenOption>(getInitialToken);
+
+  // Update selected token when preSelectedToken changes
+  useEffect(() => {
+    if (open && preSelectedToken) {
+      const match = tokens.find(
+        (t) => 
+          t.symbol.toUpperCase() === preSelectedToken.symbol.toUpperCase() &&
+          t.networkId === preSelectedToken.chain
+      );
+      if (match) {
+        setSelectedToken(match);
+        return;
+      }
+      
+      // If no exact match, try to find by network only (for native tokens)
+      const networkMatch = tokens.find(
+        (t) => t.networkId === preSelectedToken.chain && t.isNativeToken
+      );
+      if (networkMatch) {
+        setSelectedToken(networkMatch);
+      }
+    }
+  }, [open, preSelectedToken]);
 
   const { addresses: walletAddresses } = useWalletAddresses(open);
   const currentAddress = walletAddresses[selectedToken.addressKey] || "";
