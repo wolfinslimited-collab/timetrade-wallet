@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
 import { NetworkAssetSelector, AvailableAsset } from "./NetworkAssetSelector";
@@ -8,6 +8,7 @@ import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionSuccessStep } from "./TransactionSuccessStep";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
+import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { toast } from "@/hooks/use-toast";
 
 export type SendStep = "select" | "address" | "amount" | "confirm" | "success";
@@ -36,10 +37,22 @@ export interface TransactionData {
 interface SendCryptoSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Pre-selected asset from AssetDetailSheet
+  preSelectedAsset?: {
+    symbol: string;
+    name: string;
+    balance: number;
+    decimals: number;
+    chain: Chain;
+    isNative: boolean;
+    contractAddress?: string;
+    price: number;
+  } | null;
 }
 
-export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) => {
+export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCryptoSheetProps) => {
   const broadcastMutation = useBroadcastTransaction();
+  const { addresses } = useWalletAddresses(open);
   
   const [step, setStep] = useState<SendStep>("select");
   const [selectedChain, setSelectedChain] = useState<Chain>("ethereum");
@@ -60,6 +73,53 @@ export const SendCryptoSheet = ({ open, onOpenChange }: SendCryptoSheetProps) =>
     gasEstimate: 21000,
     gasFee: 0.0012,
   });
+
+  // Get sender address for a chain
+  const getSenderAddress = (chain: Chain): string => {
+    if (chain === 'solana') return addresses.solana || '';
+    if (chain === 'tron') return addresses.tron || '';
+    return addresses.evm || '';
+  };
+
+  // Handle pre-selected asset from AssetDetailSheet
+  useEffect(() => {
+    if (open && preSelectedAsset) {
+      const chain = preSelectedAsset.chain;
+      const sender = getSenderAddress(chain);
+      
+      const asset: AvailableAsset = {
+        symbol: preSelectedAsset.symbol,
+        name: preSelectedAsset.name,
+        balance: preSelectedAsset.balance,
+        decimals: preSelectedAsset.decimals,
+        chain: chain,
+        isNative: preSelectedAsset.isNative,
+        contractAddress: preSelectedAsset.contractAddress,
+        price: preSelectedAsset.price,
+      };
+
+      setSelectedChain(chain);
+      setSelectedAsset(asset);
+      setSenderAddress(sender);
+      
+      setTransaction((prev) => ({
+        ...prev,
+        token: {
+          symbol: asset.symbol,
+          name: asset.name,
+          balance: asset.balance,
+          price: asset.price,
+          icon: asset.symbol.toLowerCase(),
+          contractAddress: asset.contractAddress,
+          decimals: asset.decimals,
+          isNative: asset.isNative,
+        },
+      }));
+      
+      // Skip directly to address step
+      setStep("address");
+    }
+  }, [open, preSelectedAsset, addresses]);
 
   const handleClose = () => {
     onOpenChange(false);
