@@ -72,6 +72,14 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     return unifiedTx.addresses.evm;
   };
 
+  // Known TRC-20 tokens for proper symbol/decimals in history
+  const KNOWN_TRC20: Record<string, { symbol: string; decimals: number }> = {
+    'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t': { symbol: 'USDT', decimals: 6 },
+    'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8': { symbol: 'USDC', decimals: 6 },
+    'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR': { symbol: 'WTRX', decimals: 6 },
+    'TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S': { symbol: 'SUN', decimals: 18 },
+  };
+
   // Convert blockchain transactions to display format
   const convertBlockchainTx = (
     chain: Chain,
@@ -100,7 +108,21 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       return from.toLowerCase() === user.toLowerCase();
     })();
 
-    const amount = parseFloat(tx.value || "0") / Math.pow(10, info.decimals);
+    // Detect TRC-20 token transactions
+    let symbol = info.symbol;
+    let decimals = info.decimals;
+    if (chain === "tron" && tx.contractType === "TriggerSmartContract") {
+      const contractAddr = tx.contractAddressBase58 || tronHexToBase58(tx.contractAddress) || tx.contractAddress;
+      const token = contractAddr ? KNOWN_TRC20[contractAddr] : null;
+      if (token) {
+        symbol = token.symbol;
+        decimals = token.decimals;
+      } else {
+        symbol = "TRC20";
+      }
+    }
+
+    const amount = parseFloat(tx.value || "0") / Math.pow(10, decimals);
 
     return {
       id: `${chain}:${tx.hash}`,
@@ -108,7 +130,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       type: isSend ? "send" : "receive",
       status: tx.status === "confirmed" ? "completed" : tx.status === "pending" ? "pending" : "failed",
       amount,
-      symbol: info.symbol,
+      symbol,
       icon: info.icon,
       usdValue: 0,
       address: isSend ? to : from,
