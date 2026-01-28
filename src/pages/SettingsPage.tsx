@@ -13,6 +13,7 @@ import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
 import { ManageStoredKeysSheet } from "@/components/settings/ManageStoredKeysSheet";
 import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
+import { wipeAllWalletData } from "@/utils/walletStorage";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -115,19 +116,15 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   };
 
   const handleResetWallet = () => {
-    // Clear all wallet data
-    localStorage.removeItem("timetrade_wallet_created");
-    localStorage.removeItem("timetrade_pin");
-    localStorage.removeItem("timetrade_biometric");
-    localStorage.removeItem("timetrade_seed_phrase");
+    console.log('%c[SETTINGS] 🗑️ Reset Wallet initiated', 'color: #ef4444; font-weight: bold;');
     
-    // Clear biometric registration
+    // Clear biometric registration first (uses its own storage)
     removeBiometric();
     
-    // Clear stored encrypted keys
-    clearAllStoredKeys();
+    // Wipe ALL timetrade_* localStorage keys
+    wipeAllWalletData();
     
-    // Reload the app
+    // Reload the app to show onboarding
     window.location.reload();
   };
 
