@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
@@ -209,6 +210,15 @@ async function callBlockchainFunction<T>(
 }
 
 export function useWalletBalance(address: string | null, chain: Chain = 'ethereum') {
+  // Log when hook is called to track query state
+  React.useEffect(() => {
+    console.log(`%c[WALLET BALANCE HOOK] 🎯 useWalletBalance called`, 'color: #8b5cf6;', {
+      chain,
+      address: address || '(null - query disabled)',
+      enabled: !!address,
+    });
+  }, [chain, address]);
+
   return useQuery({
     queryKey: ['walletBalance', chain, address],
     queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, false),

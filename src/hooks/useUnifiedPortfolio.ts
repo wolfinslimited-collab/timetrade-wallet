@@ -14,22 +14,27 @@ export interface UnifiedAsset {
 
 const isLikelySolanaAddress = (address: string | null | undefined) => {
   if (!address) return false;
-  // Base58 (no 0,O,I,l) and typical Solana pubkey length
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
 };
 
-const getAddressesFromStorage = () => {
-  const primaryAddress = localStorage.getItem("timetrade_wallet_address");
+function getAddressesFromStorage() {
   const storedEvmAddress = localStorage.getItem("timetrade_wallet_address_evm");
   const storedSolanaAddress = localStorage.getItem("timetrade_wallet_address_solana");
   const storedTronAddress = localStorage.getItem("timetrade_wallet_address_tron");
 
+  // Log all address keys for debugging
+  console.log(`%c[UNIFIED PORTFOLIO] 🔍 Reading Addresses from Storage`, 'color: #6366f1;', {
+    evm: storedEvmAddress || '(empty)',
+    solana: storedSolanaAddress || '(empty)',
+    tron: storedTronAddress || '(empty)',
+  });
+
   return {
-    evmAddress: storedEvmAddress || (isEvmAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    solanaAddress: storedSolanaAddress || (isLikelySolanaAddress(primaryAddress) ? primaryAddress!.trim() : null),
-    tronAddress: storedTronAddress || (isTronAddress(primaryAddress) ? primaryAddress!.trim() : null),
+    evmAddress: storedEvmAddress?.trim() || null,
+    solanaAddress: storedSolanaAddress?.trim() || null,
+    tronAddress: storedTronAddress?.trim() || null,
   };
-};
+}
 
 function toDecimalAmount(balance: string, decimals: number) {
   const n = parseFloat(balance);
@@ -42,33 +47,44 @@ const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
 export function useUnifiedPortfolio(enabled: boolean) {
   const queryClient = useQueryClient();
 
-  // Track addresses from storage reactively
-  const [addressKey, setAddressKey] = React.useState(0);
-  const addresses = React.useMemo(() => {
-    const result = getAddressesFromStorage();
-    console.log(`%c[UNIFIED PORTFOLIO] 📍 Addresses Loaded`, 'color: #a855f7; font-weight: bold;', {
-      evm: result.evmAddress || '(not set)',
-      solana: result.solanaAddress || '(not set)',
-      tron: result.tronAddress || '(not set)',
-      key: addressKey,
-      timestamp: new Date().toISOString(),
-    });
-    return result;
-  }, [addressKey]);
+  // State to hold addresses - updated on mount and when account switches
+  const [addresses, setAddresses] = React.useState(() => getAddressesFromStorage());
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;
 
-  // Re-read addresses when account switches or wallet unlocks
+  // Log active addresses whenever they change
+  React.useEffect(() => {
+    if (!enabled) return;
+    console.log(`%c[UNIFIED PORTFOLIO] 📍 Active Addresses`, 'color: #a855f7; font-weight: bold;', {
+      evm: evmAddress || '(not set)',
+      solana: solanaAddress || '(not set)',
+      tron: tronAddress || '(not set)',
+      enabled,
+      timestamp: new Date().toISOString(),
+    });
+  }, [enabled, evmAddress, solanaAddress, tronAddress]);
+
+  // Listen for account switch events and re-read addresses
   React.useEffect(() => {
     if (!enabled) return;
 
     const handleAccountSwitch = () => {
-      console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Event`, 'color: #f97316; font-weight: bold;', {
+      console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Event Received`, 'color: #f97316; font-weight: bold;', {
         timestamp: new Date().toISOString(),
       });
       
-      setAddressKey((k) => k + 1);
+      // Re-read addresses from storage
+      const newAddresses = getAddressesFromStorage();
+      setAddresses(newAddresses);
       
+      console.log(`%c[UNIFIED PORTFOLIO] 🔄 New Addresses After Switch`, 'color: #22c55e; font-weight: bold;', {
+        evm: newAddresses.evmAddress || '(not set)',
+        solana: newAddresses.solanaAddress || '(not set)',
+        tron: newAddresses.tronAddress || '(not set)',
+      });
+      
+      // Invalidate queries to force refetch with new addresses
+      console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308;');
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
       queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
     };
@@ -82,11 +98,28 @@ export function useUnifiedPortfolio(enabled: boolean) {
     };
   }, [enabled, queryClient]);
 
+  // Determine which addresses to use for queries
+  const queryEvmAddress = enabled && evmAddress ? evmAddress : null;
+  const querySolanaAddress = enabled && solanaAddress ? solanaAddress : null;
+  const queryTronAddress = enabled && tronAddress ? tronAddress : null;
+
+  // Log query addresses
+  React.useEffect(() => {
+    if (enabled) {
+      console.log(`%c[UNIFIED PORTFOLIO] 🔗 Query Addresses`, 'color: #3b82f6;', {
+        ethereum: queryEvmAddress || '(disabled)',
+        polygon: queryEvmAddress || '(disabled)',
+        solana: querySolanaAddress || '(disabled)',
+        tron: queryTronAddress || '(disabled)',
+      });
+    }
+  }, [enabled, queryEvmAddress, querySolanaAddress, queryTronAddress]);
+
   // Fetch balances in parallel (React Query)
-  const ethBalance = useWalletBalance(enabled ? evmAddress : null, "ethereum");
-  const polyBalance = useWalletBalance(enabled ? evmAddress : null, "polygon");
-  const solBalance = useWalletBalance(enabled ? solanaAddress : null, "solana");
-  const tronBalance = useWalletBalance(enabled ? tronAddress : null, "tron");
+  const ethBalance = useWalletBalance(queryEvmAddress, "ethereum");
+  const polyBalance = useWalletBalance(queryEvmAddress, "polygon");
+  const solBalance = useWalletBalance(querySolanaAddress, "solana");
+  const tronBalance = useWalletBalance(queryTronAddress, "tron");
 
   const balances = React.useMemo(() => {
     const list: WalletBalance[] = [];
