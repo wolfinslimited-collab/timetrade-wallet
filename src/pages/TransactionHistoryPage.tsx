@@ -80,6 +80,18 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     'TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S': { symbol: 'SUN', decimals: 18 },
   };
 
+  // Known SPL tokens for proper symbol/decimals in Solana history
+  const KNOWN_SPL: Record<string, { symbol: string; decimals: number }> = {
+    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', decimals: 6 },
+    'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { symbol: 'USDT', decimals: 6 },
+    'So11111111111111111111111111111111111111112': { symbol: 'SOL', decimals: 9 },
+    'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': { symbol: 'mSOL', decimals: 9 },
+    'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { symbol: 'BONK', decimals: 5 },
+    '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj': { symbol: 'stSOL', decimals: 9 },
+    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': { symbol: 'JUP', decimals: 6 },
+    'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3': { symbol: 'PYTH', decimals: 6 },
+  };
+
   // Convert blockchain transactions to display format
   const convertBlockchainTx = (
     chain: Chain,
@@ -119,6 +131,48 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
         decimals = token.decimals;
       } else {
         symbol = "TRC20";
+      }
+    }
+
+    // Detect SPL token transactions for Solana
+    if (chain === "solana" && tx.tokenTransfers && tx.tokenTransfers.length > 0) {
+      // Find the most relevant token transfer (user is source or destination)
+      const relevantTransfer = tx.tokenTransfers.find(t => 
+        t.source === user || t.destination === user
+      ) || tx.tokenTransfers[0];
+      
+      if (relevantTransfer) {
+        const mint = relevantTransfer.mint;
+        const knownToken = mint ? KNOWN_SPL[mint] : null;
+        
+        if (knownToken) {
+          symbol = knownToken.symbol;
+          decimals = knownToken.decimals;
+        } else if (relevantTransfer.symbol && relevantTransfer.symbol !== 'SOL') {
+          // Use symbol from transfer if available
+          symbol = relevantTransfer.symbol;
+          decimals = relevantTransfer.decimals || 6;
+        }
+        
+        // Use the token transfer amount if it's a token transaction (not native SOL)
+        if (symbol !== 'SOL' && relevantTransfer.amount) {
+          const tokenAmount = parseFloat(relevantTransfer.amount) / Math.pow(10, decimals);
+          return {
+            id: `${chain}:${tx.hash}`,
+            chain,
+            type: isSend ? "send" : "receive",
+            status: tx.status === "confirmed" ? "completed" : tx.status === "pending" ? "pending" : "failed",
+            amount: tokenAmount,
+            symbol,
+            icon: info.icon,
+            usdValue: 0,
+            address: isSend ? relevantTransfer.destination : relevantTransfer.source,
+            timestamp: new Date((tx.timestamp || 0) * 1000),
+            txHash: tx.hash,
+            networkFee: 0,
+            explorerUrl,
+          };
+        }
       }
     }
 
