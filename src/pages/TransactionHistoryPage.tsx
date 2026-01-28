@@ -2,16 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { getChainInfo, formatBalance, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
+import { Chain, getChainInfo, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
 import { TransactionFilterSheet, TransactionFilters } from "@/components/history/TransactionFilterSheet";
 import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransactionDetailSheet";
 import { Badge } from "@/components/ui/badge";
+import { useUnifiedTransactions } from "@/hooks/useUnifiedTransactions";
 
 export type TransactionType = "send" | "receive" | "swap";
 export type TransactionStatus = "completed" | "pending" | "failed";
 
 export interface Transaction {
   id: string;
+  chain: Chain;
   type: TransactionType;
   status: TransactionStatus;
   amount: number;
@@ -43,21 +45,16 @@ const defaultFilters: TransactionFilters = {
 export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) => {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [selectedBlockchainTx, setSelectedBlockchainTx] = useState<BlockchainTransaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>(defaultFilters);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   
   const { 
     isConnected, 
-    walletAddress, 
-    transactions: blockchainTx, 
-    transactionsExplorerUrl,
-    isLoadingTransactions, 
-    transactionsError,
-    selectedChain,
     refreshAll,
   } = useBlockchainContext();
+
+  const unifiedTx = useUnifiedTransactions(isConnected);
 
   // Always fetch fresh blockchain data when the page loads
   useEffect(() => {
@@ -67,33 +64,63 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     }
   }, [isConnected, refreshAll]);
 
-  const chainInfo = getChainInfo(selectedChain);
+  const getUserAddressForChain = (chain: Chain) => {
+    if (chain === "solana") return unifiedTx.addresses.solana;
+    if (chain === "tron") return unifiedTx.addresses.tron;
+    // ethereum + polygon share the same EVM address
+    return unifiedTx.addresses.evm;
+  };
 
   // Convert blockchain transactions to display format
-  const convertBlockchainTx = (tx: BlockchainTransaction): Transaction => {
-    const isSend = tx.from?.toLowerCase() === walletAddress?.toLowerCase();
-    const amount = parseFloat(tx.value || '0') / Math.pow(10, chainInfo.decimals);
-    
+  const convertBlockchainTx = (
+    chain: Chain,
+    tx: BlockchainTransaction,
+    userAddress: string | null,
+    explorerUrl?: string
+  ): Transaction => {
+    const info = getChainInfo(chain);
+    const from = tx.from || "";
+    const to = tx.to || "";
+    const isSend = (() => {
+      if (!userAddress) return false;
+      if (chain === "solana") return from === userAddress;
+      return from.toLowerCase() === userAddress.toLowerCase();
+    })();
+
+    const amount = parseFloat(tx.value || "0") / Math.pow(10, info.decimals);
+
     return {
-      id: tx.hash,
+      id: `${chain}:${tx.hash}`,
+      chain,
       type: isSend ? "send" : "receive",
-      status: tx.status === 'confirmed' ? 'completed' : tx.status === 'pending' ? 'pending' : 'failed',
+      status: tx.status === "confirmed" ? "completed" : tx.status === "pending" ? "pending" : "failed",
       amount,
-      symbol: chainInfo.symbol,
-      icon: chainInfo.icon,
-      usdValue: 0, // Would need price API
-      address: isSend ? tx.to : tx.from,
-      timestamp: new Date(tx.timestamp * 1000),
+      symbol: info.symbol,
+      icon: info.icon,
+      usdValue: 0,
+      address: isSend ? to : from,
+      timestamp: new Date((tx.timestamp || 0) * 1000),
       txHash: tx.hash,
       networkFee: 0,
-      explorerUrl: transactionsExplorerUrl,
+      explorerUrl,
     };
   };
 
-  // Only show real on-chain transactions (no mock/demo data)
-  const displayTransactions = isConnected && blockchainTx?.length
-    ? blockchainTx.map(convertBlockchainTx)
-    : [];
+  const displayTransactions = useMemo(() => {
+    if (!isConnected) return [];
+    return unifiedTx.combined.map((u) =>
+      convertBlockchainTx(u.chain, u.tx, getUserAddressForChain(u.chain), u.explorerUrl)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, unifiedTx.combined, unifiedTx.addresses]);
+
+  const solanaTxByHash = useMemo(() => {
+    const map = new Map<string, BlockchainTransaction>();
+    for (const u of unifiedTx.combined) {
+      if (u.chain === "solana") map.set(u.tx.hash, u.tx);
+    }
+    return map;
+  }, [unifiedTx.combined]);
 
   // Get available tokens for filter
   const availableTokens = useMemo(() => {
@@ -195,18 +222,23 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
   const handleTxClick = (tx: Transaction) => {
     // For Solana, open the detailed sheet with parsed instructions
-    if (selectedChain === 'solana' && isConnected && blockchainTx) {
-      const originalTx = blockchainTx.find(t => t.hash === tx.txHash);
+    if (tx.chain === "solana" && isConnected) {
+      const originalTx = solanaTxByHash.get(tx.txHash);
       if (originalTx) {
         setSelectedBlockchainTx(originalTx);
         return;
       }
     }
-    // For other chains or mock data, open in explorer
-    const baseUrl = tx.explorerUrl || transactionsExplorerUrl || chainInfo.id === 'ethereum' 
-      ? 'https://sepolia.etherscan.io' 
-      : 'https://etherscan.io';
-    window.open(`${baseUrl}/tx/${tx.txHash}`, '_blank');
+
+    const baseUrl = tx.explorerUrl || (tx.chain === "tron" ? "https://tronscan.org" : undefined);
+    if (!baseUrl) return;
+
+    const url =
+      tx.chain === "tron"
+        ? `${baseUrl.replace(/\/$/, "")}/#/transaction/${tx.txHash}`
+        : `${baseUrl.replace(/\/$/, "")}/tx/${tx.txHash}`;
+
+    window.open(url, "_blank");
   };
 
   return (
@@ -223,21 +255,15 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
         {isConnected && (
           <button
             onClick={() => refreshAll()}
-            disabled={isLoadingTransactions}
+            disabled={unifiedTx.isLoading}
             className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={cn("w-4 h-4", isLoadingTransactions && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4", unifiedTx.isLoading && "animate-spin")} />
           </button>
         )}
         {isConnected && (
-          <div 
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full"
-            style={{ 
-              backgroundColor: `${chainInfo.color}20`,
-              color: chainInfo.color,
-            }}
-          >
-            {chainInfo.icon} {chainInfo.testnetName}
+          <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+            All Networks
           </div>
         )}
       </div>
@@ -361,7 +387,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       )}
 
       {/* Loading State */}
-      {isConnected && isLoadingTransactions && (
+      {isConnected && unifiedTx.isLoading && (
         <div className="flex-1 flex flex-col items-center justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mb-4" />
           <p className="text-muted-foreground">Loading transactions...</p>
@@ -369,16 +395,16 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       )}
 
       {/* Error State */}
-      {isConnected && transactionsError && !isLoadingTransactions && (
+      {isConnected && unifiedTx.error && !unifiedTx.isLoading && (
         <div className="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
           <Filter className="w-12 h-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-2">Failed to load transactions</p>
-          <p className="text-xs text-muted-foreground">{transactionsError.message}</p>
+          <p className="text-xs text-muted-foreground">{unifiedTx.error.message}</p>
         </div>
       )}
 
       {/* Transaction List */}
-      {(!isConnected || (!isLoadingTransactions && !transactionsError)) && (
+      {(!isConnected || (!unifiedTx.isLoading && !unifiedTx.error)) && (
         <div className="flex-1 px-4 pb-8">
           {Object.keys(groupedTransactions).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -386,8 +412,8 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
               <p className="text-muted-foreground">
                 {activeFilterCount > 0 || searchQuery
                   ? "No transactions match your filters"
-                  : isConnected 
-                    ? "No transactions found on this network" 
+                  : isConnected
+                    ? "No transactions found across your networks"
                     : "No transactions found"}
               </p>
               {(searchQuery || activeFilterCount > 0) && (
@@ -474,7 +500,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       {/* Solana Transaction Detail Sheet */}
       <SolanaTransactionDetailSheet
         transaction={selectedBlockchainTx}
-        userAddress={walletAddress}
+        userAddress={unifiedTx.addresses.solana}
         onClose={() => setSelectedBlockchainTx(null)}
       />
     </div>
