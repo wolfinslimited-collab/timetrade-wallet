@@ -96,6 +96,10 @@ interface BlockchainProviderProps {
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const queryClient = useQueryClient();
 
+  // Tracks which encrypted seed phrase was last used to derive accounts.
+  // This allows us to re-derive only when the user actually switches to a different mnemonic.
+  const lastSeedCipherRef = React.useRef<string | null>(null);
+
   // Defer queries until after mount to avoid React HMR state corruption
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
@@ -125,6 +129,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     const encryptedDataStr = localStorage.getItem('timetrade_seed_phrase');
     const storedPin = localStorage.getItem('timetrade_pin');
     if (!encryptedDataStr) return;
+
+    lastSeedCipherRef.current = encryptedDataStr;
 
     // Build a unique list of candidate PINs to try (handles rare PIN/seed desync issues)
     const pins = Array.from(
@@ -171,6 +177,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       const storedChain = (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
       const index = storedIndex ? parseInt(storedIndex, 10) : 0;
 
+      // Keep state in sync even if some other part of the app wrote to localStorage directly.
+      setActiveAccountIndex(index);
+
       // Derive addresses using stored path (no expensive auto-detection on every unlock)
       const accounts = deriveMultipleAccounts(words, 5, solanaPathStyle);
       const activeEvm = accounts.evm[index] || accounts.evm[0];
@@ -186,7 +195,8 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
       const chainAccounts = storedChain === 'solana' ? accounts.solana : accounts.evm;
       const activeAccount = chainAccounts[index] || chainAccounts[0];
-      if (activeAccount && !walletAddress) {
+      if (activeAccount) {
+        // Always sync walletAddress when mnemonic changes (or when index changes externally).
         setWalletAddress(activeAccount.address);
         localStorage.setItem('timetrade_wallet_address', activeAccount.address);
       }
@@ -224,11 +234,25 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       deriveFromStoredMnemonic(pin);
     };
 
+    const onAccountSwitched = () => {
+      const storedIndex = localStorage.getItem('timetrade_active_account_index');
+      const nextIndex = storedIndex ? parseInt(storedIndex, 10) : 0;
+      setActiveAccountIndex(nextIndex);
+
+      // Only re-derive if the encrypted mnemonic changed (this is what fixes “switch wallet → blank”).
+      const seedCipher = localStorage.getItem('timetrade_seed_phrase');
+      if (seedCipher && seedCipher !== lastSeedCipherRef.current) {
+        deriveFromStoredMnemonic();
+      }
+    };
+
     window.addEventListener('timetrade:unlocked', onUnlocked as EventListener);
     window.addEventListener('timetrade:pin-updated', onUnlocked as EventListener);
+    window.addEventListener('timetrade:account-switched', onAccountSwitched as EventListener);
     return () => {
       window.removeEventListener('timetrade:unlocked', onUnlocked as EventListener);
       window.removeEventListener('timetrade:pin-updated', onUnlocked as EventListener);
+      window.removeEventListener('timetrade:account-switched', onAccountSwitched as EventListener);
     };
   }, [deriveFromStoredMnemonic]);
 

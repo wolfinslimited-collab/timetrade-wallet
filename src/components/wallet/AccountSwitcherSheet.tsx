@@ -9,7 +9,9 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
 import { validateSeedPhrase } from "@/utils/seedPhrase";
 import { deriveEvmAddress, deriveSolanaAddress, deriveTronAddress } from "@/utils/walletDerivation";
-import { encryptPrivateKey } from "@/utils/encryption";
+import { decryptPrivateKey, encryptPrivateKey } from "@/utils/encryption";
+import { Wallet as EthersWallet } from "ethers";
+import { evmToTronAddress } from "@/utils/tronAddress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,11 @@ interface StoredAccount {
   id: string;
   name: string;
   type: "mnemonic" | "privateKey";
+  // When type === "mnemonic", we must persist the encrypted mnemonic per account
+  // so switching restores the correct wallet after refresh.
+  encryptedSeedPhrase?: string;
+  // When type === "privateKey", link to an entry in timetrade_stored_keys.
+  storedKeyId?: string;
   createdAt: string;
 }
 
@@ -53,18 +60,28 @@ function useUserAccounts() {
       }
     }
     
-    // If we have accounts, use them
+    // If we have accounts, use them (and lightly hydrate legacy entries)
     if (Array.isArray(parsed) && parsed.length > 0) {
-      setAccounts(parsed);
+      const seedCipher = localStorage.getItem("timetrade_seed_phrase") || undefined;
+      const hydrated = parsed.map((a) => {
+        if (a.type === "mnemonic" && a.id === "main" && !a.encryptedSeedPhrase && seedCipher) {
+          return { ...a, encryptedSeedPhrase: seedCipher };
+        }
+        return a;
+      });
+      setAccounts(hydrated);
+      // Persist hydration so switching works after refresh
+      localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(hydrated));
     } else {
       // Recovery: Check if there's an existing seed phrase but no accounts registered
-      const hasMainWallet = localStorage.getItem("timetrade_seed_phrase");
+      const seedCipher = localStorage.getItem("timetrade_seed_phrase");
       const walletName = localStorage.getItem("timetrade_wallet_name") || "Main Wallet";
-      if (hasMainWallet) {
+      if (seedCipher) {
         const mainAccount: StoredAccount = {
           id: "main",
           name: walletName,
           type: "mnemonic",
+          encryptedSeedPhrase: seedCipher,
           createdAt: new Date().toISOString(),
         };
         setAccounts([mainAccount]);
@@ -73,11 +90,16 @@ function useUserAccounts() {
     }
   }, []);
 
-  const addAccount = (name: string, type: "mnemonic" | "privateKey") => {
+  const addAccount = (
+    name: string,
+    type: "mnemonic" | "privateKey",
+    extras?: Pick<StoredAccount, "encryptedSeedPhrase" | "storedKeyId">
+  ) => {
     const newAccount: StoredAccount = {
       id: Date.now().toString(),
       name: name.trim() || `Account ${accounts.length + 1}`,
       type,
+      ...(extras || {}),
       createdAt: new Date().toISOString(),
     };
     const updated = [...accounts, newAccount];
@@ -116,25 +138,68 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   const [editNameInput, setEditNameInput] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const handleSelectAccount = (accountId: string, accountIndex: number) => {
-    // Find the account to get its name for the toast
-    const account = accounts.find(a => a.id === accountId);
-    const name = account?.name || `Account ${accountIndex + 1}`;
-    
-    // Update wallet name in storage so header reflects the selected account
-    if (account?.name) {
-      localStorage.setItem("timetrade_wallet_name", account.name);
+  const handleSelectAccount = async (accountId: string) => {
+    const account = accounts.find((a) => a.id === accountId);
+    if (!account) return;
+
+    // Always update wallet name so header reflects selection
+    localStorage.setItem("timetrade_wallet_name", account.name);
+
+    // IMPORTANT: the UI list index is NOT a derivation index.
+    // Switching must restore the correct wallet material (mnemonic/private key) first.
+    if (account.type === "mnemonic") {
+      if (!account.encryptedSeedPhrase) {
+        toast.error("This wallet was created before an update. Please re-import the seed phrase.");
+        return;
+      }
+
+      const storedPin = localStorage.getItem("timetrade_pin");
+      if (!storedPin) {
+        toast.error("Please set up PIN first");
+        return;
+      }
+
+      localStorage.setItem("timetrade_seed_phrase", account.encryptedSeedPhrase);
+      localStorage.setItem("timetrade_active_account_index", "0");
+
+      // Trigger re-derivation + UI sync (BlockchainContext re-derives when seed phrase changes)
+      window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
+
+      // Refresh queries after addresses have been re-derived
+      setTimeout(() => refreshAll(), 250);
+    } else {
+      // Private-key accounts: derive EVM + Tron addresses and update storage.
+      const storedPin = localStorage.getItem("timetrade_pin");
+      if (!storedPin) {
+        toast.error("Please set up PIN first");
+        return;
+      }
+
+      const existingKeys = JSON.parse(localStorage.getItem("timetrade_stored_keys") || "[]");
+      const entry =
+        existingKeys.find((k: any) => k.id === account.storedKeyId) ||
+        existingKeys.find((k: any) => k.label === account.name);
+      if (!entry?.encryptedKey) {
+        toast.error("Private key not found for this account");
+        return;
+      }
+
+      const privateKeyRaw = await decryptPrivateKey(entry.encryptedKey, storedPin);
+      const privateKey = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
+      const evmAddress = new EthersWallet(privateKey).address;
+      const tronAddress = evmToTronAddress(evmAddress);
+
+      localStorage.setItem("timetrade_wallet_address", evmAddress);
+      localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
+      if (tronAddress) localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
+      localStorage.removeItem("timetrade_wallet_address_solana");
+      localStorage.setItem("timetrade_active_account_index", "0");
+
+      window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
+      setTimeout(() => refreshAll(), 200);
     }
-    
-    // Set the active derivation index - this will update addresses and dispatch events
-    setActiveAccountIndex(accountIndex);
-    
-    // Extra refresh after a delay to ensure data is fetched with new addresses
-    setTimeout(() => {
-      refreshAll();
-    }, 200);
-    
-    toast.success(`Switched to ${name}`);
+
+    toast.success(`Switched to ${account.name}`);
     onOpenChange(false);
   };
 
@@ -154,7 +219,8 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       }
 
       const encrypted = await encryptPrivateKey(words.join(" "), storedPin);
-      localStorage.setItem("timetrade_seed_phrase", JSON.stringify(encrypted));
+      const encryptedStr = JSON.stringify(encrypted);
+      localStorage.setItem("timetrade_seed_phrase", encryptedStr);
 
       const evmAddress = deriveEvmAddress(words.join(" "), 0);
       const solAddress = deriveSolanaAddress(words.join(" "), 0, "phantom");
@@ -170,7 +236,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       // Set wallet name so header displays it correctly
       localStorage.setItem("timetrade_wallet_name", accountName);
       
-      addAccount(accountName, "mnemonic");
+      addAccount(accountName, "mnemonic", { encryptedSeedPhrase: encryptedStr });
 
       window.dispatchEvent(new CustomEvent("timetrade:unlocked", { detail: { pin: storedPin } }));
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
@@ -209,8 +275,9 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       const encrypted = await encryptPrivateKey(key, storedPin);
       const existingKeys = JSON.parse(localStorage.getItem("timetrade_stored_keys") || "[]");
       const accountName = accountNameInput.trim() || `Private Key ${existingKeys.length + 1}`;
+      const keyId = Date.now().toString();
       existingKeys.push({
-        id: Date.now().toString(),
+        id: keyId,
         label: accountName,
         encryptedKey: encrypted,
         addedAt: new Date().toISOString(),
@@ -220,7 +287,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       // Set wallet name so header displays it correctly
       localStorage.setItem("timetrade_wallet_name", accountName);
       
-      addAccount(accountName, "privateKey");
+      addAccount(accountName, "privateKey", { storedKeyId: keyId });
 
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
@@ -230,7 +297,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       setAddMode(null);
       
       // Refresh data for the new account
-      setTimeout(() => refreshAll(), 100);
+      setTimeout(() => refreshAll(), 150);
     } catch (err) {
       console.error("Import failed:", err);
       toast.error("Failed to import key");
@@ -441,7 +508,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                     >
                       {/* Account Number */}
                       <button
-                        onClick={() => handleSelectAccount(account.id, index)}
+                        onClick={() => handleSelectAccount(account.id)}
                         className={cn(
                           "w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg shrink-0 transition-colors",
                           isActive
@@ -454,7 +521,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                       
                       {/* Account Info */}
                       <button
-                        onClick={() => handleSelectAccount(account.id, index)}
+                        onClick={() => handleSelectAccount(account.id)}
                         className="flex-1 text-left min-w-0"
                       >
                         {isEditing ? (
