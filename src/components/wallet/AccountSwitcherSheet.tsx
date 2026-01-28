@@ -139,73 +139,112 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleSelectAccount = async (accountId: string) => {
+    console.log(`%c[ACCOUNT SWITCHER] 🔄 Starting account switch`, 'color: #8b5cf6; font-weight: bold;', { accountId });
+    
     const account = accounts.find((a) => a.id === accountId);
-    if (!account) return;
-
-    // Always update wallet name so header reflects selection
-    localStorage.setItem("timetrade_wallet_name", account.name);
-
-    // IMPORTANT: the UI list index is NOT a derivation index.
-    // Switching must restore the correct wallet material (mnemonic/private key) first.
-    if (account.type === "mnemonic") {
-      if (!account.encryptedSeedPhrase) {
-        toast.error("This wallet was created before an update. Please re-import the seed phrase.");
-        return;
-      }
-
-      const storedPin = localStorage.getItem("timetrade_pin");
-      if (!storedPin) {
-        toast.error("Please set up PIN first");
-        return;
-      }
-
-      localStorage.setItem("timetrade_seed_phrase", account.encryptedSeedPhrase);
-      localStorage.setItem("timetrade_active_account_index", "0");
-
-      // Trigger re-derivation + UI sync (BlockchainContext re-derives when seed phrase changes)
-      window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
-
-      // Refresh queries after addresses have been re-derived
-      setTimeout(() => refreshAll(), 250);
-    } else {
-      // Private-key accounts: derive EVM + Tron addresses and update storage.
-      const storedPin = localStorage.getItem("timetrade_pin");
-      if (!storedPin) {
-        toast.error("Please set up PIN first");
-        return;
-      }
-
-      const existingKeys = JSON.parse(localStorage.getItem("timetrade_stored_keys") || "[]");
-      const entry =
-        existingKeys.find((k: any) => k.id === account.storedKeyId) ||
-        existingKeys.find((k: any) => k.label === account.name);
-      if (!entry?.encryptedKey) {
-        toast.error("Private key not found for this account");
-        return;
-      }
-
-      const privateKeyRaw = await decryptPrivateKey(entry.encryptedKey, storedPin);
-      const privateKey = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
-      const evmAddress = new EthersWallet(privateKey).address;
-      const tronAddress = evmToTronAddress(evmAddress);
-
-      localStorage.setItem("timetrade_wallet_address", evmAddress);
-      localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
-      if (tronAddress) localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
-      localStorage.removeItem("timetrade_wallet_address_solana");
-      localStorage.setItem("timetrade_active_account_index", "0");
-
-      window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
-      setTimeout(() => refreshAll(), 200);
+    if (!account) {
+      console.error(`%c[ACCOUNT SWITCHER] ❌ Account not found`, 'color: #ef4444;', { accountId });
+      toast.error("Account not found");
+      return;
     }
 
-    toast.success(`Switched to ${account.name}`);
-    onOpenChange(false);
+    console.log(`%c[ACCOUNT SWITCHER] 📋 Account details`, 'color: #3b82f6;', {
+      id: account.id,
+      name: account.name,
+      type: account.type,
+      hasEncryptedSeed: !!account.encryptedSeedPhrase,
+      hasStoredKeyId: !!account.storedKeyId,
+    });
+
+    try {
+      // Always update wallet name so header reflects selection
+      localStorage.setItem("timetrade_wallet_name", account.name);
+
+      const storedPin = localStorage.getItem("timetrade_pin");
+      if (!storedPin) {
+        console.error(`%c[ACCOUNT SWITCHER] ❌ No PIN found`, 'color: #ef4444;');
+        toast.error("Please set up PIN first");
+        return;
+      }
+
+      if (account.type === "mnemonic") {
+        if (!account.encryptedSeedPhrase) {
+          console.error(`%c[ACCOUNT SWITCHER] ❌ No encrypted seed phrase`, 'color: #ef4444;');
+          toast.error("This wallet was created before an update. Please re-import the seed phrase.");
+          return;
+        }
+
+        console.log(`%c[ACCOUNT SWITCHER] 🔐 Updating seed phrase in storage`, 'color: #22c55e;');
+        localStorage.setItem("timetrade_seed_phrase", account.encryptedSeedPhrase);
+        localStorage.setItem("timetrade_active_account_index", "0");
+
+        // Trigger re-derivation + UI sync
+        console.log(`%c[ACCOUNT SWITCHER] 📢 Dispatching account-switched event`, 'color: #eab308;');
+        window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
+
+        // Refresh queries after addresses have been re-derived
+        setTimeout(() => {
+          console.log(`%c[ACCOUNT SWITCHER] 🔄 Calling refreshAll()`, 'color: #06b6d4;');
+          refreshAll();
+        }, 300);
+      } else {
+        // Private-key accounts
+        console.log(`%c[ACCOUNT SWITCHER] 🔑 Processing private key account`, 'color: #f97316;');
+        
+        const existingKeys = JSON.parse(localStorage.getItem("timetrade_stored_keys") || "[]");
+        const entry =
+          existingKeys.find((k: any) => k.id === account.storedKeyId) ||
+          existingKeys.find((k: any) => k.label === account.name);
+        
+        if (!entry?.encryptedKey) {
+          console.error(`%c[ACCOUNT SWITCHER] ❌ Private key not found`, 'color: #ef4444;', { storedKeyId: account.storedKeyId });
+          toast.error("Private key not found for this account");
+          return;
+        }
+
+        console.log(`%c[ACCOUNT SWITCHER] 🔓 Decrypting private key`, 'color: #a855f7;');
+        const privateKeyRaw = await decryptPrivateKey(entry.encryptedKey, storedPin);
+        const privateKey = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
+        
+        const evmAddress = new EthersWallet(privateKey).address;
+        const tronAddress = evmToTronAddress(evmAddress);
+
+        console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses from private key`, 'color: #22c55e;', {
+          evm: evmAddress,
+          tron: tronAddress || '(none)',
+        });
+
+        localStorage.setItem("timetrade_wallet_address", evmAddress);
+        localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
+        if (tronAddress) localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
+        localStorage.removeItem("timetrade_wallet_address_solana");
+        localStorage.setItem("timetrade_active_account_index", "0");
+
+        console.log(`%c[ACCOUNT SWITCHER] 📢 Dispatching account-switched event`, 'color: #eab308;');
+        window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
+        
+        setTimeout(() => {
+          console.log(`%c[ACCOUNT SWITCHER] 🔄 Calling refreshAll()`, 'color: #06b6d4;');
+          refreshAll();
+        }, 250);
+      }
+
+      toast.success(`Switched to ${account.name}`);
+      onOpenChange(false);
+      
+      console.log(`%c[ACCOUNT SWITCHER] ✅ Account switch completed successfully`, 'color: #22c55e; font-weight: bold;');
+    } catch (err) {
+      console.error(`%c[ACCOUNT SWITCHER] ❌ Account switch failed`, 'color: #ef4444; font-weight: bold;', err);
+      toast.error("Failed to switch account. Please try again.");
+    }
   };
 
   const handleImportMnemonic = async () => {
+    console.log(`%c[ACCOUNT SWITCHER] 📥 Starting mnemonic import`, 'color: #8b5cf6; font-weight: bold;');
+    
     const words = mnemonicInput.trim().toLowerCase().split(/\s+/);
     if (!validateSeedPhrase(words)) {
+      console.error(`%c[ACCOUNT SWITCHER] ❌ Invalid seed phrase`, 'color: #ef4444;', { wordCount: words.length });
       toast.error("Invalid seed phrase");
       return;
     }
@@ -214,17 +253,27 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     try {
       const storedPin = localStorage.getItem("timetrade_pin");
       if (!storedPin) {
+        console.error(`%c[ACCOUNT SWITCHER] ❌ No PIN found`, 'color: #ef4444;');
         toast.error("Please set up PIN first");
+        setIsImporting(false);
         return;
       }
 
+      console.log(`%c[ACCOUNT SWITCHER] 🔐 Encrypting seed phrase`, 'color: #22c55e;');
       const encrypted = await encryptPrivateKey(words.join(" "), storedPin);
       const encryptedStr = JSON.stringify(encrypted);
       localStorage.setItem("timetrade_seed_phrase", encryptedStr);
 
+      console.log(`%c[ACCOUNT SWITCHER] 🔑 Deriving addresses`, 'color: #3b82f6;');
       const evmAddress = deriveEvmAddress(words.join(" "), 0);
       const solAddress = deriveSolanaAddress(words.join(" "), 0, "phantom");
       const tronAddress = deriveTronAddress(words.join(" "), 0);
+
+      console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e;', {
+        evm: evmAddress,
+        solana: solAddress,
+        tron: tronAddress,
+      });
 
       localStorage.setItem("timetrade_wallet_address", evmAddress);
       localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
@@ -232,12 +281,11 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
 
       const accountName = accountNameInput.trim() || "Imported Wallet";
-      
-      // Set wallet name so header displays it correctly
       localStorage.setItem("timetrade_wallet_name", accountName);
       
       addAccount(accountName, "mnemonic", { encryptedSeedPhrase: encryptedStr });
 
+      console.log(`%c[ACCOUNT SWITCHER] 📢 Dispatching events`, 'color: #eab308;');
       window.dispatchEvent(new CustomEvent("timetrade:unlocked", { detail: { pin: storedPin } }));
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
@@ -247,10 +295,11 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       setAddMode(null);
       onOpenChange(false);
       
+      console.log(`%c[ACCOUNT SWITCHER] ✅ Import completed, reloading...`, 'color: #22c55e; font-weight: bold;');
       // Small delay before refresh to let events propagate
-      setTimeout(() => window.location.reload(), 100);
+      setTimeout(() => window.location.reload(), 150);
     } catch (err) {
-      console.error("Import failed:", err);
+      console.error(`%c[ACCOUNT SWITCHER] ❌ Import failed`, 'color: #ef4444; font-weight: bold;', err);
       toast.error("Failed to import wallet");
     } finally {
       setIsImporting(false);
@@ -258,8 +307,11 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   };
 
   const handleImportPrivateKey = async () => {
+    console.log(`%c[ACCOUNT SWITCHER] 📥 Starting private key import`, 'color: #8b5cf6; font-weight: bold;');
+    
     const key = privateKeyInput.trim();
     if (!key || key.length < 32) {
+      console.error(`%c[ACCOUNT SWITCHER] ❌ Invalid private key`, 'color: #ef4444;', { keyLength: key.length });
       toast.error("Invalid private key");
       return;
     }
@@ -268,14 +320,18 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     try {
       const storedPin = localStorage.getItem("timetrade_pin");
       if (!storedPin) {
+        console.error(`%c[ACCOUNT SWITCHER] ❌ No PIN found`, 'color: #ef4444;');
         toast.error("Please set up PIN first");
+        setIsImporting(false);
         return;
       }
 
+      console.log(`%c[ACCOUNT SWITCHER] 🔐 Encrypting private key`, 'color: #22c55e;');
       const encrypted = await encryptPrivateKey(key, storedPin);
       const existingKeys = JSON.parse(localStorage.getItem("timetrade_stored_keys") || "[]");
       const accountName = accountNameInput.trim() || `Private Key ${existingKeys.length + 1}`;
       const keyId = Date.now().toString();
+      
       existingKeys.push({
         id: keyId,
         label: accountName,
@@ -284,11 +340,26 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       });
       localStorage.setItem("timetrade_stored_keys", JSON.stringify(existingKeys));
 
-      // Set wallet name so header displays it correctly
+      // Derive addresses from private key
+      console.log(`%c[ACCOUNT SWITCHER] 🔑 Deriving addresses from private key`, 'color: #3b82f6;');
+      const privateKeyFormatted = key.startsWith("0x") ? key : `0x${key}`;
+      const evmAddress = new EthersWallet(privateKeyFormatted).address;
+      const tronAddress = evmToTronAddress(evmAddress);
+
+      console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e;', {
+        evm: evmAddress,
+        tron: tronAddress || '(none)',
+      });
+
+      localStorage.setItem("timetrade_wallet_address", evmAddress);
+      localStorage.setItem("timetrade_wallet_address_evm", evmAddress);
+      if (tronAddress) localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
+      localStorage.removeItem("timetrade_wallet_address_solana");
       localStorage.setItem("timetrade_wallet_name", accountName);
       
       addAccount(accountName, "privateKey", { storedKeyId: keyId });
 
+      console.log(`%c[ACCOUNT SWITCHER] 📢 Dispatching account-switched event`, 'color: #eab308;');
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
       toast.success("Private key imported");
@@ -297,9 +368,14 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       setAddMode(null);
       
       // Refresh data for the new account
-      setTimeout(() => refreshAll(), 150);
+      setTimeout(() => {
+        console.log(`%c[ACCOUNT SWITCHER] 🔄 Calling refreshAll()`, 'color: #06b6d4;');
+        refreshAll();
+      }, 200);
+      
+      console.log(`%c[ACCOUNT SWITCHER] ✅ Private key import completed`, 'color: #22c55e; font-weight: bold;');
     } catch (err) {
-      console.error("Import failed:", err);
+      console.error(`%c[ACCOUNT SWITCHER] ❌ Import failed`, 'color: #ef4444; font-weight: bold;', err);
       toast.error("Failed to import key");
     } finally {
       setIsImporting(false);
