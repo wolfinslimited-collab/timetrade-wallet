@@ -10,6 +10,7 @@ export interface UnifiedAsset {
   amount: number;
   price: number;
   valueUsd: number;
+  chain: Chain; // Track which chain this asset is on
 }
 
 function getAddressesFromStorage() {
@@ -146,14 +147,18 @@ export function useUnifiedPortfolio(enabled: boolean) {
   const pricesQuery = useCryptoPrices(symbols);
 
   const assets: UnifiedAsset[] = React.useMemo(() => {
-    const bySymbol = new Map<string, { symbol: string; name: string; amount: number }>();
+    // Use composite key (chain + symbol) to show each asset per-chain separately
+    // This ensures USDC on Solana shows Solana badge, USDC on Ethereum shows ETH badge
+    const byChainSymbol = new Map<string, { symbol: string; name: string; amount: number; chain: Chain }>();
 
-    const add = (symbol: string, name: string, amount: number) => {
-      const key = symbol.toUpperCase();
-      if (!key || key === "UNKNOWN" || !Number.isFinite(amount) || amount <= 0) return;
-      const existing = bySymbol.get(key);
+    const add = (chain: Chain, symbol: string, name: string, amount: number) => {
+      const symbolKey = symbol.toUpperCase();
+      if (!symbolKey || symbolKey === "UNKNOWN" || !Number.isFinite(amount) || amount <= 0) return;
+      
+      const compositeKey = `${chain}:${symbolKey}`;
+      const existing = byChainSymbol.get(compositeKey);
       if (!existing) {
-        bySymbol.set(key, { symbol: key, name: name || key, amount });
+        byChainSymbol.set(compositeKey, { symbol: symbolKey, name: name || symbolKey, amount, chain });
       } else {
         existing.amount += amount;
         if (!existing.name && name) existing.name = name;
@@ -161,17 +166,20 @@ export function useUnifiedPortfolio(enabled: boolean) {
     };
 
     for (const b of balances) {
+      // Add native token with its chain
       add(
+        b.chain,
         b.native.symbol,
         b.native.name ?? b.native.symbol,
         toDecimalAmount(b.native.balance, b.native.decimals)
       );
+      // Add each token with its chain
       for (const t of b.tokens || []) {
-        add(t.symbol, t.name ?? t.symbol, toDecimalAmount(t.balance, t.decimals));
+        add(b.chain, t.symbol, t.name ?? t.symbol, toDecimalAmount(t.balance, t.decimals));
       }
     }
 
-    const list = Array.from(bySymbol.values()).map((h) => {
+    const list = Array.from(byChainSymbol.values()).map((h) => {
       const price = getPriceForSymbol(pricesQuery.data, h.symbol);
       return {
         symbol: h.symbol,
@@ -179,6 +187,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
         amount: h.amount,
         price,
         valueUsd: h.amount * price,
+        chain: h.chain,
       };
     });
 
