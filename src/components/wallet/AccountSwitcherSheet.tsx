@@ -44,13 +44,16 @@ interface StoredAccount {
 }
 
 const ACCOUNTS_STORAGE_KEY = "timetrade_user_accounts";
+const ACTIVE_ACCOUNT_ID_KEY = "timetrade_active_account_id";
 
 function useUserAccounts() {
   const [accounts, setAccounts] = useState<StoredAccount[]>([]);
+  const [activeAccountId, setActiveAccountIdState] = useState<string | null>(null);
 
   // Load accounts on mount - with recovery for empty arrays
   useEffect(() => {
     const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    const storedActiveId = localStorage.getItem(ACTIVE_ACCOUNT_ID_KEY);
     let parsed: StoredAccount[] = [];
     
     if (stored) {
@@ -73,6 +76,15 @@ function useUserAccounts() {
       setAccounts(hydrated);
       // Persist hydration so switching works after refresh
       localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(hydrated));
+      
+      // Set active account ID - use stored or default to first account
+      const activeId = storedActiveId && hydrated.some(a => a.id === storedActiveId) 
+        ? storedActiveId 
+        : hydrated[0]?.id;
+      setActiveAccountIdState(activeId || null);
+      if (activeId) {
+        localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, activeId);
+      }
     } else {
       // Recovery: Check if there's an existing seed phrase but no accounts registered
       const seedCipher = localStorage.getItem("timetrade_seed_phrase");
@@ -86,10 +98,18 @@ function useUserAccounts() {
           createdAt: new Date().toISOString(),
         };
         setAccounts([mainAccount]);
+        setActiveAccountIdState("main");
         localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify([mainAccount]));
+        localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, "main");
       }
     }
   }, []);
+
+  const setActiveAccountId = (id: string) => {
+    setActiveAccountIdState(id);
+    localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, id);
+    console.log(`%c[ACCOUNT SWITCHER] 🎯 Active account ID set to: ${id}`, 'color: #22c55e; font-weight: bold;');
+  };
 
   const addAccount = (
     name: string,
@@ -106,6 +126,8 @@ function useUserAccounts() {
     const updated = [...accounts, newAccount];
     setAccounts(updated);
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
+    // Set the new account as active
+    setActiveAccountId(newAccount.id);
     return newAccount;
   };
 
@@ -113,6 +135,10 @@ function useUserAccounts() {
     const updated = accounts.filter((a) => a.id !== id);
     setAccounts(updated);
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
+    // If we removed the active account, switch to the first remaining one
+    if (activeAccountId === id && updated.length > 0) {
+      setActiveAccountId(updated[0].id);
+    }
   };
 
   const renameAccount = (id: string, newName: string) => {
@@ -123,13 +149,13 @@ function useUserAccounts() {
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
   };
 
-  return { accounts, addAccount, removeAccount, renameAccount };
+  return { accounts, activeAccountId, setActiveAccountId, addAccount, removeAccount, renameAccount };
 }
 
 export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherSheetProps) {
-  const { activeAccountIndex, setActiveAccountIndex, isLoadingAccounts, refreshAll } = useBlockchainContext();
+  const { isLoadingAccounts, refreshAll } = useBlockchainContext();
   
-  const { accounts, addAccount, removeAccount, renameAccount } = useUserAccounts();
+  const { accounts, activeAccountId, setActiveAccountId, addAccount, removeAccount, renameAccount } = useUserAccounts();
   const [addMode, setAddMode] = useState<AddAccountMode>(null);
   const [mnemonicInput, setMnemonicInput] = useState("");
   const [privateKeyInput, setPrivateKeyInput] = useState("");
@@ -274,10 +300,13 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         }, 150);
       }
 
+      // CRITICAL: Update the active account ID in state and storage
+      setActiveAccountId(accountId);
+
       toast.success(`Switched to ${account.name}`);
       onOpenChange(false);
       
-      console.log(`%c[ACCOUNT SWITCHER] ✅ Account switch completed successfully`, 'color: #22c55e; font-weight: bold;');
+      console.log(`%c[ACCOUNT SWITCHER] ✅ Account switch completed successfully`, 'color: #22c55e; font-weight: bold;', { newActiveId: accountId });
     } catch (err) {
       console.error(`%c[ACCOUNT SWITCHER] ❌ Account switch failed`, 'color: #ef4444; font-weight: bold;', err);
       toast.error("Failed to switch account. Please try again.");
@@ -629,7 +658,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                 </div>
               ) : (
                 accounts.map((account, index) => {
-                  const isActive = activeAccountIndex === index;
+                  const isActive = activeAccountId === account.id;
                   const isEditing = editingAccountId === account.id;
 
                   return (
