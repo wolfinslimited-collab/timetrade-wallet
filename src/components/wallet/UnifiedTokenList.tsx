@@ -65,6 +65,10 @@ const FallbackIcon = ({ symbol }: { symbol: string }) => (
 export const UnifiedTokenList = ({ className }: { className?: string }) => {
   const { isConnected, prices, isLoadingPrices } = useBlockchainContext();
   
+  // All hooks MUST be at the top, before any conditional returns
+  const [selectedAsset, setSelectedAsset] = useState<TokenWithValue | null>(null);
+  const [showAssetDetail, setShowAssetDetail] = useState(false);
+  
   const [addresses, setAddresses] = useState(() => {
     const primaryAddress = localStorage.getItem('timetrade_wallet_address');
     const storedEvmAddress = localStorage.getItem('timetrade_wallet_address_evm');
@@ -264,9 +268,6 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
       </div>
     );
   }
-
-  const [selectedAsset, setSelectedAsset] = useState<TokenWithValue | null>(null);
-  const [showAssetDetail, setShowAssetDetail] = useState(false);
 
   const handleAssetClick = (token: TokenWithValue) => {
     setSelectedAsset(token);
