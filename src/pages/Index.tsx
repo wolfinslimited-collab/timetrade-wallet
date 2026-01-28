@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
@@ -20,6 +21,7 @@ const Index = () => {
   const [isLocked, setIsLocked] = useState(true);
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const {
     notifications,
@@ -46,6 +48,20 @@ const Index = () => {
     setIsLocked(walletCreated === "true" && !!hasPin);
   }, []);
 
+  // Sync bottom-nav tab state with URL query (?tab=history), so deep links and
+  // in-app navigation (e.g. after Send success) always open the correct screen.
+  useEffect(() => {
+    const tab = searchParams.get("tab") as NavTab | null;
+    const allowedTabs: NavTab[] = ["wallet", "history", "market", "settings"];
+    if (tab && allowedTabs.includes(tab) && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+    // If URL has no tab param, default to wallet.
+    if (!tab && activeTab !== "wallet") {
+      setActiveTab("wallet");
+    }
+  }, [searchParams, activeTab]);
+
   const handleOnboardingComplete = () => {
     localStorage.setItem("timetrade_wallet_created", "true");
     setHasWallet(true);
@@ -58,6 +74,16 @@ const Index = () => {
 
   const handleTabChange = (tab: NavTab) => {
     setActiveTab(tab);
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === "wallet") next.delete("tab");
+        else next.set("tab", tab);
+        return next;
+      },
+      { replace: true }
+    );
   };
 
   const handleRefresh = useCallback(async () => {
@@ -103,7 +129,7 @@ const Index = () => {
   if (activeTab === "settings") {
     return (
       <>
-        <SettingsPage onBack={() => setActiveTab("wallet")} />
+        <SettingsPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </>
     );
@@ -113,7 +139,7 @@ const Index = () => {
   if (activeTab === "history") {
     return (
       <>
-        <TransactionHistoryPage onBack={() => setActiveTab("wallet")} />
+        <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </>
     );
@@ -123,7 +149,7 @@ const Index = () => {
   if (activeTab === "market") {
     return (
       <>
-        <MarketPage onBack={() => setActiveTab("wallet")} />
+        <MarketPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </>
     );
@@ -135,7 +161,7 @@ const Index = () => {
       <PullToRefresh onRefresh={handleRefresh}>
         {/* Minimal Header */}
         <WalletHeader 
-          onSettingsClick={() => setActiveTab("settings")}
+          onSettingsClick={() => handleTabChange("settings")}
           notifications={notifications}
           unreadCount={unreadCount}
           onMarkAsRead={markAsRead}

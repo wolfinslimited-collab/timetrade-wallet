@@ -26,75 +26,6 @@ export interface Transaction {
   explorerUrl?: string;
 }
 
-// Mock transaction data for demo mode
-const mockTransactions: Transaction[] = [
-  {
-    id: "1",
-    type: "send",
-    status: "completed",
-    amount: 0.5,
-    symbol: "ETH",
-    icon: "⟠",
-    usdValue: 1622.84,
-    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f8c2B1",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    txHash: "0x1234567890abcdef1234567890abcdef12345678",
-    networkFee: 0.002,
-  },
-  {
-    id: "2",
-    type: "receive",
-    status: "completed",
-    amount: 100,
-    symbol: "USDT",
-    icon: "₮",
-    usdValue: 100,
-    address: "0xabcd1234efgh5678ijkl9012mnop3456qrst7890",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    txHash: "0xabcdef1234567890abcdef1234567890abcdef12",
-    networkFee: 0.001,
-  },
-  {
-    id: "3",
-    type: "swap",
-    status: "completed",
-    amount: 0.1,
-    symbol: "ETH",
-    icon: "⟠",
-    usdValue: 324.57,
-    swapTo: { amount: 324.57, symbol: "USDC", icon: "$" },
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    txHash: "0x567890abcdef1234567890abcdef1234567890ab",
-    networkFee: 0.003,
-  },
-  {
-    id: "4",
-    type: "receive",
-    status: "pending",
-    amount: 0.25,
-    symbol: "ETH",
-    icon: "⟠",
-    usdValue: 811.42,
-    address: "0x9876543210fedcba9876543210fedcba98765432",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    txHash: "0xdef1234567890abcdef1234567890abcdef12345",
-    networkFee: 0,
-  },
-  {
-    id: "5",
-    type: "send",
-    status: "failed",
-    amount: 50,
-    symbol: "USDC",
-    icon: "$",
-    usdValue: 50,
-    address: "0x1111222233334444555566667777888899990000",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    txHash: "0x0000111122223333444455556666777788889999",
-    networkFee: 0.001,
-  },
-];
-
 type QuickFilter = "all" | TransactionType;
 
 interface TransactionHistoryPageProps {
@@ -159,10 +90,10 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     };
   };
 
-  // Use real transactions if connected, otherwise use mock
-  const displayTransactions = isConnected && blockchainTx?.length 
+  // Only show real on-chain transactions (no mock/demo data)
+  const displayTransactions = isConnected && blockchainTx?.length
     ? blockchainTx.map(convertBlockchainTx)
-    : mockTransactions;
+    : [];
 
   // Get available tokens for filter
   const availableTokens = useMemo(() => {
@@ -423,8 +354,8 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
         <div className="mx-4 mb-4 p-3 rounded-xl bg-muted/50 border border-border flex items-center gap-3">
           <WifiOff className="w-5 h-5 text-muted-foreground" />
           <div className="flex-1">
-            <p className="text-sm font-medium">Demo Mode</p>
-            <p className="text-xs text-muted-foreground">Connect wallet to see real transactions</p>
+            <p className="text-sm font-medium">Wallet not connected</p>
+            <p className="text-xs text-muted-foreground">Connect/import a wallet to load on-chain transactions</p>
           </div>
         </div>
       )}
