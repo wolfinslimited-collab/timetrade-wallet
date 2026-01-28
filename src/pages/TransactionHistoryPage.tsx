@@ -3,6 +3,7 @@ import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filte
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { Chain, getChainInfo, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
+import { tronHexToBase58 } from "@/utils/tronAddress";
 import { TransactionFilterSheet, TransactionFilters } from "@/components/history/TransactionFilterSheet";
 import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransactionDetailSheet";
 import { Badge } from "@/components/ui/badge";
@@ -79,12 +80,24 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     explorerUrl?: string
   ): Transaction => {
     const info = getChainInfo(chain);
-    const from = tx.from || "";
-    const to = tx.to || "";
+    const fromRaw = tx.from || "";
+    const toRaw = tx.to || "";
+
+    const { from, to, user } = (() => {
+      if (chain === "tron") {
+        const f = tronHexToBase58(fromRaw) || fromRaw;
+        const t = tronHexToBase58(toRaw) || toRaw;
+        const u = userAddress ? (tronHexToBase58(userAddress) || userAddress) : null;
+        return { from: f, to: t, user: u };
+      }
+      return { from: fromRaw, to: toRaw, user: userAddress };
+    })();
+
     const isSend = (() => {
-      if (!userAddress) return false;
-      if (chain === "solana") return from === userAddress;
-      return from.toLowerCase() === userAddress.toLowerCase();
+      if (!user) return false;
+      if (chain === "solana") return from === user;
+      if (chain === "tron") return from === user;
+      return from.toLowerCase() === user.toLowerCase();
     })();
 
     const amount = parseFloat(tx.value || "0") / Math.pow(10, info.decimals);
@@ -443,13 +456,13 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                         {/* Icon */}
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center",
-                          tx.type === "send" ? "bg-red-500/10" : 
-                          tx.type === "receive" ? "bg-green-500/10" : "bg-blue-500/10"
+                          tx.type === "send" ? "bg-destructive/10" : 
+                          tx.type === "receive" ? "bg-success/10" : "bg-accent/10"
                         )}>
                           <Icon className={cn(
                             "w-5 h-5",
-                            tx.type === "send" ? "text-red-500" : 
-                            tx.type === "receive" ? "text-green-500" : "text-blue-500"
+                            tx.type === "send" ? "text-destructive" : 
+                            tx.type === "receive" ? "text-success" : "text-accent"
                           )} />
                         </div>
 
@@ -476,8 +489,8 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                         <div className="text-right">
                           <p className={cn(
                             "font-mono font-medium",
-                            tx.type === "send" ? "text-red-500" : 
-                            tx.type === "receive" ? "text-green-500" : "text-foreground"
+                            tx.type === "send" ? "text-destructive" : 
+                            tx.type === "receive" ? "text-success" : "text-foreground"
                           )}>
                             {tx.type === "send" ? "-" : tx.type === "receive" ? "+" : ""}
                             {tx.amount.toFixed(6)} {tx.symbol}
