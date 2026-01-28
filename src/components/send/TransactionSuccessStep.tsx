@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { CheckCircle, ExternalLink, Copy, Share2 } from "lucide-react";
+import { CheckCircle, ExternalLink, Copy, Share2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface TransactionSuccessStepProps {
   transaction: TransactionData;
@@ -11,6 +12,7 @@ interface TransactionSuccessStepProps {
 
 export const TransactionSuccessStep = ({ transaction, onClose }: TransactionSuccessStepProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const amountNum = parseFloat(transaction.amount);
   const amountUsd = amountNum * transaction.token.price;
 
@@ -135,14 +137,24 @@ export const TransactionSuccessStep = ({ transaction, onClose }: TransactionSucc
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-4 flex gap-3"
+          className="mt-4 flex flex-wrap justify-center gap-3"
         >
           <button
             onClick={handleViewExplorer}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border hover:bg-secondary transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            <span className="text-sm">View on Explorer</span>
+            <span className="text-sm">Explorer</span>
+          </button>
+          <button
+            onClick={() => {
+              onClose();
+              navigate("/?tab=history");
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors text-primary"
+          >
+            <History className="w-4 h-4" />
+            <span className="text-sm">History</span>
           </button>
           <button
             onClick={handleShare}
