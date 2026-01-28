@@ -30,7 +30,7 @@ const Index = () => {
     clearAll,
   } = useNotifications();
   
-  const { isConnected, totalBalanceUsd, isLoadingBalance, prices, refreshAll } = useBlockchainContext();
+  const { isConnected, totalBalanceUsd, isLoadingBalance, isLoadingAccounts, prices, refreshAll } = useBlockchainContext();
 
   // Calculate display values - compute 24h change from prices
   const displayBalance = totalBalanceUsd || 0;
@@ -146,10 +146,10 @@ const Index = () => {
 
         {/* Total Balance - Centered */}
         <div className="px-4 pt-6 pb-4 text-center">
-          {isLoadingBalance && isConnected ? (
+          {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
             <div className="flex items-center justify-center gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground">Loading...</span>
+              <span className="text-muted-foreground">Syncing wallet…</span>
             </div>
           ) : (
             <>
