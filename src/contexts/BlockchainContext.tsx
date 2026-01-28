@@ -229,13 +229,17 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
           address: activeAccount.address,
         });
         
-        // CRITICAL: Invalidate queries AFTER addresses are set to trigger fresh fetches
-        // This fixes the race condition where queries start before addresses are ready
+        // CRITICAL: Notify portfolio hooks to re-read localStorage addresses AFTER derivation.
+        // Without this, the unified portfolio can stay stuck with null addresses (showing $0)
+        // until the user manually switches accounts.
         setTimeout(() => {
-          console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Post-derivation query invalidation`, 'color: #06b6d4;');
+          console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching addresses-updated + invalidating queries`, 'color: #06b6d4; font-weight: bold;');
+          window.dispatchEvent(new CustomEvent('timetrade:addresses-updated'));
           queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
           queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
-        }, 100);
+        }, 250);
       }
     } catch (err) {
       console.error(`%c[BLOCKCHAIN CONTEXT] ❌ Derivation Failed`, 'color: #ef4444; font-weight: bold;', err);

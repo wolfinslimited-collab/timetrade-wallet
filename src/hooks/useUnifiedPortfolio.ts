@@ -91,10 +91,12 @@ export function useUnifiedPortfolio(enabled: boolean) {
 
     window.addEventListener('timetrade:account-switched', handleAccountSwitch);
     window.addEventListener('timetrade:unlocked', handleAccountSwitch);
+    window.addEventListener('timetrade:addresses-updated', handleAccountSwitch);
 
     return () => {
       window.removeEventListener('timetrade:account-switched', handleAccountSwitch);
       window.removeEventListener('timetrade:unlocked', handleAccountSwitch);
+      window.removeEventListener('timetrade:addresses-updated', handleAccountSwitch);
     };
   }, [enabled, queryClient]);
 

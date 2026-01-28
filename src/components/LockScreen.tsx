@@ -61,10 +61,6 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
 
   const verifyPin = (enteredPin: string) => {
     if (enteredPin === storedPin) {
-      toast({
-        title: "Welcome back!",
-        description: "Wallet unlocked successfully",
-      });
       // Trigger address derivation after unlock (same-tab localStorage writes don't emit the `storage` event)
       window.dispatchEvent(
         new CustomEvent("timetrade:unlocked", {
@@ -105,10 +101,6 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const handleBiometric = async () => {
     // Simulate biometric authentication
     // In a real app, this would use WebAuthn or native biometric APIs
-    toast({
-      title: "Biometric verified!",
-      description: "Welcome back",
-    });
     window.dispatchEvent(new CustomEvent("timetrade:unlocked"));
     onUnlock();
   };
