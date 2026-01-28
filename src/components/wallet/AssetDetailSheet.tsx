@@ -239,10 +239,14 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
             ) : (
               <div className="space-y-2">
                 {filteredTx.map((tx, index) => {
-                  // Tron addresses are case-sensitive (Base58), others are not
+                  // Tron addresses: normalize hex (41...) to Base58 (T...) for comparison
+                  // EVM addresses: case-insensitive comparison
+                  const txFrom = asset.chain === 'tron'
+                    ? (tronHexToBase58(tx.from) || tx.from)
+                    : tx.from;
                   const isSend = asset.chain === 'tron'
-                    ? tx.from === address
-                    : tx.from?.toLowerCase() === address?.toLowerCase();
+                    ? txFrom === address
+                    : txFrom?.toLowerCase() === address?.toLowerCase();
                   const Icon = isSend ? ArrowUpRight : ArrowDownLeft;
                   const formattedValue = parseFloat(tx.value || '0') / Math.pow(10, asset.decimals);
                   const dateLabel = Number.isFinite(tx.timestamp)
