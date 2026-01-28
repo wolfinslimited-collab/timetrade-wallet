@@ -210,7 +210,7 @@ export const ReceiveCryptoSheet = ({ open, onOpenChange, preSelectedToken }: Rec
 
             {/* Token Dropdown */}
             {showTokens && (
-              <div className="absolute left-0 right-0 mt-2 bg-card border border-border rounded-xl p-2 space-y-1 max-h-48 overflow-y-auto z-50 shadow-lg">
+              <div className="absolute left-0 right-0 mt-2 bg-card border border-border rounded-xl p-2 space-y-1 max-h-72 overflow-y-auto z-50 shadow-lg">
                 {tokens.map((token) => (
                   <button
                     key={`${token.symbol}-${token.networkId}`}
