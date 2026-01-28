@@ -266,13 +266,25 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     };
 
     const onAccountSwitched = () => {
+      console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Account Switched Event Received`, 'color: #f97316; font-weight: bold;');
+      
       const storedIndex = localStorage.getItem('timetrade_active_account_index');
       const nextIndex = storedIndex ? parseInt(storedIndex, 10) : 0;
       setActiveAccountIndex(nextIndex);
 
-      // Only re-derive if the encrypted mnemonic changed (this is what fixes “switch wallet → blank”).
+      // CRITICAL: Re-read wallet address from storage (AccountSwitcherSheet already wrote it)
+      const newWalletAddress = localStorage.getItem('timetrade_wallet_address');
+      if (newWalletAddress) {
+        console.log(`%c[BLOCKCHAIN CONTEXT] 📍 Syncing wallet address from storage`, 'color: #22c55e;', {
+          newAddress: newWalletAddress,
+        });
+        setWalletAddress(newWalletAddress);
+      }
+
+      // Only re-derive if the encrypted mnemonic changed
       const seedCipher = localStorage.getItem('timetrade_seed_phrase');
       if (seedCipher && seedCipher !== lastSeedCipherRef.current) {
+        console.log(`%c[BLOCKCHAIN CONTEXT] 🔐 Seed phrase changed, re-deriving`, 'color: #a855f7;');
         deriveFromStoredMnemonic();
       }
     };
@@ -316,7 +328,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     localStorage.setItem('timetrade_wallet_address', trimmed);
 
     // Ensure multi-chain views (like UnifiedTokenList) always have the right address keys.
-    // This is especially important for manual “Connect Wallet” flows (no mnemonic).
+    // This is especially important for manual "Connect Wallet" flows (no mnemonic).
     if (selectedChain === 'solana') {
       localStorage.setItem('timetrade_wallet_address_solana', trimmed);
     } else if (selectedChain === 'ethereum' || selectedChain === 'polygon') {
@@ -329,6 +341,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   }, [selectedChain]);
 
   const disconnectWallet = useCallback(() => {
+    console.log('%c[BLOCKCHAIN CONTEXT] 🔌 Disconnecting wallet', 'color: #ef4444; font-weight: bold;');
     setWalletAddress(null);
     setAllDerivedAccounts({ evm: [], solana: [], tron: [] });
     setActiveAccountIndex(0);
