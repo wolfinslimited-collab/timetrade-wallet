@@ -224,6 +224,14 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
           chain: storedChain,
           address: activeAccount.address,
         });
+        
+        // CRITICAL: Invalidate queries AFTER addresses are set to trigger fresh fetches
+        // This fixes the race condition where queries start before addresses are ready
+        setTimeout(() => {
+          console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Post-derivation query invalidation`, 'color: #06b6d4;');
+          queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+          queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+        }, 100);
       }
     } catch (err) {
       console.error(`%c[BLOCKCHAIN CONTEXT] ❌ Derivation Failed`, 'color: #ef4444; font-weight: bold;', err);
