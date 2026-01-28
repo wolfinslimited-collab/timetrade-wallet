@@ -935,7 +935,7 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
         }
         
         return {
-          hash: tx.txID as string,
+          hash: (tx.txID || tx.hash) as string,
           from: paramValue?.ownerAddressBase58 || paramValue?.owner_address,
           to: to,
           value: value,
