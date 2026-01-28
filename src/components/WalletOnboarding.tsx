@@ -108,6 +108,16 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const handleFinish = () => {
     // Store wallet name for header display
     localStorage.setItem("timetrade_wallet_name", walletName);
+    
+    // Register the main account in the accounts list for the account switcher
+    const mainAccount = {
+      id: "main",
+      name: walletName || "Main Wallet",
+      type: "mnemonic" as const,
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem("timetrade_user_accounts", JSON.stringify([mainAccount]));
+    
     onComplete();
   };
 
