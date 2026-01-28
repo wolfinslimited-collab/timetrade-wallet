@@ -106,6 +106,8 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   const handleFinish = () => {
+    // Store wallet name for header display
+    localStorage.setItem("timetrade_wallet_name", walletName);
     onComplete();
   };
 
