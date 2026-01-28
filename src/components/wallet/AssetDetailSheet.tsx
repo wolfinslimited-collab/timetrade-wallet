@@ -6,6 +6,7 @@ import { Chain, useTransactions, formatAddress } from "@/hooks/useBlockchain";
 import { cn } from "@/lib/utils";
 import { SendCryptoSheet } from "@/components/send/SendCryptoSheet";
 import { ReceiveCryptoSheet } from "@/components/receive/ReceiveCryptoSheet";
+import { tronHexToBase58 } from "@/utils/tronAddress";
 
 interface AssetDetailSheetProps {
   open: boolean;
@@ -66,7 +67,31 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
 
   // Filter transactions for this asset
   const transactions = txData?.transactions || [];
-  const filteredTx = transactions.slice(0, 10); // Show last 10 transactions
+
+  // Tron needs special filtering:
+  // - For TRC-20 tokens (USDT), show only TriggerSmartContract tx for the token contract
+  // - For native TRX, show only TransferContract
+  const filteredTx = (() => {
+    if (asset.chain !== 'tron') return transactions.slice(0, 10);
+
+    const tokenContract = asset.contractAddress;
+    const out = transactions.filter((tx) => {
+      const type = tx.contractType;
+
+      if (asset.isNative) {
+        return type ? type === 'TransferContract' : true;
+      }
+
+      // Token view
+      if (!tokenContract) return type === 'TriggerSmartContract';
+
+      // contractAddress may be hex (41...) from API
+      const txContract = tx.contractAddressBase58 || tronHexToBase58(tx.contractAddress) || tx.contractAddress;
+      return type === 'TriggerSmartContract' && txContract === tokenContract;
+    });
+
+    return out.slice(0, 10);
+  })();
 
   // Pre-selected data to pass to Send/Receive sheets
   const preSelectedForSend = {
@@ -211,6 +236,9 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                   const isSend = tx.from?.toLowerCase() === address?.toLowerCase();
                   const Icon = isSend ? ArrowUpRight : ArrowDownLeft;
                   const formattedValue = parseFloat(tx.value || '0') / Math.pow(10, asset.decimals);
+                  const dateLabel = Number.isFinite(tx.timestamp)
+                    ? new Date(tx.timestamp * 1000).toLocaleDateString()
+                    : "—";
                   
                   return (
                     <a
@@ -226,7 +254,7 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                       <div className="flex-1 min-w-0">
                         <p className="font-medium capitalize">{isSend ? "Sent" : "Received"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(tx.timestamp * 1000).toLocaleDateString()}
+                          {dateLabel}
                         </p>
                       </div>
                       <div className="text-right">
