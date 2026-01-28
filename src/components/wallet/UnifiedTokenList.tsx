@@ -87,25 +87,19 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
     if (!unifiedAssets || unifiedAssets.length === 0) return [];
     
     // Map unified assets to display format
-    // unifiedAssets come from useUnifiedPortfolio which aggregates all chains
+    // unifiedAssets now include chain info directly from the balance source
     return unifiedAssets
       .filter(asset => asset.amount > 0)
       .map(asset => {
         const priceData = prices?.find(p => p.symbol.toUpperCase() === asset.symbol.toUpperCase());
         const change24h = priceData?.change24h || 0;
         
-        // Determine chain from symbol (for native tokens)
-        let chain: Chain = 'ethereum';
-        if (asset.symbol === 'SOL') chain = 'solana';
-        else if (asset.symbol === 'TRX') chain = 'tron';
-        else if (asset.symbol === 'POL' || asset.symbol === 'MATIC') chain = 'polygon';
-        
         return {
           symbol: asset.symbol,
           name: asset.name,
           balance: String(Math.round(asset.amount * 1e18)), // Convert back to raw balance format
           decimals: 18,
-          chain,
+          chain: asset.chain, // Use chain directly from unified asset
           isNative: ['ETH', 'SOL', 'TRX', 'POL', 'MATIC', 'BTC'].includes(asset.symbol),
           numericBalance: asset.amount,
           price: asset.price,
