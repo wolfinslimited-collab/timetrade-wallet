@@ -8,7 +8,12 @@ import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
 import { validateSeedPhrase } from "@/utils/seedPhrase";
-import { deriveEvmAddress, deriveSolanaAddress, deriveTronAddress } from "@/utils/walletDerivation";
+import {
+  deriveEvmAddress,
+  deriveSolanaAddress,
+  deriveTronAddress,
+  type SolanaDerivationPath,
+} from "@/utils/walletDerivation";
 import { decryptPrivateKey, encryptPrivateKey } from "@/utils/encryption";
 import { Wallet as EthersWallet } from "ethers";
 import { evmToTronAddress } from "@/utils/tronAddress";
@@ -217,7 +222,14 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
           
           // Derive addresses for all chains
           const evmAddress = deriveEvmAddress(phrase, 0);
-          const solAddress = deriveSolanaAddress(phrase, 0, "phantom");
+          const solanaPathStyle =
+            (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) ||
+            "phantom";
+
+          // Persist the path so first-load derivation uses the same address (prevents $0 until switching)
+          localStorage.setItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH, solanaPathStyle);
+
+          const solAddress = deriveSolanaAddress(phrase, 0, solanaPathStyle);
           const tronAddress = deriveTronAddress(phrase, 0);
 
           console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e; font-weight: bold;', {
@@ -340,7 +352,12 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       console.log(`%c[ACCOUNT SWITCHER] 🔑 Deriving addresses`, 'color: #3b82f6;');
       const evmAddress = deriveEvmAddress(words.join(" "), 0);
-      const solAddress = deriveSolanaAddress(words.join(" "), 0, "phantom");
+      const solanaPathStyle =
+        (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) ||
+        "phantom";
+      localStorage.setItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH, solanaPathStyle);
+
+      const solAddress = deriveSolanaAddress(words.join(" "), 0, solanaPathStyle);
       const tronAddress = deriveTronAddress(words.join(" "), 0);
 
       console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e;', {
