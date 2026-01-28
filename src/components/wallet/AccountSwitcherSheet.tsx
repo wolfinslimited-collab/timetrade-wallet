@@ -40,17 +40,24 @@ const ACCOUNTS_STORAGE_KEY = "timetrade_user_accounts";
 function useUserAccounts() {
   const [accounts, setAccounts] = useState<StoredAccount[]>([]);
 
-  // Load accounts on mount
+  // Load accounts on mount - with recovery for empty arrays
   useEffect(() => {
     const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    let parsed: StoredAccount[] = [];
+    
     if (stored) {
       try {
-        setAccounts(JSON.parse(stored));
+        parsed = JSON.parse(stored);
       } catch {
-        setAccounts([]);
+        parsed = [];
       }
+    }
+    
+    // If we have accounts, use them
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      setAccounts(parsed);
     } else {
-      // Check if there's an existing seed phrase (main wallet from onboarding)
+      // Recovery: Check if there's an existing seed phrase but no accounts registered
       const hasMainWallet = localStorage.getItem("timetrade_seed_phrase");
       const walletName = localStorage.getItem("timetrade_wallet_name") || "Main Wallet";
       if (hasMainWallet) {
