@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ArrowUpDown } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { AvailableAsset } from "./NetworkAssetSelector";
@@ -13,7 +13,6 @@ interface AmountInputStepProps {
   selectedAsset: AvailableAsset;
   selectedChain: Chain;
   onSubmit: (amount: string) => void;
-  onBack: () => void;
 }
 
 export const AmountInputStep = ({
@@ -21,7 +20,6 @@ export const AmountInputStep = ({
   selectedAsset,
   selectedChain,
   onSubmit,
-  onBack,
 }: AmountInputStepProps) => {
   const [amount, setAmount] = useState("");
   const [isUsdMode, setIsUsdMode] = useState(false);
@@ -85,14 +83,6 @@ export const AmountInputStep = ({
 
   return (
     <div className="flex flex-col h-full px-6 pb-8">
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="absolute top-4 left-4 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-
       {/* Asset Info */}
       <div className="mt-4 flex items-center gap-3 p-3 bg-card border border-border rounded-xl">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
@@ -122,8 +112,8 @@ export const AmountInputStep = ({
 
       {/* Amount Input */}
       <div className="mt-6 text-center">
-        <div className="relative inline-block w-full max-w-xs mx-auto">
-          <div className="flex items-center justify-center gap-2">
+        <div className="relative inline-block w-full max-w-full mx-auto">
+          <div className="flex items-end justify-center gap-2 flex-wrap">
             <span className="text-2xl text-muted-foreground">
               {isUsdMode ? "$" : ""}
             </span>
@@ -132,11 +122,10 @@ export const AmountInputStep = ({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
-              className="bg-transparent text-5xl font-bold text-center outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              style={{ maxWidth: '200px' }}
+              className="bg-transparent text-[clamp(2.5rem,9vw,3.5rem)] font-bold text-center outline-none w-full max-w-[20rem] min-w-[10rem] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             {!isUsdMode && (
-              <span className="text-2xl text-muted-foreground">
+              <span className="text-2xl text-muted-foreground leading-none pb-1">
                 {selectedAsset.symbol}
               </span>
             )}

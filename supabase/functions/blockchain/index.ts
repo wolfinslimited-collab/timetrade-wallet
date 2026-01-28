@@ -16,7 +16,7 @@ const HELIUS_DEVNET_RPC = `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_K
 
 type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron';
 
-type ActionType = 'getBalance' | 'getTransactions' | 'estimateGas' | 'getPrices' | 'broadcastTransaction';
+type ActionType = 'getBalance' | 'getTransactions' | 'estimateGas' | 'getPrices' | 'broadcastTransaction' | 'solanaRpc';
 
 interface WalletBalanceRequest {
   action: ActionType;
@@ -26,6 +26,9 @@ interface WalletBalanceRequest {
   symbols?: string[]; // For getPrices action
   // For broadcastTransaction action
   signedTransaction?: string;
+  // For solanaRpc action
+  rpcMethod?: string;
+  rpcParams?: unknown[];
   to?: string;
   amount?: string;
   gasPrice?: string;
@@ -1228,7 +1231,7 @@ serve(async (req) => {
 
   try {
     const body: WalletBalanceRequest = await req.json();
-    const { action, chain, address, testnet = true, symbols, signedTransaction } = body;
+    const { action, chain, address, testnet = true, symbols, signedTransaction, rpcMethod, rpcParams } = body;
 
     console.log(`Processing ${action} for ${chain} address: ${address}, testnet: ${testnet}`);
 
@@ -1311,6 +1314,19 @@ serve(async (req) => {
           throw new Error(`Unsupported chain: ${chain}. Supported chains: ${Object.keys(chainConfigs).join(', ')}`);
         }
         result = await broadcastTransaction(chain, signedTransaction, testnet);
+        break;
+
+      case 'solanaRpc':
+        if (chain !== 'solana') {
+          throw new Error('solanaRpc action only supports chain=solana');
+        }
+        if (!HELIUS_API_KEY) {
+          throw new Error('HELIUS_API_KEY is not configured');
+        }
+        if (!rpcMethod) {
+          throw new Error('rpcMethod is required for solanaRpc');
+        }
+        result = await heliusRpcRequest(rpcMethod, rpcParams || [], testnet);
         break;
 
       default:

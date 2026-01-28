@@ -53,10 +53,12 @@ export const PinUnlockModal = ({
     setPin(pin.slice(0, -1));
   };
 
-  const handleClose = () => {
-    setPin("");
-    setBiometricError(null);
-    onOpenChange(false);
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setPin("");
+      setBiometricError(null);
+      onOpenChange(false);
+    }
   };
 
   const handleBiometricAuth = async () => {
@@ -78,7 +80,7 @@ export const PinUnlockModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
