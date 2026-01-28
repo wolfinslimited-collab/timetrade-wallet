@@ -441,8 +441,16 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                         className="w-full flex items-center gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left"
                       >
                         {/* Icon */}
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary">
-                          <Icon className="w-5 h-5 text-muted-foreground" />
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          tx.type === "send" ? "bg-red-500/10" : 
+                          tx.type === "receive" ? "bg-green-500/10" : "bg-blue-500/10"
+                        )}>
+                          <Icon className={cn(
+                            "w-5 h-5",
+                            tx.type === "send" ? "text-red-500" : 
+                            tx.type === "receive" ? "text-green-500" : "text-blue-500"
+                          )} />
                         </div>
 
                         {/* Details */}
@@ -466,7 +474,11 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
                         {/* Amount */}
                         <div className="text-right">
-                          <p className="font-mono font-medium text-foreground">
+                          <p className={cn(
+                            "font-mono font-medium",
+                            tx.type === "send" ? "text-red-500" : 
+                            tx.type === "receive" ? "text-green-500" : "text-foreground"
+                          )}>
                             {tx.type === "send" ? "-" : tx.type === "receive" ? "+" : ""}
                             {tx.amount.toFixed(6)} {tx.symbol}
                           </p>

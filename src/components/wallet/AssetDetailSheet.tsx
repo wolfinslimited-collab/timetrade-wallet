@@ -239,7 +239,10 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
             ) : (
               <div className="space-y-2">
                 {filteredTx.map((tx, index) => {
-                  const isSend = tx.from?.toLowerCase() === address?.toLowerCase();
+                  // Tron addresses are case-sensitive (Base58), others are not
+                  const isSend = asset.chain === 'tron'
+                    ? tx.from === address
+                    : tx.from?.toLowerCase() === address?.toLowerCase();
                   const Icon = isSend ? ArrowUpRight : ArrowDownLeft;
                   const formattedValue = parseFloat(tx.value || '0') / Math.pow(10, asset.decimals);
                   const dateLabel = Number.isFinite(tx.timestamp)
@@ -258,8 +261,14 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-muted-foreground" />
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        isSend ? "bg-red-500/10" : "bg-green-500/10"
+                      )}>
+                        <Icon className={cn(
+                          "w-5 h-5",
+                          isSend ? "text-red-500" : "text-green-500"
+                        )} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium capitalize">{isSend ? "Sent" : "Received"}</p>
@@ -268,7 +277,10 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-mono text-sm">
+                        <p className={cn(
+                          "font-mono text-sm font-medium",
+                          isSend ? "text-red-500" : "text-green-500"
+                        )}>
                           {isSend ? "-" : "+"}{formattedValue.toFixed(6)}
                         </p>
                         <p className="text-xs text-muted-foreground">{asset.symbol}</p>
