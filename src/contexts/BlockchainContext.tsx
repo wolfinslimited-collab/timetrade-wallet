@@ -126,9 +126,17 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const derivationRunRef = React.useRef(0);
 
   const deriveFromStoredMnemonic = useCallback(async (pinOverride?: string) => {
+    console.log(`%c[BLOCKCHAIN CONTEXT] 🔐 Starting Derivation`, 'color: #8b5cf6; font-weight: bold;', {
+      hasPinOverride: !!pinOverride,
+      timestamp: new Date().toISOString(),
+    });
+
     const encryptedDataStr = localStorage.getItem('timetrade_seed_phrase');
     const storedPin = localStorage.getItem('timetrade_pin');
-    if (!encryptedDataStr) return;
+    if (!encryptedDataStr) {
+      console.log(`%c[BLOCKCHAIN CONTEXT] ⚠️ No seed phrase found`, 'color: #f59e0b;');
+      return;
+    }
 
     lastSeedCipherRef.current = encryptedDataStr;
 
@@ -136,7 +144,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     const pins = Array.from(
       new Set([pinOverride, storedPin].filter((p): p is string => !!p && p.trim().length > 0))
     );
-    if (pins.length === 0) return;
+    if (pins.length === 0) {
+      console.log(`%c[BLOCKCHAIN CONTEXT] ⚠️ No PIN available`, 'color: #f59e0b;');
+      return;
+    }
 
     const runId = ++derivationRunRef.current;
     setIsLoadingAccounts(true);
@@ -158,7 +169,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       }
 
       if (!decryptedPhrase || !usedPin) {
-        console.error('[BlockchainContext] Could not decrypt seed phrase (PIN mismatch or corrupted data).');
+        console.error(`%c[BLOCKCHAIN CONTEXT] ❌ PIN Mismatch`, 'color: #ef4444; font-weight: bold;');
         return;
       }
 
@@ -186,6 +197,16 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       const activeSolana = accounts.solana[index] || accounts.solana[0];
       const activeTron = accounts.tron[index] || accounts.tron[0];
 
+      console.log(`%c[BLOCKCHAIN CONTEXT] ✅ Derived Addresses`, 'color: #22c55e; font-weight: bold;', {
+        index,
+        evm: activeEvm?.address || '(none)',
+        solana: activeSolana?.address || '(none)',
+        tron: activeTron?.address || '(none)',
+        totalEvmAccounts: accounts.evm.length,
+        totalSolanaAccounts: accounts.solana.length,
+        totalTronAccounts: accounts.tron.length,
+      });
+
       if (activeEvm) localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
       if (activeSolana) localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
       if (activeTron) localStorage.setItem('timetrade_wallet_address_tron', activeTron.address);
@@ -199,9 +220,13 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         // Always sync walletAddress when mnemonic changes (or when index changes externally).
         setWalletAddress(activeAccount.address);
         localStorage.setItem('timetrade_wallet_address', activeAccount.address);
+        console.log(`%c[BLOCKCHAIN CONTEXT] 📍 Active Wallet Set`, 'color: #3b82f6; font-weight: bold;', {
+          chain: storedChain,
+          address: activeAccount.address,
+        });
       }
     } catch (err) {
-      console.error('[BlockchainContext] Address derivation failed:', err);
+      console.error(`%c[BLOCKCHAIN CONTEXT] ❌ Derivation Failed`, 'color: #ef4444; font-weight: bold;', err);
     } finally {
       if (runId === derivationRunRef.current) {
         setIsLoadingAccounts(false);
@@ -342,6 +367,11 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   // Handle switching active account
   const handleSetActiveAccountIndex = useCallback((index: number) => {
+    console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Switching Account`, 'color: #f97316; font-weight: bold;', {
+      requestedIndex: index,
+      currentIndex: activeAccountIndex,
+    });
+
     // Get accounts for current chain, but also update all chain addresses
     const evmAccounts = allDerivedAccounts.evm;
     const solanaAccounts = allDerivedAccounts.solana;
@@ -349,7 +379,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     
     // Allow switching even if some chains have no accounts - just use what's available
     const maxIndex = Math.max(evmAccounts.length, solanaAccounts.length, tronAccounts.length) - 1;
-    if (index < 0 || maxIndex < 0) return;
+    if (index < 0 || maxIndex < 0) {
+      console.warn(`%c[BLOCKCHAIN CONTEXT] ⚠️ Invalid Index`, 'color: #f59e0b;', { index, maxIndex });
+      return;
+    }
     const safeIndex = Math.min(index, maxIndex);
     
     setActiveAccountIndex(safeIndex);
@@ -367,12 +400,21 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     const evmAcc = evmAccounts[safeIndex] || evmAccounts[0];
     const solAcc = solanaAccounts[safeIndex] || solanaAccounts[0];
     const tronAcc = tronAccounts[safeIndex] || tronAccounts[0];
+    
+    console.log(`%c[BLOCKCHAIN CONTEXT] 📍 New Addresses After Switch`, 'color: #22c55e; font-weight: bold;', {
+      safeIndex,
+      evm: evmAcc?.address || '(none)',
+      solana: solAcc?.address || '(none)',
+      tron: tronAcc?.address || '(none)',
+    });
+
     if (evmAcc) localStorage.setItem('timetrade_wallet_address_evm', evmAcc.address);
     if (solAcc) localStorage.setItem('timetrade_wallet_address_solana', solAcc.address);
     if (tronAcc) localStorage.setItem('timetrade_wallet_address_tron', tronAcc.address);
     
     // Use setTimeout to ensure localStorage is written before event dispatch
     setTimeout(() => {
+      console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching account-switched event & invalidating queries`, 'color: #eab308; font-weight: bold;');
       // Dispatch event to notify other components (header, portfolio, etc.)
       window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
       
@@ -382,7 +424,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
       queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
     }, 50);
-  }, [selectedChain, allDerivedAccounts, queryClient]);
+  }, [selectedChain, allDerivedAccounts, queryClient, activeAccountIndex]);
 
   const value: BlockchainContextType = {
     walletAddress,
