@@ -318,34 +318,46 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   // Handle switching active account
   const handleSetActiveAccountIndex = useCallback((index: number) => {
-    const accounts = selectedChain === 'solana' ? allDerivedAccounts.solana : allDerivedAccounts.evm;
-    if (index < 0 || index >= accounts.length) return;
+    // Get accounts for current chain, but also update all chain addresses
+    const evmAccounts = allDerivedAccounts.evm;
+    const solanaAccounts = allDerivedAccounts.solana;
+    const tronAccounts = allDerivedAccounts.tron;
     
-    setActiveAccountIndex(index);
-    localStorage.setItem('timetrade_active_account_index', String(index));
+    // Allow switching even if some chains have no accounts - just use what's available
+    const maxIndex = Math.max(evmAccounts.length, solanaAccounts.length, tronAccounts.length) - 1;
+    if (index < 0 || maxIndex < 0) return;
+    const safeIndex = Math.min(index, maxIndex);
     
-    const account = accounts[index];
+    setActiveAccountIndex(safeIndex);
+    localStorage.setItem('timetrade_active_account_index', String(safeIndex));
+    
+    // Update main wallet address based on selected chain
+    const chainAccounts = selectedChain === 'solana' ? solanaAccounts : evmAccounts;
+    const account = chainAccounts[safeIndex] || chainAccounts[0];
     if (account) {
       setWalletAddress(account.address);
       localStorage.setItem('timetrade_wallet_address', account.address);
     }
 
     // Keep multi-chain address keys in sync with the active index
-    const evmAcc = allDerivedAccounts.evm[index];
-    const solAcc = allDerivedAccounts.solana[index];
-    const tronAcc = allDerivedAccounts.tron[index];
+    const evmAcc = evmAccounts[safeIndex] || evmAccounts[0];
+    const solAcc = solanaAccounts[safeIndex] || solanaAccounts[0];
+    const tronAcc = tronAccounts[safeIndex] || tronAccounts[0];
     if (evmAcc) localStorage.setItem('timetrade_wallet_address_evm', evmAcc.address);
     if (solAcc) localStorage.setItem('timetrade_wallet_address_solana', solAcc.address);
     if (tronAcc) localStorage.setItem('timetrade_wallet_address_tron', tronAcc.address);
     
-    // Dispatch event to notify other components (header, portfolio, etc.)
-    window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
-    
-    // Invalidate all queries to refetch with new addresses
-    queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
-    queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
+    // Use setTimeout to ensure localStorage is written before event dispatch
+    setTimeout(() => {
+      // Dispatch event to notify other components (header, portfolio, etc.)
+      window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
+      
+      // Invalidate all queries to refetch with new addresses
+      queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+      queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
+    }, 50);
   }, [selectedChain, allDerivedAccounts, queryClient]);
 
   const value: BlockchainContextType = {
