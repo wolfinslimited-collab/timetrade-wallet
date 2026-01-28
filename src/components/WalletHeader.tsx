@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Settings, CircleUser } from "lucide-react";
+import { Shield, Settings, Wallet2 } from "lucide-react";
 import { NotificationCenter } from "./notifications/NotificationCenter";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -78,20 +78,20 @@ export const WalletHeader = ({
         </div>
         <div className="flex items-center gap-2">
           {/* Account Switcher Button */}
-          {derivedAccounts.length > 0 && (
-            <button
-              onClick={() => setShowAccountSwitcher(true)}
-              className={cn(
-                "relative p-2 rounded-full border transition-colors",
-                "bg-card border-border hover:bg-secondary text-muted-foreground"
-              )}
-            >
-              <CircleUser className="w-5 h-5" />
+          <button
+            onClick={() => setShowAccountSwitcher(true)}
+            className={cn(
+              "relative p-2 rounded-full border transition-colors",
+              "bg-card border-border hover:bg-secondary text-muted-foreground"
+            )}
+          >
+            <Wallet2 className="w-5 h-5" />
+            {derivedAccounts.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                 {activeAccountIndex + 1}
               </span>
-            </button>
-          )}
+            )}
+          </button>
           <NotificationCenter
             notifications={notifications}
             unreadCount={unreadCount}
