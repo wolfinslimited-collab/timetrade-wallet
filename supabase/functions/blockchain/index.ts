@@ -251,6 +251,45 @@ async function tatumRequestTron(endpoint: string, options: RequestInit = {}) {
   }
 }
 
+type TronGridTrc20Tx = {
+  transaction_id?: string;
+  from?: string;
+  to?: string;
+  value?: string;
+  block_timestamp?: number;
+  token_info?: {
+    address?: string;
+    symbol?: string;
+    name?: string;
+    decimals?: number;
+  };
+};
+
+// Tron account tx endpoint (Tatum) can miss TRC-20 transfers where the address is only the recipient.
+// TronGrid provides recipient-side TRC-20 transfers, so we merge those in for a complete history.
+async function fetchTronGridTrc20Incoming(address: string, testnet: boolean): Promise<TronGridTrc20Tx[]> {
+  const base = testnet ? 'https://api.shasta.trongrid.io' : 'https://api.trongrid.io';
+  const url = `${base}/v1/accounts/${address}/transactions/trc20?limit=50&only_confirmed=true&only_to=true`;
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        'accept': 'application/json',
+      },
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.warn(`TronGrid TRC-20 incoming error: ${resp.status} - ${text}`);
+      return [];
+    }
+    const json = await resp.json();
+    const data = (json?.data ?? []) as TronGridTrc20Tx[];
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('TronGrid TRC-20 incoming fetch failed:', e);
+    return [];
+  }
+}
+
 // Helius RPC request helper
 async function heliusRpcRequest(method: string, params: unknown[], testnet: boolean = false) {
   const rpcUrl = testnet ? HELIUS_DEVNET_RPC : HELIUS_MAINNET_RPC;
@@ -886,7 +925,7 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
     const transactions = Array.isArray(txData) ? txData : (txData.transactions || []);
     
     // Transform transactions with chain-specific parsing
-    const parsedTransactions = transactions.map((tx: Record<string, unknown>) => {
+    let parsedTransactions = transactions.map((tx: Record<string, unknown>) => {
       // Handle Tron's nested structure
       if (chain === 'tron' && tx.rawData) {
         const rawData = tx.rawData as { 
@@ -958,6 +997,38 @@ async function getTransactions(chain: Chain, address: string, testnet: boolean =
         blockNumber: tx.blockNumber || tx.blockHeight,
       };
     });
+
+    if (chain === 'tron') {
+      const incoming = await fetchTronGridTrc20Incoming(address, testnet);
+      const incomingTx = incoming
+        .map((t) => {
+          const hash = t.transaction_id;
+          if (!hash) return null;
+          return {
+            hash,
+            from: t.from || '',
+            to: t.to || '',
+            value: t.value || '0',
+            timestamp: t.block_timestamp ? Math.floor(t.block_timestamp / 1000) : Math.floor(Date.now() / 1000),
+            status: 'confirmed',
+            contractType: 'TriggerSmartContract',
+            contractAddressBase58: t.token_info?.address,
+            contractAddress: t.token_info?.address,
+          };
+        })
+        .filter(Boolean) as Array<Record<string, unknown>>;
+
+      const uniq = new Map<string, any>();
+      for (const t of [...parsedTransactions, ...incomingTx]) {
+        if (!t) continue;
+        const h = String((t as any).hash || '');
+        if (!h) continue;
+        uniq.set(h, t);
+      }
+      parsedTransactions = Array.from(uniq.values()).sort(
+        (a, b) => Number((b as any).timestamp || 0) - Number((a as any).timestamp || 0)
+      );
+    }
     
     return {
       chain,

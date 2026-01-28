@@ -239,15 +239,26 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
             ) : (
               <div className="space-y-2">
                 {filteredTx.map((tx, index) => {
-                  // Tron addresses: normalize hex (41...) to Base58 (T...) for comparison
-                  // EVM addresses: case-insensitive comparison
+                  // Tron TRC-20 "incoming" txs often come from a different endpoint and always have Base58.
+                  // Still, normalize any hex (41...) to Base58 (T...) so comparisons are reliable.
                   const txFrom = asset.chain === 'tron'
                     ? (tronHexToBase58(tx.from) || tx.from)
                     : tx.from;
+                  const txTo = asset.chain === 'tron'
+                    ? (tronHexToBase58(tx.to) || tx.to)
+                    : tx.to;
+
                   const isSend = asset.chain === 'tron'
                     ? txFrom === address
                     : txFrom?.toLowerCase() === address?.toLowerCase();
-                  const Icon = isSend ? ArrowUpRight : ArrowDownLeft;
+
+                  const isReceive = asset.chain === 'tron'
+                    ? txTo === address
+                    : txTo?.toLowerCase() === address?.toLowerCase();
+
+                  const direction: 'send' | 'receive' = isSend ? 'send' : isReceive ? 'receive' : 'receive';
+                  const isOutgoing = direction === 'send';
+                  const Icon = isOutgoing ? ArrowUpRight : ArrowDownLeft;
                   const formattedValue = parseFloat(tx.value || '0') / Math.pow(10, asset.decimals);
                   const dateLabel = Number.isFinite(tx.timestamp)
                     ? new Date(tx.timestamp * 1000).toLocaleDateString()
@@ -267,15 +278,15 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center",
-                        isSend ? "bg-red-500/10" : "bg-green-500/10"
+                        isOutgoing ? "bg-destructive/10" : "bg-success/10"
                       )}>
                         <Icon className={cn(
                           "w-5 h-5",
-                          isSend ? "text-red-500" : "text-green-500"
+                          isOutgoing ? "text-destructive" : "text-success"
                         )} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium capitalize">{isSend ? "Sent" : "Received"}</p>
+                        <p className="font-medium capitalize">{isOutgoing ? "Sent" : "Received"}</p>
                         <p className="text-xs text-muted-foreground">
                           {dateLabel}
                         </p>
@@ -283,9 +294,9 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                       <div className="text-right">
                         <p className={cn(
                           "font-mono text-sm font-medium",
-                          isSend ? "text-red-500" : "text-green-500"
+                          isOutgoing ? "text-destructive" : "text-success"
                         )}>
-                          {isSend ? "-" : "+"}{formattedValue.toFixed(6)}
+                          {isOutgoing ? "-" : "+"}{formattedValue.toFixed(6)}
                         </p>
                         <p className="text-xs text-muted-foreground">{asset.symbol}</p>
                       </div>
