@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getChainInfo, formatBalance, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
@@ -125,7 +125,16 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     isLoadingTransactions, 
     transactionsError,
     selectedChain,
+    refreshAll,
   } = useBlockchainContext();
+
+  // Always fetch fresh blockchain data when the page loads
+  useEffect(() => {
+    if (isConnected) {
+      console.log('%c[TX HISTORY] 🔄 Fetching fresh transaction data', 'color: #06b6d4; font-weight: bold;');
+      refreshAll();
+    }
+  }, [isConnected, refreshAll]);
 
   const chainInfo = getChainInfo(selectedChain);
 
@@ -280,6 +289,15 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
           <ChevronLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold flex-1">Transaction History</h1>
+        {isConnected && (
+          <button
+            onClick={() => refreshAll()}
+            disabled={isLoadingTransactions}
+            className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={cn("w-4 h-4", isLoadingTransactions && "animate-spin")} />
+          </button>
+        )}
         {isConnected && (
           <div 
             className="flex items-center gap-1 text-xs px-2 py-1 rounded-full"
