@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Copy, Loader2, Plus, Key, FileText, ChevronRight, Wallet2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Check, Copy, Loader2, Plus, Key, FileText, ChevronRight, ChevronLeft, Layers, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
@@ -18,6 +19,34 @@ interface AccountSwitcherSheetProps {
 
 type AddAccountMode = null | "menu" | "mnemonic" | "privateKey";
 
+interface AccountNickname {
+  index: number;
+  name: string;
+}
+
+// Hook for managing account nicknames
+function useAccountNicknames() {
+  const [nicknames, setNicknames] = useState<AccountNickname[]>(() => {
+    const stored = localStorage.getItem("timetrade_account_nicknames");
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  const setNickname = (index: number, name: string) => {
+    setNicknames((prev) => {
+      const filtered = prev.filter((n) => n.index !== index);
+      const updated = [...filtered, { index, name }];
+      localStorage.setItem("timetrade_account_nicknames", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const getNickname = (index: number): string | null => {
+    return nicknames.find((n) => n.index === index)?.name || null;
+  };
+
+  return { nicknames, setNickname, getNickname };
+}
+
 export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherSheetProps) {
   const { 
     derivedAccounts, 
@@ -26,11 +55,15 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     isLoadingAccounts,
   } = useBlockchainContext();
   
+  const { getNickname, setNickname } = useAccountNicknames();
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [addMode, setAddMode] = useState<AddAccountMode>(null);
   const [mnemonicInput, setMnemonicInput] = useState("");
   const [privateKeyInput, setPrivateKeyInput] = useState("");
+  const [accountNameInput, setAccountNameInput] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null);
+  const [editNameInput, setEditNameInput] = useState("");
 
   const handleCopyAddress = async (address: string) => {
     try {
@@ -45,25 +78,13 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
   const handleSelectAccount = (index: number) => {
     setActiveAccountIndex(index);
-    toast.success(`Switched to Account ${index + 1}`);
+    const name = getNickname(index) || `Account ${index + 1}`;
+    toast.success(`Switched to ${name}`);
     onOpenChange(false);
   };
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const getChainIcon = (chain: string) => {
-    switch (chain) {
-      case "evm":
-        return "⟠";
-      case "solana":
-        return "◎";
-      case "tron":
-        return "◈";
-      default:
-        return "●";
-    }
   };
 
   const handleImportMnemonic = async () => {
@@ -95,11 +116,17 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       localStorage.setItem("timetrade_wallet_address_solana", solAddress);
       localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
 
+      // Set account name if provided
+      if (accountNameInput.trim()) {
+        setNickname(0, accountNameInput.trim());
+      }
+
       // Trigger re-derivation
       window.dispatchEvent(new CustomEvent("timetrade:unlocked", { detail: { pin: storedPin } }));
 
       toast.success("Wallet imported successfully");
       setMnemonicInput("");
+      setAccountNameInput("");
       setAddMode(null);
       onOpenChange(false);
       
@@ -131,9 +158,10 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       // Store as encrypted key
       const encrypted = await encryptPrivateKey(key, storedPin);
       const existingKeys = JSON.parse(localStorage.getItem("timetrade_stored_keys") || "[]");
+      const newKeyIndex = existingKeys.length;
       existingKeys.push({
         id: Date.now().toString(),
-        label: `Imported Key ${existingKeys.length + 1}`,
+        label: accountNameInput.trim() || `Imported Key ${newKeyIndex + 1}`,
         encryptedKey: encrypted,
         addedAt: new Date().toISOString(),
       });
@@ -141,6 +169,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       toast.success("Private key imported");
       setPrivateKeyInput("");
+      setAccountNameInput("");
       setAddMode(null);
     } catch (err) {
       console.error("Import failed:", err);
@@ -150,10 +179,51 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     }
   };
 
+  const handleSaveNickname = (index: number) => {
+    if (editNameInput.trim()) {
+      setNickname(index, editNameInput.trim());
+      toast.success("Account name updated");
+    }
+    setEditingAccountIndex(null);
+    setEditNameInput("");
+  };
+
+  const startEditingName = (index: number) => {
+    setEditingAccountIndex(index);
+    setEditNameInput(getNickname(index) || "");
+  };
+
   const resetAddMode = () => {
     setAddMode(null);
     setMnemonicInput("");
     setPrivateKeyInput("");
+    setAccountNameInput("");
+  };
+
+  // Chain SVG icons (no emojis)
+  const ChainIcon = ({ chain }: { chain: string }) => {
+    if (chain === "evm") {
+      return (
+        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+          <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
+        </svg>
+      );
+    }
+    if (chain === "solana") {
+      return (
+        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+          <path d="M4.5 7.5h12.9l-3.3-3.3H4.5v3.3zm0 4.5h12.9l-3.3 3.3H4.5V12zm14.1 7.5H5.7l3.3-3.3h9.6v3.3z"/>
+        </svg>
+      );
+    }
+    if (chain === "tron") {
+      return (
+        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+          <path d="M12 2L2 9l3 11 7 2 7-2 3-11-10-7zm0 2.5L18.5 9l-2 7.5L12 19l-4.5-2.5-2-7.5L12 4.5z"/>
+        </svg>
+      );
+    }
+    return <Layers className="w-3.5 h-3.5" />;
   };
 
   // Render add account menu
@@ -192,18 +262,32 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   // Render mnemonic import form
   const renderMnemonicForm = () => (
     <div className="space-y-4 py-4">
-      <p className="text-sm text-muted-foreground">
-        Enter your 12 or 24 word seed phrase, separated by spaces.
-      </p>
-      <textarea
-        value={mnemonicInput}
-        onChange={(e) => setMnemonicInput(e.target.value)}
-        placeholder="word1 word2 word3 ..."
-        className="w-full h-32 p-3 rounded-xl border border-border bg-card text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-      />
+      <div className="space-y-2">
+        <Label htmlFor="account-name-mnemonic">Account Name (Optional)</Label>
+        <Input
+          id="account-name-mnemonic"
+          value={accountNameInput}
+          onChange={(e) => setAccountNameInput(e.target.value)}
+          placeholder="e.g. Trading, Savings, Main"
+          maxLength={24}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Seed Phrase</Label>
+        <p className="text-xs text-muted-foreground">
+          Enter your 12 or 24 word seed phrase, separated by spaces.
+        </p>
+        <textarea
+          value={mnemonicInput}
+          onChange={(e) => setMnemonicInput(e.target.value)}
+          placeholder="word1 word2 word3 ..."
+          className="w-full h-28 p-3 rounded-xl border border-border bg-card text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
       <div className="flex gap-3">
         <Button variant="outline" onClick={resetAddMode} className="flex-1">
-          Cancel
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Back
         </Button>
         <Button
           onClick={handleImportMnemonic}
@@ -219,19 +303,33 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   // Render private key import form
   const renderPrivateKeyForm = () => (
     <div className="space-y-4 py-4">
-      <p className="text-sm text-muted-foreground">
-        Enter your private key (hex format).
-      </p>
-      <Input
-        type="password"
-        value={privateKeyInput}
-        onChange={(e) => setPrivateKeyInput(e.target.value)}
-        placeholder="0x..."
-        className="font-mono"
-      />
+      <div className="space-y-2">
+        <Label htmlFor="account-name-pk">Account Name (Optional)</Label>
+        <Input
+          id="account-name-pk"
+          value={accountNameInput}
+          onChange={(e) => setAccountNameInput(e.target.value)}
+          placeholder="e.g. Trading, Savings, Main"
+          maxLength={24}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Private Key</Label>
+        <p className="text-xs text-muted-foreground">
+          Enter your private key (hex format).
+        </p>
+        <Input
+          type="password"
+          value={privateKeyInput}
+          onChange={(e) => setPrivateKeyInput(e.target.value)}
+          placeholder="0x..."
+          className="font-mono"
+        />
+      </div>
       <div className="flex gap-3">
         <Button variant="outline" onClick={resetAddMode} className="flex-1">
-          Cancel
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Back
         </Button>
         <Button
           onClick={handleImportPrivateKey}
@@ -245,11 +343,11 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   );
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetAddMode(); }}>
+    <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { resetAddMode(); setEditingAccountIndex(null); } }}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh]">
         <SheetHeader className="pb-2">
           <SheetTitle className="text-left flex items-center gap-2">
-            <Wallet2 className="w-5 h-5" />
+            <Layers className="w-5 h-5" />
             {addMode === null && "Switch Account"}
             {addMode === "menu" && "Add Account"}
             {addMode === "mnemonic" && "Import Seed Phrase"}
@@ -285,68 +383,119 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
               </div>
             ) : derivedAccounts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Wallet2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <Layers className="w-10 h-10 mx-auto mb-3 opacity-40" />
                 <p className="text-sm">No accounts found</p>
                 <p className="text-xs mt-1">Import a wallet to get started</p>
               </div>
             ) : (
-              derivedAccounts.map((account) => (
-                <button
-                  key={account.index}
-                  onClick={() => handleSelectAccount(account.index)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
-                    activeAccountIndex === account.index
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:bg-secondary"
-                  )}
-                >
-                  {/* Account Number Circle */}
-                  <div 
-                    className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shrink-0",
-                      activeAccountIndex === account.index
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {account.index + 1}
-                  </div>
-                  
-                  {/* Account Info */}
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Account {account.index + 1}</span>
-                      {activeAccountIndex === account.index && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-xs">{getChainIcon(account.chain)}</span>
-                      <p className="text-xs text-muted-foreground font-mono truncate">
-                        {formatAddress(account.address)}
-                      </p>
-                    </div>
-                  </div>
+              derivedAccounts.map((account) => {
+                const nickname = getNickname(account.index);
+                const displayName = nickname || `Account ${account.index + 1}`;
+                const isEditing = editingAccountIndex === account.index;
 
-                  {/* Copy Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopyAddress(account.address);
-                    }}
-                    className="p-2 rounded-lg hover:bg-muted transition-colors shrink-0"
-                  >
-                    {copiedAddress === account.address ? (
-                      <Check className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-muted-foreground" />
+                return (
+                  <div
+                    key={account.index}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                      activeAccountIndex === account.index
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:bg-secondary"
                     )}
-                  </button>
-                </button>
-              ))
+                  >
+                    {/* Account Number Circle */}
+                    <button
+                      onClick={() => handleSelectAccount(account.index)}
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shrink-0",
+                        activeAccountIndex === account.index
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {account.index + 1}
+                    </button>
+                    
+                    {/* Account Info */}
+                    <button
+                      onClick={() => handleSelectAccount(account.index)}
+                      className="flex-1 text-left min-w-0"
+                    >
+                      {isEditing ? (
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Input
+                            value={editNameInput}
+                            onChange={(e) => setEditNameInput(e.target.value)}
+                            placeholder="Account name"
+                            maxLength={24}
+                            className="h-7 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveNickname(account.index);
+                              if (e.key === "Escape") setEditingAccountIndex(null);
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2"
+                            onClick={() => handleSaveNickname(account.index)}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{displayName}</span>
+                            {activeAccountIndex === account.index && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium shrink-0">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <ChainIcon chain={account.chain} />
+                            <p className="text-xs text-muted-foreground font-mono truncate">
+                              {formatAddress(account.address)}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Actions */}
+                    {!isEditing && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditingName(account.index);
+                          }}
+                          className="p-2 rounded-lg hover:bg-muted transition-colors"
+                          title="Edit name"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyAddress(account.address);
+                          }}
+                          className="p-2 rounded-lg hover:bg-muted transition-colors"
+                          title="Copy address"
+                        >
+                          {copiedAddress === account.address ? (
+                            <Check className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         )}
@@ -355,7 +504,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         {addMode === null && derivedAccounts.length > 0 && (
           <div className="mt-4 pt-3 border-t border-border">
             <p className="text-[11px] text-muted-foreground text-center">
-              Accounts derived from your seed phrase using BIP44
+              Tap the edit icon to rename accounts
             </p>
           </div>
         )}

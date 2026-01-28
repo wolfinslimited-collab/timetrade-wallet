@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Settings, Wallet2 } from "lucide-react";
+import { Shield, Settings, Layers } from "lucide-react";
 import { NotificationCenter } from "./notifications/NotificationCenter";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -85,7 +85,7 @@ export const WalletHeader = ({
               "bg-card border-border hover:bg-secondary text-muted-foreground"
             )}
           >
-            <Wallet2 className="w-5 h-5" />
+            <Layers className="w-5 h-5" />
             {derivedAccounts.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                 {activeAccountIndex + 1}
