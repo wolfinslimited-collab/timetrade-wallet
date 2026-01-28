@@ -164,9 +164,14 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       localStorage.setItem("timetrade_wallet_address_tron", tronAddress);
 
       const accountName = accountNameInput.trim() || "Imported Wallet";
+      
+      // Set wallet name so header displays it correctly
+      localStorage.setItem("timetrade_wallet_name", accountName);
+      
       addAccount(accountName, "mnemonic");
 
       window.dispatchEvent(new CustomEvent("timetrade:unlocked", { detail: { pin: storedPin } }));
+      window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
       toast.success("Wallet imported successfully");
       setMnemonicInput("");
@@ -174,7 +179,8 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       setAddMode(null);
       onOpenChange(false);
       
-      window.location.reload();
+      // Small delay before refresh to let events propagate
+      setTimeout(() => window.location.reload(), 100);
     } catch (err) {
       console.error("Import failed:", err);
       toast.error("Failed to import wallet");
@@ -209,12 +215,20 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       });
       localStorage.setItem("timetrade_stored_keys", JSON.stringify(existingKeys));
 
+      // Set wallet name so header displays it correctly
+      localStorage.setItem("timetrade_wallet_name", accountName);
+      
       addAccount(accountName, "privateKey");
+
+      window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
       toast.success("Private key imported");
       setPrivateKeyInput("");
       setAccountNameInput("");
       setAddMode(null);
+      
+      // Refresh data for the new account
+      setTimeout(() => refreshAll(), 100);
     } catch (err) {
       console.error("Import failed:", err);
       toast.error("Failed to import key");
