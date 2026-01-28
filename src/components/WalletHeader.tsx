@@ -70,14 +70,14 @@ export const WalletHeader = ({
           <div>
             <p className="text-xs text-muted-foreground tracking-widest uppercase">{walletName.toUpperCase()}</p>
             <div className="flex items-center gap-2 mt-1">
-              <div className="insurance-badge">
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary border border-border">
                 <Shield className="w-3 h-3 text-primary" />
-                <span className="text-primary">Insured</span>
+                <span className="text-[10px] font-medium text-primary uppercase tracking-wide">Protected</span>
               </div>
               {isConnected && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Multi-Chain
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Live</span>
                 </div>
               )}
             </div>
