@@ -325,3 +325,67 @@ export function formatAddress(address: string, chars: number = 6): string {
   if (!address || address.length < 10) return address;
   return `${address.slice(0, chars)}...${address.slice(-4)}`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private Key Derivation (for transaction signing)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Derive EVM private key from mnemonic
+ * Returns hex string with 0x prefix
+ */
+export function deriveEvmPrivateKey(phrase: string, accountIndex: number = 0): string {
+  const path = `m/44'/60'/0'/0/${accountIndex}`;
+  const wallet = HDNodeWallet.fromPhrase(phrase, undefined, path);
+  return wallet.privateKey;
+}
+
+/**
+ * Derive Solana private key (seed bytes) from mnemonic
+ * Returns hex string of the 32-byte seed
+ */
+export function deriveSolanaPrivateKey(
+  phrase: string,
+  accountIndex: number = 0,
+  pathStyle: SolanaDerivationPath = "phantom"
+): string {
+  const seed = mnemonicToSeedSync(phrase);
+  const pathConfig = SOLANA_DERIVATION_PATHS[pathStyle];
+  const path = pathConfig.getPath(accountIndex);
+  const { key } = derivePath(path, bytesToHex(seed));
+  return bytesToHex(key);
+}
+
+/**
+ * Derive Tron private key from mnemonic
+ * Returns hex string with 0x prefix (same as EVM since Tron uses secp256k1)
+ */
+export function deriveTronPrivateKey(phrase: string, accountIndex: number = 0): string {
+  const path = `m/44'/195'/0'/0/${accountIndex}`;
+  const wallet = HDNodeWallet.fromPhrase(phrase, undefined, path);
+  return wallet.privateKey;
+}
+
+export type Chain = "ethereum" | "polygon" | "solana" | "tron" | "bitcoin";
+
+/**
+ * Derive private key for any supported chain
+ */
+export function derivePrivateKeyForChain(
+  phrase: string,
+  chain: Chain,
+  accountIndex: number = 0,
+  solanaPathStyle: SolanaDerivationPath = "phantom"
+): string {
+  switch (chain) {
+    case "ethereum":
+    case "polygon":
+      return deriveEvmPrivateKey(phrase, accountIndex);
+    case "solana":
+      return deriveSolanaPrivateKey(phrase, accountIndex, solanaPathStyle);
+    case "tron":
+      return deriveTronPrivateKey(phrase, accountIndex);
+    default:
+      throw new Error(`Unsupported chain: ${chain}`);
+  }
+}

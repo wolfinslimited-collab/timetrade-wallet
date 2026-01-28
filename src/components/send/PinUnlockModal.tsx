@@ -8,7 +8,7 @@ interface PinUnlockModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (pin: string) => void;
-  onUsePrivateKey: () => void;
+  onUsePrivateKey?: () => void;
   isLoading: boolean;
   walletAddress?: string;
   error?: string | null;
@@ -175,18 +175,20 @@ export const PinUnlockModal = ({
           </div>
         )}
 
-        {/* Use Private Key Instead */}
-        <div className="border-t border-border pt-4">
-          <Button
-            variant="ghost"
-            onClick={onUsePrivateKey}
-            disabled={isLoading}
-            className="w-full text-muted-foreground"
-          >
-            <Key className="w-4 h-4 mr-2" />
-            Use Private Key Instead
-          </Button>
-        </div>
+        {/* Use Private Key Instead - only show if handler provided */}
+        {onUsePrivateKey && (
+          <div className="border-t border-border pt-4">
+            <Button
+              variant="ghost"
+              onClick={onUsePrivateKey}
+              disabled={isLoading}
+              className="w-full text-muted-foreground"
+            >
+              <Key className="w-4 h-4 mr-2" />
+              Use Private Key Instead
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
