@@ -156,20 +156,54 @@ async function callBlockchainFunction<T>(
   testnet: boolean = true
 ): Promise<T> {
   const normalizedAddress = normalizeAddressForChain(chain, address);
+  
+  // DEBUG: Log API request details
+  console.log(`%c[BLOCKCHAIN API] 📡 Request`, 'color: #3b82f6; font-weight: bold;', {
+    action,
+    chain,
+    address: normalizedAddress,
+    originalAddress: address !== normalizedAddress ? address : '(same)',
+    testnet,
+    timestamp: new Date().toISOString(),
+  });
+
+  const startTime = performance.now();
+  
   const { data, error } = await supabase.functions.invoke('blockchain', {
     body: { action, chain, address: normalizedAddress, testnet },
   });
 
+  const duration = (performance.now() - startTime).toFixed(0);
+
   if (error) {
-    console.error('Blockchain function error:', error);
+    console.error(`%c[BLOCKCHAIN API] ❌ Error (${duration}ms)`, 'color: #ef4444; font-weight: bold;', {
+      action,
+      chain,
+      address: normalizedAddress,
+      error: error.message,
+    });
     throw new Error(error.message || 'Failed to call blockchain function');
   }
 
   const response = data as BlockchainResponse<T>;
   
   if (!response.success) {
+    console.error(`%c[BLOCKCHAIN API] ⚠️ Failed Response (${duration}ms)`, 'color: #f59e0b; font-weight: bold;', {
+      action,
+      chain,
+      address: normalizedAddress,
+      error: response.error,
+    });
     throw new Error(response.error || 'Unknown error');
   }
+
+  // DEBUG: Log successful response
+  console.log(`%c[BLOCKCHAIN API] ✅ Success (${duration}ms)`, 'color: #22c55e; font-weight: bold;', {
+    action,
+    chain,
+    address: normalizedAddress,
+    data: response.data,
+  });
 
   return response.data as T;
 }

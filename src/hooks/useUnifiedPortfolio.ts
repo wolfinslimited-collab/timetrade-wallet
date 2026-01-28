@@ -50,14 +50,22 @@ export function useUnifiedPortfolio(enabled: boolean) {
     if (!enabled) return;
     
     // Initial read
-    setAddresses(getAddressesFromStorage());
+    const initialAddresses = getAddressesFromStorage();
+    setAddresses(initialAddresses);
+    console.log(`%c[UNIFIED PORTFOLIO] 🚀 Initial Load`, 'color: #06b6d4; font-weight: bold;', initialAddresses);
     
     // Listen for custom events when accounts switch
     const handleAccountSwitch = () => {
       const newAddresses = getAddressesFromStorage();
+      console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Detected`, 'color: #f97316; font-weight: bold;', {
+        previous: addresses,
+        new: newAddresses,
+        timestamp: new Date().toISOString(),
+      });
       setAddresses(newAddresses);
       
       // Invalidate ALL balance queries to force refetch with new addresses
+      console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308; font-weight: bold;');
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
       queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
     };
@@ -76,10 +84,12 @@ export function useUnifiedPortfolio(enabled: boolean) {
   // Debug logging for address detection
   React.useEffect(() => {
     if (enabled) {
-      console.log('[UnifiedPortfolio] Addresses:', {
-        evm: evmAddress,
-        solana: solanaAddress,
-        tron: tronAddress,
+      console.log(`%c[UNIFIED PORTFOLIO] 🔍 Active Addresses`, 'color: #a855f7; font-weight: bold;', {
+        evm: evmAddress || '(not set)',
+        solana: solanaAddress || '(not set)',
+        tron: tronAddress || '(not set)',
+        enabled,
+        timestamp: new Date().toISOString(),
       });
     }
   }, [enabled, evmAddress, solanaAddress, tronAddress]);
