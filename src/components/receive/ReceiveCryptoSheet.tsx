@@ -74,14 +74,6 @@ const tokens: TokenOption[] = [
     addressKey: "btc",
     isNativeToken: true
   },
-  { 
-    symbol: "USDT", 
-    name: "Tether", 
-    network: "Ethereum Mainnet", 
-    networkId: "ethereum",
-    addressKey: "evm",
-    isNativeToken: false
-  },
 ];
 
 interface ReceiveCryptoSheetProps {
