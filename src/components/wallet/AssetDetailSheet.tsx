@@ -39,6 +39,12 @@ const getExplorerUrl = (chain: Chain): string => {
   return urls[chain] || urls.ethereum;
 };
 
+const getTxExplorerUrl = (chain: Chain, explorerBase: string, txHash: string) => {
+  const base = explorerBase.replace(/\/$/, "");
+  if (chain === "tron") return `${base}/#/transaction/${txHash}`;
+  return `${base}/tx/${txHash}`;
+};
+
 // Get network logo URL
 const getNetworkLogoUrl = (chain: Chain): string => {
   const symbols: Record<Chain, string> = {
@@ -239,11 +245,15 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                   const dateLabel = Number.isFinite(tx.timestamp)
                     ? new Date(tx.timestamp * 1000).toLocaleDateString()
                     : "—";
+
+                  const txHref = tx.hash
+                    ? getTxExplorerUrl(asset.chain, txData?.explorerUrl || explorerUrl, tx.hash)
+                    : undefined;
                   
                   return (
                     <a
                       key={`${tx.hash}-${index}`}
-                      href={`${explorerUrl}/tx/${tx.hash}`}
+                      href={txHref}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors"
