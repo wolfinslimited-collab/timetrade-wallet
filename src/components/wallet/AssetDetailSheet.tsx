@@ -268,18 +268,42 @@ export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDe
                     ? (tronHexToBase58(tx.to) || tx.to)
                     : tx.to;
 
-                  const isSend = asset.chain === 'tron'
-                    ? txFrom === address
-                    : txFrom?.toLowerCase() === address?.toLowerCase();
+                  // Solana: determine direction from the *asset-specific* tokenTransfer.
+                  // Relying on tx.from/tx.to can be misleading for token receipts (fee payer/signer may be the wallet).
+                  const solanaTransfer = asset.chain === 'solana'
+                    ? (
+                        asset.isNative
+                          ? tx.tokenTransfers?.find((tt: any) => !tt.mint && (tt.symbol === 'SOL' || tt.decimals === 9))
+                          : tx.tokenTransfers?.find((tt: any) => tt.mint === asset.contractAddress)
+                      )
+                    : undefined;
 
-                  const isReceive = asset.chain === 'tron'
-                    ? txTo === address
-                    : txTo?.toLowerCase() === address?.toLowerCase();
+                  const solanaSource = solanaTransfer?.source;
+                  const solanaDestination = solanaTransfer?.destination;
+
+                  const isSend = asset.chain === 'solana'
+                    ? (solanaSource ? solanaSource === address : txFrom?.toLowerCase() === address?.toLowerCase())
+                    : asset.chain === 'tron'
+                      ? txFrom === address
+                      : txFrom?.toLowerCase() === address?.toLowerCase();
+
+                  const isReceive = asset.chain === 'solana'
+                    ? (solanaDestination ? solanaDestination === address : txTo?.toLowerCase() === address?.toLowerCase())
+                    : asset.chain === 'tron'
+                      ? txTo === address
+                      : txTo?.toLowerCase() === address?.toLowerCase();
 
                   const direction: 'send' | 'receive' = isSend ? 'send' : isReceive ? 'receive' : 'receive';
                   const isOutgoing = direction === 'send';
                   const Icon = isOutgoing ? ArrowUpRight : ArrowDownLeft;
-                  const formattedValue = parseFloat(tx.value || '0') / Math.pow(10, asset.decimals);
+
+                  const displayBaseUnits = asset.chain === 'solana' && solanaTransfer
+                    ? String(solanaTransfer.amount ?? '0')
+                    : String(tx.value || '0');
+                  const displayDecimals = asset.chain === 'solana' && solanaTransfer
+                    ? (typeof solanaTransfer.decimals === 'number' ? solanaTransfer.decimals : asset.decimals)
+                    : asset.decimals;
+                  const formattedValue = parseFloat(displayBaseUnits || '0') / Math.pow(10, displayDecimals);
                   const dateLabel = Number.isFinite(tx.timestamp)
                     ? new Date(tx.timestamp * 1000).toLocaleDateString()
                     : "—";
