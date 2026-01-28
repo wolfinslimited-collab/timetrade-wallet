@@ -42,10 +42,19 @@ export function useUnifiedPortfolio(enabled: boolean) {
   // Use a version counter to force re-reads of addresses
   const [addressVersion, setAddressVersion] = React.useState(0);
 
-  // Compute addresses from storage when version changes
+  // Compute addresses from storage when:
+  // - we become enabled (after mnemonic derivation writes addresses)
+  // - an account switch/unlock event bumps the version
   const addresses = React.useMemo(() => {
+    if (!enabled) {
+      return {
+        evmAddress: null,
+        solanaAddress: null,
+        tronAddress: null,
+      };
+    }
     return getAddressesFromStorage();
-  }, [addressVersion]);
+  }, [enabled, addressVersion]);
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;
 
