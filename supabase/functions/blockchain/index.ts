@@ -735,13 +735,42 @@ async function getSolanaTransactions(address: string, testnet: boolean = false):
 }> {
   try {
     console.log(`Fetching Solana transactions via Helius RPC for: ${address}`);
+
+    // IMPORTANT: The asset detail sheet filters token activity client-side by `tokenTransfers[].mint`.
+    // If we only fetch a small number of recent signatures, users with many token transfers may
+    // see just 1–2 items after filtering. We fetch more signatures + details here to provide
+    // a richer history while still keeping a hard cap to avoid excessive RPC calls.
+    const SIGNATURE_LIMIT = 200;
+    const MAX_TX_DETAILS = 100;
+    const CONCURRENCY = 8;
+
+    const mapWithConcurrency = async <T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> => {
+      const results: R[] = new Array(items.length) as R[];
+      let cursor = 0;
+      const workerCount = Math.max(1, Math.min(limit, items.length));
+
+      const workers = Array.from({ length: workerCount }, async () => {
+        while (cursor < items.length) {
+          const currentIndex = cursor++;
+          results[currentIndex] = await fn(items[currentIndex]);
+        }
+      });
+
+      await Promise.all(workers);
+      return results;
+    };
     
     // Step 1: Get recent transaction signatures
-    const signatures = await heliusRpcRequest(
+    type SolanaSignatureInfo = { signature: string; blockTime?: number | null };
+
+    const signaturesRaw = await heliusRpcRequest(
       'getSignaturesForAddress',
-      [address, { limit: 20 }],
+      [address, { limit: SIGNATURE_LIMIT }],
       testnet
     );
+
+    const signatures = (Array.isArray(signaturesRaw) ? (signaturesRaw as SolanaSignatureInfo[]) : [])
+      .filter((s) => !!s?.signature);
     
     console.log(`Helius found ${signatures?.length || 0} transaction signatures`);
     
@@ -753,23 +782,22 @@ async function getSolanaTransactions(address: string, testnet: boolean = false):
       };
     }
     
-    // Step 2: Fetch transaction details (batch up to 10)
-    const transactionsToFetch = signatures.slice(0, 10);
-    const transactions: SolanaTransactionDetail[] = [];
-    
-    for (const sig of transactionsToFetch) {
+    // Step 2: Fetch transaction details (in parallel, capped)
+    const transactionsToFetch: SolanaSignatureInfo[] = signatures.slice(0, MAX_TX_DETAILS);
+
+    const maybeTxs = await mapWithConcurrency(transactionsToFetch, CONCURRENCY, async (sig) => {
       try {
         const tx = await heliusRpcRequest(
           'getTransaction',
           [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
           testnet
         );
-        
+
         if (!tx) {
           console.log(`Skipping tx ${sig.signature}: no result`);
-          continue;
+          return null;
         }
-        
+
         const meta = tx.meta;
         const message = tx.transaction?.message;
         const accountKeys = message?.accountKeys || [];
@@ -937,7 +965,7 @@ async function getSolanaTransactions(address: string, testnet: boolean = false):
         const fee = meta?.fee || 0;
         const logs = (meta?.logMessages || []).slice(0, 10);
         
-        transactions.push({
+        const out: SolanaTransactionDetail = {
           hash: sig.signature,
           from,
           to,
@@ -950,11 +978,16 @@ async function getSolanaTransactions(address: string, testnet: boolean = false):
           tokenTransfers,
           signers,
           logs,
-        });
+        };
+
+        return out;
       } catch (txError) {
         console.error(`Error processing tx ${sig.signature}:`, txError);
+        return null;
       }
-    }
+    });
+
+    const transactions = maybeTxs.filter((t): t is SolanaTransactionDetail => !!t);
     
     console.log(`Fetched ${transactions.length} Solana transactions via Helius`);
     return {
