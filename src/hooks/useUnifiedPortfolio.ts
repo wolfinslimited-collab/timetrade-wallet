@@ -45,29 +45,44 @@ export function useUnifiedPortfolio(enabled: boolean) {
   // Use state to reactively track addresses
   const [addresses, setAddresses] = React.useState(() => getAddressesFromStorage());
   
+  // Counter to force re-evaluation of addresses
+  const [refreshCounter, setRefreshCounter] = React.useState(0);
+  
   // Listen for account switch events and refetch data
   React.useEffect(() => {
     if (!enabled) return;
     
-    // Initial read
-    const initialAddresses = getAddressesFromStorage();
-    setAddresses(initialAddresses);
-    console.log(`%c[UNIFIED PORTFOLIO] 🚀 Initial Load`, 'color: #06b6d4; font-weight: bold;', initialAddresses);
+    try {
+      // Initial read
+      const initialAddresses = getAddressesFromStorage();
+      setAddresses(initialAddresses);
+      console.log(`%c[UNIFIED PORTFOLIO] 🚀 Initial Load`, 'color: #06b6d4; font-weight: bold;', initialAddresses);
+    } catch (err) {
+      console.error(`%c[UNIFIED PORTFOLIO] ❌ Error reading initial addresses`, 'color: #ef4444;', err);
+    }
     
     // Listen for custom events when accounts switch
     const handleAccountSwitch = () => {
-      const newAddresses = getAddressesFromStorage();
-      console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Detected`, 'color: #f97316; font-weight: bold;', {
-        previous: addresses,
-        new: newAddresses,
-        timestamp: new Date().toISOString(),
-      });
-      setAddresses(newAddresses);
-      
-      // Invalidate ALL balance queries to force refetch with new addresses
-      console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308; font-weight: bold;');
-      queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+      try {
+        // Small delay to ensure localStorage is updated
+        setTimeout(() => {
+          const newAddresses = getAddressesFromStorage();
+          console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Detected`, 'color: #f97316; font-weight: bold;', {
+            previous: addresses,
+            new: newAddresses,
+            timestamp: new Date().toISOString(),
+          });
+          setAddresses(newAddresses);
+          setRefreshCounter((c) => c + 1);
+          
+          // Invalidate ALL balance queries to force refetch with new addresses
+          console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308; font-weight: bold;');
+          queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+          queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+        }, 100);
+      } catch (err) {
+        console.error(`%c[UNIFIED PORTFOLIO] ❌ Error handling account switch`, 'color: #ef4444;', err);
+      }
     };
     
     window.addEventListener('timetrade:account-switched', handleAccountSwitch);
@@ -81,7 +96,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;
 
-  // Debug logging for address detection
+  // Debug logging for address detection - also triggers on refreshCounter changes
   React.useEffect(() => {
     if (enabled) {
       console.log(`%c[UNIFIED PORTFOLIO] 🔍 Active Addresses`, 'color: #a855f7; font-weight: bold;', {
@@ -89,10 +104,11 @@ export function useUnifiedPortfolio(enabled: boolean) {
         solana: solanaAddress || '(not set)',
         tron: tronAddress || '(not set)',
         enabled,
+        refreshCounter,
         timestamp: new Date().toISOString(),
       });
     }
-  }, [enabled, evmAddress, solanaAddress, tronAddress]);
+  }, [enabled, evmAddress, solanaAddress, tronAddress, refreshCounter]);
 
   // Fetch balances in parallel (React Query)
   const ethBalance = useWalletBalance(enabled ? evmAddress : null, "ethereum");

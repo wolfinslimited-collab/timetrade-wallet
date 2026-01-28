@@ -252,11 +252,17 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   // Auto-connect and derive accounts from the stored, encrypted mnemonic.
   useEffect(() => {
+    console.log(`%c[BLOCKCHAIN CONTEXT] 🚀 Initializing...`, 'color: #8b5cf6; font-weight: bold;');
     deriveFromStoredMnemonic();
 
     const onUnlocked = (e: Event) => {
-      const pin = (e as CustomEvent<{ pin?: string }>).detail?.pin;
-      deriveFromStoredMnemonic(pin);
+      try {
+        console.log(`%c[BLOCKCHAIN CONTEXT] 🔓 Unlock event received`, 'color: #22c55e;');
+        const pin = (e as CustomEvent<{ pin?: string }>).detail?.pin;
+        deriveFromStoredMnemonic(pin);
+      } catch (err) {
+        console.error(`%c[BLOCKCHAIN CONTEXT] ❌ Error handling unlock event`, 'color: #ef4444;', err);
+      }
     };
 
     const onAccountSwitched = () => {
@@ -351,6 +357,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   }, [allDerivedAccounts, activeAccountIndex]);
 
   const refreshAll = useCallback(() => {
+    console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 refreshAll() called`, 'color: #06b6d4; font-weight: bold;', {
+      timestamp: new Date().toISOString(),
+    });
     queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
