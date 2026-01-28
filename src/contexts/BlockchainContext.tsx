@@ -182,8 +182,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       const words = decryptedPhrase.split(/\s+/);
       const phrase = words.join(' ').toLowerCase().trim().replace(/\s+/g, ' ');
 
-      // Get stored settings
-      const solanaPathStyle = (localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath) || 'legacy';
+       // Get stored settings
+       // Default to Phantom/Solflare style (most common). Using 'legacy' here caused a mismatch where
+       // first load derives a DIFFERENT Solana address than the one set during account selection,
+       // resulting in $0 until the user switches accounts.
+       const solanaPathStyle =
+         (localStorage.getItem('timetrade_solana_derivation_path') as SolanaDerivationPath) || 'phantom';
       const storedIndex = localStorage.getItem('timetrade_active_account_index');
       const storedChain = (localStorage.getItem('timetrade_selected_chain') as Chain) || 'ethereum';
       const index = storedIndex ? parseInt(storedIndex, 10) : 0;
@@ -240,7 +244,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         setIsLoadingAccounts(false);
       }
     }
-  }, [walletAddress]);
+   }, [queryClient]);
 
   // Ensure we always have a valid Tron address stored for unified multi-chain views.
   // This covers existing sessions and manual connect flows that only provide an EVM address.
