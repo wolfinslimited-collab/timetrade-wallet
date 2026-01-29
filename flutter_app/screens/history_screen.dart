@@ -1,40 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../models/token.dart';
 import '../services/blockchain_service.dart';
-
-enum TransactionType { send, receive, swap }
-enum TransactionStatus { completed, pending, failed }
-
-class Transaction {
-  final String id;
-  final String chain;
-  final TransactionType type;
-  final TransactionStatus status;
-  final double amount;
-  final String symbol;
-  final double usdValue;
-  final String? address;
-  final DateTime timestamp;
-  final String txHash;
-  final double networkFee;
-  final String? explorerUrl;
-
-  Transaction({
-    required this.id,
-    required this.chain,
-    required this.type,
-    required this.status,
-    required this.amount,
-    required this.symbol,
-    required this.usdValue,
-    this.address,
-    required this.timestamp,
-    required this.txHash,
-    required this.networkFee,
-    this.explorerUrl,
-  });
-}
+import '../models/token.dart' show Transaction, TransactionType, TransactionStatus;
 
 class HistoryScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -94,8 +61,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
         return tx.symbol.toLowerCase().contains(query) ||
-            (tx.address?.toLowerCase().contains(query) ?? false) ||
-            tx.txHash.toLowerCase().contains(query);
+            tx.from.toLowerCase().contains(query) ||
+            tx.to.toLowerCase().contains(query) ||
+            tx.hash.toLowerCase().contains(query);
       }
 
       return true;
@@ -379,7 +347,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildTransactionItem(Transaction tx) {
     final isSend = tx.type == TransactionType.send;
-    final isSwap = tx.type == TransactionType.swap;
     
     IconData icon;
     Color iconColor;
@@ -397,7 +364,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
         icon = Icons.swap_horiz;
         iconColor = AppTheme.primary;
         break;
+      case TransactionType.contract:
+        icon = Icons.description_outlined;
+        iconColor = AppTheme.mutedForeground;
+        break;
     }
+
+    final address = isSend ? tx.to : tx.from;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -443,7 +416,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        tx.chain.toUpperCase(),
+                        tx.chain.name.toUpperCase(),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -455,9 +428,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  tx.address != null
-                      ? '${isSend ? 'To' : 'From'}: ${_formatAddress(tx.address)}'
-                      : _formatTime(tx.timestamp),
+                  '${isSend ? 'To' : 'From'}: ${_formatAddress(address)}',
                   style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.mutedForeground,

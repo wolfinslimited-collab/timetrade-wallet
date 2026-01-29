@@ -106,6 +106,104 @@ class WalletService extends ChangeNotifier {
     return bip39.validateMnemonic(mnemonic);
   }
 
+  /// Validate mnemonic string (async version for compatibility)
+  Future<bool> validateMnemonic(String mnemonic) async {
+    return bip39.validateMnemonic(mnemonic);
+  }
+
+  /// Store mnemonic temporarily (to be encrypted with PIN later)
+  String? _tempMnemonic;
+  Future<void> storeMnemonic(String mnemonic) async {
+    _tempMnemonic = mnemonic;
+  }
+
+  /// Set PIN and complete wallet setup
+  Future<void> setPin(String pin) async {
+    if (_tempMnemonic == null) {
+      throw Exception('No mnemonic stored');
+    }
+    
+    // Store PIN
+    await _storage.write(key: _keyPin, value: pin);
+    _storedPin = pin;
+    _hasPin = true;
+
+    // Encrypt and store seed phrase
+    final encryptedPhrase = _encryptWithPin(_tempMnemonic!, pin);
+    await _storage.write(key: _keySeedPhrase, value: encryptedPhrase);
+
+    // Derive addresses
+    final words = _tempMnemonic!.split(' ');
+    final addresses = await _deriveAddresses(words, 0);
+
+    // Create main account
+    final mainAccount = WalletAccount(
+      id: 'main',
+      name: 'Main Wallet',
+      type: AccountType.mnemonic,
+      createdAt: DateTime.now(),
+      evmAddress: addresses['evm'],
+      solanaAddress: addresses['solana'],
+      tronAddress: addresses['tron'],
+    );
+
+    _accounts = [mainAccount];
+    _activeAccount = mainAccount;
+
+    // Persist
+    await _storage.write(key: _keyWalletCreated, value: 'true');
+    await _storage.write(
+      key: _keyUserAccounts,
+      value: jsonEncode(_accounts.map((a) => a.toJson()).toList()),
+    );
+    await _storage.write(key: _keyActiveAccountId, value: mainAccount.id);
+    await _storage.write(key: _keyAddressEvm, value: addresses['evm']);
+    await _storage.write(key: _keyAddressSolana, value: addresses['solana']);
+    await _storage.write(key: _keyAddressTron, value: addresses['tron']);
+
+    _hasWallet = true;
+    _tempMnemonic = null;
+    notifyListeners();
+  }
+
+  /// Check if biometric is enabled
+  Future<bool> isBiometricEnabled() async {
+    return _biometricEnabled;
+  }
+
+  /// Set biometric enabled status
+  Future<void> setBiometricEnabled(bool enabled) async {
+    await setBiometric(enabled);
+  }
+
+  /// Get count of stored keys
+  Future<int> getStoredKeysCount() async {
+    // Return 0 for now - implement key storage later
+    return 0;
+  }
+
+  /// Get wallet name
+  Future<String?> getWalletName() async {
+    return _activeAccount?.name;
+  }
+
+  /// Get active account index
+  Future<int> getActiveAccountIndex() async {
+    if (_activeAccount == null) return 0;
+    final index = _accounts.indexWhere((a) => a.id == _activeAccount!.id);
+    return index >= 0 ? index : 0;
+  }
+
+  /// Get all addresses for the active account
+  Future<Map<String, String>> getAllAddresses() async {
+    return {
+      'evm': _activeAccount?.evmAddress ?? '',
+      'solana': _activeAccount?.solanaAddress ?? '',
+      'tron': _activeAccount?.tronAddress ?? '',
+      'btc': _activeAccount?.btcAddress ?? '',
+    };
+  }
+
   /// Verify PIN
   bool verifyPin(String pin) {
     return pin == _storedPin;
