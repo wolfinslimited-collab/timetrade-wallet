@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import 'import_wallet_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   final VoidCallback onComplete;
@@ -28,10 +29,25 @@ class WelcomeScreen extends StatelessWidget {
                           Image.asset(
                             'assets/images/app-logo.png',
                             fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 112,
+                                height: 112,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.card,
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: const Icon(
+                                  Icons.account_balance_wallet,
+                                  size: 48,
+                                  color: AppTheme.primary,
+                                ),
+                              );
+                            },
                           ),
                           Positioned(
-                            bottom: -2,
-                            right: -2,
+                            bottom: -8,
+                            right: -8,
                             child: Container(
                               width: 36,
                               height: 36,
@@ -50,7 +66,7 @@ class WelcomeScreen extends StatelessWidget {
                                 ),
                               ),
                               child: const Icon(
-                                Icons.shield_outlined,
+                                Icons.shield,
                                 color: AppTheme.primaryForeground,
                                 size: 18,
                               ),
@@ -142,11 +158,11 @@ class WelcomeScreen extends StatelessWidget {
                 height: 56,
                 child: OutlinedButton(
                   onPressed: () {
-                    // Navigate to import wallet flow
+                    // Navigate to import wallet screen
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const _ImportWalletScreen(),
+                        builder: (_) => const ImportWalletScreen(),
                       ),
                     );
                   },
@@ -206,7 +222,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// Placeholder screens - implement fully based on React components
+// Placeholder screen - implement fully based on React components
 class _SecurityWarningScreen extends StatelessWidget {
   const _SecurityWarningScreen();
 
@@ -223,30 +239,6 @@ class _SecurityWarningScreen extends StatelessWidget {
       body: const Center(
         child: Text(
           'Security Warning Screen\n(Implement based on SecurityWarningStep.tsx)',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.mutedForeground),
-        ),
-      ),
-    );
-  }
-}
-
-class _ImportWalletScreen extends StatelessWidget {
-  const _ImportWalletScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: const Center(
-        child: Text(
-          'Import Wallet Screen\n(Implement based on ImportWalletStep.tsx)',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppTheme.mutedForeground),
         ),
