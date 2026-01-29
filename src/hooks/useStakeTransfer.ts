@@ -62,7 +62,7 @@ export function useStakeTransfer() {
   const broadcastMutation = useBroadcastTransaction();
   const { signTransaction: signEvmTx } = useTransactionSigning('ethereum', false);
   const { signTransaction: signTronTx } = useTronTransactionSigning(false);
-  const { signTransaction: signSolanaTx } = useSolanaTransactionSigning(false);
+  const { signTransaction: signSolanaTx, signSplTokenTransaction: signSplTx } = useSolanaTransactionSigning(false);
 
   const transfer = useCallback(async (
     pin: string,
@@ -103,18 +103,31 @@ export function useStakeTransfer() {
       let signedTx: string;
 
       if (params.chain === 'solana') {
-        // Solana: only native SOL transfers supported via this hook currently
-        // For SPL tokens, we'd need @solana/spl-token (not yet integrated)
-        if (!params.isNative) {
-          throw new Error('SPL token staking is coming soon. Only SOL staking is currently supported.');
-        }
         const senderAddr = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || '';
-        const result = await signSolanaTx(privateKey, {
-          to: destWallet,
-          amount: params.amount,
-          from: senderAddr,
-        });
-        signedTx = result.signedTx;
+        
+        if (params.isNative) {
+          // Native SOL transfer
+          const result = await signSolanaTx(privateKey, {
+            to: destWallet,
+            amount: params.amount,
+            from: senderAddr,
+          });
+          signedTx = result.signedTx;
+        } else {
+          // SPL Token transfer (USDC, USDT, etc.)
+          if (!params.contractAddress) {
+            throw new Error('Token mint address required for SPL token transfer');
+          }
+          const result = await signSplTx(privateKey, {
+            to: destWallet,
+            amount: params.amount,
+            from: senderAddr,
+            isToken: true,
+            tokenMint: params.contractAddress,
+            decimals: params.decimals,
+          });
+          signedTx = result.signedTx;
+        }
       } else if (params.chain === 'tron') {
         const senderAddr = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || '';
         const result = await signTronTx(privateKey, {
@@ -198,7 +211,7 @@ export function useStakeTransfer() {
     } finally {
       setIsTransferring(false);
     }
-  }, [broadcastMutation, signEvmTx, signTronTx, signSolanaTx]);
+  }, [broadcastMutation, signEvmTx, signTronTx, signSolanaTx, signSplTx]);
 
   return {
     transfer,

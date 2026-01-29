@@ -8,6 +8,14 @@ import {
   Keypair,
   ComputeBudgetProgram,
 } from '@solana/web3.js';
+import {
+  createTransferInstruction,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  getAccount,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { supabase } from '@/integrations/supabase/client';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { hmac } from '@noble/hashes/hmac.js';
@@ -16,18 +24,23 @@ import { SOLANA_DERIVATION_PATHS, SolanaDerivationPath } from '@/utils/walletDer
 
 export interface SolanaTransactionParams {
   to: string;
-  amount: string; // Amount in SOL
+  amount: string; // Amount in SOL (for native) or token units (for SPL)
   from: string;
   priorityFee?: number; // In micro-lamports per compute unit
+  // SPL Token fields (optional)
+  isToken?: boolean;
+  tokenMint?: string; // SPL token mint address
+  decimals?: number; // Token decimals (default 6 for most stablecoins)
 }
 
 export interface SolanaSignedTransaction {
-  signedTx: string; // Base64 encoded serialized transaction
+  signedTx: string; // Hex encoded serialized transaction
   txHash: string;
 }
 
 interface UseSolanaTransactionSigningReturn {
   signTransaction: (privateKey: string, params: SolanaTransactionParams) => Promise<SolanaSignedTransaction>;
+  signSplTokenTransaction: (privateKey: string, params: SolanaTransactionParams) => Promise<SolanaSignedTransaction>;
   isSigningAvailable: boolean;
   error: string | null;
   clearError: () => void;
@@ -279,8 +292,191 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
     }
   }, [isTestnet]);
 
+  /**
+   * Sign an SPL token transfer transaction
+   */
+  const signSplTokenTransaction = useCallback(async (
+    privateKeyOrMnemonic: string,
+    params: SolanaTransactionParams
+  ): Promise<SolanaSignedTransaction> => {
+    try {
+      setError(null);
+
+      if (!params.tokenMint) {
+        throw new Error('Token mint address is required for SPL token transfers');
+      }
+
+      const rpcUrl = isTestnet ? SOLANA_RPC.devnet : SOLANA_RPC.mainnet;
+      const connection = new Connection(rpcUrl, 'confirmed');
+
+      // Determine if input is mnemonic (contains spaces) or private key
+      let keypair: Keypair;
+      const isMnemonic = privateKeyOrMnemonic.includes(' ');
+
+      if (isMnemonic) {
+        const { path, index } = getStoredSolanaDerivationInfo();
+        keypair = deriveSolanaKeypair(privateKeyOrMnemonic.trim(), index, path);
+        console.log(`[SPL] Using Solana derivation: path=${path}, index=${index}`);
+      } else {
+        keypair = keypairFromPrivateKey(privateKeyOrMnemonic);
+      }
+
+      const fromPubkey = keypair.publicKey;
+      const toPubkey = new PublicKey(params.to);
+      const mintPubkey = new PublicKey(params.tokenMint);
+      const decimals = params.decimals ?? 6;
+
+      // Calculate token amount in base units
+      const tokenAmount = BigInt(Math.floor(parseFloat(params.amount) * Math.pow(10, decimals)));
+
+      if (tokenAmount <= 0n) {
+        throw new Error('Amount must be greater than 0');
+      }
+
+      // Get associated token accounts
+      const fromAta = await getAssociatedTokenAddress(mintPubkey, fromPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+      const toAta = await getAssociatedTokenAddress(mintPubkey, toPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+
+      console.log('[SPL] From ATA:', fromAta.toBase58());
+      console.log('[SPL] To ATA:', toAta.toBase58());
+
+      // Get recent blockhash
+      let blockhash: string;
+      try {
+        const latest = await connection.getLatestBlockhash('confirmed');
+        blockhash = latest.blockhash;
+      } catch (e) {
+        console.warn('[SPL] getLatestBlockhash failed on public RPC; falling back to backend RPC', e);
+        const { data, error: fnError } = await supabase.functions.invoke('blockchain', {
+          body: {
+            action: 'solanaRpc',
+            chain: 'solana',
+            address: '',
+            testnet: isTestnet,
+            rpcMethod: 'getLatestBlockhash',
+            rpcParams: [{ commitment: 'confirmed' }],
+          },
+        });
+        if (fnError) {
+          throw new Error(fnError.message || 'Failed to fetch Solana blockhash');
+        }
+        const response = data as { success: boolean; data?: any; error?: string };
+        if (!response?.success) {
+          throw new Error(response?.error || 'Failed to fetch Solana blockhash');
+        }
+        blockhash = response.data?.value?.blockhash || response.data?.blockhash;
+        if (!blockhash) {
+          throw new Error('Failed to fetch Solana blockhash');
+        }
+      }
+
+      // Create transaction
+      const transaction = new Transaction();
+
+      // Add priority fee if specified
+      if (params.priorityFee) {
+        const computeBudgetIx = ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: params.priorityFee,
+        });
+        transaction.add(computeBudgetIx);
+      }
+
+      // Check if destination ATA exists, if not create it
+      let destinationAccountExists = false;
+      try {
+        await getAccount(connection, toAta, 'confirmed', TOKEN_PROGRAM_ID);
+        destinationAccountExists = true;
+      } catch (e) {
+        // Account doesn't exist, we need to create it
+        console.log('[SPL] Destination ATA does not exist, will create it');
+        destinationAccountExists = false;
+      }
+
+      if (!destinationAccountExists) {
+        // Add instruction to create the associated token account
+        const createAtaIx = createAssociatedTokenAccountInstruction(
+          fromPubkey, // payer
+          toAta,      // associated token account
+          toPubkey,   // owner
+          mintPubkey, // mint
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
+        transaction.add(createAtaIx);
+      }
+
+      // Add transfer instruction
+      const transferIx = createTransferInstruction(
+        fromAta,      // source
+        toAta,        // destination
+        fromPubkey,   // owner
+        tokenAmount,  // amount
+        [],           // multi-signers (empty for single signer)
+        TOKEN_PROGRAM_ID
+      );
+      transaction.add(transferIx);
+
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = fromPubkey;
+
+      // Sign transaction
+      transaction.sign(keypair);
+
+      // Serialize
+      const serialized = transaction.serialize();
+      const hexTx = Buffer.from(serialized).toString('hex');
+
+      // Get signature
+      const signature = transaction.signature;
+      if (!signature) {
+        throw new Error('Failed to sign transaction');
+      }
+
+      // Convert to base58
+      const bs58Chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      const toBase58 = (bytes: Uint8Array): string => {
+        let num = BigInt(0);
+        for (const byte of bytes) {
+          num = num * BigInt(256) + BigInt(byte);
+        }
+        let result = '';
+        while (num > 0) {
+          result = bs58Chars[Number(num % BigInt(58))] + result;
+          num = num / BigInt(58);
+        }
+        for (const byte of bytes) {
+          if (byte === 0) result = '1' + result;
+          else break;
+        }
+        return result || '1';
+      };
+
+      const txHash = toBase58(signature);
+
+      console.log('[SPL] Token transaction signed successfully:', {
+        from: fromPubkey.toBase58(),
+        to: toPubkey.toBase58(),
+        mint: mintPubkey.toBase58(),
+        amount: tokenAmount.toString(),
+        decimals,
+        txHash,
+      });
+
+      return {
+        signedTx: hexTx,
+        txHash,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to sign SPL token transaction';
+      console.error('[SPL] Signing error:', err);
+      setError(message);
+      throw err;
+    }
+  }, [isTestnet]);
+
   return {
     signTransaction,
+    signSplTokenTransaction,
     isSigningAvailable: true, // Solana signing is always available client-side
     error,
     clearError,
