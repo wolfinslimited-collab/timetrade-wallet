@@ -41,9 +41,9 @@ class BottomNavBar extends StatelessWidget {
               ),
               _buildNavItem(
                 index: 2,
-                icon: Icons.show_chart_outlined,
-                activeIcon: Icons.show_chart,
-                label: 'Market',
+                icon: Icons.monetization_on_outlined,
+                activeIcon: Icons.monetization_on,
+                label: 'Staking',
               ),
               _buildNavItem(
                 index: 3,

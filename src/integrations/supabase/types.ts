@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      staking_positions: {
+        Row: {
+          amount: number
+          apy_rate: number
+          chain: string
+          created_at: string
+          earned_rewards: number
+          id: string
+          is_active: boolean
+          last_reward_calculation: string
+          staked_at: string
+          token_symbol: string
+          unlock_at: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          apy_rate?: number
+          chain?: string
+          created_at?: string
+          earned_rewards?: number
+          id?: string
+          is_active?: boolean
+          last_reward_calculation?: string
+          staked_at?: string
+          token_symbol?: string
+          unlock_at: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          apy_rate?: number
+          chain?: string
+          created_at?: string
+          earned_rewards?: number
+          id?: string
+          is_active?: boolean
+          last_reward_calculation?: string
+          staked_at?: string
+          token_symbol?: string
+          unlock_at?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,8 +1,8 @@
 import { forwardRef } from "react";
-import { Wallet, BarChart3, Clock, Settings } from "lucide-react";
+import { Wallet, Coins, Clock, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type NavTab = "wallet" | "history" | "market" | "settings";
+export type NavTab = "wallet" | "history" | "staking" | "settings";
 
 interface NavItem {
   icon: React.ElementType;
@@ -13,7 +13,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Wallet, label: "Wallet", tab: "wallet" },
   { icon: Clock, label: "History", tab: "history" },
-  { icon: BarChart3, label: "Market", tab: "market" },
+  { icon: Coins, label: "Staking", tab: "staking" },
   { icon: Settings, label: "Settings", tab: "settings" },
 ];
 
