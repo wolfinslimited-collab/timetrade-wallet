@@ -1368,7 +1368,7 @@ async function broadcastTransaction(
       
       const result = await heliusRpcRequest(
         'sendTransaction',
-        [base64Tx, { encoding: 'base64', skipPreflight: false, preflightCommitment: 'confirmed' }],
+        [base64Tx, { encoding: 'base64', skipPreflight: true, preflightCommitment: 'confirmed', maxRetries: 3 }],
         testnet
       );
       

@@ -381,15 +381,46 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         transaction.add(computeBudgetIx);
       }
 
-      // Check if destination ATA exists, if not create it
+      // Check if destination ATA exists via backend RPC (public RPC may be blocked)
       let destinationAccountExists = false;
       try {
+        // First try direct connection
         await getAccount(connection, toAta, 'confirmed', TOKEN_PROGRAM_ID);
         destinationAccountExists = true;
-      } catch (e) {
-        // Account doesn't exist, we need to create it
-        console.log('[SPL] Destination ATA does not exist, will create it');
-        destinationAccountExists = false;
+      } catch (e: unknown) {
+        // If it's a token account not found error, we need to create it
+        // If it's a network error (403), fall back to backend RPC check
+        const errMsg = e instanceof Error ? e.message : String(e);
+        if (errMsg.includes('403') || errMsg.includes('Access forbidden') || errMsg.includes('could not find account')) {
+          // Try via backend RPC
+          try {
+            const { data: rpcData, error: rpcError } = await supabase.functions.invoke('blockchain', {
+              body: {
+                action: 'solanaRpc',
+                chain: 'solana',
+                address: '',
+                testnet: isTestnet,
+                rpcMethod: 'getAccountInfo',
+                rpcParams: [toAta.toBase58(), { encoding: 'base64' }],
+              },
+            });
+            if (!rpcError && rpcData?.success && rpcData?.data?.value) {
+              destinationAccountExists = true;
+              console.log('[SPL] Destination ATA exists (verified via backend RPC)');
+            } else {
+              console.log('[SPL] Destination ATA does not exist (verified via backend RPC)');
+              destinationAccountExists = false;
+            }
+          } catch {
+            // If backend check also fails, assume we need to create it
+            console.log('[SPL] Could not verify ATA existence, will attempt to create it');
+            destinationAccountExists = false;
+          }
+        } else {
+          // Standard account not found - we need to create it
+          console.log('[SPL] Destination ATA does not exist, will create it');
+          destinationAccountExists = false;
+        }
       }
 
       if (!destinationAccountExists) {
