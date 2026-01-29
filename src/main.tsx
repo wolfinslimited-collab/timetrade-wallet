@@ -1,7 +1,5 @@
-import { Buffer } from 'buffer';
-
-// Polyfill Buffer for browser compatibility (required by ed25519-hd-key)
-window.Buffer = Buffer;
+// CRITICAL: Import polyfills FIRST before any other imports
+import './polyfills';
 
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
