@@ -525,22 +525,33 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             {/* Duration Selection */}
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-3 block">Lock Duration</label>
-              <div className="grid grid-cols-2 gap-2">
-                {STAKING_OPTIONS.map((option) => (
-                  <button
-                    key={option.duration}
-                    onClick={() => setSelectedDuration(option)}
-                    className={cn(
-                      "p-4 rounded-xl border transition-all text-left",
-                      selectedDuration.duration === option.duration
-                        ? "border-primary bg-primary/10"
-                        : "border-border/50 bg-card/30 hover:border-primary/30"
-                    )}
-                  >
-                    <p className="font-semibold">{option.label}</p>
-                    <p className="text-sm text-primary">{option.rate}% /month</p>
-                  </button>
-                ))}
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+                {STAKING_OPTIONS.map((option) => {
+                  const shortLabel =
+                    option.duration === 30
+                      ? "30D"
+                      : option.duration === 90
+                        ? "90D"
+                        : option.duration === 180
+                          ? "180D"
+                          : "1Y";
+
+                  return (
+                    <button
+                      key={option.duration}
+                      onClick={() => setSelectedDuration(option)}
+                      className={cn(
+                        "min-w-[92px] px-3 py-2 rounded-xl border transition-all text-left",
+                        selectedDuration.duration === option.duration
+                          ? "border-primary bg-primary/10"
+                          : "border-border/50 bg-card/30 hover:border-primary/30",
+                      )}
+                    >
+                      <p className="text-sm font-semibold leading-tight">{shortLabel}</p>
+                      <p className="text-[11px] text-primary leading-tight">{option.rate}% /mo</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -550,6 +561,10 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
               <div className="relative">
                 <Input
                   type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min={0}
+                  autoFocus
                   placeholder="0.00"
                   value={stakeAmount}
                   onChange={(e) => setStakeAmount(e.target.value)}
