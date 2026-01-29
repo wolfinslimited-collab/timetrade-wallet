@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../services/wallet_service.dart';
 import '../../widgets/seed_word_input.dart';
+import '../home_screen.dart';
 import 'pin_setup_screen.dart';
 
 class ImportWalletScreen extends StatefulWidget {
@@ -191,7 +192,14 @@ class _ImportWalletScreenState extends State<ImportWalletScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const PinSetupScreen(),
+            builder: (ctx) => PinSetupScreen(
+              onComplete: () {
+                Navigator.of(ctx).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              },
+            ),
           ),
         );
       }
