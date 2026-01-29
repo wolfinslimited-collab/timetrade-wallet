@@ -158,6 +158,13 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     fetchPositions();
   }, [walletAddress]);
 
+  // Prevent stale state causing accidental stakes when reopening the sheet
+  useEffect(() => {
+    if (!showStakeSheet) return;
+    setStakeAmount("");
+    setSelectedDuration(STAKING_OPTIONS[0]);
+  }, [showStakeSheet]);
+
   const fetchPositions = async () => {
     if (!walletAddress) {
       setIsLoading(false);
@@ -503,7 +510,10 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
       {/* Stake Configuration Sheet */}
       <Sheet open={showStakeSheet} onOpenChange={setShowStakeSheet}>
-        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl flex flex-col">
+        <SheetContent
+          side="bottom"
+          className="h-[85vh] rounded-t-3xl flex flex-col overflow-hidden"
+        >
           <SheetHeader className="pb-2 flex-shrink-0">
             <SheetTitle className="flex items-center gap-3">
               {selectedToken && <TokenLogo symbol={selectedToken.symbol} size="md" />}
@@ -511,7 +521,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             </SheetTitle>
           </SheetHeader>
 
-          <div className="mt-4 space-y-5 overflow-y-auto flex-1">
+          <div className="mt-4 space-y-5 overflow-y-auto flex-1 min-h-0 pb-24">
             {/* Duration Selection */}
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-3 block">Lock Duration</label>
@@ -567,7 +577,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           </div>
 
           {/* Footer - always visible */}
-          <div className="pt-4 pb-6 flex-shrink-0 space-y-3 border-t border-border/50 mt-4">
+          <div className="pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex-shrink-0 space-y-3 border-t border-border/50">
             <Button
               className="w-full h-14 text-base font-semibold rounded-xl"
               onClick={handleStake}
