@@ -32,7 +32,7 @@ class _SendCryptoSheetState extends State<SendCryptoSheet> {
     super.initState();
     if (widget.preSelectedAsset != null) {
       _selectedToken = widget.preSelectedAsset;
-      _selectedChain = widget.preSelectedAsset!.chain;
+      _selectedChain = widget.preSelectedAsset!.chain.name;
       _step = SendStep.address;
     }
   }

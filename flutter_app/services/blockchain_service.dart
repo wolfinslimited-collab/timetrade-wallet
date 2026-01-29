@@ -1,11 +1,11 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../models/token.dart';
 import '../models/wallet_account.dart';
 
+
 class BlockchainService {
   static const String _baseUrl = 'https://uxjpbjkgyphhbycrldui.supabase.co/functions/v1/blockchain';
-  static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Your Supabase anon key
+  static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4anBiamtneXBoaGJ5Y3JsZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MjE5NTgsImV4cCI6MjA4NDk5Nzk1OH0.UfBvQCc4ByMLHXCWbCRr3Aislp2EexZJj1umMyO16RA';
   
   late final Dio _dio;
 
@@ -228,5 +228,12 @@ class BlockchainService {
       print('Error fetching fees: $e');
     }
     return null;
+  }
+
+  /// Get unified transactions from all chains
+  Future<List<Transaction>> getUnifiedTransactions() async {
+    // Return empty list for now - implement when addresses are available
+    // This would fetch from all chains and merge results
+    return [];
   }
 }
