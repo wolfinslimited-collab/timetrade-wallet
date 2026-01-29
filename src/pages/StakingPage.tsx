@@ -160,7 +160,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="flex flex-col max-w-md mx-auto pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center gap-3 px-4 py-4">
