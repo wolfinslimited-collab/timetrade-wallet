@@ -26,11 +26,14 @@ interface StakingPosition {
   earned_rewards: number;
 }
 
+// 15% monthly rate (not annual)
+const MONTHLY_RATE = 15; // percent per 30 days
+
 const STAKING_OPTIONS = [
-  { duration: 30, label: "30 Days", apy: 15 },
-  { duration: 90, label: "90 Days", apy: 15 },
-  { duration: 180, label: "180 Days", apy: 15 },
-  { duration: 365, label: "1 Year", apy: 15 },
+  { duration: 30, label: "30 Days", rate: MONTHLY_RATE },
+  { duration: 90, label: "90 Days", rate: MONTHLY_RATE },
+  { duration: 180, label: "180 Days", rate: MONTHLY_RATE },
+  { duration: 365, label: "1 Year", rate: MONTHLY_RATE },
 ];
 
 // Stablecoin metadata (symbol → display name + supported chains for reference)
@@ -178,11 +181,13 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
   };
 
+  // Calculate earnings: 15% monthly rate → 15% per 30 days
   const calculateEarnings = (position: StakingPosition) => {
     const stakedAt = new Date(position.staked_at).getTime();
     const now = Date.now();
     const daysStaked = (now - stakedAt) / (1000 * 60 * 60 * 24);
-    const dailyRate = position.apy_rate / 365 / 100;
+    // apy_rate stored is monthly rate, so: rate/100 per 30 days → dailyRate = rate / 30 / 100
+    const dailyRate = position.apy_rate / 30 / 100;
     return position.amount * dailyRate * daysStaked;
   };
 
@@ -214,7 +219,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
         token_symbol: selectedToken.symbol,
         chain: selectedToken.chains[0],
         amount: amount,
-        apy_rate: selectedDuration.apy,
+        apy_rate: selectedDuration.rate,
         unlock_at: unlockDate.toISOString(),
       });
 
@@ -278,7 +283,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           </button>
           <div>
             <h1 className="text-lg font-semibold">Staking</h1>
-            <p className="text-xs text-muted-foreground">Earn 15% APY on stablecoins</p>
+            <p className="text-xs text-muted-foreground">Earn 15% monthly on stablecoins</p>
           </div>
         </div>
       </div>
@@ -307,8 +312,8 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Fixed Annual Yield</p>
-              <p className="text-4xl font-bold text-primary mt-1">15% <span className="text-lg font-medium">APY</span></p>
+              <p className="text-sm text-muted-foreground font-medium">Fixed Monthly Yield</p>
+              <p className="text-4xl font-bold text-primary mt-1">15% <span className="text-lg font-medium">/month</span></p>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
               <Coins className="w-7 h-7 text-primary" />
@@ -350,7 +355,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="font-semibold">{formatTokenAmount(token.balance)}</span>
-                        <span className="text-xs text-primary font-medium">15% APY</span>
+                        <span className="text-xs text-primary font-medium">15% /month</span>
                       </div>
                     </div>
                   </Card>
@@ -382,7 +387,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                 <Coins className="w-8 h-8 text-muted-foreground/50" />
               </div>
               <p className="font-medium text-muted-foreground">No active stakes</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Start earning 15% APY today</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Start earning 15% monthly today</p>
             </Card>
           ) : (
             <div className="space-y-3">
@@ -428,7 +433,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                         <Clock className="w-3.5 h-3.5" />
                         <span>{unlockDate.toLocaleDateString()}</span>
                       </div>
-                      <span className="font-medium">{position.apy_rate}% APY</span>
+                      <span className="font-medium">{position.apy_rate}% /month</span>
                     </div>
 
                     <Button
@@ -486,7 +491,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{formatTokenAmount(token.balance)}</p>
-                      <p className="text-xs text-primary font-medium">15% APY</p>
+                      <p className="text-xs text-primary font-medium">15% /month</p>
                     </div>
                   </button>
                 ))
@@ -523,7 +528,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                     )}
                   >
                     <p className="font-semibold">{option.label}</p>
-                    <p className="text-sm text-primary">{option.apy}% APY</p>
+                    <p className="text-sm text-primary">{option.rate}% /month</p>
                   </button>
                 ))}
               </div>
@@ -553,7 +558,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Estimated earnings</span>
                   <span className="font-bold text-primary text-lg">
-                    +{formatCurrency(parseFloat(stakeAmount) * (selectedDuration.apy / 100) * (selectedDuration.duration / 365))}
+                    +{formatCurrency(parseFloat(stakeAmount) * (selectedDuration.rate / 100) * (selectedDuration.duration / 30))}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">After {selectedDuration.label}</p>
@@ -577,7 +582,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Tokens locked until unlock date. Rewards calculated daily at 15% APY.
+              Tokens locked until unlock date. Rewards calculated daily at 15% per month.
             </p>
           </div>
         </SheetContent>
