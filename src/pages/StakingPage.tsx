@@ -202,10 +202,26 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const totalEarnings = positions.reduce((sum, p) => sum + calculateEarnings(p), 0);
 
   const handleSelectToken = (token: StablecoinEntry) => {
+    // Reset state before opening sheet to prevent stale values
+    setStakeAmount("");
+    setSelectedDuration(STAKING_OPTIONS[0]);
     setSelectedToken(token);
     setShowTokenSheet(false);
     setShowStakeSheet(true);
   };
+
+  // Handle max button click
+  const handleMaxAmount = () => {
+    if (selectedToken && selectedToken.balance > 0) {
+      setStakeAmount(selectedToken.balance.toString());
+    }
+  };
+
+  // Validate amount against balance
+  const parsedAmount = parseFloat(stakeAmount) || 0;
+  const maxBalance = selectedToken?.balance || 0;
+  const isAmountValid = parsedAmount > 0 && parsedAmount <= maxBalance;
+  const isOverBalance = parsedAmount > maxBalance;
 
   const handleStake = async () => {
     const amount = parseFloat(stakeAmount);
@@ -556,25 +572,48 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             </div>
 
             {/* Amount Input */}
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-3 block">Amount</label>
+            <div className="px-1">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-muted-foreground">Amount</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Available: {formatTokenAmount(maxBalance)} {selectedToken?.symbol}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleMaxAmount}
+                    className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors px-2 py-0.5 rounded bg-primary/10"
+                  >
+                    MAX
+                  </button>
+                </div>
+              </div>
               <div className="relative">
                 <Input
                   type="number"
                   inputMode="decimal"
                   step="any"
                   min={0}
+                  max={maxBalance}
                   autoFocus
                   placeholder="0.00"
                   value={stakeAmount}
                   onChange={(e) => setStakeAmount(e.target.value)}
-                  className="h-14 text-xl font-semibold pr-20 rounded-xl bg-card/30 border-border/50"
+                  className={cn(
+                    "h-14 text-xl font-semibold pr-24 rounded-xl bg-card/30",
+                    isOverBalance ? "border-destructive focus-visible:ring-destructive" : "border-border/50"
+                  )}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {selectedToken && <TokenLogo symbol={selectedToken.symbol} size="sm" />}
                   <span className="font-medium text-muted-foreground">{selectedToken?.symbol || ""}</span>
                 </div>
               </div>
+              {isOverBalance && (
+                <p className="text-xs text-destructive mt-1.5 px-1">
+                  Amount exceeds available balance
+                </p>
+              )}
             </div>
 
             {/* Earnings Preview */}
@@ -596,7 +635,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             <Button
               className="w-full h-14 text-base font-semibold rounded-xl"
               onClick={handleStake}
-              disabled={isStaking || !stakeAmount || parseFloat(stakeAmount) <= 0}
+              disabled={isStaking || !isAmountValid}
             >
               {isStaking ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
