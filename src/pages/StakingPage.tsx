@@ -45,13 +45,32 @@ const TokenLogo = ({ symbol, size = "md" }: { symbol: string; size?: "sm" | "md"
     lg: "w-12 h-12",
   };
 
+  const primarySrc = `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
+  // Backup source (public CDN) in case the primary logo endpoint is unavailable.
+  const backupSrc = `https://cdn.jsdelivr.net/gh/ErikThiart/cryptocurrency-icons@0.18.1/128/color/${symbol.toLowerCase()}.png`;
+  const finalFallbackSrc = `https://ui-avatars.com/api/?name=${symbol}&background=1a1a2e&color=fff&bold=true&size=128`;
+
   return (
     <img
-      src={`https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`}
+      src={primarySrc}
       alt={symbol}
       className={cn(sizeClasses[size], "rounded-full object-cover")}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
       onError={(e) => {
-        e.currentTarget.src = `https://ui-avatars.com/api/?name=${symbol}&background=1a1a2e&color=fff&bold=true&size=128`;
+        const img = e.currentTarget;
+        const step = Number(img.dataset.fallbackStep || "0");
+
+        // step 0 -> backup, step 1 -> final fallback
+        if (step === 0) {
+          img.dataset.fallbackStep = "1";
+          img.src = backupSrc;
+          return;
+        }
+
+        img.dataset.fallbackStep = "2";
+        img.src = finalFallbackSrc;
       }}
     />
   );
