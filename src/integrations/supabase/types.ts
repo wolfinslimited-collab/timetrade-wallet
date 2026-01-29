@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      stake_wallets: {
+        Row: {
+          chain: string
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          chain: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          chain?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       staking_positions: {
         Row: {
           amount: number
@@ -26,6 +53,7 @@ export type Database = {
           last_reward_calculation: string
           staked_at: string
           token_symbol: string
+          tx_hash: string | null
           unlock_at: string
           updated_at: string
           wallet_address: string
@@ -41,6 +69,7 @@ export type Database = {
           last_reward_calculation?: string
           staked_at?: string
           token_symbol?: string
+          tx_hash?: string | null
           unlock_at: string
           updated_at?: string
           wallet_address: string
@@ -56,6 +85,7 @@ export type Database = {
           last_reward_calculation?: string
           staked_at?: string
           token_symbol?: string
+          tx_hash?: string | null
           unlock_at?: string
           updated_at?: string
           wallet_address?: string
