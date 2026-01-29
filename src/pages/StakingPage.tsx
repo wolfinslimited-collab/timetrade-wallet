@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Coins, Clock, TrendingUp, Wallet, Plus, Minus, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, Coins, Clock, TrendingUp, Wallet, Plus, Minus, ChevronRight, Loader2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { Chain } from "@/hooks/useBlockchain";
+import { PinUnlockModal } from "@/components/send/PinUnlockModal";
+import { useStakeTransfer, getStakeWalletAddress } from "@/hooks/useStakeTransfer";
+import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
+import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
 
 interface StakingPageProps {
   onBack: () => void;
@@ -24,6 +29,7 @@ interface StakingPosition {
   unlock_at: string;
   is_active: boolean;
   earned_rewards: number;
+  tx_hash?: string;
 }
 
 // 15% monthly rate (not annual)
@@ -43,12 +49,18 @@ const STABLECOIN_META: Record<string, { name: string; chains: string[] }> = {
   DAI: { name: "Dai Stablecoin", chains: ["ethereum", "polygon"] },
 };
 
+// Extended entry with per-chain details for the transfer
 interface StablecoinEntry {
   symbol: string;
   name: string;
   chains: string[];
   balance: number; // aggregated across all chains
   valueUsd: number;
+  // Per-chain asset info for transfer (first chain with balance)
+  primaryChain: Chain;
+  contractAddress?: string;
+  decimals: number;
+  isNative: boolean;
 }
 
 function formatTokenAmount(amount: number) {
@@ -107,7 +119,15 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const [selectedDuration, setSelectedDuration] = useState(STAKING_OPTIONS[0]);
   const [stakeAmount, setStakeAmount] = useState("");
   const [isStaking, setIsStaking] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Stake transfer hook for real on-chain transfers
+  const { transfer: executeStakeTransfer, isTransferring } = useStakeTransfer();
+
+  // Check if user has mnemonic stored (for signing)
+  const hasMnemonicStored = !!localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
 
   // Get real portfolio data from blockchain context
   const { unifiedAssets, isLoadingBalance } = useBlockchainContext();
@@ -116,11 +136,16 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const stablecoinList: StablecoinEntry[] = useMemo(() => {
     const stableSymbols = Object.keys(STABLECOIN_META);
     
-    // Group assets by symbol and aggregate
-    const aggregated: Record<string, { balance: number; valueUsd: number; chains: Set<string> }> = {};
+    // Group assets by symbol and aggregate; track first matching asset for transfer details
+    const aggregated: Record<string, { 
+      balance: number; 
+      valueUsd: number; 
+      chains: Set<string>;
+      primaryAsset: UnifiedAsset | null;
+    }> = {};
     
     for (const sym of stableSymbols) {
-      aggregated[sym] = { balance: 0, valueUsd: 0, chains: new Set() };
+      aggregated[sym] = { balance: 0, valueUsd: 0, chains: new Set(), primaryAsset: null };
     }
 
     if (unifiedAssets) {
@@ -130,20 +155,32 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           aggregated[sym].balance += asset.amount;
           aggregated[sym].valueUsd += asset.valueUsd;
           aggregated[sym].chains.add(asset.chain);
+          // Keep track of the first asset with the highest balance for transfer details
+          if (!aggregated[sym].primaryAsset || asset.amount > aggregated[sym].primaryAsset.amount) {
+            aggregated[sym].primaryAsset = asset;
+          }
         }
       }
     }
 
     // Convert to array and sort by USD value (descending)
     return stableSymbols
-      .map((sym) => ({
-        symbol: sym,
-        name: STABLECOIN_META[sym].name,
-        // Prefer chains where the user actually has this asset; fallback to supported chains.
-        chains: aggregated[sym].chains.size ? Array.from(aggregated[sym].chains) : STABLECOIN_META[sym].chains,
-        balance: aggregated[sym].balance,
-        valueUsd: aggregated[sym].valueUsd,
-      }))
+      .map((sym) => {
+        const agg = aggregated[sym];
+        const primary = agg.primaryAsset;
+        return {
+          symbol: sym,
+          name: STABLECOIN_META[sym].name,
+          chains: agg.chains.size ? Array.from(agg.chains) : STABLECOIN_META[sym].chains,
+          balance: agg.balance,
+          valueUsd: agg.valueUsd,
+          // Transfer details from primary asset
+          primaryChain: (primary?.chain || 'ethereum') as Chain,
+          contractAddress: primary?.contractAddress,
+          decimals: primary?.decimals ?? 6,
+          isNative: primary?.isNative ?? false,
+        };
+      })
       .sort((a, b) => b.valueUsd - a.valueUsd);
   }, [unifiedAssets]);
 
@@ -223,6 +260,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const isAmountValid = parsedAmount > 0 && parsedAmount <= maxBalance;
   const isOverBalance = parsedAmount > maxBalance;
 
+  // Opens PIN modal to initiate staking
   const handleStake = async () => {
     const amount = parseFloat(stakeAmount);
     if (!amount || amount <= 0) {
@@ -230,31 +268,111 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
       return;
     }
 
+    if (!selectedToken) {
+      toast({ title: "No token selected", variant: "destructive" });
+      return;
+    }
+
+    // Check if staking wallet is configured for this chain
+    const stakeWallet = await getStakeWalletAddress(selectedToken.primaryChain);
+    if (!stakeWallet) {
+      toast({ 
+        title: "Staking unavailable", 
+        description: `Staking is not configured for ${selectedToken.primaryChain}. Please contact support.`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (!hasMnemonicStored) {
+      toast({ 
+        title: "Wallet required", 
+        description: "Please import your wallet to stake.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Open PIN modal
+    setPinError(null);
+    setShowPinModal(true);
+  };
+
+  // Called when user enters PIN - performs the real on-chain transfer
+  const handlePinSubmit = async (pin: string) => {
+    if (!selectedToken) return;
+
+    const amount = parseFloat(stakeAmount);
     setIsStaking(true);
+    setPinError(null);
+
     try {
+      // 1. Execute real on-chain transfer to staking wallet
+      console.log('[STAKING] Initiating on-chain transfer...');
+      const transferResult = await executeStakeTransfer(pin, {
+        chain: selectedToken.primaryChain,
+        tokenSymbol: selectedToken.symbol,
+        amount: stakeAmount,
+        contractAddress: selectedToken.contractAddress,
+        decimals: selectedToken.decimals,
+        isNative: selectedToken.isNative,
+      });
+
+      console.log('[STAKING] Transfer successful:', transferResult);
+
+      // 2. Record staking position in database with tx_hash
       const unlockDate = new Date();
       unlockDate.setDate(unlockDate.getDate() + selectedDuration.duration);
 
-      if (!selectedToken) return;
-
-      const { error } = await supabase.from("staking_positions").insert({
+      const { error: dbError } = await supabase.from("staking_positions").insert({
         wallet_address: walletAddress.toLowerCase(),
         token_symbol: selectedToken.symbol,
-        chain: selectedToken.chains[0],
+        chain: selectedToken.primaryChain,
         amount: amount,
         apy_rate: selectedDuration.rate,
         unlock_at: unlockDate.toISOString(),
+        tx_hash: transferResult.txHash,
       });
 
-      if (error) throw error;
+      if (dbError) {
+        console.error('[STAKING] DB insert error:', dbError);
+        // Transaction succeeded but DB failed - inform user
+        toast({ 
+          title: "Stake recorded with issue", 
+          description: `Your funds were transferred (tx: ${transferResult.txHash.slice(0, 10)}...) but there was an issue recording the stake. Please contact support.`,
+          variant: "default" 
+        });
+      } else {
+        toast({ 
+          title: "Staking successful!", 
+          description: `Staked ${amount} ${selectedToken.symbol} for ${selectedDuration.label}. Tx: ${transferResult.txHash.slice(0, 10)}...` 
+        });
+      }
 
-      toast({ title: "Staking successful!", description: `Staked ${amount} ${selectedToken.symbol} for ${selectedDuration.label}` });
+      setShowPinModal(false);
       setShowStakeSheet(false);
       setStakeAmount("");
       fetchPositions();
+
+      // Refresh blockchain data
+      console.log('[STAKING] Refreshing blockchain data...');
+      window.dispatchEvent(new CustomEvent('timetrade:addresses-updated'));
     } catch (err) {
-      console.error("Staking error:", err);
-      toast({ title: "Staking failed", description: "Please try again", variant: "destructive" });
+      console.error('[STAKING] Stake transfer error:', err);
+      const msg = err instanceof Error ? err.message : 'Transfer failed';
+      
+      // Check if it's a PIN error
+      if (msg.includes('Incorrect PIN')) {
+        setPinError(msg);
+      } else {
+        setPinError(null);
+        setShowPinModal(false);
+        toast({ 
+          title: "Staking failed", 
+          description: msg,
+          variant: "destructive" 
+        });
+      }
     } finally {
       setIsStaking(false);
     }
@@ -635,10 +753,15 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             <Button
               className="w-full h-14 text-base font-semibold rounded-xl"
               onClick={handleStake}
-              disabled={isStaking || !isAmountValid}
+              disabled={isStaking || isTransferring || !isAmountValid}
             >
-              {isStaking ? (
+              {isStaking || isTransferring ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : hasMnemonicStored ? (
+                <>
+                  <Key className="w-5 h-5 mr-2" />
+                  Sign & Stake
+                </>
               ) : (
                 <>
                   <Coins className="w-5 h-5 mr-2" />
@@ -653,6 +776,16 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* PIN Unlock Modal for Staking */}
+      <PinUnlockModal
+        open={showPinModal}
+        onOpenChange={setShowPinModal}
+        onSubmit={handlePinSubmit}
+        isLoading={isStaking || isTransferring}
+        walletAddress={walletAddress}
+        error={pinError}
+      />
     </div>
   );
 };
