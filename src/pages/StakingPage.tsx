@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Coins, Clock, TrendingUp, Wallet, Plus, Minus, ChevronRight } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Coins, Clock, TrendingUp, Wallet, Plus, Minus, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
 interface StakingPageProps {
   onBack: () => void;
@@ -32,11 +33,20 @@ const STAKING_OPTIONS = [
   { duration: 365, label: "1 Year", apy: 15 },
 ];
 
-const SUPPORTED_TOKENS = [
-  { symbol: "USDT", name: "Tether USD", chains: ["ethereum", "polygon", "tron"], balance: 0 },
-  { symbol: "USDC", name: "USD Coin", chains: ["ethereum", "polygon", "solana"], balance: 0 },
-  { symbol: "DAI", name: "Dai Stablecoin", chains: ["ethereum", "polygon"], balance: 0 },
-];
+// Stablecoin metadata (symbol → display name + supported chains for reference)
+const STABLECOIN_META: Record<string, { name: string; chains: string[] }> = {
+  USDT: { name: "Tether USD", chains: ["ethereum", "polygon", "tron"] },
+  USDC: { name: "USD Coin", chains: ["ethereum", "polygon", "solana"] },
+  DAI: { name: "Dai Stablecoin", chains: ["ethereum", "polygon"] },
+};
+
+interface StablecoinEntry {
+  symbol: string;
+  name: string;
+  chains: string[];
+  balance: number; // aggregated across all chains
+  valueUsd: number;
+}
 
 const TokenLogo = ({ symbol, size = "md" }: { symbol: string; size?: "sm" | "md" | "lg" }) => {
   const sizeClasses = {
@@ -81,11 +91,48 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showTokenSheet, setShowTokenSheet] = useState(false);
   const [showStakeSheet, setShowStakeSheet] = useState(false);
-  const [selectedToken, setSelectedToken] = useState(SUPPORTED_TOKENS[0]);
+  const [selectedToken, setSelectedToken] = useState<StablecoinEntry | null>(null);
   const [selectedDuration, setSelectedDuration] = useState(STAKING_OPTIONS[0]);
   const [stakeAmount, setStakeAmount] = useState("");
   const [isStaking, setIsStaking] = useState(false);
   const { toast } = useToast();
+
+  // Get real portfolio data from blockchain context
+  const { unifiedAssets, isLoadingBalance } = useBlockchainContext();
+
+  // Build stablecoin list from real wallet data (aggregated across chains, sorted by USD value)
+  const stablecoinList: StablecoinEntry[] = useMemo(() => {
+    const stableSymbols = Object.keys(STABLECOIN_META);
+    
+    // Group assets by symbol and aggregate
+    const aggregated: Record<string, { balance: number; valueUsd: number; chains: Set<string> }> = {};
+    
+    for (const sym of stableSymbols) {
+      aggregated[sym] = { balance: 0, valueUsd: 0, chains: new Set() };
+    }
+
+    if (unifiedAssets) {
+      for (const asset of unifiedAssets) {
+        const sym = asset.symbol.toUpperCase();
+        if (stableSymbols.includes(sym)) {
+          aggregated[sym].balance += asset.amount;
+          aggregated[sym].valueUsd += asset.valueUsd;
+          aggregated[sym].chains.add(asset.chain);
+        }
+      }
+    }
+
+    // Convert to array and sort by USD value (descending)
+    return stableSymbols
+      .map((sym) => ({
+        symbol: sym,
+        name: STABLECOIN_META[sym].name,
+        chains: STABLECOIN_META[sym].chains,
+        balance: aggregated[sym].balance,
+        valueUsd: aggregated[sym].valueUsd,
+      }))
+      .sort((a, b) => b.valueUsd - a.valueUsd);
+  }, [unifiedAssets]);
 
   const walletAddress = localStorage.getItem("timetrade_wallet_address_evm") || "";
 
@@ -127,7 +174,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const totalStaked = positions.reduce((sum, p) => sum + Number(p.amount), 0);
   const totalEarnings = positions.reduce((sum, p) => sum + calculateEarnings(p), 0);
 
-  const handleSelectToken = (token: typeof SUPPORTED_TOKENS[0]) => {
+  const handleSelectToken = (token: StablecoinEntry) => {
     setSelectedToken(token);
     setShowTokenSheet(false);
     setShowStakeSheet(true);
@@ -144,6 +191,8 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     try {
       const unlockDate = new Date();
       unlockDate.setDate(unlockDate.getDate() + selectedDuration.duration);
+
+      if (!selectedToken) return;
 
       const { error } = await supabase.from("staking_positions").insert({
         wallet_address: walletAddress.toLowerCase(),
@@ -254,30 +303,37 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
         {/* Supported Stablecoins */}
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Supported Stablecoins</h2>
-          <div className="space-y-2">
-            {SUPPORTED_TOKENS.map((token) => (
-              <Card 
-                key={token.symbol}
-                className="p-4 bg-card/50 border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
-                onClick={() => handleSelectToken(token)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <TokenLogo symbol={token.symbol} size="md" />
-                    <div>
-                      <p className="font-semibold">{token.symbol}</p>
-                      <p className="text-xs text-muted-foreground">{token.name}</p>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3">Your Stablecoins</h2>
+          {isLoadingBalance ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Loading balances...</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {stablecoinList.map((token) => (
+                <Card 
+                  key={token.symbol}
+                  className="p-4 bg-card/50 border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                  onClick={() => handleSelectToken(token)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <TokenLogo symbol={token.symbol} size="md" />
+                      <div>
+                        <p className="font-semibold">{token.symbol}</p>
+                        <p className="text-xs text-muted-foreground">{token.name}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="font-semibold">{token.balance.toFixed(2)}</span>
+                      <span className="text-xs text-primary font-medium">15% APY</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded-full">15% APY</span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Stake Button */}
@@ -377,25 +433,32 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           </SheetHeader>
 
           <div className="space-y-2 pb-6">
-            {SUPPORTED_TOKENS.map((token) => (
-              <button
-                key={token.symbol}
-                onClick={() => handleSelectToken(token)}
-                className="w-full p-4 rounded-xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/30 transition-all flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <TokenLogo symbol={token.symbol} size="lg" />
-                  <div className="text-left">
-                    <p className="font-semibold">{token.symbol}</p>
-                    <p className="text-sm text-muted-foreground">{token.name}</p>
+            {isLoadingBalance ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading balances...</span>
+              </div>
+            ) : (
+              stablecoinList.map((token) => (
+                <button
+                  key={token.symbol}
+                  onClick={() => handleSelectToken(token)}
+                  className="w-full p-4 rounded-xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/30 transition-all flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <TokenLogo symbol={token.symbol} size="lg" />
+                    <div className="text-left">
+                      <p className="font-semibold">{token.symbol}</p>
+                      <p className="text-sm text-muted-foreground">{token.name}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-primary font-semibold">15% APY</p>
-                  <p className="text-xs text-muted-foreground">{token.chains.length} chains</p>
-                </div>
-              </button>
-            ))}
+                  <div className="text-right">
+                    <p className="font-semibold">{token.balance.toFixed(2)}</p>
+                    <p className="text-xs text-primary font-medium">15% APY</p>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -405,8 +468,8 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
         <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
           <SheetHeader className="pb-2">
             <SheetTitle className="flex items-center gap-3">
-              <TokenLogo symbol={selectedToken.symbol} size="md" />
-              <span>Stake {selectedToken.symbol}</span>
+              {selectedToken && <TokenLogo symbol={selectedToken.symbol} size="md" />}
+              <span>Stake {selectedToken?.symbol || ""}</span>
             </SheetTitle>
           </SheetHeader>
 
@@ -445,8 +508,8 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                   className="h-14 text-xl font-semibold pr-20 rounded-xl bg-card/30 border-border/50"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <TokenLogo symbol={selectedToken.symbol} size="sm" />
-                  <span className="font-medium text-muted-foreground">{selectedToken.symbol}</span>
+                  {selectedToken && <TokenLogo symbol={selectedToken.symbol} size="sm" />}
+                  <span className="font-medium text-muted-foreground">{selectedToken?.symbol || ""}</span>
                 </div>
               </div>
             </div>
@@ -475,7 +538,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
               ) : (
                 <>
                   <Coins className="w-5 h-5 mr-2" />
-                  Stake {selectedToken.symbol}
+                  Stake {selectedToken?.symbol || ""}
                 </>
               )}
             </Button>
