@@ -1,0 +1,54 @@
+name: timetrade_wallet
+description: Non-custodial multi-chain crypto wallet
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Crypto & Wallet
+  bip39: ^1.0.6
+  bip32: ^2.0.0
+  web3dart: ^2.7.1
+  pointycastle: ^3.7.3
+  hex: ^0.2.0
+  
+  # Security
+  flutter_secure_storage: ^9.0.0
+  local_auth: ^2.1.6
+  crypto: ^3.0.3
+  
+  # UI
+  qr_flutter: ^4.1.0
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  
+  # HTTP
+  dio: ^5.4.0
+  
+  # Utils
+  intl: ^0.18.1
+  shared_preferences: ^2.2.2
+  
+  # Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
