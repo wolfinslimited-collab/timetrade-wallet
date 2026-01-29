@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bip39/bip39.dart' as bip39;
 import '../theme/app_theme.dart';
+import '../utils/bip39_wordlist.dart';
 
 /// Get BIP39 wordlist for autocomplete
 List<String> get bip39Wordlist {
   // BIP39 English wordlist (2048 words)
-  return bip39.WORDLIST;
+  return bip39EnglishWordlist;
 }
 
 /// Check if a word is valid BIP39 word
