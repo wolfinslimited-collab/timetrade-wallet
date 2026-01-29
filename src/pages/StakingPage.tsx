@@ -503,15 +503,15 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
       {/* Stake Configuration Sheet */}
       <Sheet open={showStakeSheet} onOpenChange={setShowStakeSheet}>
-        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
-          <SheetHeader className="pb-2">
+        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl flex flex-col">
+          <SheetHeader className="pb-2 flex-shrink-0">
             <SheetTitle className="flex items-center gap-3">
               {selectedToken && <TokenLogo symbol={selectedToken.symbol} size="md" />}
               <span>Stake {selectedToken?.symbol || ""}</span>
             </SheetTitle>
           </SheetHeader>
 
-          <div className="mt-4 space-y-5 pb-6">
+          <div className="mt-4 space-y-5 overflow-y-auto flex-1">
             {/* Duration Selection */}
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-3 block">Lock Duration</label>
@@ -564,8 +564,10 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                 <p className="text-xs text-muted-foreground mt-1">After {selectedDuration.label}</p>
               </Card>
             )}
+          </div>
 
-            {/* Stake Button */}
+          {/* Footer - always visible */}
+          <div className="pt-4 pb-6 flex-shrink-0 space-y-3 border-t border-border/50 mt-4">
             <Button
               className="w-full h-14 text-base font-semibold rounded-xl"
               onClick={handleStake}
@@ -576,7 +578,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
               ) : (
                 <>
                   <Coins className="w-5 h-5 mr-2" />
-                  Stake {selectedToken?.symbol || ""}
+                  Confirm Stake
                 </>
               )}
             </Button>
