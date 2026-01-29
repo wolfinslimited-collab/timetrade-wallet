@@ -105,9 +105,9 @@
     @apply bg-card/80 backdrop-blur-xl border border-border/50;
   }
 
-  /* Gradient text */
+  /* Gradient text - Blue accent */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-[hsl(210,100%,60%)] to-[hsl(220,100%,70%)] bg-clip-text text-transparent;
   }
 
   /* Status indicator animations */
