@@ -48,6 +48,15 @@ interface StablecoinEntry {
   valueUsd: number;
 }
 
+function formatTokenAmount(amount: number) {
+  if (!Number.isFinite(amount) || amount <= 0) return "0";
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M`;
+  if (amount >= 1000) return `${(amount / 1000).toFixed(2)}K`;
+  if (amount >= 1) return amount.toFixed(2);
+  // show more precision for small balances so users don't see 0.00 for dust
+  return amount.toFixed(6);
+}
+
 const TokenLogo = ({ symbol, size = "md" }: { symbol: string; size?: "sm" | "md" | "lg" }) => {
   const sizeClasses = {
     sm: "w-6 h-6",
@@ -127,12 +136,18 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
       .map((sym) => ({
         symbol: sym,
         name: STABLECOIN_META[sym].name,
-        chains: STABLECOIN_META[sym].chains,
+        // Prefer chains where the user actually has this asset; fallback to supported chains.
+        chains: aggregated[sym].chains.size ? Array.from(aggregated[sym].chains) : STABLECOIN_META[sym].chains,
         balance: aggregated[sym].balance,
         valueUsd: aggregated[sym].valueUsd,
       }))
       .sort((a, b) => b.valueUsd - a.valueUsd);
   }, [unifiedAssets]);
+
+  // Only show *available* stablecoins in the picker (non-zero balance)
+  const availableStablecoinList = useMemo(() => {
+    return stablecoinList.filter((t) => Number.isFinite(t.balance) && t.balance > 0);
+  }, [stablecoinList]);
 
   const walletAddress = localStorage.getItem("timetrade_wallet_address_evm") || "";
 
@@ -311,27 +326,36 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             </div>
           ) : (
             <div className="space-y-2">
-              {stablecoinList.map((token) => (
-                <Card 
-                  key={token.symbol}
-                  className="p-4 bg-card/50 border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
-                  onClick={() => handleSelectToken(token)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <TokenLogo symbol={token.symbol} size="md" />
-                      <div>
-                        <p className="font-semibold">{token.symbol}</p>
-                        <p className="text-xs text-muted-foreground">{token.name}</p>
+              {availableStablecoinList.length === 0 ? (
+                <Card className="p-6 text-center bg-card/30 border-border/50">
+                  <p className="font-medium text-muted-foreground">No stablecoins found</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    USDT/USDC/DAI with a non-zero balance will appear here.
+                  </p>
+                </Card>
+              ) : (
+                availableStablecoinList.map((token) => (
+                  <Card 
+                    key={token.symbol}
+                    className="p-4 bg-card/50 border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    onClick={() => handleSelectToken(token)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <TokenLogo symbol={token.symbol} size="md" />
+                        <div>
+                          <p className="font-semibold">{token.symbol}</p>
+                          <p className="text-xs text-muted-foreground">{token.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="font-semibold">{formatTokenAmount(token.balance)}</span>
+                        <span className="text-xs text-primary font-medium">15% APY</span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="font-semibold">{token.balance.toFixed(2)}</span>
-                      <span className="text-xs text-primary font-medium">15% APY</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -439,25 +463,34 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                 <span className="ml-2 text-sm text-muted-foreground">Loading balances...</span>
               </div>
             ) : (
-              stablecoinList.map((token) => (
-                <button
-                  key={token.symbol}
-                  onClick={() => handleSelectToken(token)}
-                  className="w-full p-4 rounded-xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/30 transition-all flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <TokenLogo symbol={token.symbol} size="lg" />
-                    <div className="text-left">
-                      <p className="font-semibold">{token.symbol}</p>
-                      <p className="text-sm text-muted-foreground">{token.name}</p>
+              availableStablecoinList.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">No available stablecoins</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Add USDT/USDC/DAI to this wallet and they will show up here.
+                  </p>
+                </div>
+              ) : (
+                availableStablecoinList.map((token) => (
+                  <button
+                    key={token.symbol}
+                    onClick={() => handleSelectToken(token)}
+                    className="w-full p-4 rounded-xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/30 transition-all flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <TokenLogo symbol={token.symbol} size="lg" />
+                      <div className="text-left">
+                        <p className="font-semibold">{token.symbol}</p>
+                        <p className="text-sm text-muted-foreground">{token.name}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{token.balance.toFixed(2)}</p>
-                    <p className="text-xs text-primary font-medium">15% APY</p>
-                  </div>
-                </button>
-              ))
+                    <div className="text-right">
+                      <p className="font-semibold">{formatTokenAmount(token.balance)}</p>
+                      <p className="text-xs text-primary font-medium">15% APY</p>
+                    </div>
+                  </button>
+                ))
+              )
             )}
           </div>
         </SheetContent>
