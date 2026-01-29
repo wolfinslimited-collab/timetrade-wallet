@@ -45,27 +45,16 @@ const TokenLogo = ({ symbol, size = "md" }: { symbol: string; size?: "sm" | "md"
     lg: "w-12 h-12",
   };
 
-  const logoUrl = `https://cryptologos.cc/logos/${getLogoName(symbol)}.png`;
-
   return (
     <img
-      src={logoUrl}
+      src={`https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`}
       alt={symbol}
-      className={cn(sizeClasses[size], "rounded-full object-contain bg-card")}
+      className={cn(sizeClasses[size], "rounded-full object-cover")}
       onError={(e) => {
         e.currentTarget.src = `https://ui-avatars.com/api/?name=${symbol}&background=1a1a2e&color=fff&bold=true&size=128`;
       }}
     />
   );
-};
-
-const getLogoName = (symbol: string): string => {
-  const logoMap: Record<string, string> = {
-    USDT: "tether-usdt-logo",
-    USDC: "usd-coin-usdc-logo",
-    DAI: "multi-collateral-dai-dai-logo",
-  };
-  return logoMap[symbol] || symbol.toLowerCase();
 };
 
 export const StakingPage = ({ onBack }: StakingPageProps) => {
