@@ -112,11 +112,11 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="mb-6"
         >
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg ring-1 ring-border/50">
+          <div className="w-20 h-20 overflow-hidden">
             <img 
               src="/app-logo.png" 
               alt="Timetrade" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           </div>
         </motion.div>

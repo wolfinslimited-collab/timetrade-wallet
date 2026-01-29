@@ -21,11 +21,11 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="relative mb-10"
         >
-          <div className="w-28 h-28 rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+          <div className="w-28 h-28 overflow-hidden">
             <img 
               src="/app-logo.png" 
               alt="Timetrade" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           </div>
           <motion.div 
