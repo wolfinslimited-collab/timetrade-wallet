@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
             : _currentNavIndex == 1
                 ? _buildHistoryTab()
                 : _currentNavIndex == 2
-                    ? _buildMarketTab()
+                    ? _buildStakingTab()
                     : _buildSettingsTab(),
       ),
       bottomNavigationBar: BottomNavBar(
@@ -271,10 +271,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMarketTab() {
+  Widget _buildStakingTab() {
     return const Center(
       child: Text(
-        'Market\n(Implement based on MarketPage.tsx)',
+        'Staking\n15% APY on Stablecoins\n(Implement based on StakingPage.tsx)',
         textAlign: TextAlign.center,
         style: TextStyle(color: AppTheme.mutedForeground),
       ),

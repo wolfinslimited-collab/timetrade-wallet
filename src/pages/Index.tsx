@@ -9,7 +9,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
-import { MarketPage } from "./MarketPage";
+import { StakingPage } from "./StakingPage";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -52,7 +52,7 @@ const Index = () => {
   // in-app navigation (e.g. after Send success) always open the correct screen.
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
-    const allowedTabs: NavTab[] = ["wallet", "history", "market", "settings"];
+    const allowedTabs: NavTab[] = ["wallet", "history", "staking", "settings"];
     if (tab && allowedTabs.includes(tab) && tab !== activeTab) {
       setActiveTab(tab);
     }
@@ -145,11 +145,11 @@ const Index = () => {
     );
   }
 
-  // Show market page
-  if (activeTab === "market") {
+  // Show staking page
+  if (activeTab === "staking") {
     return (
       <>
-        <MarketPage onBack={() => handleTabChange("wallet")} />
+        <StakingPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </>
     );
