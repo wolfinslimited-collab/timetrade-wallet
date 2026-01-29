@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../models/wallet_account.dart';
 import '../theme/app_theme.dart';
 import '../models/token.dart';
 
@@ -122,7 +123,7 @@ class TokenListWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            
+
             // Token info
             Expanded(
               child: Column(
@@ -147,7 +148,7 @@ class TokenListWidget extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Balance & value
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
