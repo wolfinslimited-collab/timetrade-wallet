@@ -1,4 +1,3 @@
-import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useQuery } from '@tanstack/react-query';
 
 export interface PriceData {
@@ -10,32 +9,31 @@ export interface PriceData {
   lastUpdated: string;
 }
 
-interface PricesResponse {
-  success: boolean;
-  data?: PriceData[];
-  error?: string;
-}
+// Mock prices - backend removed
+const MOCK_PRICES: Record<string, { price: number; change24h: number }> = {
+  ETH: { price: 3200, change24h: 2.5 },
+  BTC: { price: 65000, change24h: 1.2 },
+  SOL: { price: 145, change24h: 3.8 },
+  MATIC: { price: 0.85, change24h: -1.5 },
+  POL: { price: 0.85, change24h: -1.5 },
+  TRX: { price: 0.12, change24h: 0.8 },
+  USDC: { price: 1.0, change24h: 0 },
+  USDT: { price: 1.0, change24h: 0 },
+  LINK: { price: 14.5, change24h: 2.1 },
+  DAI: { price: 1.0, change24h: 0 },
+};
 
 async function fetchPrices(symbols: string[]): Promise<PriceData[]> {
-  const { data, error } = await invokeExternalBlockchain({ 
-    action: 'getPrices', 
-    chain: 'ethereum', // Not used for prices but required by the type
-    address: '',
-    symbols,
+  // Return mock prices since backend is removed
+  return symbols.map(symbol => {
+    const mock = MOCK_PRICES[symbol.toUpperCase()] || { price: 0, change24h: 0 };
+    return {
+      symbol: symbol.toUpperCase(),
+      price: mock.price,
+      change24h: mock.change24h,
+      lastUpdated: new Date().toISOString(),
+    };
   });
-
-  if (error) {
-    console.error('Price fetch error:', error);
-    throw new Error(error.message || 'Failed to fetch prices');
-  }
-
-  const response = data as PricesResponse;
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Unknown error');
-  }
-
-  return response.data || [];
 }
 
 export function useCryptoPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC', 'TRX', 'USDC', 'USDT', 'LINK']) {

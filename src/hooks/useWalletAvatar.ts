@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AvatarCache {
   [address: string]: string;
@@ -7,7 +6,6 @@ interface AvatarCache {
 
 // In-memory cache to prevent duplicate requests
 const avatarCache: AvatarCache = {};
-const pendingRequests: Map<string, Promise<string | null>> = new Map();
 
 // Generate a deterministic color from address for placeholder
 function addressToColor(address: string): { from: string; to: string } {
@@ -27,6 +25,16 @@ function addressToColor(address: string): { from: string; to: string } {
   };
 }
 
+// Generate a deterministic avatar URL using UI Avatars service
+function generateAvatarUrl(address: string): string {
+  // Use first 6 and last 4 characters for the avatar
+  const shortAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const colors = addressToColor(address);
+  // Extract just the hue value from the HSL color
+  const bgColor = colors.from.match(/hsl\((\d+)/)?.[1] || '240';
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(shortAddr)}&background=${bgColor}80&color=fff&bold=true&size=128&format=png`;
+}
+
 export function useWalletAvatar(address: string | null) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,56 +49,10 @@ export function useWalletAvatar(address: string | null) {
       return avatarCache[addr];
     }
     
-    // Check if there's already a pending request for this address
-    if (pendingRequests.has(addr)) {
-      return pendingRequests.get(addr)!;
-    }
-    
-    // Create the request promise
-    const requestPromise = (async () => {
-      try {
-        // First, check if avatar already exists in storage
-        const { data: publicUrl } = supabase.storage
-          .from("wallet-avatars")
-          .getPublicUrl(`avatars/${addr}.png`);
-        
-        // Try to fetch the existing image
-        try {
-          const checkResponse = await fetch(publicUrl.publicUrl, { method: "HEAD" });
-          if (checkResponse.ok) {
-            avatarCache[addr] = publicUrl.publicUrl;
-            return publicUrl.publicUrl;
-          }
-        } catch {
-          // Image doesn't exist, need to generate
-        }
-
-        // Generate new avatar
-        const { data, error: fnError } = await supabase.functions.invoke("generate-avatar", {
-          body: { address: addr },
-        });
-
-        if (fnError) {
-          console.error("Avatar generation error:", fnError);
-          return null;
-        }
-
-        if (data?.avatarUrl) {
-          avatarCache[addr] = data.avatarUrl;
-          return data.avatarUrl;
-        }
-
-        return null;
-      } catch (err) {
-        console.error("Failed to fetch/generate avatar:", err);
-        return null;
-      } finally {
-        pendingRequests.delete(addr);
-      }
-    })();
-    
-    pendingRequests.set(addr, requestPromise);
-    return requestPromise;
+    // Generate avatar URL (no backend needed)
+    const url = generateAvatarUrl(addr);
+    avatarCache[addr] = url;
+    return url;
   }, []);
 
   useEffect(() => {

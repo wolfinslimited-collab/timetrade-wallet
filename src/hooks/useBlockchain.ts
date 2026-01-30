@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
@@ -139,93 +138,54 @@ export interface GasEstimate {
   unit: string;
 }
 
-interface BlockchainResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
+// Mock data functions - backend removed
+function getMockBalance(chain: Chain, address: string): WalletBalance {
+  const chainInfo = getChainInfo(chain);
+  return {
+    chain,
+    native: {
+      symbol: chainInfo.symbol,
+      balance: '0',
+      decimals: chainInfo.decimals,
+    },
+    tokens: [],
+    explorerUrl: getExplorerUrl(chain, address),
+  };
 }
 
-function normalizeAddressForChain(chain: Chain, address: string): string {
-  if (chain !== 'tron') return address;
-  const trimmed = (address ?? '').trim();
-  if (!trimmed) return trimmed;
-  if (isTronAddress(trimmed)) return trimmed;
-  if (isEvmAddress(trimmed)) return evmToTronAddress(trimmed) ?? trimmed;
-  return trimmed;
+function getExplorerUrl(chain: Chain, address: string): string {
+  const explorers: Record<Chain, string> = {
+    ethereum: `https://etherscan.io/address/${address}`,
+    polygon: `https://polygonscan.com/address/${address}`,
+    solana: `https://solscan.io/account/${address}`,
+    tron: `https://tronscan.org/#/address/${address}`,
+    bitcoin: `https://blockchair.com/bitcoin/address/${address}`,
+  };
+  return explorers[chain] || '';
 }
 
-async function callBlockchainFunction<T>(
-  action: string,
-  chain: Chain,
-  address: string,
-  testnet: boolean = true
-): Promise<T> {
-  const normalizedAddress = normalizeAddressForChain(chain, address);
-  
-  // DEBUG: Log API request details
-  console.log(`%c[BLOCKCHAIN API] 📡 Request`, 'color: #3b82f6; font-weight: bold;', {
-    action,
+function getMockTransactions(chain: Chain): TransactionsResponse {
+  return {
     chain,
-    address: normalizedAddress,
-    originalAddress: address !== normalizedAddress ? address : '(same)',
-    testnet,
-    timestamp: new Date().toISOString(),
-  });
+    transactions: [],
+    explorerUrl: '',
+  };
+}
 
-  const startTime = performance.now();
-  
-  const { data, error } = await invokeExternalBlockchain(
-    { action, chain, address: normalizedAddress, testnet }
-  );
-
-  const duration = (performance.now() - startTime).toFixed(0);
-
-  if (error) {
-    console.error(`%c[BLOCKCHAIN API] ❌ Error (${duration}ms)`, 'color: #ef4444; font-weight: bold;', {
-      action,
-      chain,
-      address: normalizedAddress,
-      error: error.message,
-    });
-    throw new Error(error.message || 'Failed to call blockchain function');
-  }
-
-  const response = data as BlockchainResponse<T>;
-  
-  if (!response.success) {
-    console.error(`%c[BLOCKCHAIN API] ⚠️ Failed Response (${duration}ms)`, 'color: #f59e0b; font-weight: bold;', {
-      action,
-      chain,
-      address: normalizedAddress,
-      error: response.error,
-    });
-    throw new Error(response.error || 'Unknown error');
-  }
-
-  // DEBUG: Log successful response
-  console.log(`%c[BLOCKCHAIN API] ✅ Success (${duration}ms)`, 'color: #22c55e; font-weight: bold;', {
-    action,
+function getMockGasEstimate(chain: Chain): GasEstimate {
+  return {
     chain,
-    address: normalizedAddress,
-    data: response.data,
-  });
-
-  return response.data as T;
+    slow: { fee: '0.001', estimatedTime: 60 },
+    medium: { fee: '0.002', estimatedTime: 30 },
+    fast: { fee: '0.003', estimatedTime: 15 },
+    unit: 'gwei',
+  };
 }
 
 export function useWalletBalance(address: string | null, chain: Chain = 'ethereum') {
-  // Log when hook is called to track query state
-  React.useEffect(() => {
-    console.log(`%c[WALLET BALANCE HOOK] 🎯 useWalletBalance called`, 'color: #8b5cf6;', {
-      chain,
-      address: address || '(null - query disabled)',
-      enabled: !!address,
-    });
-  }, [chain, address]);
-
   return useQuery({
     queryKey: ['walletBalance', chain, address],
-    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, false),
+    queryFn: () => Promise.resolve(getMockBalance(chain, address || '')),
     enabled: !!address,
     staleTime: 30000,
     refetchInterval: 60000,
@@ -235,14 +195,6 @@ export function useWalletBalance(address: string | null, chain: Chain = 'ethereu
 export function useMultiChainBalances(address: string | null) {
   const queryClient = useQueryClient();
   
-  const queries = SUPPORTED_CHAINS.map(chain => ({
-    queryKey: ['walletBalance', chain.id, address],
-    queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain.id, address!, false),
-    enabled: !!address,
-    staleTime: 30000,
-  }));
-
-  // Use individual queries for each chain
   const ethereumBalance = useWalletBalance(address, 'ethereum');
   const polygonBalance = useWalletBalance(address, 'polygon');
   const bitcoinBalance = useWalletBalance(address, 'bitcoin');
@@ -267,7 +219,7 @@ export function useMultiChainBalances(address: string | null) {
 export function useTransactions(address: string | null, chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['transactions', chain, address],
-    queryFn: () => callBlockchainFunction<TransactionsResponse>('getTransactions', chain, address!, false),
+    queryFn: () => Promise.resolve(getMockTransactions(chain)),
     enabled: !!address,
     staleTime: 30000,
     refetchInterval: 60000,
@@ -277,7 +229,7 @@ export function useTransactions(address: string | null, chain: Chain = 'ethereum
 export function useGasEstimate(chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['gasEstimate', chain],
-    queryFn: () => callBlockchainFunction<GasEstimate>('estimateGas', chain, '', false),
+    queryFn: () => Promise.resolve(getMockGasEstimate(chain)),
     staleTime: 15000,
     refetchInterval: 30000,
   });
