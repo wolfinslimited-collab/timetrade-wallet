@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { 
   SolanaDerivationPath, 
   SOLANA_DERIVATION_PATHS,
@@ -47,13 +47,11 @@ export function useSolanaPathDetection() {
       // Check balances for all addresses in parallel
       const balancePromises = addresses.map(async ({ path, address }) => {
         try {
-          const { data, error } = await supabase.functions.invoke('blockchain', {
-            body: { 
-              action: 'getBalance', 
-              chain: 'solana', 
-              address, 
-              testnet: false 
-            },
+          const { data, error } = await invokeExternalBlockchain({ 
+            action: 'getBalance', 
+            chain: 'solana', 
+            address, 
+            testnet: false 
           });
 
           if (error) {

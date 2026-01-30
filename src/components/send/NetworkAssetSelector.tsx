@@ -82,14 +82,12 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
       }
 
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
-        const { data, error } = await supabase.functions.invoke('blockchain', {
-          body: {
-            action: 'getBalance',
-            chain: selectedNetwork,
-            address: senderAddress,
-            testnet: false,
-          },
+        const { invokeExternalBlockchain } = await import("@/lib/externalSupabase");
+        const { data, error } = await invokeExternalBlockchain({
+          action: 'getBalance',
+          chain: selectedNetwork,
+          address: senderAddress,
+          testnet: false,
         });
 
         if (error || !data?.success) {

@@ -4,7 +4,7 @@ import '../models/wallet_account.dart';
 
 
 class BlockchainService {
-  static const String _baseUrl = 'https://mrdnogctgvzhuqlfervb.supabase.co/functions/v1/blockchain';
+  static const String _baseUrl = 'https://mrdnogctgvzhuqlfervb.supabase.co/functions/v1/wallet-blockchain';
   static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZG5vZ2N0Z3Z6aHVxbGZlcnZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NTUxOTUsImV4cCI6MjA4NDQzMTE5NX0.0cxHNzqj5jQg6vQrZ31efQSJ_Tw8E95uQyLDTudTyAE';
   
   late final Dio _dio;

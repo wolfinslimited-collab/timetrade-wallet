@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
@@ -174,9 +174,9 @@ async function callBlockchainFunction<T>(
 
   const startTime = performance.now();
   
-  const { data, error } = await supabase.functions.invoke('blockchain', {
-    body: { action, chain, address: normalizedAddress, testnet },
-  });
+  const { data, error } = await invokeExternalBlockchain(
+    { action, chain, address: normalizedAddress, testnet }
+  );
 
   const duration = (performance.now() - startTime).toFixed(0);
 

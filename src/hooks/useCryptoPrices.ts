@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useQuery } from '@tanstack/react-query';
 
 export interface PriceData {
@@ -17,13 +17,11 @@ interface PricesResponse {
 }
 
 async function fetchPrices(symbols: string[]): Promise<PriceData[]> {
-  const { data, error } = await supabase.functions.invoke('blockchain', {
-    body: { 
-      action: 'getPrices', 
-      chain: 'ethereum', // Not used for prices but required by the type
-      address: '',
-      symbols,
-    },
+  const { data, error } = await invokeExternalBlockchain({ 
+    action: 'getPrices', 
+    chain: 'ethereum', // Not used for prices but required by the type
+    address: '',
+    symbols,
   });
 
   if (error) {
