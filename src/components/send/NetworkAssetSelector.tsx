@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Chain, SUPPORTED_CHAINS, getChainInfo } from "@/hooks/useBlockchain";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
@@ -41,7 +42,7 @@ const SENDABLE_CHAINS: Chain[] = ['ethereum', 'polygon', 'solana', 'tron'];
 
 export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelectorProps) => {
   const { addresses } = useWalletAddresses(true);
-  const { prices, unifiedAssets } = useBlockchainContext();
+  const { prices } = useBlockchainContext();
   
   const [selectedNetwork, setSelectedNetwork] = useState<Chain | null>(null);
   const [assets, setAssets] = useState<AvailableAsset[]>([]);
@@ -63,32 +64,86 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
     });
   }, [addresses]);
 
-  // Fetch assets when network is selected - use local unified assets
+  // Fetch assets when network is selected
   useEffect(() => {
     if (!selectedNetwork) {
       setAssets([]);
       return;
     }
 
-    setIsLoadingAssets(true);
-    
-    // Filter unified assets by selected network
-    const networkAssets = (unifiedAssets || [])
-      .filter(asset => asset.chain === selectedNetwork && asset.amount > 0)
-      .map(asset => ({
-        symbol: asset.symbol,
-        name: asset.name,
-        balance: asset.amount,
-        decimals: asset.decimals,
-        chain: asset.chain,
-        isNative: asset.isNative,
-        contractAddress: asset.contractAddress,
-        price: asset.price,
-      }));
+    const fetchAssets = async () => {
+      setIsLoadingAssets(true);
+      const senderAddress = getSenderAddress(selectedNetwork);
+      
+      if (!senderAddress) {
+        setAssets([]);
+        setIsLoadingAssets(false);
+        return;
+      }
 
-    setAssets(networkAssets);
-    setIsLoadingAssets(false);
-  }, [selectedNetwork, unifiedAssets]);
+      try {
+        const { invokeExternalBlockchain } = await import("@/lib/externalSupabase");
+        const { data, error } = await invokeExternalBlockchain({
+          action: 'getBalance',
+          chain: selectedNetwork,
+          address: senderAddress,
+          testnet: false,
+        });
+
+        if (error || !data?.success) {
+          console.error('Failed to fetch assets:', error || data?.error);
+          setAssets([]);
+          return;
+        }
+
+        const balanceData = data.data;
+        const chainInfo = getChainInfo(selectedNetwork);
+        const fetchedAssets: AvailableAsset[] = [];
+
+        // Add native token
+        const nativeBalance = parseFloat(balanceData.native?.balance || '0') / Math.pow(10, balanceData.native?.decimals || 18);
+        if (nativeBalance > 0) {
+          const priceData = prices?.find(p => p.symbol.toUpperCase() === chainInfo.symbol.toUpperCase());
+          fetchedAssets.push({
+            symbol: balanceData.native?.symbol || chainInfo.symbol,
+            name: chainInfo.name,
+            balance: nativeBalance,
+            decimals: balanceData.native?.decimals || chainInfo.decimals,
+            chain: selectedNetwork,
+            isNative: true,
+            price: priceData?.price || 0,
+          });
+        }
+
+        // Add tokens
+        for (const token of balanceData.tokens || []) {
+          const tokenBalance = parseFloat(token.balance || '0') / Math.pow(10, token.decimals || 18);
+          if (tokenBalance > 0 && token.symbol?.toUpperCase() !== 'UNKNOWN') {
+            const priceData = prices?.find(p => p.symbol.toUpperCase() === token.symbol?.toUpperCase());
+            fetchedAssets.push({
+              symbol: token.symbol,
+              name: token.name || token.symbol,
+              balance: tokenBalance,
+              decimals: token.decimals,
+              chain: selectedNetwork,
+              isNative: false,
+              contractAddress: token.contractAddress,
+              price: priceData?.price || 0,
+            });
+          }
+        }
+
+        setAssets(fetchedAssets);
+      } catch (err) {
+        console.error('Error fetching assets:', err);
+        setAssets([]);
+      } finally {
+        setIsLoadingAssets(false);
+      }
+    };
+
+    fetchAssets();
+  }, [selectedNetwork, addresses, prices]);
 
   const handleAssetSelect = (asset: AvailableAsset) => {
     const senderAddress = getSenderAddress(asset.chain);

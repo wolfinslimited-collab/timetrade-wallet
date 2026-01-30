@@ -1,3 +1,4 @@
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Chain } from './useBlockchain';
 
@@ -12,11 +13,35 @@ export interface BroadcastResult {
   explorerUrl: string;
 }
 
-// Mock broadcast - backend removed
+interface BroadcastResponse {
+  success: boolean;
+  data?: BroadcastResult;
+  error?: string;
+}
+
 async function broadcastTransaction(params: BroadcastTransactionParams): Promise<BroadcastResult> {
-  // Since backend is removed, just return a mock result
-  console.warn('[BROADCAST] Backend removed - transactions cannot be broadcast');
-  throw new Error('Transaction broadcasting is not available. Backend has been removed.');
+  const { chain, signedTransaction, testnet = false } = params;
+
+  const { data, error } = await invokeExternalBlockchain({
+    action: 'broadcastTransaction',
+    chain,
+    address: '', // Not needed for broadcast
+    signedTransaction,
+    testnet,
+  });
+
+  if (error) {
+    console.error('Broadcast error:', error);
+    throw new Error(error.message || 'Failed to broadcast transaction');
+  }
+
+  const response = data as BroadcastResponse;
+
+  if (!response.success) {
+    throw new Error(response.error || 'Unknown broadcast error');
+  }
+
+  return response.data!;
 }
 
 export function useBroadcastTransaction() {
@@ -25,6 +50,7 @@ export function useBroadcastTransaction() {
   return useMutation({
     mutationFn: broadcastTransaction,
     onSuccess: () => {
+      // Invalidate balance and transaction queries after successful broadcast
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },

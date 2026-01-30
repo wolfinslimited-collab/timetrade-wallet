@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { 
   SolanaDerivationPath, 
   SOLANA_DERIVATION_PATHS,
@@ -41,21 +42,55 @@ export function useSolanaPathDetection() {
         });
       }
 
-      console.log('Derived Solana addresses for all paths:', addresses);
+      console.log('Checking Solana balances for derivation paths:', addresses);
 
-      // Backend removed - cannot check balances, default to phantom path
-      const results: PathBalanceResult[] = addresses.map(({ path, address }) => ({
-        path,
-        address,
-        balance: '0',
-        hasBalance: false,
-      }));
+      // Check balances for all addresses in parallel
+      const balancePromises = addresses.map(async ({ path, address }) => {
+        try {
+          const { data, error } = await invokeExternalBlockchain({ 
+            action: 'getBalance', 
+            chain: 'solana', 
+            address, 
+            testnet: false 
+          });
 
-      // Default to phantom (most common)
-      const detectedPath: SolanaDerivationPath = 'phantom';
-      const detectedAddress = addresses.find(a => a.path === 'phantom')!.address;
+          if (error) {
+            console.error(`Error checking balance for ${path}:`, error);
+            return { path, address, balance: '0', hasBalance: false };
+          }
 
-      console.log(`Using default Solana derivation path: ${detectedPath} (${detectedAddress})`);
+          const nativeBalance = data?.data?.native?.balance || '0';
+          const tokens = data?.data?.tokens || [];
+          
+          // Check if there's any native balance or tokens
+          const hasNativeBalance = nativeBalance !== '0' && parseFloat(nativeBalance) > 0;
+          const hasTokens = tokens.length > 0;
+          const hasBalance = hasNativeBalance || hasTokens;
+
+          console.log(`Path ${path} (${address}): native=${nativeBalance}, tokens=${tokens.length}, hasBalance=${hasBalance}`);
+
+          return { 
+            path, 
+            address, 
+            balance: nativeBalance, 
+            hasBalance 
+          };
+        } catch (err) {
+          console.error(`Error checking balance for ${path}:`, err);
+          return { path, address, balance: '0', hasBalance: false };
+        }
+      });
+
+      const results = await Promise.all(balancePromises);
+
+      // Find the first path with a balance
+      const pathWithBalance = results.find(r => r.hasBalance);
+
+      // If we found a path with balance, use it; otherwise default to legacy (Trust Wallet compatible)
+      const detectedPath = pathWithBalance?.path || 'legacy';
+      const detectedAddress = pathWithBalance?.address || addresses.find(a => a.path === 'legacy')!.address;
+
+      console.log(`Detected Solana derivation path: ${detectedPath} (${detectedAddress})`);
 
       return {
         detectedPath,
