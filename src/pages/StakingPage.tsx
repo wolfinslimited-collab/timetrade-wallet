@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { externalSupabase } from "@/lib/externalSupabase";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { Chain } from "@/hooks/useBlockchain";
@@ -209,7 +209,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await externalSupabase
         .from("staking_positions")
         .select("*")
         .eq("wallet_address", walletAddress.toLowerCase())
@@ -324,7 +324,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
       const unlockDate = new Date();
       unlockDate.setDate(unlockDate.getDate() + selectedDuration.duration);
 
-      const { error: dbError } = await supabase.from("staking_positions").insert({
+      const { error: dbError } = await externalSupabase.from("staking_positions").insert({
         wallet_address: walletAddress.toLowerCase(),
         token_symbol: selectedToken.symbol,
         chain: selectedToken.primaryChain,
@@ -390,7 +390,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await externalSupabase
         .from("staking_positions")
         .update({ is_active: false })
         .eq("id", position.id);
