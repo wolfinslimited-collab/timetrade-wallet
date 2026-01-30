@@ -16,7 +16,7 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha512 } from '@noble/hashes/sha2.js';
@@ -192,15 +192,13 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         blockhash = latest.blockhash;
       } catch (e) {
         console.warn('[Solana] getLatestBlockhash failed on public RPC; falling back to backend RPC', e);
-        const { data, error: fnError } = await supabase.functions.invoke('blockchain', {
-          body: {
-            action: 'solanaRpc',
-            chain: 'solana',
-            address: '',
-            testnet: isTestnet,
-            rpcMethod: 'getLatestBlockhash',
-            rpcParams: [{ commitment: 'confirmed' }],
-          },
+        const { data, error: fnError } = await invokeExternalBlockchain({
+          action: 'solanaRpc',
+          chain: 'solana',
+          address: '',
+          testnet: isTestnet,
+          rpcMethod: 'getLatestBlockhash',
+          rpcParams: [{ commitment: 'confirmed' }],
         });
         if (fnError) {
           throw new Error(fnError.message || 'Failed to fetch Solana blockhash');
@@ -347,15 +345,13 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         blockhash = latest.blockhash;
       } catch (e) {
         console.warn('[SPL] getLatestBlockhash failed on public RPC; falling back to backend RPC', e);
-        const { data, error: fnError } = await supabase.functions.invoke('blockchain', {
-          body: {
-            action: 'solanaRpc',
-            chain: 'solana',
-            address: '',
-            testnet: isTestnet,
-            rpcMethod: 'getLatestBlockhash',
-            rpcParams: [{ commitment: 'confirmed' }],
-          },
+        const { data, error: fnError } = await invokeExternalBlockchain({
+          action: 'solanaRpc',
+          chain: 'solana',
+          address: '',
+          testnet: isTestnet,
+          rpcMethod: 'getLatestBlockhash',
+          rpcParams: [{ commitment: 'confirmed' }],
         });
         if (fnError) {
           throw new Error(fnError.message || 'Failed to fetch Solana blockhash');
@@ -394,15 +390,13 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         if (errMsg.includes('403') || errMsg.includes('Access forbidden') || errMsg.includes('could not find account')) {
           // Try via backend RPC
           try {
-            const { data: rpcData, error: rpcError } = await supabase.functions.invoke('blockchain', {
-              body: {
-                action: 'solanaRpc',
-                chain: 'solana',
-                address: '',
-                testnet: isTestnet,
-                rpcMethod: 'getAccountInfo',
-                rpcParams: [toAta.toBase58(), { encoding: 'base64' }],
-              },
+            const { data: rpcData, error: rpcError } = await invokeExternalBlockchain({
+              action: 'solanaRpc',
+              chain: 'solana',
+              address: '',
+              testnet: isTestnet,
+              rpcMethod: 'getAccountInfo',
+              rpcParams: [toAta.toBase58(), { encoding: 'base64' }],
             });
             if (!rpcError && rpcData?.success && rpcData?.data?.value) {
               destinationAccountExists = true;

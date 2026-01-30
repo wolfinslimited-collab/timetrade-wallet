@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Chain } from './useBlockchain';
 
@@ -22,14 +22,12 @@ interface BroadcastResponse {
 async function broadcastTransaction(params: BroadcastTransactionParams): Promise<BroadcastResult> {
   const { chain, signedTransaction, testnet = false } = params;
 
-  const { data, error } = await supabase.functions.invoke('blockchain', {
-    body: {
-      action: 'broadcastTransaction',
-      chain,
-      address: '', // Not needed for broadcast
-      signedTransaction,
-      testnet,
-    },
+  const { data, error } = await invokeExternalBlockchain({
+    action: 'broadcastTransaction',
+    chain,
+    address: '', // Not needed for broadcast
+    signedTransaction,
+    testnet,
   });
 
   if (error) {
