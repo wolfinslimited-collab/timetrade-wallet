@@ -4,8 +4,8 @@ import '../models/wallet_account.dart';
 
 
 class BlockchainService {
-  static const String _baseUrl = 'https://uxjpbjkgyphhbycrldui.supabase.co/functions/v1/blockchain';
-  static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4anBiamtneXBoaGJ5Y3JsZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MjE5NTgsImV4cCI6MjA4NDk5Nzk1OH0.UfBvQCc4ByMLHXCWbCRr3Aislp2EexZJj1umMyO16RA';
+  static const String _baseUrl = 'https://mrdnogctgvzhuqlfervb.supabase.co/functions/v1/blockchain';
+  static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZG5vZ2N0Z3Z6aHVxbGZlcnZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NTUxOTUsImV4cCI6MjA4NDQzMTE5NX0.0cxHNzqj5jQg6vQrZ31efQSJ_Tw8E95uQyLDTudTyAE';
   
   late final Dio _dio;
 
