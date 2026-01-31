@@ -30,25 +30,21 @@ class BottomNavBar extends StatelessWidget {
               _buildNavItem(
                 index: 0,
                 icon: Icons.account_balance_wallet_outlined,
-                activeIcon: Icons.account_balance_wallet,
                 label: 'Wallet',
               ),
               _buildNavItem(
                 index: 1,
                 icon: Icons.history_outlined,
-                activeIcon: Icons.history,
                 label: 'History',
               ),
               _buildNavItem(
                 index: 2,
                 icon: Icons.monetization_on_outlined,
-                activeIcon: Icons.monetization_on,
                 label: 'Staking',
               ),
               _buildNavItem(
                 index: 3,
                 icon: Icons.settings_outlined,
-                activeIcon: Icons.settings,
                 label: 'Settings',
               ),
             ],
@@ -61,7 +57,6 @@ class BottomNavBar extends StatelessWidget {
   Widget _buildNavItem({
     required int index,
     required IconData icon,
-    required IconData activeIcon,
     required String label,
   }) {
     final isActive = currentIndex == index;
@@ -75,7 +70,7 @@ class BottomNavBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isActive ? activeIcon : icon,
+              icon,
               size: 24,
               color: isActive ? AppTheme.primary : AppTheme.mutedForeground,
             ),
