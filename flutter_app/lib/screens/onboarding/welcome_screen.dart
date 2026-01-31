@@ -46,8 +46,8 @@ class WelcomeScreen extends StatelessWidget {
                             },
                           ),
                           Positioned(
-                            bottom: -2,
-                            right: -2,
+                            bottom: -1,
+                            right: -1,
                             child: Container(
                               width: 36,
                               height: 36,
@@ -76,7 +76,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Title with gradient
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -99,7 +99,7 @@ class WelcomeScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Description
                     const Text(
                       'Your secure, non-custodial crypto wallet\nwith multi-chain support',
@@ -111,7 +111,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Feature badges
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -126,7 +126,7 @@ class WelcomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Action buttons
               SizedBox(
                 width: double.infinity,
@@ -152,7 +152,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -180,7 +180,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // Terms
               const Padding(
                 padding: EdgeInsets.only(bottom: 24),
