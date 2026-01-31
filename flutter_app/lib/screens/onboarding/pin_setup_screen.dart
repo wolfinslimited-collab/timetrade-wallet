@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
-import '../../services/wallet_service.dart';
 
 class PinSetupScreen extends StatefulWidget {
-  final VoidCallback onComplete;
+  final Function(String pin) onComplete;
   final VoidCallback? onBack;
 
   const PinSetupScreen({
@@ -22,8 +21,11 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   String _confirmPin = '';
   bool _isConfirming = false;
   String? _error;
+  bool _isSubmitting = false;
 
   void _handleKeyPress(String key) {
+    if (_isSubmitting) return;
+    
     HapticFeedback.lightImpact();
     
     setState(() {
@@ -54,6 +56,8 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   }
 
   void _handleDelete() {
+    if (_isSubmitting) return;
+    
     HapticFeedback.lightImpact();
     
     setState(() {
@@ -69,7 +73,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     });
   }
 
-  Future<void> _validatePins() async {
+  void _validatePins() {
     if (_pin != _confirmPin) {
       setState(() {
         _error = 'PINs do not match. Please try again.';
@@ -79,11 +83,11 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       return;
     }
 
-    // Save PIN
-    final walletService = WalletService();
-    await walletService.setPin(_pin);
+    // PINs match - call onComplete with the PIN
+    setState(() => _isSubmitting = true);
     
-    widget.onComplete();
+    // Call the callback - parent will handle storage
+    widget.onComplete(_pin);
   }
 
   @override
@@ -102,7 +106,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                 children: [
                   if (widget.onBack != null || _isConfirming)
                     GestureDetector(
-                      onTap: () {
+                      onTap: _isSubmitting ? null : () {
                         if (_isConfirming) {
                           setState(() {
                             _isConfirming = false;
@@ -138,7 +142,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
+                color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(40),
               ),
               child: const Icon(
@@ -166,7 +170,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               _isConfirming 
                   ? 'Re-enter your 6-digit PIN'
                   : 'Enter a 6-digit PIN to secure your wallet',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: AppTheme.mutedForeground,
               ),
@@ -209,13 +213,25 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               ),
             ],
 
+            // Loading indicator
+            if (_isSubmitting) ...[
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(color: AppTheme.primary),
+              const SizedBox(height: 8),
+              const Text(
+                'Setting up...',
+                style: TextStyle(color: AppTheme.mutedForeground),
+              ),
+            ],
+
             const Spacer(),
 
             // Numpad
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: _buildNumpad(),
-            ),
+            if (!_isSubmitting)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: _buildNumpad(),
+              ),
 
             const SizedBox(height: 32),
           ],
