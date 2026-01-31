@@ -46,8 +46,8 @@ class WelcomeScreen extends StatelessWidget {
                             },
                           ),
                           Positioned(
-                            bottom: -8,
-                            right: -8,
+                            bottom: -1,
+                            right: -1,
                             child: Container(
                               width: 36,
                               height: 36,
@@ -66,7 +66,7 @@ class WelcomeScreen extends StatelessWidget {
                                 ),
                               ),
                               child: const Icon(
-                                Icons.shield,
+                                Icons.shield_outlined,
                                 color: AppTheme.primaryForeground,
                                 size: 18,
                               ),

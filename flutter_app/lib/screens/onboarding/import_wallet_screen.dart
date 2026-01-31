@@ -564,13 +564,6 @@ class _ImportWalletScreenState extends State<ImportWalletScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '⌨️ Use Space or Enter to move between words',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.mutedForeground,
-                          ),
-                        ),
                       ],
                     ),
 
