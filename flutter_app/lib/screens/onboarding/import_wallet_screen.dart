@@ -227,7 +227,7 @@ class _ImportWalletScreenState extends State<ImportWalletScreen> {
             context,
             MaterialPageRoute(
               builder: (ctx) => PinSetupScreen(
-                onComplete: () {
+                onComplete: (String pin) {
                   Navigator.of(ctx).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const HomeScreen()),
                     (route) => false,
