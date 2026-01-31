@@ -81,13 +81,6 @@ class _SuccessScreenState extends State<SuccessScreen>
                           decoration: BoxDecoration(
                             color: AppTheme.primary.withOpacity(0.2),
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primary.withOpacity(0.3),
-                                blurRadius: 40,
-                                spreadRadius: 10,
-                              ),
-                            ],
                           ),
                         ),
                         // Inner circle with check
@@ -106,15 +99,15 @@ class _SuccessScreenState extends State<SuccessScreen>
                         ),
                         // Floating icons
                         Positioned(
-                          left: -8,
+                          left: -0.1,
                           top: 0,
                           child: FadeTransition(
                             opacity: _fadeAnimation,
                             child: Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
                                 color: AppTheme.card,
-                                borderRadius: BorderRadius.circular(8),
+                                shape: BoxShape.circle,
                                 border: Border.all(color: AppTheme.border),
                               ),
                               child: Icon(
@@ -126,15 +119,15 @@ class _SuccessScreenState extends State<SuccessScreen>
                           ),
                         ),
                         Positioned(
-                          right: -8,
+                          right: -0.1,
                           top: 0,
                           child: FadeTransition(
                             opacity: _fadeAnimation,
                             child: Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
                                 color: AppTheme.card,
-                                borderRadius: BorderRadius.circular(8),
+                                shape: BoxShape.circle,
                                 border: Border.all(color: AppTheme.border),
                               ),
                               child: const Icon(
