@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/token.dart';
+import '../models/notification_item.dart';
 import '../services/wallet_service.dart';
 import '../services/blockchain_service.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/token_list.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/notification_center.dart';
+import '../widgets/account_switcher_sheet.dart';
 import 'history_screen.dart';
 import 'staking_screen.dart';
 import 'settings_screen.dart';
@@ -26,12 +29,50 @@ class _HomeScreenState extends State<HomeScreen> {
   double _totalBalance = 0.0;
   double _change24h = 0.0;
 
+  // Notifications state (matching web version)
+  List<NotificationItem> _notifications = [];
+  
+  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
   final BlockchainService _blockchainService = BlockchainService();
 
   @override
   void initState() {
     super.initState();
     _loadBalances();
+    _loadNotifications();
+  }
+
+  void _loadNotifications() {
+    // Initialize with empty notifications - can be populated from backend later
+    _notifications = [];
+  }
+
+  void _markAsRead(String id) {
+    setState(() {
+      final index = _notifications.indexWhere((n) => n.id == id);
+      if (index != -1) {
+        _notifications[index] = _notifications[index].copyWith(isRead: true);
+      }
+    });
+  }
+
+  void _markAllAsRead() {
+    setState(() {
+      _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+    });
+  }
+
+  void _deleteNotification(String id) {
+    setState(() {
+      _notifications.removeWhere((n) => n.id == id);
+    });
+  }
+
+  void _clearAllNotifications() {
+    setState(() {
+      _notifications.clear();
+    });
   }
 
   Future<void> _loadBalances() async {
@@ -213,16 +254,84 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  // Settings button
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.card,
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: const Icon(Icons.settings_outlined, size: 18, color: AppTheme.mutedForeground),
+                  // Action buttons (matching web: Account Switcher, Notifications, Settings)
+                  Row(
+                    children: [
+                      // Account Switcher Button
+                      GestureDetector(
+                        onTap: () => showAccountSwitcherSheet(
+                          context,
+                          onAccountSwitched: () => _loadBalances(),
+                        ),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.card,
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Stack(
+                            children: [
+                              const Center(
+                                child: Icon(Icons.layers_outlined, size: 18, color: AppTheme.mutedForeground),
+                              ),
+                              if (context.watch<WalletService>().accounts.length > 0)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: const BoxDecoration(
+                                      color: AppTheme.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${context.watch<WalletService>().accounts.indexOf(context.watch<WalletService>().activeAccount ?? context.watch<WalletService>().accounts.first) + 1}',
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.primaryForeground,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Notifications Button
+                      NotificationCenter(
+                        notifications: _notifications,
+                        unreadCount: _unreadCount,
+                        onMarkAsRead: _markAsRead,
+                        onMarkAllAsRead: _markAllAsRead,
+                        onDelete: _deleteNotification,
+                        onClearAll: _clearAllNotifications,
+                      ),
+                      const SizedBox(width: 8),
+                      // Settings Button
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() => _currentNavIndex = 3);
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.card,
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: const Icon(Icons.settings_outlined, size: 18, color: AppTheme.mutedForeground),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
