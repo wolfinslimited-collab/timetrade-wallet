@@ -10,10 +10,12 @@ import 'pin_setup_screen.dart';
 
 class ImportWalletScreen extends StatefulWidget {
   final VoidCallback? onBack;
+  final Function(List<String> words)? onComplete;
 
   const ImportWalletScreen({
     super.key,
     this.onBack,
+    this.onComplete,
   });
 
   @override
@@ -211,25 +213,30 @@ class _ImportWalletScreenState extends State<ImportWalletScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Wallet imported successfully! Setting up PIN...'),
+            content: Text('Wallet imported successfully!'),
             duration: Duration(seconds: 2),
           ),
         );
 
-        // Navigate to PIN setup
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (ctx) => PinSetupScreen(
-              onComplete: () {
-                Navigator.of(ctx).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const HomeScreen()),
-                  (route) => false,
-                );
-              },
+        // If onComplete callback is provided, use it (new flow)
+        if (widget.onComplete != null) {
+          widget.onComplete!(_words);
+        } else {
+          // Legacy navigation - directly to PIN setup then HomeScreen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (ctx) => PinSetupScreen(
+                onComplete: () {
+                  Navigator.of(ctx).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    (route) => false,
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

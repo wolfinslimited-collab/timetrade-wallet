@@ -1,11 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
+import '../../services/wallet_service.dart';
+import 'security_warning_screen.dart';
+import 'seed_phrase_screen.dart';
+import 'verify_seed_screen.dart';
+import 'pin_setup_screen.dart';
+import 'biometric_setup_screen.dart';
+import 'success_screen.dart';
 import 'import_wallet_screen.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
   const WelcomeScreen({super.key, required this.onComplete});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  final WalletService _walletService = WalletService();
+
+  void _handleCreateWallet() {
+    HapticFeedback.mediumImpact();
+    
+    // Generate seed phrase
+    final seedPhrase = _walletService.generateSeedPhrase(wordCount: 12);
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _CreateWalletFlow(
+          seedPhrase: seedPhrase,
+          walletService: _walletService,
+          onComplete: widget.onComplete,
+        ),
+      ),
+    );
+  }
+
+  void _handleImportWallet() {
+    HapticFeedback.mediumImpact();
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _ImportWalletFlow(
+          walletService: _walletService,
+          onComplete: widget.onComplete,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +67,7 @@ class WelcomeScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // App Logo (no rounded corners per user request)
+                    // App Logo
                     SizedBox(
                       width: 112,
                       height: 112,
@@ -80,8 +127,8 @@ class WelcomeScreen extends StatelessWidget {
                     // Title with gradient
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
+                      children: const [
+                        Text(
                           'Welcome to ',
                           style: TextStyle(
                             fontSize: 28,
@@ -89,7 +136,7 @@ class WelcomeScreen extends StatelessWidget {
                             color: AppTheme.foreground,
                           ),
                         ),
-                        const GradientText(
+                        GradientText(
                           text: 'Timetrade',
                           style: TextStyle(
                             fontSize: 28,
@@ -132,15 +179,7 @@ class WelcomeScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to create wallet flow
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const _SecurityWarningScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _handleCreateWallet,
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -157,15 +196,7 @@ class WelcomeScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: OutlinedButton(
-                  onPressed: () {
-                    // Navigate to import wallet screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ImportWalletScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _handleImportWallet,
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppTheme.card.withOpacity(0.6),
                   ),
@@ -222,27 +253,148 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// Placeholder screen - implement fully based on React components
-class _SecurityWarningScreen extends StatelessWidget {
-  const _SecurityWarningScreen();
+/// Create wallet flow - handles the full onboarding for new wallets
+class _CreateWalletFlow extends StatefulWidget {
+  final List<String> seedPhrase;
+  final WalletService walletService;
+  final VoidCallback onComplete;
+
+  const _CreateWalletFlow({
+    required this.seedPhrase,
+    required this.walletService,
+    required this.onComplete,
+  });
+
+  @override
+  State<_CreateWalletFlow> createState() => _CreateWalletFlowState();
+}
+
+class _CreateWalletFlowState extends State<_CreateWalletFlow> {
+  String _currentStep = 'security';
+  String _walletName = 'Main Wallet';
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: const Center(
-        child: Text(
-          'Security Warning Screen\n(Implement based on SecurityWarningStep.tsx)',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.mutedForeground),
-        ),
-      ),
-    );
+    switch (_currentStep) {
+      case 'security':
+        return SecurityWarningScreen(
+          onContinue: () => setState(() => _currentStep = 'seedphrase'),
+          onBack: () => Navigator.pop(context),
+        );
+
+      case 'seedphrase':
+        return SeedPhraseScreen(
+          seedPhrase: widget.seedPhrase,
+          onContinue: () => setState(() => _currentStep = 'verify'),
+          onBack: () => setState(() => _currentStep = 'security'),
+        );
+
+      case 'verify':
+        return VerifySeedScreen(
+          seedPhrase: widget.seedPhrase,
+          onComplete: () async {
+            // Store mnemonic for later encryption with PIN
+            await widget.walletService.storeMnemonic(widget.seedPhrase.join(' '));
+            setState(() => _currentStep = 'pin');
+          },
+          onBack: () => setState(() => _currentStep = 'seedphrase'),
+        );
+
+      case 'pin':
+        return PinSetupScreen(
+          onComplete: () => setState(() => _currentStep = 'biometric'),
+          onBack: () => setState(() => _currentStep = 'verify'),
+        );
+
+      case 'biometric':
+        return BiometricSetupScreen(
+          onComplete: (enabled) async {
+            await widget.walletService.setBiometric(enabled);
+            setState(() => _currentStep = 'success');
+          },
+          onSkip: () async {
+            await widget.walletService.setBiometric(false);
+            setState(() => _currentStep = 'success');
+          },
+        );
+
+      case 'success':
+        return SuccessScreen(
+          walletName: _walletName,
+          onFinish: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            widget.onComplete();
+          },
+        );
+
+      default:
+        return const SizedBox();
+    }
+  }
+}
+
+/// Import wallet flow - handles the onboarding for imported wallets
+class _ImportWalletFlow extends StatefulWidget {
+  final WalletService walletService;
+  final VoidCallback onComplete;
+
+  const _ImportWalletFlow({
+    required this.walletService,
+    required this.onComplete,
+  });
+
+  @override
+  State<_ImportWalletFlow> createState() => _ImportWalletFlowState();
+}
+
+class _ImportWalletFlowState extends State<_ImportWalletFlow> {
+  String _currentStep = 'import';
+  List<String> _importedPhrase = [];
+  String _walletName = 'Main Wallet';
+
+  @override
+  Widget build(BuildContext context) {
+    switch (_currentStep) {
+      case 'import':
+        return ImportWalletScreen(
+          onComplete: (words) async {
+            _importedPhrase = words;
+            // Store mnemonic for later encryption with PIN
+            await widget.walletService.storeMnemonic(words.join(' '));
+            setState(() => _currentStep = 'pin');
+          },
+          onBack: () => Navigator.pop(context),
+        );
+
+      case 'pin':
+        return PinSetupScreen(
+          onComplete: () => setState(() => _currentStep = 'biometric'),
+          onBack: () => setState(() => _currentStep = 'import'),
+        );
+
+      case 'biometric':
+        return BiometricSetupScreen(
+          onComplete: (enabled) async {
+            await widget.walletService.setBiometric(enabled);
+            setState(() => _currentStep = 'success');
+          },
+          onSkip: () async {
+            await widget.walletService.setBiometric(false);
+            setState(() => _currentStep = 'success');
+          },
+        );
+
+      case 'success':
+        return SuccessScreen(
+          walletName: _walletName,
+          onFinish: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            widget.onComplete();
+          },
+        );
+
+      default:
+        return const SizedBox();
+    }
   }
 }
