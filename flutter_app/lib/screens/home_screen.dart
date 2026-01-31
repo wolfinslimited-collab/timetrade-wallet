@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Token> _tokens = [];
   double _totalBalance = 0.0;
   double _change24h = 0.0;
-  
+
   final BlockchainService _blockchainService = BlockchainService();
 
   @override
@@ -39,7 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final walletService = context.read<WalletService>();
-      
+      debugPrint('[HOME] Fetching balances for evm=${walletService.evmAddress}, sol=${walletService.solanaAddress}, tron=${walletService.tronAddress}');
+
       final tokens = await _blockchainService.fetchAllBalances(
         evmAddress: walletService.evmAddress,
         solanaAddress: walletService.solanaAddress,
@@ -48,11 +49,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       double total = 0;
       double weightedChange = 0;
-      
+
       for (final token in tokens) {
         total += token.usdValue;
         weightedChange += token.usdValue * token.change24h;
       }
+
+      debugPrint('[HOME] Loaded ${tokens.length} tokens, total=\$${total.toStringAsFixed(2)}');
 
       setState(() {
         _tokens = tokens;
@@ -61,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading balances: $e');
+      debugPrint('[HOME] Error loading balances: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -104,6 +107,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWalletTab(walletAccount) {
+    final isPositive = _change24h >= 0;
+    final dollarChange = _totalBalance * (_change24h / 100);
+
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       color: AppTheme.primary,
@@ -129,20 +135,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.success,
-                          ),
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.success),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           walletAccount?.name.toUpperCase() ?? 'MAIN WALLET',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                            color: AppTheme.foreground,
-                          ),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5, color: AppTheme.foreground),
                         ),
                       ],
                     ),
@@ -160,13 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Icon(Icons.shield, size: 12, color: AppTheme.mutedForeground),
                         SizedBox(width: 4),
-                        Text(
-                          'Protected',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.mutedForeground,
-                          ),
-                        ),
+                        Text('Protected', style: TextStyle(fontSize: 10, color: AppTheme.mutedForeground)),
                       ],
                     ),
                   ),
@@ -175,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Balance display
+          // Balance display (matches web)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -184,31 +176,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_isLoading)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTheme.mutedForeground,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Syncing wallet…',
-                          style: TextStyle(color: AppTheme.mutedForeground),
-                        ),
+                      children: const [
+                        SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.mutedForeground)),
+                        SizedBox(width: 12),
+                        Text('Syncing wallet…', style: TextStyle(color: AppTheme.mutedForeground)),
                       ],
                     )
                   else ...[
                     Text(
                       _formatBalance(_totalBalance),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -1,
-                        color: AppTheme.foreground,
-                      ),
+                      style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: -1, color: AppTheme.foreground),
                     ),
                     if (_totalBalance > 0) ...[
                       const SizedBox(height: 8),
@@ -216,21 +193,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '${_change24h >= 0 ? '+' : ''}\$${(_totalBalance * _change24h / 100).abs().toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: _change24h >= 0 ? AppTheme.primary : AppTheme.destructive,
-                            ),
+                            '${isPositive ? '+' : ''}\$${dollarChange.abs().toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: isPositive ? AppTheme.primary : AppTheme.destructive),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${_change24h >= 0 ? '+' : ''}${_change24h.toStringAsFixed(2)}%',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: _change24h >= 0 ? AppTheme.primary : AppTheme.destructive,
-                            ),
+                            '${isPositive ? '+' : ''}${_change24h.toStringAsFixed(2)}%',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: isPositive ? AppTheme.primary : AppTheme.destructive),
                           ),
                         ],
                       ),
@@ -242,25 +211,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           // Quick actions
-          const SliverToBoxAdapter(
-            child: QuickActionsWidget(),
-          ),
+          const SliverToBoxAdapter(child: QuickActionsWidget()),
 
           // Token list
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(top: 24),
-              child: TokenListWidget(
-                tokens: _tokens,
-                isLoading: _isLoading,
-              ),
+              child: TokenListWidget(tokens: _tokens, isLoading: _isLoading),
             ),
           ),
 
           // Bottom padding for nav bar
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 100),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
