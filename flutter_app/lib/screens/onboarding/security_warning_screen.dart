@@ -97,9 +97,9 @@ class _SecurityWarningScreenState extends State<SecurityWarningScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.accent.withOpacity(0.1),
+                  color: AppTheme.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
+                  border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,10 +107,10 @@ class _SecurityWarningScreenState extends State<SecurityWarningScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.accent.withOpacity(0.2),
+                        color: AppTheme.accent.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.warning_amber_rounded,
                         color: AppTheme.accent,
                         size: 20,
@@ -121,7 +121,7 @@ class _SecurityWarningScreenState extends State<SecurityWarningScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Important Security Notice',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
@@ -130,7 +130,7 @@ class _SecurityWarningScreenState extends State<SecurityWarningScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
+                          const Text(
                             'Your seed phrase is the only way to recover your wallet. If you lose it, your funds are gone forever.',
                             style: TextStyle(
                               fontSize: 13,
