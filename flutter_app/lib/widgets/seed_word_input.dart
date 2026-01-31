@@ -269,34 +269,28 @@ class _SeedWordInputState extends State<SeedWordInput> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine border color based on validation state (not focus)
+    Color borderColor;
+    if (_isValid) {
+      borderColor = AppTheme.primary.withOpacity(0.5);
+    } else if (_isInvalid) {
+      borderColor = AppTheme.destructive.withOpacity(0.5);
+    } else {
+      borderColor = AppTheme.border;
+    }
+
     return CompositedTransformTarget(
       link: _layerLink,
       child: Focus(
         onKeyEvent: _handleKeyEvent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+        child: Container(
           decoration: BoxDecoration(
             color: AppTheme.card,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _isFocused
-                  ? AppTheme.primary
-                  : _isValid
-                      ? AppTheme.primary.withOpacity(0.5)
-                      : _isInvalid
-                          ? AppTheme.destructive.withOpacity(0.5)
-                          : AppTheme.border,
-              width: _isFocused ? 2 : 1,
+              color: borderColor,
+              width: 1,
             ),
-            boxShadow: _isFocused
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primary.withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: -2,
-                    ),
-                  ]
-                : null,
           ),
           child: Row(
             children: [
@@ -312,32 +306,51 @@ class _SeedWordInputState extends State<SeedWordInput> {
                   ),
                 ),
               ),
-              // Text input
+              // Text input with focus border
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  textCapitalization: TextCapitalization.none,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontFamily: 'monospace',
-                    color: AppTheme.foreground,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: _isFocused ? AppTheme.primary : Colors.transparent,
+                      width: _isFocused ? 2 : 1,
+                    ),
+                    boxShadow: _isFocused
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.15),
+                              blurRadius: 6,
+                              spreadRadius: -1,
+                            ),
+                          ]
+                        : null,
                   ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                    isDense: true,
-                    hintText: 'word',
-                    hintStyle: TextStyle(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textCapitalization: TextCapitalization.none,
+                    style: const TextStyle(
                       fontSize: 13,
                       fontFamily: 'monospace',
-                      color: AppTheme.mutedForeground,
+                      color: AppTheme.foreground,
                     ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      isDense: true,
+                      hintText: 'word',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        color: AppTheme.mutedForeground,
+                      ),
+                    ),
+                    onChanged: _handleTextChange,
+                    onSubmitted: (_) => widget.onMoveToNext?.call(),
                   ),
-                  onChanged: _handleTextChange,
-                  onSubmitted: (_) => widget.onMoveToNext?.call(),
                 ),
               ),
               // Validation icon
