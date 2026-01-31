@@ -1,13 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/token.dart';
 import '../models/wallet_account.dart';
-
 
 class BlockchainService {
   static const String _baseUrl = 'https://mrdnogctgvzhuqlfervb.supabase.co/functions/v1/wallet-blockchain';
   static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZG5vZ2N0Z3Z6aHVxbGZlcnZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NTUxOTUsImV4cCI6MjA4NDQzMTE5NX0.0cxHNzqj5jQg6vQrZ31efQSJ_Tw8E95uQyLDTudTyAE';
   
   late final Dio _dio;
+
+  // Price cache
+  final Map<String, double> _priceCache = {};
 
   BlockchainService() {
     _dio = Dio(BaseOptions(
@@ -30,34 +33,65 @@ class BlockchainService {
   }) async {
     final List<Token> allTokens = [];
 
-    // Fetch in parallel
-    final futures = <Future>[];
+    // First fetch prices
+    await _fetchPrices();
 
-    if (evmAddress != null) {
-      futures.add(_fetchEvmBalances(evmAddress, ChainType.ethereum));
-      futures.add(_fetchEvmBalances(evmAddress, ChainType.polygon));
+    // Fetch balances in parallel
+    final futures = <Future<List<Token>>>[];
+
+    if (evmAddress != null && evmAddress.isNotEmpty) {
+      futures.add(_fetchChainBalances(evmAddress, 'ethereum', ChainType.ethereum));
+      futures.add(_fetchChainBalances(evmAddress, 'polygon', ChainType.polygon));
     }
-    if (solanaAddress != null) {
-      futures.add(_fetchSolanaBalances(solanaAddress));
+    if (solanaAddress != null && solanaAddress.isNotEmpty) {
+      futures.add(_fetchChainBalances(solanaAddress, 'solana', ChainType.solana));
     }
-    if (tronAddress != null) {
-      futures.add(_fetchTronBalances(tronAddress));
+    if (tronAddress != null && tronAddress.isNotEmpty) {
+      futures.add(_fetchChainBalances(tronAddress, 'tron', ChainType.tron));
     }
 
     final results = await Future.wait(futures, eagerError: false);
     for (final result in results) {
-      if (result is List<Token>) {
-        allTokens.addAll(result);
-      }
+      allTokens.addAll(result);
     }
 
-    return allTokens;
+    // Sort by USD value descending, filter out zero balances and unknown tokens
+    allTokens.sort((a, b) => b.usdValue.compareTo(a.usdValue));
+    return allTokens.where((t) => t.balance > 0 && t.symbol != 'UNKNOWN').toList();
   }
 
-  /// Fetch EVM chain balances (Ethereum, Polygon)
-  Future<List<Token>> _fetchEvmBalances(String address, ChainType chain) async {
+  /// Fetch prices for common symbols
+  Future<void> _fetchPrices() async {
     try {
-      final chainName = chain == ChainType.ethereum ? 'ethereum' : 'polygon';
+      final response = await _dio.post('', data: {
+        'action': 'getPrices',
+        'chain': 'ethereum',
+        'address': '',
+        'symbols': ['BTC', 'ETH', 'MATIC', 'POL', 'SOL', 'TRX', 'USDC', 'USDT', 'DAI'],
+      });
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        final List<dynamic> prices = data['data'] ?? data;
+        
+        for (final p in prices) {
+          final symbol = p['symbol'] as String?;
+          final price = (p['price'] as num?)?.toDouble() ?? 0.0;
+          if (symbol != null) {
+            _priceCache[symbol.toUpperCase()] = price;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching prices: $e');
+    }
+  }
+
+  /// Fetch chain balances (handles native + tokens)
+  Future<List<Token>> _fetchChainBalances(String address, String chainName, ChainType chain) async {
+    final List<Token> tokens = [];
+    
+    try {
       final response = await _dio.post('', data: {
         'action': 'getBalance',
         'chain': chainName,
@@ -65,51 +99,92 @@ class BlockchainService {
       });
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> tokens = response.data['tokens'] ?? [];
-        return tokens.map((t) => Token.fromJson(t, chain)).toList();
+        final data = response.data['data'] ?? response.data;
+        
+        // Parse native token
+        final native = data['native'];
+        if (native != null) {
+          final symbol = native['symbol'] as String? ?? '';
+          final balanceRaw = native['balance'] as String? ?? '0';
+          final decimals = native['decimals'] as int? ?? 18;
+          final balance = _parseBalance(balanceRaw, decimals);
+          final price = _priceCache[symbol.toUpperCase()] ?? 0.0;
+          final usdValue = balance * price;
+
+          if (balance > 0) {
+            tokens.add(Token(
+              symbol: symbol,
+              name: _getTokenName(symbol),
+              chain: chain,
+              balance: balance,
+              usdValue: usdValue,
+              price: price,
+              change24h: 0.0,
+              decimals: decimals,
+              isNative: true,
+            ));
+          }
+        }
+
+        // Parse ERC20/SPL/TRC20 tokens
+        final List<dynamic> tokenList = data['tokens'] ?? [];
+        for (final t in tokenList) {
+          final symbol = t['symbol'] as String? ?? 'UNKNOWN';
+          if (symbol == 'UNKNOWN') continue;
+          
+          final balanceRaw = t['balance'] as String? ?? '0';
+          final decimals = t['decimals'] as int? ?? 18;
+          final balance = _parseBalance(balanceRaw, decimals);
+          final price = _priceCache[symbol.toUpperCase()] ?? 0.0;
+          final usdValue = balance * price;
+
+          if (balance > 0) {
+            tokens.add(Token(
+              symbol: symbol,
+              name: t['name'] as String? ?? symbol,
+              chain: chain,
+              balance: balance,
+              usdValue: usdValue,
+              price: price,
+              change24h: 0.0,
+              decimals: decimals,
+              contractAddress: t['contractAddress'] as String?,
+              isNative: false,
+            ));
+          }
+        }
       }
     } catch (e) {
-      print('Error fetching $chain balances: $e');
+      debugPrint('Error fetching $chainName balances: $e');
     }
-    return [];
+    
+    return tokens;
   }
 
-  /// Fetch Solana balances
-  Future<List<Token>> _fetchSolanaBalances(String address) async {
+  /// Parse balance string with decimals
+  double _parseBalance(String balanceRaw, int decimals) {
     try {
-      final response = await _dio.post('', data: {
-        'action': 'getBalance',
-        'chain': 'solana',
-        'address': address,
-      });
-
-      if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> tokens = response.data['tokens'] ?? [];
-        return tokens.map((t) => Token.fromJson(t, ChainType.solana)).toList();
-      }
+      final bigBalance = BigInt.tryParse(balanceRaw) ?? BigInt.zero;
+      final divisor = BigInt.from(10).pow(decimals);
+      return bigBalance / divisor;
     } catch (e) {
-      print('Error fetching Solana balances: $e');
+      return 0.0;
     }
-    return [];
   }
 
-  /// Fetch Tron balances
-  Future<List<Token>> _fetchTronBalances(String address) async {
-    try {
-      final response = await _dio.post('', data: {
-        'action': 'getBalance',
-        'chain': 'tron',
-        'address': address,
-      });
-
-      if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> tokens = response.data['tokens'] ?? [];
-        return tokens.map((t) => Token.fromJson(t, ChainType.tron)).toList();
-      }
-    } catch (e) {
-      print('Error fetching Tron balances: $e');
-    }
-    return [];
+  String _getTokenName(String symbol) {
+    const names = {
+      'ETH': 'Ethereum',
+      'MATIC': 'Polygon',
+      'POL': 'Polygon',
+      'SOL': 'Solana',
+      'TRX': 'Tron',
+      'BTC': 'Bitcoin',
+      'USDC': 'USD Coin',
+      'USDT': 'Tether USD',
+      'DAI': 'Dai Stablecoin',
+    };
+    return names[symbol.toUpperCase()] ?? symbol;
   }
 
   /// Fetch transaction history
@@ -120,15 +195,15 @@ class BlockchainService {
   }) async {
     final List<Transaction> allTx = [];
 
-    if (evmAddress != null) {
-      allTx.addAll(await _fetchEvmTransactions(evmAddress, ChainType.ethereum));
-      allTx.addAll(await _fetchEvmTransactions(evmAddress, ChainType.polygon));
+    if (evmAddress != null && evmAddress.isNotEmpty) {
+      allTx.addAll(await _fetchChainTransactions(evmAddress, 'ethereum', ChainType.ethereum));
+      allTx.addAll(await _fetchChainTransactions(evmAddress, 'polygon', ChainType.polygon));
     }
-    if (solanaAddress != null) {
-      allTx.addAll(await _fetchSolanaTransactions(solanaAddress));
+    if (solanaAddress != null && solanaAddress.isNotEmpty) {
+      allTx.addAll(await _fetchChainTransactions(solanaAddress, 'solana', ChainType.solana));
     }
-    if (tronAddress != null) {
-      allTx.addAll(await _fetchTronTransactions(tronAddress));
+    if (tronAddress != null && tronAddress.isNotEmpty) {
+      allTx.addAll(await _fetchChainTransactions(tronAddress, 'tron', ChainType.tron));
     }
 
     // Sort by timestamp descending
@@ -136,9 +211,8 @@ class BlockchainService {
     return allTx;
   }
 
-  Future<List<Transaction>> _fetchEvmTransactions(String address, ChainType chain) async {
+  Future<List<Transaction>> _fetchChainTransactions(String address, String chainName, ChainType chain) async {
     try {
-      final chainName = chain == ChainType.ethereum ? 'ethereum' : 'polygon';
       final response = await _dio.post('', data: {
         'action': 'getTransactions',
         'chain': chainName,
@@ -146,48 +220,48 @@ class BlockchainService {
       });
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> txList = response.data['transactions'] ?? [];
-        return txList.map((t) => Transaction.fromJson({...t, 'chain': chain.name})).toList();
+        final data = response.data['data'] ?? response.data;
+        final List<dynamic> txList = data['transactions'] ?? [];
+        
+        return txList.map((t) {
+          // Determine transaction type
+          final from = (t['from'] as String? ?? '').toLowerCase();
+          final to = (t['to'] as String? ?? '').toLowerCase();
+          final userAddr = address.toLowerCase();
+          
+          TransactionType type;
+          if (from == userAddr) {
+            type = TransactionType.send;
+          } else if (to == userAddr) {
+            type = TransactionType.receive;
+          } else {
+            type = TransactionType.contract;
+          }
+
+          return Transaction(
+            hash: t['hash'] as String? ?? '',
+            chain: chain,
+            type: type,
+            from: t['from'] as String? ?? '',
+            to: t['to'] as String? ?? '',
+            amount: (t['value'] as num?)?.toDouble() ?? 0.0,
+            symbol: t['symbol'] as String? ?? chain.symbol,
+            fee: (t['fee'] as num?)?.toDouble() ?? 0.0,
+            feeSymbol: chain.symbol,
+            timestamp: DateTime.tryParse(t['timestamp'] as String? ?? '') ?? DateTime.now(),
+            status: TransactionStatus.confirmed,
+          );
+        }).toList();
       }
     } catch (e) {
-      print('Error fetching $chain transactions: $e');
+      debugPrint('Error fetching $chainName transactions: $e');
     }
     return [];
   }
 
-  Future<List<Transaction>> _fetchSolanaTransactions(String address) async {
-    try {
-      final response = await _dio.post('', data: {
-        'action': 'getTransactions',
-        'chain': 'solana',
-        'address': address,
-      });
-
-      if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> txList = response.data['transactions'] ?? [];
-        return txList.map((t) => Transaction.fromJson({...t, 'chain': 'solana'})).toList();
-      }
-    } catch (e) {
-      print('Error fetching Solana transactions: $e');
-    }
-    return [];
-  }
-
-  Future<List<Transaction>> _fetchTronTransactions(String address) async {
-    try {
-      final response = await _dio.post('', data: {
-        'action': 'getTransactions',
-        'chain': 'tron',
-        'address': address,
-      });
-
-      if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> txList = response.data['transactions'] ?? [];
-        return txList.map((t) => Transaction.fromJson({...t, 'chain': 'tron'})).toList();
-      }
-    } catch (e) {
-      print('Error fetching Tron transactions: $e');
-    }
+  /// Get unified transactions from all chains
+  Future<List<Transaction>> getUnifiedTransactions() async {
+    // This would require addresses - implement when called with proper context
     return [];
   }
 
@@ -197,18 +271,18 @@ class BlockchainService {
     required String signedTx,
   }) async {
     try {
-      final chainName = chain.name;
       final response = await _dio.post('', data: {
         'action': 'broadcast',
-        'chain': chainName,
+        'chain': chain.name,
         'signedTx': signedTx,
       });
 
       if (response.statusCode == 200 && response.data != null) {
-        return response.data['txHash'] as String?;
+        final data = response.data['data'] ?? response.data;
+        return data['txHash'] as String?;
       }
     } catch (e) {
-      print('Error broadcasting transaction: $e');
+      debugPrint('Error broadcasting transaction: $e');
     }
     return null;
   }
@@ -217,23 +291,23 @@ class BlockchainService {
   Future<Map<String, dynamic>?> fetchFeeEstimate(ChainType chain) async {
     try {
       final response = await _dio.post('', data: {
-        'action': 'getFees',
+        'action': 'estimateGas',
         'chain': chain.name,
+        'address': '',
       });
 
       if (response.statusCode == 200) {
-        return response.data as Map<String, dynamic>?;
+        return response.data['data'] as Map<String, dynamic>?;
       }
     } catch (e) {
-      print('Error fetching fees: $e');
+      debugPrint('Error fetching fees: $e');
     }
     return null;
   }
+}
 
-  /// Get unified transactions from all chains
-  Future<List<Transaction>> getUnifiedTransactions() async {
-    // Return empty list for now - implement when addresses are available
-    // This would fetch from all chains and merge results
-    return [];
+extension on BigInt {
+  double operator /(BigInt other) {
+    return this.toDouble() / other.toDouble();
   }
 }

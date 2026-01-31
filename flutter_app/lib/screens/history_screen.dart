@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/blockchain_service.dart';
-import '../models/token.dart' show Transaction, TransactionType, TransactionStatus;
+import '../services/wallet_service.dart';
+import '../models/token.dart' show Transaction, TransactionType;
 
 class HistoryScreen extends StatefulWidget {
-  final VoidCallback onBack;
+  final VoidCallback? onBack;
 
   const HistoryScreen({
     super.key,
-    required this.onBack,
+    this.onBack,
   });
 
   @override
@@ -20,6 +22,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _searchQuery = '';
   bool _isLoading = true;
   List<Transaction> _transactions = [];
+  final BlockchainService _blockchainService = BlockchainService();
 
   @override
   void initState() {
@@ -31,9 +34,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final blockchainService = BlockchainService();
-      // Load transactions from all chains
-      final txs = await blockchainService.getUnifiedTransactions();
+      final walletService = context.read<WalletService>();
+      
+      final txs = await _blockchainService.fetchTransactions(
+        evmAddress: walletService.evmAddress,
+        solanaAddress: walletService.solanaAddress,
+        tronAddress: walletService.tronAddress,
+      );
       
       if (mounted) {
         setState(() {
@@ -113,203 +120,181 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: AppTheme.border, width: 1),
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: AppTheme.border, width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Transaction History',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.foreground,
+                  ),
                 ),
               ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: widget.onBack,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.card,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.border),
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
+              GestureDetector(
+                onTap: _loadTransactions,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.border),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Transaction History',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
+                  child: Icon(
+                    Icons.refresh,
+                    color: _isLoading ? AppTheme.mutedForeground : AppTheme.foreground,
+                    size: 20,
                   ),
-                  GestureDetector(
-                    onTap: _loadTransactions,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.card,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.border),
-                      ),
-                      child: Icon(
-                        Icons.refresh,
-                        color: _isLoading ? AppTheme.mutedForeground : AppTheme.foreground,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.muted,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: Text(
-                      'All Networks',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.mutedForeground,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppTheme.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.border),
-                      ),
-                      child: TextField(
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        style: const TextStyle(color: AppTheme.foreground),
-                        decoration: InputDecoration(
-                          hintText: 'Search transactions...',
-                          hintStyle: TextStyle(color: AppTheme.mutedForeground),
-                          prefixIcon: Icon(Icons.search, color: AppTheme.mutedForeground),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.muted,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: const Text(
+                  'All Networks',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.mutedForeground,
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.card,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: Icon(
-                      Icons.tune,
-                      color: AppTheme.mutedForeground,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-
-            // Quick Filter Tabs
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: ['all', 'send', 'receive', 'swap'].map((filter) {
-                  final isActive = _quickFilter == filter;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _quickFilter = filter),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isActive ? AppTheme.primary : AppTheme.card,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isActive ? AppTheme.primary : AppTheme.border,
-                          ),
-                        ),
-                        child: Text(
-                          filter == 'all' ? 'All' : filter[0].toUpperCase() + filter.substring(1),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: isActive ? AppTheme.primaryForeground : AppTheme.mutedForeground,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Transaction List
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppTheme.primary),
-                    )
-                  : _filteredTransactions.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _groupedTransactions.length,
-                          itemBuilder: (context, index) {
-                            final date = _groupedTransactions.keys.elementAt(index);
-                            final txs = _groupedTransactions[date]!;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  child: Text(
-                                    date,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.mutedForeground,
-                                    ),
-                                  ),
-                                ),
-                                ...txs.map((tx) => _buildTransactionItem(tx)),
-                              ],
-                            );
-                          },
-                        ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+
+        // Search Bar
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    style: const TextStyle(color: AppTheme.foreground),
+                    decoration: const InputDecoration(
+                      hintText: 'Search transactions...',
+                      hintStyle: TextStyle(color: AppTheme.mutedForeground),
+                      prefixIcon: Icon(Icons.search, color: AppTheme.mutedForeground),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppTheme.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: const Icon(
+                  Icons.tune,
+                  color: AppTheme.mutedForeground,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Quick Filter Tabs
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: ['all', 'send', 'receive', 'swap'].map((filter) {
+              final isActive = _quickFilter == filter;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () => setState(() => _quickFilter = filter),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isActive ? AppTheme.primary : AppTheme.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isActive ? AppTheme.primary : AppTheme.border,
+                      ),
+                    ),
+                    child: Text(
+                      filter == 'all' ? 'All' : filter[0].toUpperCase() + filter.substring(1),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isActive ? AppTheme.primaryForeground : AppTheme.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Transaction List
+        Expanded(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppTheme.primary),
+                )
+              : _filteredTransactions.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _groupedTransactions.length,
+                      itemBuilder: (context, index) {
+                        final date = _groupedTransactions.keys.elementAt(index);
+                        final txs = _groupedTransactions[date]!;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                date,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                            ),
+                            ...txs.map((tx) => _buildTransactionItem(tx)),
+                          ],
+                        );
+                      },
+                    ),
+        ),
+      ],
     );
   }
 
@@ -321,10 +306,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Icon(
             Icons.receipt_long_outlined,
             size: 64,
-            color: AppTheme.mutedForeground.withOpacity(0.5),
+            color: AppTheme.mutedForeground.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'No transactions found',
             style: TextStyle(
               fontSize: 16,
@@ -337,7 +322,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             'Your transaction history will appear here',
             style: TextStyle(
               fontSize: 14,
-              color: AppTheme.mutedForeground.withOpacity(0.7),
+              color: AppTheme.mutedForeground.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -387,7 +372,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(22),
             ),
             child: Icon(icon, color: iconColor, size: 22),
@@ -417,7 +402,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       child: Text(
                         tx.chain.name.toUpperCase(),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedForeground,
@@ -429,7 +414,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '${isSend ? 'To' : 'From'}: ${_formatAddress(address)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppTheme.mutedForeground,
                   ),
@@ -452,7 +437,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const SizedBox(height: 4),
               Text(
                 _formatTime(tx.timestamp),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppTheme.mutedForeground,
                 ),
