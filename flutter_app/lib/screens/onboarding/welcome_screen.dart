@@ -518,7 +518,7 @@ class GradientText extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderMask(
       shaderCallback: (bounds) => const LinearGradient(
-        colors: [AppTheme.primary, AppTheme.accent],
+        colors: [AppTheme.gradientStart, AppTheme.gradientEnd],
       ).createShader(bounds),
       child: Text(
         text,
