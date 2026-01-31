@@ -1,9 +1,9 @@
 name: timetrade_wallet
-description: "Timetrade crypto wallet - Flutter mobile app"
+description: Non-custodial multi-chain crypto wallet
 
 publish_to: "none"
 
-version: 1.0.0+6
+version: 1.0.0+5
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
