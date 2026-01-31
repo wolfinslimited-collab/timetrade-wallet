@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../services/wallet_service.dart';
 import 'security_warning_screen.dart';
@@ -20,20 +21,18 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  final WalletService _walletService = WalletService();
-
   void _handleCreateWallet() {
     HapticFeedback.mediumImpact();
     
-    // Generate seed phrase
-    final seedPhrase = _walletService.generateSeedPhrase(wordCount: 12);
+    // Generate seed phrase using provider
+    final walletService = context.read<WalletService>();
+    final seedPhrase = walletService.generateSeedPhrase(wordCount: 12);
     
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => _CreateWalletFlow(
           seedPhrase: seedPhrase,
-          walletService: _walletService,
           onComplete: widget.onComplete,
         ),
       ),
@@ -47,7 +46,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => _ImportWalletFlow(
-          walletService: _walletService,
           onComplete: widget.onComplete,
         ),
       ),
@@ -103,7 +101,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                   ),
                                 ],
@@ -125,9 +123,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     const SizedBox(height: 40),
 
                     // Title with gradient
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Text(
                           'Welcome to ',
                           style: TextStyle(
@@ -198,7 +196,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 child: OutlinedButton(
                   onPressed: _handleImportWallet,
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: AppTheme.card.withOpacity(0.6),
+                    backgroundColor: AppTheme.card.withValues(alpha: 0.6),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -238,7 +236,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         Icon(
           Icons.auto_awesome,
           size: 12,
-          color: AppTheme.primary.withOpacity(0.7),
+          color: AppTheme.primary.withValues(alpha: 0.7),
         ),
         const SizedBox(width: 4),
         Text(
@@ -256,12 +254,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 /// Create wallet flow - handles the full onboarding for new wallets
 class _CreateWalletFlow extends StatefulWidget {
   final List<String> seedPhrase;
-  final WalletService walletService;
   final VoidCallback onComplete;
 
   const _CreateWalletFlow({
     required this.seedPhrase,
-    required this.walletService,
     required this.onComplete,
   });
 
@@ -271,10 +267,63 @@ class _CreateWalletFlow extends StatefulWidget {
 
 class _CreateWalletFlowState extends State<_CreateWalletFlow> {
   String _currentStep = 'security';
-  String _walletName = 'Main Wallet';
+  final String _walletName = 'Main Wallet';
+  String? _pin;
+  bool _isProcessing = false;
+
+  Future<void> _handlePinComplete(String pin) async {
+    if (_isProcessing) return;
+    
+    setState(() {
+      _isProcessing = true;
+      _pin = pin;
+    });
+
+    try {
+      final walletService = context.read<WalletService>();
+      
+      // Store mnemonic first, then set PIN
+      await walletService.storeMnemonic(widget.seedPhrase.join(' '));
+      await walletService.setPin(pin);
+      
+      if (mounted) {
+        setState(() {
+          _currentStep = 'biometric';
+          _isProcessing = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('PIN setup error: $e');
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error setting up PIN: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isProcessing) {
+      return Scaffold(
+        backgroundColor: AppTheme.background,
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: AppTheme.primary),
+              SizedBox(height: 24),
+              Text(
+                'Setting up your wallet...',
+                style: TextStyle(color: AppTheme.foreground),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     switch (_currentStep) {
       case 'security':
         return SecurityWarningScreen(
@@ -292,9 +341,7 @@ class _CreateWalletFlowState extends State<_CreateWalletFlow> {
       case 'verify':
         return VerifySeedScreen(
           seedPhrase: widget.seedPhrase,
-          onComplete: () async {
-            // Store mnemonic for later encryption with PIN
-            await widget.walletService.storeMnemonic(widget.seedPhrase.join(' '));
+          onComplete: () {
             setState(() => _currentStep = 'pin');
           },
           onBack: () => setState(() => _currentStep = 'seedphrase'),
@@ -302,19 +349,25 @@ class _CreateWalletFlowState extends State<_CreateWalletFlow> {
 
       case 'pin':
         return PinSetupScreen(
-          onComplete: () => setState(() => _currentStep = 'biometric'),
+          onComplete: _handlePinComplete,
           onBack: () => setState(() => _currentStep = 'verify'),
         );
 
       case 'biometric':
         return BiometricSetupScreen(
           onComplete: (enabled) async {
-            await widget.walletService.setBiometric(enabled);
-            setState(() => _currentStep = 'success');
+            final walletService = context.read<WalletService>();
+            await walletService.setBiometric(enabled);
+            if (mounted) {
+              setState(() => _currentStep = 'success');
+            }
           },
           onSkip: () async {
-            await widget.walletService.setBiometric(false);
-            setState(() => _currentStep = 'success');
+            final walletService = context.read<WalletService>();
+            await walletService.setBiometric(false);
+            if (mounted) {
+              setState(() => _currentStep = 'success');
+            }
           },
         );
 
@@ -335,11 +388,9 @@ class _CreateWalletFlowState extends State<_CreateWalletFlow> {
 
 /// Import wallet flow - handles the onboarding for imported wallets
 class _ImportWalletFlow extends StatefulWidget {
-  final WalletService walletService;
   final VoidCallback onComplete;
 
   const _ImportWalletFlow({
-    required this.walletService,
     required this.onComplete,
   });
 
@@ -350,17 +401,64 @@ class _ImportWalletFlow extends StatefulWidget {
 class _ImportWalletFlowState extends State<_ImportWalletFlow> {
   String _currentStep = 'import';
   List<String> _importedPhrase = [];
-  String _walletName = 'Main Wallet';
+  final String _walletName = 'Main Wallet';
+  bool _isProcessing = false;
+
+  Future<void> _handlePinComplete(String pin) async {
+    if (_isProcessing) return;
+    
+    setState(() => _isProcessing = true);
+
+    try {
+      final walletService = context.read<WalletService>();
+      
+      // Store mnemonic first, then set PIN
+      await walletService.storeMnemonic(_importedPhrase.join(' '));
+      await walletService.setPin(pin);
+      
+      if (mounted) {
+        setState(() {
+          _currentStep = 'biometric';
+          _isProcessing = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('PIN setup error: $e');
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error setting up PIN: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isProcessing) {
+      return Scaffold(
+        backgroundColor: AppTheme.background,
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: AppTheme.primary),
+              SizedBox(height: 24),
+              Text(
+                'Setting up your wallet...',
+                style: TextStyle(color: AppTheme.foreground),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     switch (_currentStep) {
       case 'import':
         return ImportWalletScreen(
-          onComplete: (words) async {
+          onComplete: (words) {
             _importedPhrase = words;
-            // Store mnemonic for later encryption with PIN
-            await widget.walletService.storeMnemonic(words.join(' '));
             setState(() => _currentStep = 'pin');
           },
           onBack: () => Navigator.pop(context),
@@ -368,19 +466,25 @@ class _ImportWalletFlowState extends State<_ImportWalletFlow> {
 
       case 'pin':
         return PinSetupScreen(
-          onComplete: () => setState(() => _currentStep = 'biometric'),
+          onComplete: _handlePinComplete,
           onBack: () => setState(() => _currentStep = 'import'),
         );
 
       case 'biometric':
         return BiometricSetupScreen(
           onComplete: (enabled) async {
-            await widget.walletService.setBiometric(enabled);
-            setState(() => _currentStep = 'success');
+            final walletService = context.read<WalletService>();
+            await walletService.setBiometric(enabled);
+            if (mounted) {
+              setState(() => _currentStep = 'success');
+            }
           },
           onSkip: () async {
-            await widget.walletService.setBiometric(false);
-            setState(() => _currentStep = 'success');
+            final walletService = context.read<WalletService>();
+            await walletService.setBiometric(false);
+            if (mounted) {
+              setState(() => _currentStep = 'success');
+            }
           },
         );
 
@@ -396,5 +500,30 @@ class _ImportWalletFlowState extends State<_ImportWalletFlow> {
       default:
         return const SizedBox();
     }
+  }
+}
+
+/// Gradient text widget
+class GradientText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+
+  const GradientText({
+    super.key,
+    required this.text,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [AppTheme.primary, AppTheme.accent],
+      ).createShader(bounds),
+      child: Text(
+        text,
+        style: style.copyWith(color: Colors.white),
+      ),
+    );
   }
 }
