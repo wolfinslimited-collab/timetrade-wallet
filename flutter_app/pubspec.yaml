@@ -3,7 +3,7 @@ description: Non-custodial multi-chain crypto wallet
 
 publish_to: "none"
 
-version: 1.0.0+5
+version: 1.0.0+3
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
