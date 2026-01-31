@@ -44,8 +44,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadNotifications() {
-    // Initialize with empty notifications - can be populated from backend later
-    _notifications = [];
+    // Generate demo notifications matching the web version
+    final now = DateTime.now();
+    _notifications = [
+      NotificationItem(
+        id: '1',
+        type: NotificationType.priceAlert,
+        title: 'BTC Price Alert',
+        message: 'Bitcoin just crossed \$45,000! Up 5.2% in the last hour.',
+        createdAt: now.subtract(const Duration(minutes: 5)),
+        isRead: false,
+      ),
+      NotificationItem(
+        id: '2',
+        type: NotificationType.transaction,
+        title: 'Transaction Confirmed',
+        message: 'Your transfer of 0.5 ETH has been confirmed on the network.',
+        createdAt: now.subtract(const Duration(minutes: 30)),
+        isRead: false,
+      ),
+      NotificationItem(
+        id: '3',
+        type: NotificationType.security,
+        title: 'New Login Detected',
+        message: "A new device logged into your wallet. If this wasn't you, please secure your account.",
+        createdAt: now.subtract(const Duration(hours: 2)),
+        isRead: true,
+      ),
+      NotificationItem(
+        id: '4',
+        type: NotificationType.priceAlert,
+        title: 'ETH Below Target',
+        message: 'Ethereum dropped below your \$2,400 price alert target.',
+        createdAt: now.subtract(const Duration(hours: 5)),
+        isRead: true,
+      ),
+      NotificationItem(
+        id: '5',
+        type: NotificationType.transaction,
+        title: 'Swap Completed',
+        message: 'Successfully swapped 100 USDT for 0.042 ETH.',
+        createdAt: now.subtract(const Duration(days: 1)),
+        isRead: true,
+      ),
+      NotificationItem(
+        id: '6',
+        type: NotificationType.security,
+        title: 'Backup Reminder',
+        message: "It's been 30 days since you last verified your seed phrase backup.",
+        createdAt: now.subtract(const Duration(days: 2)),
+        isRead: true,
+      ),
+    ];
   }
 
   void _markAsRead(String id) {
