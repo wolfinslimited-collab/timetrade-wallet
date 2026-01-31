@@ -8,6 +8,9 @@ import '../services/blockchain_service.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/token_list.dart';
 import '../widgets/bottom_nav.dart';
+import 'history_screen.dart';
+import 'staking_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -83,13 +86,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: _currentNavIndex == 0
-            ? _buildWalletTab(activeAccount)
-            : _currentNavIndex == 1
-                ? _buildHistoryTab()
-                : _currentNavIndex == 2
-                    ? _buildStakingTab()
-                    : _buildSettingsTab(),
+        child: IndexedStack(
+          index: _currentNavIndex,
+          children: [
+            _buildWalletTab(activeAccount),
+            HistoryScreen(onBack: () => setState(() => _currentNavIndex = 0)),
+            StakingScreen(onBack: () => setState(() => _currentNavIndex = 0)),
+            SettingsScreen(onBack: () => setState(() => _currentNavIndex = 0)),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentNavIndex,
@@ -131,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          walletAccount?.name.toUpperCase() ?? 'WALLET',
+                          walletAccount?.name.toUpperCase() ?? 'MAIN WALLET',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -180,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
@@ -257,36 +262,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: SizedBox(height: 100),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHistoryTab() {
-    return const Center(
-      child: Text(
-        'Transaction History\n(Implement based on TransactionHistoryPage.tsx)',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppTheme.mutedForeground),
-      ),
-    );
-  }
-
-  Widget _buildStakingTab() {
-    return const Center(
-      child: Text(
-        'Staking\n15% APY on Stablecoins\n(Implement based on StakingPage.tsx)',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppTheme.mutedForeground),
-      ),
-    );
-  }
-
-  Widget _buildSettingsTab() {
-    return const Center(
-      child: Text(
-        'Settings\n(Implement based on SettingsPage.tsx)',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppTheme.mutedForeground),
       ),
     );
   }

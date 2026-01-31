@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../screens/receive/receive_crypto_screen.dart';
+import '../screens/send/send_crypto_screen.dart';
 
 class QuickActionsWidget extends StatelessWidget {
   const QuickActionsWidget({super.key});
@@ -16,15 +18,13 @@ class QuickActionsWidget extends StatelessWidget {
             icon: Icons.arrow_downward_rounded,
             label: 'Receive',
             onTap: () {
-              // Open receive sheet
               showModalBottomSheet(
                 context: context,
-                backgroundColor: AppTheme.background,
+                backgroundColor: Colors.transparent,
                 isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                builder: (_) => ReceiveCryptoSheet(
+                  onClose: () => Navigator.pop(context),
                 ),
-                builder: (_) => const _ReceiveSheet(),
               );
             },
           ),
@@ -33,15 +33,13 @@ class QuickActionsWidget extends StatelessWidget {
             icon: Icons.arrow_upward_rounded,
             label: 'Send',
             onTap: () {
-              // Open send flow
               showModalBottomSheet(
                 context: context,
-                backgroundColor: AppTheme.background,
+                backgroundColor: Colors.transparent,
                 isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                builder: (_) => SendCryptoSheet(
+                  onClose: () => Navigator.pop(context),
                 ),
-                builder: (_) => const _SendSheet(),
               );
             },
           ),
@@ -50,15 +48,11 @@ class QuickActionsWidget extends StatelessWidget {
             icon: Icons.swap_horiz_rounded,
             label: 'Swap',
             onTap: () {
-              // Open swap sheet
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: AppTheme.background,
-                isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Swap - Coming soon'),
+                  backgroundColor: AppTheme.card,
                 ),
-                builder: (_) => const _SwapSheet(),
               );
             },
           ),
@@ -67,7 +61,6 @@ class QuickActionsWidget extends StatelessWidget {
             icon: Icons.shopping_cart_rounded,
             label: 'Buy',
             onTap: () {
-              // Open buy flow
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Buy crypto - Coming soon'),
@@ -114,127 +107,6 @@ class QuickActionsWidget extends StatelessWidget {
               color: AppTheme.mutedForeground,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// Placeholder sheets - implement fully
-class _ReceiveSheet extends StatelessWidget {
-  const _ReceiveSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppTheme.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Receive Crypto',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.foreground,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Implement QR code display and address copy\n(Based on ReceiveCryptoSheet.tsx)',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.mutedForeground),
-          ),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-}
-
-class _SendSheet extends StatelessWidget {
-  const _SendSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppTheme.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Send Crypto',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.foreground,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Implement multi-step send flow\n(Based on SendCryptoSheet.tsx)',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.mutedForeground),
-          ),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwapSheet extends StatelessWidget {
-  const _SwapSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppTheme.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Swap Tokens',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.foreground,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Implement token swap interface\n(Based on SwapCryptoSheet.tsx)',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.mutedForeground),
-          ),
-          const Spacer(),
         ],
       ),
     );
