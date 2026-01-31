@@ -137,7 +137,7 @@ class _SuccessScreenState extends State<SuccessScreen>
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: AppTheme.border),
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.account_balance_wallet_outlined,
                                 color: AppTheme.accent,
                                 size: 16,

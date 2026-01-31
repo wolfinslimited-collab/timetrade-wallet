@@ -14,6 +14,7 @@ class AppTheme {
   static const Color border = Color(0xFF27272A);
   static const Color destructive = Color(0xFFEF4444);
   static const Color success = Color(0xFF22C55E);
+  static const Color accent = Color(0xFFF59E0B); // Amber/Orange for warnings
   
   // Blue gradient for "Timetrade" text
   static const Color gradientStart = Color(0xFF3B82F6);
