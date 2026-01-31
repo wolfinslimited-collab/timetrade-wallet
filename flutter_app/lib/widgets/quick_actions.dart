@@ -15,7 +15,7 @@ class QuickActionsWidget extends StatelessWidget {
         children: [
           _buildActionButton(
             context,
-            icon: Icons.arrow_downward_rounded,
+            icon: Icons.qr_code_rounded,
             label: 'Receive',
             onTap: () {
               showModalBottomSheet(
@@ -30,7 +30,7 @@ class QuickActionsWidget extends StatelessWidget {
           ),
           _buildActionButton(
             context,
-            icon: Icons.arrow_upward_rounded,
+            icon: Icons.send_rounded,
             label: 'Send',
             onTap: () {
               showModalBottomSheet(
@@ -58,7 +58,7 @@ class QuickActionsWidget extends StatelessWidget {
           ),
           _buildActionButton(
             context,
-            icon: Icons.shopping_cart_rounded,
+            icon: Icons.attach_money_rounded,
             label: 'Buy',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
