@@ -29,22 +29,22 @@ class BottomNavBar extends StatelessWidget {
             children: [
               _buildNavItem(
                 index: 0,
-                icon: Icons.account_balance_wallet_outlined,
+                icon: Icons.wallet_outlined, // Matches web Wallet icon
                 label: 'Wallet',
               ),
               _buildNavItem(
                 index: 1,
-                icon: Icons.history_outlined,
+                icon: Icons.access_time_outlined, // Matches web Clock icon
                 label: 'History',
               ),
               _buildNavItem(
                 index: 2,
-                icon: Icons.monetization_on_outlined,
+                icon: Icons.toll_outlined, // Matches web Coins icon
                 label: 'Staking',
               ),
               _buildNavItem(
                 index: 3,
-                icon: Icons.settings_outlined,
+                icon: Icons.settings_outlined, // Matches web Settings icon
                 label: 'Settings',
               ),
             ],

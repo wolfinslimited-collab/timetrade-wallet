@@ -116,51 +116,113 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppTheme.card,
       child: CustomScrollView(
         slivers: [
-          // Header
+          // Header - matches web WalletHeader layout
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.card,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.success),
+                  // Avatar with online indicator
+                  Stack(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.border),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                          ),
                         ),
-                        const SizedBox(width: 6),
+                        child: Center(
+                          child: Text(
+                            (walletAccount?.name ?? 'W')[0].toUpperCase(),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.primary,
+                            border: Border.all(color: AppTheme.background, width: 2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  // Wallet name and status
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          walletAccount?.name.toUpperCase() ?? 'MAIN WALLET',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5, color: AppTheme.foreground),
+                          (walletAccount?.name ?? 'WALLET').toUpperCase(),
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 1, color: AppTheme.mutedForeground),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.secondary,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.border),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.shield_outlined, size: 10, color: AppTheme.primary),
+                                  SizedBox(width: 4),
+                                  Text('PROTECTED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, letterSpacing: 0.5, color: AppTheme.primary)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.secondary.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.success),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text('LIVE', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: AppTheme.mutedForeground)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
+                  // Settings button
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
                       color: AppTheme.card,
-                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppTheme.border),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.shield, size: 12, color: AppTheme.mutedForeground),
-                        SizedBox(width: 4),
-                        Text('Protected', style: TextStyle(fontSize: 10, color: AppTheme.mutedForeground)),
-                      ],
-                    ),
+                    child: const Icon(Icons.settings_outlined, size: 18, color: AppTheme.mutedForeground),
                   ),
                 ],
               ),
