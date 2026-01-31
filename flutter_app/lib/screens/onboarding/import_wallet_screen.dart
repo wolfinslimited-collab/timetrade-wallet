@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../services/wallet_service.dart';
 import '../../widgets/seed_word_input.dart';
+import '../../widgets/qr_scanner_dialog.dart';
 import '../home_screen.dart';
 import 'pin_setup_screen.dart';
 
@@ -112,14 +113,41 @@ class _ImportWalletScreenState extends State<ImportWalletScreen> {
     }
   }
 
-  void _handleQRScan() {
-    // TODO: Implement QR scanner using mobile_scanner package
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('QR Scanner - Coming soon'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  Future<void> _handleQRScan() async {
+    final result = await QRScannerDialog.show(context);
+
+    if (result == null) return; // User cancelled
+
+    if (result.success && result.words != null) {
+      final words = result.words!;
+      final targetCount = words.length;
+
+      setState(() {
+        _wordCount = targetCount;
+        _words = List<String>.from(words);
+        _generateInputKeys();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$targetCount words scanned successfully'),
+            backgroundColor: AppTheme.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } else if (result.errorMessage != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: AppTheme.destructive,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   int get _filledCount => _words.where((w) => w.isNotEmpty).length;
@@ -564,13 +592,6 @@ class _ImportWalletScreenState extends State<ImportWalletScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '⌨️ Use Space or Enter to move between words',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.mutedForeground,
-                          ),
-                        ),
                       ],
                     ),
 

@@ -308,51 +308,33 @@ class _SeedWordInputState extends State<SeedWordInput> {
               ),
               // Text input with focus border
               Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _isFocused ? AppTheme.primary : Colors.transparent,
-                      width: _isFocused ? 2 : 1,
-                    ),
-                    boxShadow: _isFocused
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.15),
-                              blurRadius: 6,
-                              spreadRadius: -1,
-                            ),
-                          ]
-                        : null,
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textCapitalization: TextCapitalization.none,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    color: AppTheme.foreground,
                   ),
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    textCapitalization: TextCapitalization.none,
-                    style: const TextStyle(
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                    isDense: true,
+                    hintText: 'word',
+                    hintStyle: TextStyle(
                       fontSize: 13,
                       fontFamily: 'monospace',
-                      color: AppTheme.foreground,
+                      color: AppTheme.mutedForeground,
                     ),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                      isDense: true,
-                      hintText: 'word',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        fontFamily: 'monospace',
-                        color: AppTheme.mutedForeground,
-                      ),
-                    ),
-                    onChanged: _handleTextChange,
-                    onSubmitted: (_) => widget.onMoveToNext?.call(),
                   ),
+                  onChanged: _handleTextChange,
+                  onSubmitted: (_) => widget.onMoveToNext?.call(),
                 ),
               ),
+              const SizedBox(width: 2),
               // Validation icon
               if (_isValid)
                 const Padding(
