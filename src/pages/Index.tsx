@@ -45,7 +45,9 @@ const Index = () => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
     const hasPin = localStorage.getItem("timetrade_pin");
     setHasWallet(walletCreated === "true");
-    setIsLocked(walletCreated === "true" && !!hasPin);
+    // Only show lock screen in production mode
+    const isProduction = import.meta.env.PROD;
+    setIsLocked(isProduction && walletCreated === "true" && !!hasPin);
   }, []);
 
   // Sync bottom-nav tab state with URL query (?tab=history), so deep links and
