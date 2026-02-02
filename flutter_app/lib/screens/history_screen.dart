@@ -746,7 +746,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           color: AppTheme.foreground,
                         ),
                       ),
-                      if (tx.status != TransactionStatus.completed) ...[
+                      if (tx.status != TransactionStatus.confirmed) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
