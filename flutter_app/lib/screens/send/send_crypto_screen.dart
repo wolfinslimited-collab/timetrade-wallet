@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../models/wallet_account.dart';
 import '../../theme/app_theme.dart';
 import '../../models/token.dart';
 import '../../services/wallet_service.dart';

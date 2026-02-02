@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:timetrade_wallet/models/wallet_account.dart';
 import '../theme/app_theme.dart';
 import '../services/wallet_service.dart';
 import '../services/staking_service.dart';
@@ -1138,6 +1139,7 @@ class _StakingScreenState extends State<StakingScreen> {
                         )
                       else if (_positions.isEmpty)
                         Container(
+                          width: MediaQuery.of(context).size.width,
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
                             color: AppTheme.card.withOpacity(0.3),
@@ -1154,7 +1156,7 @@ class _StakingScreenState extends State<StakingScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: const Icon(
-                                  Icons.monetization_on_outlined,
+                                  Icons.toll,
                                   size: 32,
                                   color: AppTheme.mutedForeground,
                                 ),
