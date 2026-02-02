@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/blockchain_service.dart';
 import '../services/wallet_service.dart';
 import '../models/token.dart' show Transaction, TransactionType, TransactionStatus;
 import '../models/wallet_account.dart' show ChainType;
+import '../widgets/transaction_filter_sheet.dart';
 
 class HistoryScreen extends StatefulWidget {
   final VoidCallback? onBack;
@@ -20,8 +22,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _quickFilter = 'all';
   String _searchQuery = '';
   bool _isLoading = true;
+  String? _error;
   List<Transaction> _transactions = [];
+  TransactionFilters _filters = TransactionFilters.empty;
   final BlockchainService _blockchainService = BlockchainService();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -29,8 +34,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _loadTransactions();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadTransactions() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     HapticFeedback.lightImpact();
 
     try {
@@ -54,7 +68,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     } catch (e) {
       debugPrint('[HISTORY] Error loading transactions: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
       }
     }
   }
@@ -67,6 +84,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (_quickFilter == 'receive' && tx.type != TransactionType.receive) return false;
         if (_quickFilter == 'swap' && tx.type != TransactionType.swap) return false;
       }
+      
+      // Advanced filters - types
+      if (_filters.types.isNotEmpty) {
+        final typeName = tx.type.name;
+        if (!_filters.types.contains(typeName)) return false;
+      }
+      
+      // Advanced filters - statuses
+      if (_filters.statuses.isNotEmpty) {
+        final statusName = tx.status.name;
+        if (!_filters.statuses.contains(statusName)) return false;
+      }
+      
+      // Advanced filters - tokens
+      if (_filters.tokens.isNotEmpty) {
+        if (!_filters.tokens.contains(tx.symbol)) return false;
+      }
+      
+      // Advanced filters - date range
+      if (_filters.dateFrom != null) {
+        final fromDate = DateTime(_filters.dateFrom!.year, _filters.dateFrom!.month, _filters.dateFrom!.day);
+        if (tx.timestamp.isBefore(fromDate)) return false;
+      }
+      if (_filters.dateTo != null) {
+        final toDate = DateTime(_filters.dateTo!.year, _filters.dateTo!.month, _filters.dateTo!.day, 23, 59, 59);
+        if (tx.timestamp.isAfter(toDate)) return false;
+      }
+
       // Search query
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -77,6 +122,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
       return true;
     }).toList();
+  }
+
+  List<String> get _availableTokens {
+    final tokens = <String>{};
+    for (final tx in _transactions) {
+      tokens.add(tx.symbol);
+    }
+    return tokens.toList()..sort();
   }
 
   Map<String, List<Transaction>> get _groupedTransactions {
@@ -90,16 +143,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _formatDateGroup(DateTime date) {
     final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
-    return '${date.day} ${_monthName(date.month)}${date.year != now.year ? ' ${date.year}' : ''}';
-  }
-
-  String _monthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[month - 1];
+    final today = DateTime(now.year, now.month, now.day);
+    final txDate = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(txDate).inDays;
+    
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (date.year != now.year) {
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    }
+    return '${months[date.month - 1]} ${date.day}';
   }
 
   String _formatTime(DateTime date) {
@@ -122,33 +177,102 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return amount.toStringAsFixed(8);
   }
 
-  void _openExplorer(Transaction tx) {
-    String url;
+  String _getExplorerUrl(Transaction tx) {
     switch (tx.chain) {
       case ChainType.ethereum:
-        url = 'https://etherscan.io/tx/${tx.hash}';
-        break;
+        return 'https://etherscan.io/tx/${tx.hash}';
       case ChainType.arbitrum:
-        url = 'https://arbiscan.io/tx/${tx.hash}';
-        break;
+        return 'https://arbiscan.io/tx/${tx.hash}';
       case ChainType.polygon:
-        url = 'https://polygonscan.com/tx/${tx.hash}';
-        break;
+        return 'https://polygonscan.com/tx/${tx.hash}';
       case ChainType.solana:
-        url = 'https://solscan.io/tx/${tx.hash}';
-        break;
+        return 'https://solscan.io/tx/${tx.hash}';
       case ChainType.tron:
-        url = 'https://tronscan.org/#/transaction/${tx.hash}';
-        break;
+        return 'https://tronscan.org/#/transaction/${tx.hash}';
       default:
-        url = '';
+        return '';
     }
-    debugPrint('[HISTORY] Open explorer: $url');
-    // In real app, launch URL
+  }
+
+  Future<void> _openExplorer(Transaction tx) async {
+    final url = _getExplorerUrl(tx);
+    if (url.isNotEmpty) {
+      try {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('[HISTORY] Error opening explorer: $e');
+      }
+    }
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => TransactionFilterSheet(
+        filters: _filters,
+        availableTokens: _availableTokens,
+        onApply: (filters) {
+          setState(() => _filters = filters);
+        },
+        onClose: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _filters = TransactionFilters.empty;
+      _quickFilter = 'all';
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  void _removeFilterType(String type) {
+    setState(() {
+      _filters = _filters.copyWith(
+        types: _filters.types.where((t) => t != type).toList(),
+      );
+    });
+  }
+
+  void _removeFilterStatus(String status) {
+    setState(() {
+      _filters = _filters.copyWith(
+        statuses: _filters.statuses.where((s) => s != status).toList(),
+      );
+    });
+  }
+
+  void _removeFilterToken(String token) {
+    setState(() {
+      _filters = _filters.copyWith(
+        tokens: _filters.tokens.where((t) => t != token).toList(),
+      );
+    });
+  }
+
+  void _removeFilterDateFrom() {
+    setState(() {
+      _filters = _filters.copyWith(clearDateFrom: true);
+    });
+  }
+
+  void _removeFilterDateTo() {
+    setState(() {
+      _filters = _filters.copyWith(clearDateTo: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final walletService = context.watch<WalletService>();
+    final isConnected = walletService.evmAddress != null || 
+                        walletService.solanaAddress != null || 
+                        walletService.tronAddress != null;
+
     return Column(
       children: [
         // Header
@@ -165,38 +289,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.foreground),
                 ),
               ),
-              GestureDetector(
-                onTap: _loadTransactions,
-                child: Container(
-                  width: 40,
-                  height: 40,
+              if (isConnected)
+                GestureDetector(
+                  onTap: _isLoading ? null : _loadTransactions,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppTheme.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: _isLoading
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.mutedForeground,
+                            ),
+                          )
+                        : const Icon(Icons.refresh, color: AppTheme.foreground, size: 20),
+                  ),
+                ),
+              if (isConnected) const SizedBox(width: 8),
+              if (isConnected)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.card,
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppTheme.muted,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppTheme.border),
                   ),
-                  child: Icon(
-                    Icons.refresh,
-                    color: _isLoading ? AppTheme.mutedForeground : AppTheme.foreground,
-                    size: 20,
-                  ),
+                  child: const Text('All Networks', style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground)),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.muted,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.border),
-                ),
-                child: const Text('All Networks', style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground)),
-              ),
             ],
           ),
         ),
 
-        // Search Bar
+        // Search Bar with Filter Button
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -210,6 +340,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     border: Border.all(color: AppTheme.border),
                   ),
                   child: TextField(
+                    controller: _searchController,
                     onChanged: (value) => setState(() => _searchQuery = value),
                     style: const TextStyle(color: AppTheme.foreground),
                     decoration: const InputDecoration(
@@ -223,19 +354,93 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.border),
+              GestureDetector(
+                onTap: _showFilterSheet,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: _filters.hasActiveFilters ? AppTheme.primary : AppTheme.card,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _filters.hasActiveFilters ? AppTheme.primary : AppTheme.border,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: Icon(
+                          Icons.tune,
+                          color: _filters.hasActiveFilters 
+                              ? AppTheme.primaryForeground 
+                              : AppTheme.mutedForeground,
+                        ),
+                      ),
+                      if (_filters.activeCount > 0)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: AppTheme.destructive,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${_filters.activeCount}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                child: const Icon(Icons.tune, color: AppTheme.mutedForeground),
               ),
             ],
           ),
         ),
+
+        // Active Filter Tags
+        if (_filters.hasActiveFilters)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (_filters.dateFrom != null)
+                  _buildFilterTag('From: ${_formatDateGroup(_filters.dateFrom!)}', _removeFilterDateFrom),
+                if (_filters.dateTo != null)
+                  _buildFilterTag('To: ${_formatDateGroup(_filters.dateTo!)}', _removeFilterDateTo),
+                ..._filters.types.map((type) => 
+                  _buildFilterTag(type[0].toUpperCase() + type.substring(1), () => _removeFilterType(type))),
+                ..._filters.statuses.map((status) => 
+                  _buildFilterTag(status[0].toUpperCase() + status.substring(1), () => _removeFilterStatus(status))),
+                ..._filters.tokens.map((token) => 
+                  _buildFilterTag(token, () => _removeFilterToken(token))),
+                GestureDetector(
+                  onTap: _clearFilters,
+                  child: const Text(
+                    'Clear all',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.mutedForeground,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        if (_filters.hasActiveFilters) const SizedBox(height: 8),
 
         // Quick Filter Tabs
         SingleChildScrollView(
@@ -247,7 +452,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
-                  onTap: () => setState(() => _quickFilter = filter),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() => _quickFilter = filter);
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
@@ -272,83 +480,229 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
         const SizedBox(height: 16),
 
+        // Connection Status Banner
+        if (!isConnected)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.muted.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.wifi_off, color: AppTheme.mutedForeground, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Wallet not connected',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foreground),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Connect/import a wallet to load on-chain transactions',
+                        style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Transaction List
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-              : _filteredTransactions.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _loadTransactions,
-                      color: AppTheme.primary,
-                      backgroundColor: AppTheme.card,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _groupedTransactions.length,
-                        itemBuilder: (context, index) {
-                          final date = _groupedTransactions.keys.elementAt(index);
-                          final txs = _groupedTransactions[date]!;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                child: Text(
-                                  date,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.mutedForeground,
-                                  ),
-                                ),
-                              ),
-                              ...txs.map((tx) => _buildTransactionItem(tx)),
-                            ],
-                          );
-                        },
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: AppTheme.mutedForeground),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading transactions...',
+                        style: TextStyle(color: AppTheme.mutedForeground),
                       ),
-                    ),
+                    ],
+                  ),
+                )
+              : _error != null
+                  ? _buildErrorState()
+                  : _filteredTransactions.isEmpty
+                      ? _buildEmptyState()
+                      : RefreshIndicator(
+                          onRefresh: _loadTransactions,
+                          color: AppTheme.primary,
+                          backgroundColor: AppTheme.card,
+                          child: ListView.builder(
+                            padding: EdgeInsets.only(
+                              left: 16,
+                              right: 16,
+                              bottom: MediaQuery.of(context).padding.bottom + 100,
+                            ),
+                            itemCount: _groupedTransactions.length,
+                            itemBuilder: (context, index) {
+                              final date = _groupedTransactions.keys.elementAt(index);
+                              final txs = _groupedTransactions[date]!;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    child: Text(
+                                      date.toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.mutedForeground,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  ...txs.map((tx) => _buildTransactionItem(tx)),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
         ),
       ],
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildFilterTag(String label, VoidCallback onRemove) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.secondary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 64, color: AppTheme.mutedForeground.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          const Text('No transactions found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.mutedForeground)),
-          const SizedBox(height: 8),
-          Text('Your transaction history will appear here', style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground.withValues(alpha: 0.7))),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.foreground),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close, size: 14, color: AppTheme.mutedForeground),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final hasFilters = _filters.hasActiveFilters || _searchQuery.isNotEmpty;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list,
+              size: 48,
+              color: AppTheme.mutedForeground.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              hasFilters
+                  ? 'No transactions match your filters'
+                  : 'No transactions found across your networks',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.mutedForeground,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (hasFilters) ...[
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _clearFilters,
+                child: const Text(
+                  'Clear all filters',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list,
+              size: 48,
+              color: AppTheme.mutedForeground.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load transactions',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.mutedForeground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error ?? '',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.mutedForeground.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildTransactionItem(Transaction tx) {
     final isSend = tx.type == TransactionType.send;
+    final isReceive = tx.type == TransactionType.receive;
 
     IconData icon;
     Color iconColor;
+    Color bgColor;
     switch (tx.type) {
       case TransactionType.send:
         icon = Icons.arrow_outward;
         iconColor = AppTheme.destructive;
+        bgColor = AppTheme.destructive.withOpacity(0.1);
         break;
       case TransactionType.receive:
         icon = Icons.arrow_downward;
         iconColor = AppTheme.success;
+        bgColor = AppTheme.success.withOpacity(0.1);
         break;
       case TransactionType.swap:
         icon = Icons.swap_horiz;
-        iconColor = AppTheme.primary;
+        iconColor = AppTheme.accent;
+        bgColor = AppTheme.accent.withOpacity(0.1);
         break;
       case TransactionType.contract:
         icon = Icons.description_outlined;
         iconColor = AppTheme.mutedForeground;
+        bgColor = AppTheme.muted.withOpacity(0.1);
         break;
     }
 
@@ -357,7 +711,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return GestureDetector(
       onTap: () => _openExplorer(tx),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppTheme.card,
@@ -368,13 +722,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             // Icon
             Container(
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(22),
+                color: bgColor,
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
+              child: Icon(icon, color: iconColor, size: 20),
             ),
             const SizedBox(width: 12),
             // Details
@@ -386,20 +740,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       Text(
                         tx.type.name[0].toUpperCase() + tx.type.name.substring(1),
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.foreground),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.foreground,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: AppTheme.muted, borderRadius: BorderRadius.circular(4)),
-                        child: Text(tx.chain.name.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.mutedForeground)),
-                      ),
+                      if (tx.status != TransactionStatus.completed) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.secondary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tx.status.name,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.mutedForeground,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${isSend ? 'To' : 'From'}: ${_formatAddress(address)}',
-                    style: const TextStyle(fontSize: 13, color: AppTheme.mutedForeground),
+                    _formatTime(tx.timestamp),
+                    style: const TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
                   ),
                 ],
               ),
@@ -409,12 +778,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isSend ? '-' : '+'}${_formatAmount(tx.amount)} ${tx.symbol}',
-                  style: TextStyle(fontWeight: FontWeight.w600, color: isSend ? AppTheme.destructive : AppTheme.success),
+                  '${isSend ? '-' : isReceive ? '+' : ''}${_formatAmount(tx.amount)} ${tx.symbol}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
+                    color: isSend ? AppTheme.destructive : isReceive ? AppTheme.success : AppTheme.foreground,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Text(_formatTime(tx.timestamp), style: const TextStyle(fontSize: 12, color: AppTheme.mutedForeground)),
+                Text(
+                  _formatAddress(address),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: AppTheme.mutedForeground,
             ),
           ],
         ),
