@@ -349,7 +349,7 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
 
                   const SizedBox(height: 24),
 
-                  // QR Code
+                  // QR Code with centered logo overlay
                   if (_currentAddress.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -357,19 +357,54 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: QrImageView(
-                        data: _currentAddress,
-                        version: QrVersions.auto,
-                        size: 200,
-                        backgroundColor: Colors.white,
-                        errorCorrectionLevel: QrErrorCorrectLevel.M,
-                        embeddedImage: NetworkImage(
-                          _getCryptoLogoUrl(_selectedToken.symbol),
-                        ),
-                        embeddedImageStyle: const QrEmbeddedImageStyle(
-                          size: Size(48, 48),
-                        ),
-                        embeddedImageEmitsError: true,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          QrImageView(
+                            data: _currentAddress,
+                            version: QrVersions.auto,
+                            size: 200,
+                            backgroundColor: Colors.white,
+                            errorCorrectionLevel: QrErrorCorrectLevel.H,
+                          ),
+                          // Center logo overlay
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _getCryptoLogoUrl(_selectedToken.symbol),
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: AppTheme.secondary,
+                                  child: Center(
+                                    child: Text(
+                                      _selectedToken.symbol[0],
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.foreground,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   else
