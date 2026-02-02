@@ -60,12 +60,16 @@ export function useUnifiedPortfolio(enabled: boolean) {
 
   // Use a version counter to force re-reads of addresses
   const [addressVersion, setAddressVersion] = React.useState(0);
+  
+  // Track mount state to avoid HMR issues with hook count changes
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => { setIsMounted(true); }, []);
 
   // Compute addresses from storage when:
   // - we become enabled (after mnemonic derivation writes addresses)
   // - an account switch/unlock event bumps the version
   const addresses = React.useMemo(() => {
-    if (!enabled) {
+    if (!enabled || !isMounted) {
       return {
         evmAddress: null,
         solanaAddress: null,
@@ -73,7 +77,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
       };
     }
     return getAddressesFromStorage();
-  }, [enabled, addressVersion]);
+  }, [enabled, isMounted, addressVersion]);
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;
 
