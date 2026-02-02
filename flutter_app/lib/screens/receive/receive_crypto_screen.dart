@@ -121,10 +121,10 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
     return 'https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}';
   }
 
-  Future<void> _handleCopy() async {
-    if (_currentAddress.isEmpty) return;
+  Future<void> _handleCopy(String address) async {
+    if (address.isEmpty) return;
     
-    await Clipboard.setData(ClipboardData(text: _currentAddress));
+    await Clipboard.setData(ClipboardData(text: address));
     setState(() => _copied = true);
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -538,7 +538,7 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
                         child: SizedBox(
                           height: 56,
                           child: OutlinedButton(
-                            onPressed: _handleCopy,
+                            onPressed: () => _handleCopy(_currentAddress),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: AppTheme.border),
                               shape: RoundedRectangleBorder(
