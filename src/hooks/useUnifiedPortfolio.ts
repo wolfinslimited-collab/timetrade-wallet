@@ -53,7 +53,7 @@ function toDecimalAmount(balance: string, decimals: number) {
   return n / Math.pow(10, decimals);
 }
 
-const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron"];
+const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron", "arbitrum"];
 
 export function useUnifiedPortfolio(enabled: boolean) {
   const queryClient = useQueryClient();
@@ -129,6 +129,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
       console.log(`%c[UNIFIED PORTFOLIO] 🔗 Query Addresses (v${addressVersion})`, 'color: #3b82f6;', {
         ethereum: queryEvmAddress || '(disabled)',
         polygon: queryEvmAddress || '(disabled)',
+        arbitrum: queryEvmAddress || '(disabled)',
         solana: querySolanaAddress || '(disabled)',
         tron: queryTronAddress || '(disabled)',
       });
@@ -138,6 +139,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
   // Fetch balances in parallel (React Query)
   const ethBalance = useWalletBalance(queryEvmAddress, "ethereum");
   const polyBalance = useWalletBalance(queryEvmAddress, "polygon");
+  const arbBalance = useWalletBalance(queryEvmAddress, "arbitrum");
   const solBalance = useWalletBalance(querySolanaAddress, "solana");
   const tronBalance = useWalletBalance(queryTronAddress, "tron");
 
@@ -145,10 +147,11 @@ export function useUnifiedPortfolio(enabled: boolean) {
     const list: WalletBalance[] = [];
     if (ethBalance.data) list.push(ethBalance.data);
     if (polyBalance.data) list.push(polyBalance.data);
+    if (arbBalance.data) list.push(arbBalance.data);
     if (solBalance.data) list.push(solBalance.data);
     if (tronBalance.data) list.push(tronBalance.data);
     return list;
-  }, [ethBalance.data, polyBalance.data, solBalance.data, tronBalance.data]);
+  }, [ethBalance.data, polyBalance.data, arbBalance.data, solBalance.data, tronBalance.data]);
 
   const symbols = React.useMemo(() => {
     const set = new Set<string>(["ETH", "BTC", "SOL", "POL", "TRX", "USDC", "USDT"]);
@@ -271,11 +274,12 @@ export function useUnifiedPortfolio(enabled: boolean) {
   }, [assets]);
 
   const isLoadingBalances =
-    ethBalance.isLoading || polyBalance.isLoading || solBalance.isLoading || tronBalance.isLoading;
+    ethBalance.isLoading || polyBalance.isLoading || arbBalance.isLoading || solBalance.isLoading || tronBalance.isLoading;
 
   const balanceError =
     (ethBalance.error as Error | null) ||
     (polyBalance.error as Error | null) ||
+    (arbBalance.error as Error | null) ||
     (solBalance.error as Error | null) ||
     (tronBalance.error as Error | null) ||
     null;
@@ -283,7 +287,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
   return {
     addresses: { evmAddress, solanaAddress, tronAddress },
     chains: CHAINS,
-    balances: { ethBalance, polyBalance, solBalance, tronBalance },
+    balances: { ethBalance, polyBalance, arbBalance, solBalance, tronBalance },
     assets,
     totalUsd,
     prices: pricesQuery.data,
