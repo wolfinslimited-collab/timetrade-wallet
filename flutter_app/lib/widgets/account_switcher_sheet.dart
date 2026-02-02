@@ -20,12 +20,21 @@ class AccountSwitcherSheet extends StatefulWidget {
 class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
   String? _editingAccountId;
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _seedPhraseController = TextEditingController();
+  final TextEditingController _privateKeyController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
   String? _deleteConfirmId;
   bool _showAddMenu = false;
+  bool _showImportSeed = false;
+  bool _showImportKey = false;
+  bool _isImporting = false;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _seedPhraseController.dispose();
+    _privateKeyController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
@@ -153,12 +162,21 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
                 child: Column(
                   children: [
                     _buildAddOption(
+                      icon: Icons.add_circle_outline,
+                      title: 'Create New Account',
+                      subtitle: 'Derive from existing seed phrase',
+                      onTap: () => _showCreateAccountDialog(walletService),
+                    ),
+                    const Divider(height: 16, color: AppTheme.border),
+                    _buildAddOption(
                       icon: Icons.article_outlined,
                       title: 'Import Seed Phrase',
                       subtitle: '12 or 24 word recovery phrase',
                       onTap: () {
-                        // TODO: Navigate to import seed phrase screen
-                        setState(() => _showAddMenu = false);
+                        setState(() {
+                          _showAddMenu = false;
+                          _showImportSeed = true;
+                        });
                       },
                     ),
                     const Divider(height: 16, color: AppTheme.border),
@@ -167,14 +185,24 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
                       title: 'Import Private Key',
                       subtitle: 'EVM-compatible private key',
                       onTap: () {
-                        // TODO: Navigate to import private key screen
-                        setState(() => _showAddMenu = false);
+                        setState(() {
+                          _showAddMenu = false;
+                          _showImportKey = true;
+                        });
                       },
                     ),
                   ],
                 ),
               ),
             ),
+
+          // Import Seed Phrase form
+          if (_showImportSeed)
+            _buildImportSeedForm(walletService),
+
+          // Import Private Key form
+          if (_showImportKey)
+            _buildImportKeyForm(walletService),
 
           const Divider(height: 1, color: AppTheme.border),
 
@@ -256,6 +284,279 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
     );
   }
 
+  void _showCreateAccountDialog(WalletService walletService) {
+    _pinController.clear();
+    _nameController.clear();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.card,
+        title: const Text('Create New Account', style: TextStyle(color: AppTheme.foreground)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(color: AppTheme.foreground),
+              decoration: InputDecoration(
+                labelText: 'Account Name (optional)',
+                labelStyle: const TextStyle(color: AppTheme.mutedForeground),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              style: const TextStyle(color: AppTheme.foreground),
+              decoration: InputDecoration(
+                labelText: 'Enter PIN to confirm',
+                labelStyle: const TextStyle(color: AppTheme.mutedForeground),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final result = await walletService.addAccountFromSeed(
+                name: _nameController.text.isNotEmpty ? _nameController.text : null,
+                pin: _pinController.text,
+              );
+              if (result != null) {
+                Navigator.pop(context);
+                setState(() => _showAddMenu = false);
+                HapticFeedback.mediumImpact();
+              } else {
+                HapticFeedback.heavyImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invalid PIN'), backgroundColor: AppTheme.destructive),
+                );
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImportSeedForm(WalletService walletService) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Import Seed Phrase',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.foreground,
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() {
+                  _showImportSeed = false;
+                  _seedPhraseController.clear();
+                  _pinController.clear();
+                }),
+                icon: const Icon(Icons.close, size: 20, color: AppTheme.mutedForeground),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _seedPhraseController,
+            maxLines: 3,
+            style: const TextStyle(color: AppTheme.foreground),
+            decoration: InputDecoration(
+              hintText: 'Enter 12 or 24 words separated by spaces',
+              hintStyle: const TextStyle(color: AppTheme.mutedForeground),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _pinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            style: const TextStyle(color: AppTheme.foreground),
+            decoration: InputDecoration(
+              labelText: 'Enter PIN to confirm',
+              labelStyle: const TextStyle(color: AppTheme.mutedForeground),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isImporting ? null : () => _handleImportSeed(walletService),
+              child: _isImporting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Import'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImportKeyForm(WalletService walletService) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Import Private Key',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.foreground,
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() {
+                  _showImportKey = false;
+                  _privateKeyController.clear();
+                  _pinController.clear();
+                }),
+                icon: const Icon(Icons.close, size: 20, color: AppTheme.mutedForeground),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _privateKeyController,
+            style: const TextStyle(color: AppTheme.foreground),
+            decoration: InputDecoration(
+              hintText: 'Enter private key (with or without 0x prefix)',
+              hintStyle: const TextStyle(color: AppTheme.mutedForeground),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _pinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            style: const TextStyle(color: AppTheme.foreground),
+            decoration: InputDecoration(
+              labelText: 'Enter PIN to confirm',
+              labelStyle: const TextStyle(color: AppTheme.mutedForeground),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isImporting ? null : () => _handleImportKey(walletService),
+              child: _isImporting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Import'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleImportSeed(WalletService walletService) async {
+    final words = _seedPhraseController.text.trim().split(RegExp(r'\s+'));
+    if (words.length != 12 && words.length != 24) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter 12 or 24 words'), backgroundColor: AppTheme.destructive),
+      );
+      return;
+    }
+
+    setState(() => _isImporting = true);
+    
+    final result = await walletService.importFromSeedPhrase(words, pin: _pinController.text);
+    
+    setState(() => _isImporting = false);
+    
+    if (result != null) {
+      setState(() {
+        _showImportSeed = false;
+        _seedPhraseController.clear();
+        _pinController.clear();
+      });
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid seed phrase or PIN'), backgroundColor: AppTheme.destructive),
+      );
+    }
+  }
+
+  Future<void> _handleImportKey(WalletService walletService) async {
+    if (_privateKeyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a private key'), backgroundColor: AppTheme.destructive),
+      );
+      return;
+    }
+
+    setState(() => _isImporting = true);
+    
+    final result = await walletService.importFromPrivateKey(
+      _privateKeyController.text.trim(),
+      pin: _pinController.text,
+    );
+    
+    setState(() => _isImporting = false);
+    
+    if (result != null) {
+      setState(() {
+        _showImportKey = false;
+        _privateKeyController.clear();
+        _pinController.clear();
+      });
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid private key or PIN'), backgroundColor: AppTheme.destructive),
+      );
+    }
+  }
+
   Widget _buildDeleteConfirmation(WalletService walletService) {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -291,20 +592,48 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
             ),
           ),
           const SizedBox(height: 12),
+          TextField(
+            controller: _pinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            style: const TextStyle(color: AppTheme.foreground),
+            decoration: InputDecoration(
+              labelText: 'Enter PIN to confirm',
+              labelStyle: const TextStyle(color: AppTheme.mutedForeground),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: TextButton(
-                  onPressed: () => setState(() => _deleteConfirmId = null),
+                  onPressed: () => setState(() {
+                    _deleteConfirmId = null;
+                    _pinController.clear();
+                  }),
                   child: const Text('Cancel'),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement account deletion
-                    setState(() => _deleteConfirmId = null);
+                  onPressed: () async {
+                    final success = await walletService.deleteAccount(_deleteConfirmId!, _pinController.text);
+                    if (success) {
+                      setState(() {
+                        _deleteConfirmId = null;
+                        _pinController.clear();
+                      });
+                      HapticFeedback.mediumImpact();
+                    } else {
+                      HapticFeedback.heavyImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invalid PIN'), backgroundColor: AppTheme.destructive),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.destructive,
