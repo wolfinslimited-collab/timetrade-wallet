@@ -119,7 +119,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                     width: 80,
                     height: 80,
                     child: Image.asset(
-                      'assets/app-logo.png',
+                      'assets/images/app-logo.png',
                       fit: BoxFit.contain,
                     ),
                   ),

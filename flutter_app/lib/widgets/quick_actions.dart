@@ -31,6 +31,7 @@ class QuickActionsWidget extends StatelessWidget {
           _buildActionButton(
             context,
             icon: Icons.send_rounded,
+            img: 'assets/icons/send.png',
             label: 'Send',
             onTap: () {
               showModalBottomSheet(
@@ -79,6 +80,7 @@ class QuickActionsWidget extends StatelessWidget {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    final String? img,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -93,10 +95,13 @@ class QuickActionsWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.border),
             ),
-            child: Icon(
+            child: img == null ? Icon(
               icon,
               color: AppTheme.foreground,
               size: 24,
+            ) : Padding(
+              padding: const EdgeInsets.all(12),
+              child: Image.asset(img, width: 30),
             ),
           ),
           const SizedBox(height: 8),
