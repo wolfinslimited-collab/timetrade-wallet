@@ -149,11 +149,22 @@ export function useUnifiedPortfolio(enabled: boolean) {
 
   const balances = React.useMemo(() => {
     const list: WalletBalance[] = [];
-    if (ethBalance.data) list.push(ethBalance.data);
-    if (polyBalance.data) list.push(polyBalance.data);
-    if (arbBalance.data) list.push(arbBalance.data);
-    if (solBalance.data) list.push(solBalance.data);
-    if (tronBalance.data) list.push(tronBalance.data);
+    // Use a Set to track which chains we've already added to avoid duplicates
+    const seenChains = new Set<Chain>();
+    
+    const addIfUnique = (data: WalletBalance | undefined) => {
+      if (data && !seenChains.has(data.chain)) {
+        seenChains.add(data.chain);
+        list.push(data);
+      }
+    };
+    
+    addIfUnique(ethBalance.data);
+    addIfUnique(polyBalance.data);
+    addIfUnique(arbBalance.data);
+    addIfUnique(solBalance.data);
+    addIfUnique(tronBalance.data);
+    
     return list;
   }, [ethBalance.data, polyBalance.data, arbBalance.data, solBalance.data, tronBalance.data]);
 
