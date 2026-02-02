@@ -14,6 +14,7 @@ const getCryptoLogoUrl = (symbol: string): string => {
 const getNetworkLogoUrl = (chain: Chain): string => {
   const symbols: Record<Chain, string> = {
     ethereum: "eth",
+    arbitrum: "arb",
     polygon: "matic",
     solana: "sol",
     tron: "trx",

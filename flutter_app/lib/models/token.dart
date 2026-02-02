@@ -134,6 +134,8 @@ class Transaction {
     switch (chain) {
       case ChainType.ethereum:
         return 'https://etherscan.io/tx/$hash';
+      case ChainType.arbitrum:
+        return 'https://arbiscan.io/tx/$hash';
       case ChainType.polygon:
         return 'https://polygonscan.com/tx/$hash';
       case ChainType.solana:

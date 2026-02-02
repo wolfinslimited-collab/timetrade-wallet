@@ -165,7 +165,7 @@ class _SendCryptoSheetState extends State<SendCryptoSheet> {
   }
 
   Widget _buildNetworkAssetSelector() {
-    final chains = ['ethereum', 'polygon', 'solana', 'tron'];
+    final chains = ['ethereum', 'arbitrum', 'polygon', 'solana', 'tron'];
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

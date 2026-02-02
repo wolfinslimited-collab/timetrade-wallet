@@ -3,7 +3,7 @@ import { invokeExternalBlockchain } from '@/lib/externalSupabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
-export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron';
+export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron' | 'arbitrum';
 
 export interface ChainInfo {
   id: Chain;
@@ -59,6 +59,15 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     icon: '◈', 
     color: '#FF0013',
     decimals: 6,
+    testnetName: 'Mainnet',
+  },
+  { 
+    id: 'arbitrum', 
+    name: 'Arbitrum One', 
+    symbol: 'ETH', 
+    icon: '◆', 
+    color: '#28A0F0',
+    decimals: 18,
     testnetName: 'Mainnet',
   },
 ];

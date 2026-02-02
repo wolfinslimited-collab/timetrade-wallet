@@ -61,6 +61,7 @@ class BlockchainService {
     final futures = <Future<List<Token>>>[];
     if (evmAddress != null && evmAddress.isNotEmpty) {
       futures.add(_fetchChainBalances(evmAddress, 'ethereum', ChainType.ethereum));
+      futures.add(_fetchChainBalances(evmAddress, 'arbitrum', ChainType.arbitrum));
       futures.add(_fetchChainBalances(evmAddress, 'polygon', ChainType.polygon));
     }
     if (solanaAddress != null && solanaAddress.isNotEmpty) {
@@ -216,6 +217,7 @@ class BlockchainService {
 
     if (evmAddress != null && evmAddress.isNotEmpty) {
       allTx.addAll(await _fetchChainTransactions(evmAddress, 'ethereum', ChainType.ethereum));
+      allTx.addAll(await _fetchChainTransactions(evmAddress, 'arbitrum', ChainType.arbitrum));
       allTx.addAll(await _fetchChainTransactions(evmAddress, 'polygon', ChainType.polygon));
     }
     if (solanaAddress != null && solanaAddress.isNotEmpty) {
@@ -377,6 +379,7 @@ class BlockchainService {
   int _chainDecimals(ChainType chain) {
     switch (chain) {
       case ChainType.ethereum:
+      case ChainType.arbitrum:
       case ChainType.polygon:
         return 18;
       case ChainType.solana:

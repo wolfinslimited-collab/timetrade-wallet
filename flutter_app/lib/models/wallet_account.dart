@@ -80,6 +80,7 @@ enum AccountType {
 
 enum ChainType {
   ethereum,
+  arbitrum,
   polygon,
   solana,
   tron,
@@ -91,6 +92,8 @@ extension ChainTypeExtension on ChainType {
     switch (this) {
       case ChainType.ethereum:
         return 'Ethereum';
+      case ChainType.arbitrum:
+        return 'Arbitrum One';
       case ChainType.polygon:
         return 'Polygon';
       case ChainType.solana:
@@ -106,6 +109,8 @@ extension ChainTypeExtension on ChainType {
     switch (this) {
       case ChainType.ethereum:
         return 'ETH';
+      case ChainType.arbitrum:
+        return 'ETH';
       case ChainType.polygon:
         return 'POL';
       case ChainType.solana:
@@ -118,7 +123,14 @@ extension ChainTypeExtension on ChainType {
   }
 
   String get logoUrl {
-    final symbol = this.symbol.toLowerCase();
-    return 'https://api.elbstream.com/logos/crypto/$symbol';
+    final symbols = {
+      ChainType.ethereum: 'eth',
+      ChainType.arbitrum: 'arb',
+      ChainType.polygon: 'matic',
+      ChainType.solana: 'sol',
+      ChainType.tron: 'trx',
+      ChainType.bitcoin: 'btc',
+    };
+    return 'https://api.elbstream.com/logos/crypto/${symbols[this]}';
   }
 }

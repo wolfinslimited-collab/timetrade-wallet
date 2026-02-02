@@ -7,6 +7,7 @@ interface NetworkIndicatorProps {
 
 const NETWORKS = [
   { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', color: '#627EEA' },
+  { id: 'arbitrum', name: 'Arbitrum One', symbol: 'ETH', color: '#28A0F0' },
   { id: 'polygon', name: 'Polygon', symbol: 'MATIC', color: '#8247E5' },
   { id: 'solana', name: 'Solana', symbol: 'SOL', color: '#14F195' },
   { id: 'tron', name: 'Tron', symbol: 'TRX', color: '#FF0013' },
@@ -41,10 +42,20 @@ const TronLogo = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const ArbitrumLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 32 32" className={className} fill="currentColor">
+    <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" opacity="0.3" />
+    <path d="M16 6l-8 4.5v9L16 24l8-4.5v-9L16 6z" />
+    <path d="M16 10l-4 2.5v5l4 2.5 4-2.5v-5l-4-2.5z" opacity="0.6" />
+  </svg>
+);
+
 const getNetworkLogo = (networkId: string, className?: string) => {
   switch (networkId) {
     case 'ethereum':
       return <EthereumLogo className={className} />;
+    case 'arbitrum':
+      return <ArbitrumLogo className={className} />;
     case 'polygon':
       return <PolygonLogo className={className} />;
     case 'solana':
