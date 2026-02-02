@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../services/wallet_service.dart';
 
@@ -39,7 +40,6 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
   bool _showTokens = false;
   bool _copied = false;
   late TokenOption _selectedToken;
-  Map<String, String> _addresses = {};
 
   final List<TokenOption> _tokens = [
     TokenOption(
@@ -83,7 +83,6 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
   void initState() {
     super.initState();
     _selectedToken = _findInitialToken();
-    _loadAddresses();
   }
 
   TokenOption _findInitialToken() {
@@ -97,15 +96,26 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
     return _tokens.first;
   }
 
-  Future<void> _loadAddresses() async {
-    final walletService = WalletService();
-    final addresses = await walletService.getAllAddresses();
-    if (mounted) {
-      setState(() => _addresses = addresses);
+  /// Get the current address from WalletService Provider (matching web useWalletAddresses hook)
+  String _getCurrentAddress(WalletService walletService) {
+    final activeAccount = walletService.activeAccount;
+    if (activeAccount == null) return '';
+    
+    switch (_selectedToken.addressKey) {
+      case 'evm':
+        return activeAccount.evmAddress ?? '';
+      case 'solana':
+        return activeAccount.solanaAddress ?? '';
+      case 'tron':
+        return activeAccount.tronAddress ?? '';
+      case 'btc':
+        return activeAccount.btcAddress ?? '';
+      default:
+        return '';
     }
   }
 
-  String get _currentAddress => _addresses[_selectedToken.addressKey] ?? '';
+  
 
   String _getCryptoLogoUrl(String symbol) {
     return 'https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}';
@@ -131,6 +141,8 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final walletService = context.watch<WalletService>();
+    final _currentAddress = _getCurrentAddress(walletService);
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
