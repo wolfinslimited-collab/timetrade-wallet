@@ -153,7 +153,7 @@ class _StakingScreenState extends State<StakingScreen> {
             valueUsd: existing.valueUsd + token.usdValue,
             primaryChain: existing.balance > token.balance
                 ? existing.primaryChain
-                : token.primaryChain,
+                : token.chain,
             contractAddress: existing.balance > token.balance
                 ? existing.contractAddress
                 : token.contractAddress,
@@ -543,7 +543,7 @@ class _StakingScreenState extends State<StakingScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isOverBalance
-                                  ? AppTheme.error
+                                  ? AppTheme.destructive
                                   : AppTheme.border.withOpacity(0.5),
                             ),
                           ),
@@ -601,7 +601,7 @@ class _StakingScreenState extends State<StakingScreen> {
                               'Amount exceeds available balance',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.error,
+                                color: AppTheme.destructive,
                               ),
                             ),
                           ),
@@ -800,7 +800,7 @@ class _StakingScreenState extends State<StakingScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Staking failed: ${e.toString()}'),
-                backgroundColor: AppTheme.error,
+                backgroundColor: AppTheme.destructive,
               ),
             );
           } finally {
@@ -838,7 +838,7 @@ class _StakingScreenState extends State<StakingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Unstake failed. Please try again.'),
-          backgroundColor: AppTheme.error,
+          backgroundColor: AppTheme.destructive,
         ),
       );
     }
