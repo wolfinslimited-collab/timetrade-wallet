@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../services/wallet_service.dart';
 
@@ -356,49 +357,19 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Column(
-                        children: [
-                          // QR Code placeholder - in real app use qr_flutter package
-                          Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // Grid pattern to simulate QR
-                                CustomPaint(
-                                  size: const Size(200, 200),
-                                  painter: QRPlaceholderPainter(),
-                                ),
-                                // Center logo
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.all(4),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Image.network(
-                                      _getCryptoLogoUrl(_selectedToken.symbol),
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.qr_code,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      child: QrImageView(
+                        data: _currentAddress,
+                        version: QrVersions.auto,
+                        size: 200,
+                        backgroundColor: Colors.white,
+                        errorCorrectionLevel: QrErrorCorrectLevel.M,
+                        embeddedImage: NetworkImage(
+                          _getCryptoLogoUrl(_selectedToken.symbol),
+                        ),
+                        embeddedImageStyle: const QrEmbeddedImageStyle(
+                          size: Size(48, 48),
+                        ),
+                        embeddedImageEmitsError: true,
                       ),
                     )
                   else
@@ -603,72 +574,4 @@ class _ReceiveCryptoSheetState extends State<ReceiveCryptoSheet> {
       ),
     );
   }
-}
-
-// QR Code placeholder painter
-class QRPlaceholderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.fill;
-
-    final cellSize = size.width / 25;
-    
-    // Draw corner squares
-    _drawCornerSquare(canvas, paint, 0, 0, cellSize);
-    _drawCornerSquare(canvas, paint, size.width - 7 * cellSize, 0, cellSize);
-    _drawCornerSquare(canvas, paint, 0, size.height - 7 * cellSize, cellSize);
-
-    // Draw random pattern in the middle
-    final random = [
-      [1,0,1,1,0,1,0,1,1,0,1],
-      [0,1,0,1,1,0,1,0,1,1,0],
-      [1,1,0,0,1,1,0,1,0,1,1],
-      [0,1,1,0,1,0,1,1,0,0,1],
-      [1,0,1,1,0,1,0,1,1,0,1],
-      [0,1,0,0,1,1,0,1,0,1,0],
-      [1,0,1,1,0,1,0,1,1,0,1],
-      [0,1,1,0,1,0,1,0,1,1,0],
-      [1,0,0,1,1,0,1,1,0,1,1],
-      [0,1,1,0,1,1,0,0,1,0,1],
-      [1,0,1,0,0,1,1,1,0,1,0],
-    ];
-
-    for (int y = 0; y < random.length; y++) {
-      for (int x = 0; x < random[y].length; x++) {
-        if (random[y][x] == 1) {
-          canvas.drawRect(
-            Rect.fromLTWH(
-              8 * cellSize + x * cellSize,
-              8 * cellSize + y * cellSize,
-              cellSize,
-              cellSize,
-            ),
-            paint,
-          );
-        }
-      }
-    }
-  }
-
-  void _drawCornerSquare(Canvas canvas, Paint paint, double x, double y, double cellSize) {
-    // Outer square
-    canvas.drawRect(Rect.fromLTWH(x, y, 7 * cellSize, 7 * cellSize), paint);
-    
-    // Inner white
-    canvas.drawRect(
-      Rect.fromLTWH(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize),
-      Paint()..color = Colors.white,
-    );
-    
-    // Center black
-    canvas.drawRect(
-      Rect.fromLTWH(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
