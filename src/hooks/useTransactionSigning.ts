@@ -28,6 +28,7 @@ interface UseTransactionSigningReturn {
 // Chain IDs for supported networks
 const CHAIN_IDS: Record<Chain, { mainnet: number; testnet: number }> = {
   ethereum: { mainnet: 1, testnet: 11155111 }, // Sepolia
+  arbitrum: { mainnet: 42161, testnet: 421614 }, // Arbitrum One / Sepolia
   polygon: { mainnet: 137, testnet: 80002 }, // Amoy
   bitcoin: { mainnet: 0, testnet: 0 }, // Not EVM
   solana: { mainnet: 0, testnet: 0 }, // Not EVM
@@ -39,6 +40,10 @@ const RPC_URLS: Record<Chain, { mainnet: string; testnet: string }> = {
   ethereum: {
     mainnet: 'https://eth.llamarpc.com',
     testnet: 'https://rpc.sepolia.org',
+  },
+  arbitrum: {
+    mainnet: 'https://arb1.arbitrum.io/rpc',
+    testnet: 'https://sepolia-rollup.arbitrum.io/rpc',
   },
   polygon: {
     mainnet: 'https://polygon-rpc.com',

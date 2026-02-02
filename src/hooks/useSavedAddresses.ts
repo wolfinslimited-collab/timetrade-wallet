@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 export interface SavedAddress {
   address: string;
   label: string;
-  chain: 'ethereum' | 'polygon' | 'solana' | 'tron' | 'bitcoin';
+  chain: 'ethereum' | 'polygon' | 'solana' | 'tron' | 'bitcoin' | 'arbitrum';
   createdAt: number;
 }
 

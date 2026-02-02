@@ -31,6 +31,7 @@ interface AssetDetailSheetProps {
 const getExplorerUrl = (chain: Chain): string => {
   const urls: Record<Chain, string> = {
     ethereum: "https://etherscan.io",
+    arbitrum: "https://arbiscan.io",
     polygon: "https://polygonscan.com",
     solana: "https://explorer.solana.com",
     tron: "https://tronscan.org",
@@ -49,6 +50,7 @@ const getTxExplorerUrl = (chain: Chain, explorerBase: string, txHash: string) =>
 const getNetworkLogoUrl = (chain: Chain): string => {
   const symbols: Record<Chain, string> = {
     ethereum: "eth",
+    arbitrum: "arb",
     polygon: "matic",
     solana: "sol",
     tron: "trx",

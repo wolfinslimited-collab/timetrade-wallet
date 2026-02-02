@@ -13,6 +13,7 @@ const getCryptoLogoUrl = (symbol: string) =>
 const getNetworkLogoUrl = (chain: Chain) => {
   const symbols: Record<Chain, string> = {
     ethereum: "eth",
+    arbitrum: "arb",
     polygon: "matic",
     solana: "sol",
     tron: "trx",
@@ -38,7 +39,7 @@ interface NetworkAssetSelectorProps {
 }
 
 // Sendable networks (exclude bitcoin for now as it requires different signing)
-const SENDABLE_CHAINS: Chain[] = ['ethereum', 'polygon', 'solana', 'tron'];
+const SENDABLE_CHAINS: Chain[] = ['ethereum', 'arbitrum', 'polygon', 'solana', 'tron'];
 
 export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelectorProps) => {
   const { addresses } = useWalletAddresses(true);

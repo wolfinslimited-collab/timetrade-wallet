@@ -128,6 +128,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       case ChainType.ethereum:
         url = 'https://etherscan.io/tx/${tx.hash}';
         break;
+      case ChainType.arbitrum:
+        url = 'https://arbiscan.io/tx/${tx.hash}';
+        break;
       case ChainType.polygon:
         url = 'https://polygonscan.com/tx/${tx.hash}';
         break;

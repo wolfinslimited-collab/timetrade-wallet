@@ -32,7 +32,8 @@ const generateChartData = (networkBalances: NetworkBalanceChartProps["networkBal
 };
 
 const NETWORK_COLORS: Record<Chain, string> = {
-  ethereum: "#F7931A",
+  ethereum: "#627EEA",
+  arbitrum: "#28A0F0",
   polygon: "#8247E5",
   solana: "#9945FF",
   tron: "#FF0013",
