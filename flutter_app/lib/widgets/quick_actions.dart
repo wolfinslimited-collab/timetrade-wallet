@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../screens/receive/receive_crypto_screen.dart';
 import '../screens/send/send_crypto_screen.dart';
+import '../screens/swap/swap_crypto_screen.dart';
 
 class QuickActionsWidget extends StatelessWidget {
   const QuickActionsWidget({super.key});
@@ -49,10 +50,12 @@ class QuickActionsWidget extends StatelessWidget {
             icon: Icons.swap_horiz_rounded,
             label: 'Swap',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Swap - Coming soon'),
-                  backgroundColor: AppTheme.card,
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (_) => SwapCryptoSheet(
+                  onClose: () => Navigator.pop(context),
                 ),
               );
             },
