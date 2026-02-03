@@ -15,6 +15,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -48,6 +49,51 @@ const Index = () => {
     // Only show lock screen in production mode
     const isProduction = import.meta.env.PROD;
     setIsLocked(isProduction && walletCreated === "true" && !!hasPin);
+  }, []);
+
+  // If another tab performs a reset, wipe this tab too so nothing can re-populate storage.
+  useEffect(() => {
+    let didReset = false;
+    const resetKey = getResetSignalKey();
+
+    const doReset = async () => {
+      if (didReset) return;
+      didReset = true;
+      try {
+        wipeAllWalletData();
+        await wipeIndexedDb();
+      } finally {
+        window.location.replace(window.location.pathname);
+      }
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === resetKey) {
+        void doReset();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if ("BroadcastChannel" in window) {
+        bc = new BroadcastChannel("timetrade_wallet");
+        bc.onmessage = (ev) => {
+          if (ev?.data?.type === "wallet_reset") void doReset();
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      try {
+        bc?.close();
+      } catch {
+        // ignore
+      }
+    };
   }, []);
 
   // Sync bottom-nav tab state with URL query (?tab=history), so deep links and

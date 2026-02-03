@@ -13,7 +13,7 @@ import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
 import { ManageStoredKeysSheet } from "@/components/settings/ManageStoredKeysSheet";
 import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
-import { wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
+import { broadcastWalletResetSignal, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -117,6 +117,9 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
 
   const handleResetWallet = async () => {
     console.log('%c[SETTINGS] 🗑️ Reset Wallet initiated', 'color: #ef4444; font-weight: bold;');
+
+    // Broadcast first so other open tabs can wipe before we clear our own storage.
+    broadcastWalletResetSignal();
     
     // Clear biometric registration first (uses its own storage)
     removeBiometric();
@@ -128,7 +131,8 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
     await wipeIndexedDb();
     
     // Reload the app to show onboarding
-    window.location.reload();
+    // Use replace() to drop any query params (like ?tab=settings) and fully re-init.
+    window.location.replace(window.location.pathname);
   };
 
   return (

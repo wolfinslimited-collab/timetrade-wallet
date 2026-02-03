@@ -39,6 +39,35 @@ export const WALLET_STORAGE_KEYS = {
   SAVED_ADDRESSES: 'timetrade_saved_addresses',
 } as const;
 
+// Cross-tab reset signal (non-user-facing)
+const RESET_SIGNAL_KEY = "timetrade__reset_signal";
+
+/**
+ * Notify other open tabs of the app to wipe their storage too.
+ * This prevents another tab from re-populating localStorage after a reset.
+ */
+export function broadcastWalletResetSignal(): void {
+  try {
+    localStorage.setItem(RESET_SIGNAL_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+
+  try {
+    if ("BroadcastChannel" in window) {
+      const bc = new BroadcastChannel("timetrade_wallet");
+      bc.postMessage({ type: "wallet_reset", at: Date.now() });
+      bc.close();
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function getResetSignalKey(): string {
+  return RESET_SIGNAL_KEY;
+}
+
 export type WalletStorageKey = typeof WALLET_STORAGE_KEYS[keyof typeof WALLET_STORAGE_KEYS];
 
 /**
@@ -84,6 +113,22 @@ export function wipeAllWalletData(): void {
     console.warn('[WALLET STORAGE] localStorage.clear() failed, falling back to timetrade_* removal', e);
     const keys = getAllWalletKeys();
     keys.forEach((key) => localStorage.removeItem(key));
+  }
+
+  // Verify wipe (some environments/iframes can behave oddly). If anything remains,
+  // remove keys one-by-one as a second pass.
+  try {
+    if (localStorage.length > 0) {
+      const remaining: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k) remaining.push(k);
+      }
+      console.warn("[WALLET STORAGE] localStorage not empty after clear(); removing keys individually", remaining);
+      remaining.forEach((k) => localStorage.removeItem(k));
+    }
+  } catch {
+    // ignore
   }
 
   try {
