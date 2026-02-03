@@ -144,6 +144,11 @@ function useUserAccounts() {
       const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
       const storedActiveId = localStorage.getItem(ACTIVE_ACCOUNT_ID_KEY);
 
+      console.log('%c[ACCOUNT LOADER] 📂 Loading accounts from storage', 'color: #8b5cf6;', { 
+        raw: stored,
+        activeId: storedActiveId 
+      });
+
       let parsedUnknown: unknown = [];
       if (stored) {
         try {
@@ -154,6 +159,10 @@ function useUserAccounts() {
       }
 
       const normalized = normalizeStoredAccounts(parsedUnknown);
+      console.log('%c[ACCOUNT LOADER] 📋 Normalized accounts', 'color: #3b82f6;', { 
+        count: normalized.length, 
+        accounts: normalized.map(a => ({ id: a.id, name: a.name, type: a.type, hasEncrypted: !!a.encryptedSeedPhrase }))
+      });
 
       // If we have accounts, use them (and lightly hydrate legacy entries)
       if (normalized.length > 0) {
@@ -489,7 +498,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       const accountName = accountNameInput.trim() || "Imported Wallet";
       localStorage.setItem(WALLET_STORAGE_KEYS.WALLET_NAME, accountName);
       
-      addAccount(accountName, "mnemonic", { encryptedSeedPhrase: encryptedStr });
+      addAccount(accountName, "mnemonic", { encryptedSeedPhrase: encryptedStr, derivationIndex: 0 });
 
       // Log state before events
       logWalletState();
