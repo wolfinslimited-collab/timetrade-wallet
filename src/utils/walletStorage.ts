@@ -60,16 +60,68 @@ export function getAllWalletKeys(): string[] {
  * Used for "Reset Wallet" functionality
  */
 export function wipeAllWalletData(): void {
-  console.log('%c[WALLET STORAGE] 🗑️ Wiping ALL wallet data', 'color: #ef4444; font-weight: bold;');
-  
-  const keys = getAllWalletKeys();
-  console.log('%c[WALLET STORAGE] Keys to remove:', 'color: #f97316;', keys);
-  
-  keys.forEach(key => {
-    localStorage.removeItem(key);
-  });
-  
+  // IMPORTANT:
+  // Users expect "Reset Wallet" to remove *everything* for this app.
+  // Historically we only removed keys with the timetrade_ prefix, but other
+  // libraries (wallet-connectors, caches, etc.) may store data under other keys.
+  // On a dedicated app domain it's safe (and expected) to clear all storage.
+  console.log('%c[WALLET STORAGE] 🗑️ Wiping ALL client storage', 'color: #ef4444; font-weight: bold;');
+
+  try {
+    const allKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k) allKeys.push(k);
+    }
+    console.log('%c[WALLET STORAGE] localStorage keys before clear:', 'color: #f97316;', allKeys);
+  } catch {
+    // ignore
+  }
+
+  try {
+    localStorage.clear();
+  } catch (e) {
+    console.warn('[WALLET STORAGE] localStorage.clear() failed, falling back to timetrade_* removal', e);
+    const keys = getAllWalletKeys();
+    keys.forEach((key) => localStorage.removeItem(key));
+  }
+
+  try {
+    sessionStorage.clear();
+  } catch {
+    // ignore
+  }
+
   console.log('%c[WALLET STORAGE] ✅ Wipe complete', 'color: #22c55e; font-weight: bold;');
+}
+
+/**
+ * Best-effort deletion of IndexedDB databases.
+ * Some wallet connectors/cache layers store account state here.
+ */
+export async function wipeIndexedDb(): Promise<void> {
+  try {
+    const databasesFn = (indexedDB as unknown as { databases?: () => Promise<{ name?: string }[]> }).databases;
+    const databases: { name?: string }[] = databasesFn ? await databasesFn() : [];
+    const names = databases.map((d) => d.name).filter(Boolean) as string[];
+    if (names.length === 0) return;
+
+    console.log('%c[WALLET STORAGE] 🧨 Deleting IndexedDB databases', 'color: #ef4444; font-weight: bold;', names);
+
+    await Promise.all(
+      names.map(
+        (name) =>
+          new Promise<void>((resolve) => {
+            const req = indexedDB.deleteDatabase(name);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            req.onblocked = () => resolve();
+          })
+      )
+    );
+  } catch (e) {
+    console.warn('[WALLET STORAGE] wipeIndexedDb skipped/failed', e);
+  }
 }
 
 /**
