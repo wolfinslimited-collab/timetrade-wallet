@@ -321,14 +321,20 @@ function useUserAccounts() {
     return newAccount;
   };
 
-  const removeAccount = (id: string) => {
+  const removeAccount = (id: string): { switchToId: string | null; remainingAccounts: StoredAccount[] } => {
     const updated = accounts.filter((a) => a.id !== id);
     setAccounts(updated);
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
-    // If we removed the active account, switch to the first remaining one
+    
+    // Determine which account to switch to
+    let switchToId: string | null = null;
     if (activeAccountId === id && updated.length > 0) {
-      setActiveAccountId(updated[0].id);
+      // Switch to first available account
+      switchToId = updated[0].id;
+      setActiveAccountId(switchToId);
     }
+    
+    return { switchToId, remainingAccounts: updated };
   };
 
   const renameAccount = (id: string, newName: string) => {
@@ -769,10 +775,37 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     setEditNameInput(currentName);
   };
 
-  const handleDeleteAccount = (id: string) => {
-    removeAccount(id);
+  const handleDeleteAccount = async (id: string) => {
+    const { switchToId, remainingAccounts } = removeAccount(id);
     setDeleteConfirmId(null);
-    toast.success("Account removed");
+    
+    // If we need to switch to another account, trigger the full switch flow
+    if (switchToId && remainingAccounts.length > 0) {
+      const newActiveAccount = remainingAccounts.find(a => a.id === switchToId);
+      if (newActiveAccount) {
+        console.log(`%c[ACCOUNT SWITCHER] 🔄 Deleted active account, switching to first available`, 'color: #f59e0b; font-weight: bold;', {
+          deletedId: id,
+          newActiveId: switchToId,
+          newActiveName: newActiveAccount.name,
+        });
+        
+        // Update wallet name
+        localStorage.setItem(WALLET_STORAGE_KEYS.WALLET_NAME, newActiveAccount.name);
+        
+        // Update active account index for the header badge
+        localStorage.setItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_ID, switchToId);
+        
+        // Dispatch account-switched event to trigger blockchain refresh
+        window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
+        
+        // Force refresh blockchain data
+        refreshAll();
+        
+        toast.success(`Switched to ${newActiveAccount.name}`);
+      }
+    } else {
+      toast.success("Account removed");
+    }
   };
 
   const resetAddMode = () => {
