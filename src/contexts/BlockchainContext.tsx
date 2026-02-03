@@ -235,10 +235,11 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         setTimeout(() => {
           console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching addresses-updated + invalidating queries`, 'color: #06b6d4; font-weight: bold;');
           window.dispatchEvent(new CustomEvent('timetrade:addresses-updated'));
-          queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-          queryClient.invalidateQueries({ queryKey: ['transactions'] });
-          queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
-          queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+           // Force immediate refetch so the UI updates right after import/unlock.
+           queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
+           queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
+           queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
+           queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
         }, 250);
       }
     } catch (err) {
@@ -389,10 +390,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 refreshAll() called`, 'color: #06b6d4; font-weight: bold;', {
       timestamp: new Date().toISOString(),
     });
-    queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
-    queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+    queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
+    queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
+    queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
+    queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
   }, [queryClient]);
 
   // Extract transactions from response
@@ -457,10 +458,10 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
       
       // Invalidate all queries to refetch with new addresses
-      queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
-      queryClient.invalidateQueries({ queryKey: ['gasEstimate'] });
+      queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
     }, 50);
   }, [selectedChain, allDerivedAccounts, queryClient, activeAccountIndex]);
 
