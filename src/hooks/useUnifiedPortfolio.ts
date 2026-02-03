@@ -238,12 +238,29 @@ export function useUnifiedPortfolio(enabled: boolean) {
       if (!existing.name && entry.name) existing.name = entry.name;
     };
 
+    // Helper to generate display name with chain distinction for native tokens
+    const getNativeDisplayName = (chain: Chain, symbol: string, originalName?: string): string => {
+      const chainNames: Record<Chain, string> = {
+        ethereum: "Ethereum",
+        polygon: "Polygon",
+        arbitrum: "Arbitrum One",
+        solana: "Solana",
+        tron: "Tron",
+        bitcoin: "Bitcoin",
+      };
+      // For ETH-like symbols on non-Ethereum chains, add the chain name
+      if (symbol.toUpperCase() === "ETH" && chain !== "ethereum") {
+        return `ETH (${chainNames[chain]})`;
+      }
+      return originalName ?? symbol;
+    };
+
     for (const b of balances) {
-      // Add native token with its chain
+      // Add native token with its chain - with chain-specific display name
       add({
         chain: b.chain,
         symbol: b.native.symbol,
-        name: b.native.name ?? b.native.symbol,
+        name: getNativeDisplayName(b.chain, b.native.symbol, b.native.name),
         balance: b.native.balance,
         decimals: b.native.decimals,
         amount: toDecimalAmount(b.native.balance, b.native.decimals),
