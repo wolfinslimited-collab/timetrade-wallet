@@ -144,24 +144,35 @@ function useUserAccounts() {
       const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
       const storedActiveId = localStorage.getItem(ACTIVE_ACCOUNT_ID_KEY);
 
-      console.log('%c[ACCOUNT LOADER] 📂 Loading accounts from storage', 'color: #8b5cf6;', { 
-        raw: stored,
-        activeId: storedActiveId 
-      });
+      console.log('%c[ACCOUNT LOADER] 📂 Raw storage data:', 'color: #8b5cf6; font-weight: bold;');
+      console.log('  - timetrade_user_accounts:', stored);
+      console.log('  - timetrade_active_account_id:', storedActiveId);
 
       let parsedUnknown: unknown = [];
       if (stored) {
         try {
           parsedUnknown = JSON.parse(stored);
-        } catch {
+          console.log('%c[ACCOUNT LOADER] 📋 Parsed JSON:', 'color: #3b82f6;', parsedUnknown);
+          console.log('  - Is Array:', Array.isArray(parsedUnknown));
+          console.log('  - Length:', Array.isArray(parsedUnknown) ? parsedUnknown.length : 'N/A');
+        } catch (e) {
+          console.error('%c[ACCOUNT LOADER] ❌ JSON parse error:', 'color: #ef4444;', e);
           parsedUnknown = [];
         }
+      } else {
+        console.log('%c[ACCOUNT LOADER] ⚠️ No stored accounts found', 'color: #f59e0b;');
       }
 
       const normalized = normalizeStoredAccounts(parsedUnknown);
-      console.log('%c[ACCOUNT LOADER] 📋 Normalized accounts', 'color: #3b82f6;', { 
+      console.log('%c[ACCOUNT LOADER] ✅ Normalized accounts:', 'color: #22c55e; font-weight: bold;', { 
         count: normalized.length, 
-        accounts: normalized.map(a => ({ id: a.id, name: a.name, type: a.type, hasEncrypted: !!a.encryptedSeedPhrase }))
+        accounts: normalized.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          type: a.type, 
+          hasEncrypted: !!a.encryptedSeedPhrase,
+          derivationIndex: a.derivationIndex
+        }))
       });
 
       // If we have accounts, use them (and lightly hydrate legacy entries)
@@ -183,6 +194,7 @@ function useUserAccounts() {
         if (didHydrate) {
           // Persist hydration so switching works after refresh
           localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(hydrated));
+          console.log('%c[ACCOUNT LOADER] 💧 Hydrated accounts saved', 'color: #06b6d4;');
         }
 
         // Set active account ID - use stored or default to first account
@@ -191,6 +203,7 @@ function useUserAccounts() {
         if (activeId) {
           localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, activeId);
         }
+        console.log('%c[ACCOUNT LOADER] 🎯 Active account:', 'color: #a855f7;', activeId);
         return;
       }
 
@@ -198,6 +211,7 @@ function useUserAccounts() {
       const seedCipher = localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
       const walletName = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_NAME) || "Main Wallet";
       if (seedCipher) {
+        console.log('%c[ACCOUNT LOADER] 🔄 Recovery: Creating main account from seed phrase', 'color: #f59e0b;');
         const mainAccount: StoredAccount = {
           id: "main",
           name: walletName,
@@ -238,16 +252,45 @@ function useUserAccounts() {
     type: "mnemonic" | "privateKey",
     extras?: Pick<StoredAccount, "encryptedSeedPhrase" | "storedKeyId" | "derivationIndex">
   ) => {
+    // Read current accounts directly from localStorage to avoid stale state issues
+    const currentStored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    let currentAccounts: StoredAccount[] = [];
+    if (currentStored) {
+      try {
+        const parsed = JSON.parse(currentStored);
+        currentAccounts = normalizeStoredAccounts(parsed);
+      } catch (e) {
+        console.error('%c[ACCOUNT SWITCHER] ❌ Failed to parse current accounts:', 'color: #ef4444;', e);
+      }
+    }
+
     const newAccount: StoredAccount = {
       id: Date.now().toString(),
-      name: name.trim() || `Account ${accounts.length + 1}`,
+      name: name.trim() || `Account ${currentAccounts.length + 1}`,
       type,
       ...(extras || {}),
       createdAt: new Date().toISOString(),
     };
-    const updated = [...accounts, newAccount];
+    
+    // Merge with existing accounts, avoiding duplicates by checking if ID already exists
+    const updated = [...currentAccounts, newAccount];
+    
+    console.log('%c[ACCOUNT SWITCHER] ➕ Adding account:', 'color: #22c55e; font-weight: bold;', {
+      newAccount: { id: newAccount.id, name: newAccount.name, type: newAccount.type },
+      totalAccounts: updated.length,
+      allAccountIds: updated.map(a => a.id)
+    });
+    
     setAccounts(updated);
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
+    
+    // Verify the write
+    const verifyStored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    console.log('%c[ACCOUNT SWITCHER] ✅ Verified storage:', 'color: #3b82f6;', {
+      storedLength: verifyStored?.length,
+      preview: verifyStored?.substring(0, 200)
+    });
+    
     // Set the new account as active
     setActiveAccountId(newAccount.id);
     return newAccount;
