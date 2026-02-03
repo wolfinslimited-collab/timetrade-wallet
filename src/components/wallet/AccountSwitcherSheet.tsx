@@ -49,6 +49,12 @@ interface StoredAccount {
   // When type === "privateKey", link to an entry in timetrade_stored_keys.
   storedKeyId?: string;
   createdAt: string;
+  
+  // NEW: Store derived addresses directly in the account for reliable switching
+  // This prevents address desync issues when switching accounts
+  evmAddress?: string;
+  solanaAddress?: string;
+  tronAddress?: string;
 }
 
 const ACCOUNTS_STORAGE_KEY = "timetrade_user_accounts";
@@ -120,6 +126,11 @@ function normalizeStoredAccounts(parsed: unknown): StoredAccount[] {
       a.createdAt ?? a.created_at ?? a.addedAt ?? a.added_at ?? a.updatedAt ?? new Date().toISOString()
     );
 
+    // Extract stored addresses (new fields)
+    const evmAddress = a.evmAddress ?? a.evm_address ?? a.ethAddress;
+    const solanaAddress = a.solanaAddress ?? a.solana_address ?? a.solAddress;
+    const tronAddress = a.tronAddress ?? a.tron_address ?? a.trxAddress;
+
     out.push({
       id,
       name,
@@ -128,6 +139,9 @@ function normalizeStoredAccounts(parsed: unknown): StoredAccount[] {
       encryptedSeedPhrase: typeof encryptedSeedPhrase === "string" ? encryptedSeedPhrase : undefined,
       storedKeyId: typeof storedKeyId === "string" ? storedKeyId : undefined,
       createdAt,
+      evmAddress: typeof evmAddress === "string" ? evmAddress : undefined,
+      solanaAddress: typeof solanaAddress === "string" ? solanaAddress : undefined,
+      tronAddress: typeof tronAddress === "string" ? tronAddress : undefined,
     });
   }
 
@@ -171,7 +185,8 @@ function useUserAccounts() {
           name: a.name, 
           type: a.type, 
           hasEncrypted: !!a.encryptedSeedPhrase,
-          derivationIndex: a.derivationIndex
+          derivationIndex: a.derivationIndex,
+          evmAddress: a.evmAddress?.substring(0, 10) + '...',
         }))
       });
 
@@ -212,18 +227,28 @@ function useUserAccounts() {
       const walletName = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_NAME) || "Main Wallet";
       if (seedCipher) {
         console.log('%c[ACCOUNT LOADER] 🔄 Recovery: Creating main account from seed phrase', 'color: #f59e0b;');
+        
+        // Also grab any existing addresses from global storage
+        const evmAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_EVM) || undefined;
+        const solanaAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || undefined;
+        const tronAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || undefined;
+        
         const mainAccount: StoredAccount = {
           id: "main",
           name: walletName,
           type: "mnemonic",
           encryptedSeedPhrase: seedCipher,
           derivationIndex: 0,
+          evmAddress,
+          solanaAddress,
+          tronAddress,
           createdAt: new Date().toISOString(),
         };
         setAccounts([mainAccount]);
         setActiveAccountIdState("main");
         localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify([mainAccount]));
         localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, "main");
+        console.log('%c[ACCOUNT LOADER] 💾 Recovered main account with addresses:', 'color: #22c55e;', { evmAddress, solanaAddress, tronAddress });
       }
     };
 
@@ -250,7 +275,7 @@ function useUserAccounts() {
   const addAccount = (
     name: string,
     type: "mnemonic" | "privateKey",
-    extras?: Pick<StoredAccount, "encryptedSeedPhrase" | "storedKeyId" | "derivationIndex">
+    extras?: Pick<StoredAccount, "encryptedSeedPhrase" | "storedKeyId" | "derivationIndex" | "evmAddress" | "solanaAddress" | "tronAddress">
   ) => {
     // Read current accounts directly from localStorage to avoid stale state issues
     const currentStored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
@@ -276,7 +301,7 @@ function useUserAccounts() {
     const updated = [...currentAccounts, newAccount];
     
     console.log('%c[ACCOUNT SWITCHER] ➕ Adding account:', 'color: #22c55e; font-weight: bold;', {
-      newAccount: { id: newAccount.id, name: newAccount.name, type: newAccount.type },
+      newAccount: { id: newAccount.id, name: newAccount.name, type: newAccount.type, evmAddress: newAccount.evmAddress },
       totalAccounts: updated.length,
       allAccountIds: updated.map(a => a.id)
     });
@@ -372,48 +397,80 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
         const index = typeof account.derivationIndex === "number" ? account.derivationIndex : 0;
 
-        console.log(`%c[ACCOUNT SWITCHER] 🔐 Decrypting and deriving addresses`, 'color: #22c55e;');
-        
         // Store the encrypted seed phrase FIRST
         localStorage.setItem(WALLET_STORAGE_KEYS.SEED_PHRASE, effectiveSeedCipher);
         localStorage.setItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX, String(index));
 
-        // CRITICAL: Decrypt and derive addresses NOW, before dispatching events
-        try {
-          const encryptedData = JSON.parse(effectiveSeedCipher);
-          const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
-          const words = decryptedPhrase.split(/\s+/);
-          const phrase = words.join(" ").toLowerCase().trim();
-          
-          // Derive addresses for all chains
-          const evmAddress = deriveEvmAddress(phrase, index);
-          const solanaPathStyle =
-            (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) ||
-            "phantom";
-
-          // Persist the path so first-load derivation uses the same address (prevents $0 until switching)
-          localStorage.setItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH, solanaPathStyle);
-
-          const solAddress = deriveSolanaAddress(phrase, index, solanaPathStyle);
-          const tronAddress = deriveTronAddress(phrase, index);
-
-          console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e; font-weight: bold;', {
-            evm: evmAddress,
-            solana: solAddress,
-            tron: tronAddress,
+        // FAST PATH: If account already has stored addresses, use them directly
+        if (account.evmAddress) {
+          console.log(`%c[ACCOUNT SWITCHER] ⚡ Using stored addresses (fast path)`, 'color: #22c55e; font-weight: bold;', {
+            evm: account.evmAddress,
+            solana: account.solanaAddress,
+            tron: account.tronAddress,
           });
 
-          // Use centralized storage to set ALL addresses atomically
           setAllAddresses({
-            evm: evmAddress,
-            solana: solAddress,
-            tron: tronAddress,
+            evm: account.evmAddress,
+            solana: account.solanaAddress || undefined,
+            tron: account.tronAddress || undefined,
           });
+        } else {
+          // SLOW PATH: Decrypt and derive addresses (legacy accounts without stored addresses)
+          console.log(`%c[ACCOUNT SWITCHER] 🔐 Decrypting and deriving addresses (slow path)`, 'color: #f59e0b;');
+          
+          try {
+            const encryptedData = JSON.parse(effectiveSeedCipher);
+            const decryptedPhrase = await decryptPrivateKey(encryptedData, storedPin);
+            const words = decryptedPhrase.split(/\s+/);
+            const phrase = words.join(" ").toLowerCase().trim();
+            
+            // Derive addresses for all chains
+            const evmAddress = deriveEvmAddress(phrase, index);
+            const solanaPathStyle =
+              (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) ||
+              "phantom";
 
-        } catch (decryptErr) {
-          console.error(`%c[ACCOUNT SWITCHER] ❌ Failed to decrypt/derive`, 'color: #ef4444;', decryptErr);
-          toast.error("Failed to decrypt wallet. Check your PIN.");
-          return;
+            // Persist the path so first-load derivation uses the same address (prevents $0 until switching)
+            localStorage.setItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH, solanaPathStyle);
+
+            const solAddress = deriveSolanaAddress(phrase, index, solanaPathStyle);
+            const tronAddress = deriveTronAddress(phrase, index);
+
+            console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e; font-weight: bold;', {
+              evm: evmAddress,
+              solana: solAddress,
+              tron: tronAddress,
+            });
+
+            // Use centralized storage to set ALL addresses atomically
+            setAllAddresses({
+              evm: evmAddress,
+              solana: solAddress,
+              tron: tronAddress,
+            });
+
+            // UPGRADE: Store derived addresses in the account for future fast switching
+            const currentStored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+            if (currentStored) {
+              try {
+                const accountsList = normalizeStoredAccounts(JSON.parse(currentStored));
+                const updatedList = accountsList.map(a => 
+                  a.id === account.id 
+                    ? { ...a, evmAddress, solanaAddress: solAddress, tronAddress } 
+                    : a
+                );
+                localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedList));
+                console.log(`%c[ACCOUNT SWITCHER] 💾 Upgraded account with stored addresses`, 'color: #06b6d4;');
+              } catch (e) {
+                console.warn('Failed to upgrade account with addresses:', e);
+              }
+            }
+
+          } catch (decryptErr) {
+            console.error(`%c[ACCOUNT SWITCHER] ❌ Failed to decrypt/derive`, 'color: #ef4444;', decryptErr);
+            toast.error("Failed to decrypt wallet. Check your PIN.");
+            return;
+          }
         }
 
         // Log final state before event
@@ -433,35 +490,67 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         console.log(`%c[ACCOUNT SWITCHER] 🔑 Processing private key account`, 'color: #f97316;');
         clearMnemonicSession();
         
-        const existingKeys = JSON.parse(localStorage.getItem(WALLET_STORAGE_KEYS.STORED_KEYS) || "[]");
-        const entry =
-          existingKeys.find((k: any) => k.id === account.storedKeyId) ||
-          existingKeys.find((k: any) => k.label === account.name);
-        
-        if (!entry?.encryptedKey) {
-          console.error(`%c[ACCOUNT SWITCHER] ❌ Private key not found`, 'color: #ef4444;', { storedKeyId: account.storedKeyId });
-          toast.error("Private key not found for this account");
-          return;
+        // FAST PATH: If account already has stored addresses, use them directly
+        if (account.evmAddress) {
+          console.log(`%c[ACCOUNT SWITCHER] ⚡ Using stored addresses for PK account (fast path)`, 'color: #22c55e; font-weight: bold;', {
+            evm: account.evmAddress,
+            tron: account.tronAddress,
+          });
+
+          setAllAddresses({
+            evm: account.evmAddress,
+            tron: account.tronAddress || undefined,
+            solana: undefined,
+          });
+        } else {
+          // SLOW PATH: Decrypt and derive addresses (legacy accounts without stored addresses)
+          const existingKeys = JSON.parse(localStorage.getItem(WALLET_STORAGE_KEYS.STORED_KEYS) || "[]");
+          const entry =
+            existingKeys.find((k: any) => k.id === account.storedKeyId) ||
+            existingKeys.find((k: any) => k.label === account.name);
+          
+          if (!entry?.encryptedKey) {
+            console.error(`%c[ACCOUNT SWITCHER] ❌ Private key not found`, 'color: #ef4444;', { storedKeyId: account.storedKeyId });
+            toast.error("Private key not found for this account");
+            return;
+          }
+
+          console.log(`%c[ACCOUNT SWITCHER] 🔓 Decrypting private key (slow path)`, 'color: #f59e0b;');
+          const privateKeyRaw = await decryptPrivateKey(entry.encryptedKey, storedPin);
+          const privateKey = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
+          
+          const evmAddress = new EthersWallet(privateKey).address;
+          const tronAddress = evmToTronAddress(evmAddress);
+
+          console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses from private key`, 'color: #22c55e;', {
+            evm: evmAddress,
+            tron: tronAddress || '(none)',
+          });
+
+          // Use centralized storage - explicitly no Solana for PK accounts
+          setAllAddresses({
+            evm: evmAddress,
+            tron: tronAddress || undefined,
+            solana: undefined,
+          });
+
+          // UPGRADE: Store derived addresses in the account for future fast switching
+          const currentStored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+          if (currentStored) {
+            try {
+              const accountsList = normalizeStoredAccounts(JSON.parse(currentStored));
+              const updatedList = accountsList.map(a => 
+                a.id === account.id 
+                  ? { ...a, evmAddress, tronAddress } 
+                  : a
+              );
+              localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedList));
+              console.log(`%c[ACCOUNT SWITCHER] 💾 Upgraded PK account with stored addresses`, 'color: #06b6d4;');
+            } catch (e) {
+              console.warn('Failed to upgrade PK account with addresses:', e);
+            }
+          }
         }
-
-        console.log(`%c[ACCOUNT SWITCHER] 🔓 Decrypting private key`, 'color: #a855f7;');
-        const privateKeyRaw = await decryptPrivateKey(entry.encryptedKey, storedPin);
-        const privateKey = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
-        
-        const evmAddress = new EthersWallet(privateKey).address;
-        const tronAddress = evmToTronAddress(evmAddress);
-
-        console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses from private key`, 'color: #22c55e;', {
-          evm: evmAddress,
-          tron: tronAddress || '(none)',
-        });
-
-        // Use centralized storage - explicitly no Solana for PK accounts
-        setAllAddresses({
-          evm: evmAddress,
-          tron: tronAddress || undefined,
-          solana: undefined, // This will remove the Solana address
-        });
         
         localStorage.setItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX, "0");
 
@@ -541,7 +630,14 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       const accountName = accountNameInput.trim() || "Imported Wallet";
       localStorage.setItem(WALLET_STORAGE_KEYS.WALLET_NAME, accountName);
       
-      addAccount(accountName, "mnemonic", { encryptedSeedPhrase: encryptedStr, derivationIndex: 0 });
+      // Store addresses directly in the account for reliable switching
+      addAccount(accountName, "mnemonic", { 
+        encryptedSeedPhrase: encryptedStr, 
+        derivationIndex: 0,
+        evmAddress,
+        solanaAddress: solAddress,
+        tronAddress,
+      });
 
       // Log state before events
       logWalletState();
@@ -624,7 +720,13 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       
       localStorage.setItem(WALLET_STORAGE_KEYS.WALLET_NAME, accountName);
       
-      addAccount(accountName, "privateKey", { storedKeyId: keyId });
+      // Store addresses directly in the account for reliable switching
+      addAccount(accountName, "privateKey", { 
+        storedKeyId: keyId,
+        evmAddress,
+        tronAddress: tronAddress || undefined,
+        solanaAddress: undefined, // PK accounts don't support Solana
+      });
 
       // Log state before events
       logWalletState();
