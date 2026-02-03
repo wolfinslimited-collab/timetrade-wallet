@@ -107,8 +107,8 @@ export function useUnifiedPortfolio(enabled: boolean) {
       
       // Invalidate queries to force refetch with new addresses
       console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308;');
-      queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'] });
+      queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
     };
 
     window.addEventListener('timetrade:account-switched', handleAccountSwitch);
