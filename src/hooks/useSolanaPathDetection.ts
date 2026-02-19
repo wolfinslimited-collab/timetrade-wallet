@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { invokeExternalBlockchain } from '@/lib/externalSupabase';
+import { invokeBlockchain } from '@/lib/blockchain';
 import { 
   SolanaDerivationPath, 
   SOLANA_DERIVATION_PATHS,
@@ -47,7 +47,7 @@ export function useSolanaPathDetection() {
       // Check balances for all addresses in parallel
       const balancePromises = addresses.map(async ({ path, address }) => {
         try {
-          const { data, error } = await invokeExternalBlockchain({ 
+          const { data, error } = await invokeBlockchain({ 
             action: 'getBalance', 
             chain: 'solana', 
             address, 
