@@ -83,8 +83,8 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
       }
 
       try {
-        const { invokeExternalBlockchain } = await import("@/lib/externalSupabase");
-        const { data, error } = await invokeExternalBlockchain({
+        const { invokeBlockchain } = await import("@/lib/blockchain");
+        const { data, error } = await invokeBlockchain({
           action: 'getBalance',
           chain: selectedNetwork,
           address: senderAddress,

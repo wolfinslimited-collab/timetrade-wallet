@@ -16,7 +16,7 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { invokeExternalBlockchain } from '@/lib/externalSupabase';
+import { invokeBlockchain } from '@/lib/blockchain';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha512 } from '@noble/hashes/sha2.js';
@@ -192,7 +192,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         blockhash = latest.blockhash;
       } catch (e) {
         console.warn('[Solana] getLatestBlockhash failed on public RPC; falling back to backend RPC', e);
-        const { data, error: fnError } = await invokeExternalBlockchain({
+        const { data, error: fnError } = await invokeBlockchain({
           action: 'solanaRpc',
           chain: 'solana',
           address: '',
@@ -345,7 +345,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         blockhash = latest.blockhash;
       } catch (e) {
         console.warn('[SPL] getLatestBlockhash failed on public RPC; falling back to backend RPC', e);
-        const { data, error: fnError } = await invokeExternalBlockchain({
+        const { data, error: fnError } = await invokeBlockchain({
           action: 'solanaRpc',
           chain: 'solana',
           address: '',
@@ -390,7 +390,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         if (errMsg.includes('403') || errMsg.includes('Access forbidden') || errMsg.includes('could not find account')) {
           // Try via backend RPC
           try {
-            const { data: rpcData, error: rpcError } = await invokeExternalBlockchain({
+            const { data: rpcData, error: rpcError } = await invokeBlockchain({
               action: 'solanaRpc',
               chain: 'solana',
               address: '',

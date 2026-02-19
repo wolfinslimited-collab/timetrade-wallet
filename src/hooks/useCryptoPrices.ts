@@ -1,4 +1,4 @@
-import { invokeExternalBlockchain } from '@/lib/externalSupabase';
+import { invokeBlockchain } from '@/lib/blockchain';
 import { useQuery } from '@tanstack/react-query';
 
 export interface PriceData {
@@ -17,7 +17,7 @@ interface PricesResponse {
 }
 
 async function fetchPrices(symbols: string[]): Promise<PriceData[]> {
-  const { data, error } = await invokeExternalBlockchain({ 
+  const { data, error } = await invokeBlockchain({ 
     action: 'getPrices', 
     chain: 'ethereum', // Not used for prices but required by the type
     address: '',
