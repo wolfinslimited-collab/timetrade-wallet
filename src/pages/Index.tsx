@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
@@ -10,6 +10,7 @@ import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { StakingPage } from "./StakingPage";
+import { NotificationsPage } from "./NotificationsPage";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -23,6 +24,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const { toast } = useToast();
   const {
     notifications,
@@ -173,6 +175,20 @@ const Index = () => {
     return <LockScreen onUnlock={handleUnlock} />;
   }
 
+  // Show notifications page
+  if (location.pathname === "/notifications") {
+    return (
+      <NotificationsPage
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onDelete={deleteNotification}
+        onClearAll={clearAll}
+      />
+    );
+  }
+
   // Show settings page
   if (activeTab === "settings") {
     return (
@@ -210,12 +226,7 @@ const Index = () => {
         {/* Minimal Header */}
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
-          notifications={notifications}
           unreadCount={unreadCount}
-          onMarkAsRead={markAsRead}
-          onMarkAllAsRead={markAllAsRead}
-          onDeleteNotification={deleteNotification}
-          onClearAllNotifications={clearAll}
         />
 
         {/* Total Balance */}
