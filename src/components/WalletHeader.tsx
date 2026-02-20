@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Bell } from "lucide-react";
+import { User, Bell, ChevronDown } from "lucide-react";
 import { NotificationCenter } from "./notifications/NotificationCenter";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -55,9 +55,7 @@ export const WalletHeader = ({
           <span className="text-sm text-foreground/80 font-mono">
             {formatAddress(walletAddress)}
           </span>
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="text-muted-foreground">
-            <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
 
         {/* Notification bell */}
