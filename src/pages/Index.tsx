@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
@@ -33,6 +33,7 @@ const Index = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const {
     notifications,
@@ -280,7 +281,10 @@ const Index = () => {
         <div className="mt-6 bg-card/60 backdrop-blur-sm rounded-3xl border-t border-border/30 pt-5 pb-4 min-h-[40vh]">
           <div className="px-5 flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold text-foreground">My assets</h2>
-            <button className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-secondary transition-colors">
+            <button 
+              onClick={() => navigate("/assets")}
+              className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-secondary transition-colors"
+            >
               see all
             </button>
           </div>
