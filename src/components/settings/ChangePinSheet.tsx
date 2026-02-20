@@ -130,7 +130,7 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl bg-background border-border p-0">
+      <SheetContent side="bottom" className="h-[100dvh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
         <SheetHeader className="px-6 pt-6 pb-2">
           <SheetTitle className="text-xl font-bold">{getTitle()}</SheetTitle>
         </SheetHeader>
