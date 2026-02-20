@@ -1089,6 +1089,25 @@ async function getTokens(
   return [];
 }
 
+// Fetch native ETH balance via direct JSON-RPC (eth_getBalance)
+async function rpcGetNativeBalance(rpcUrl: string, address: string): Promise<string> {
+  const body = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "eth_getBalance",
+    params: [address, "latest"],
+  };
+  const resp = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await resp.json();
+  const hex = json?.result;
+  if (!hex || hex === "0x0") return "0";
+  return BigInt(hex).toString();
+}
+
 async function getBalance(
   chain: Chain,
   address: string,
@@ -1113,6 +1132,38 @@ async function getBalance(
           balance: solBalance,
           decimals: config.decimals,
         },
+        tokens,
+        explorerUrl: config.explorerUrl(testnet),
+      };
+    }
+
+    // Arbitrum: use direct RPC for accurate native ETH balance (Tatum returns Ethereum mainnet balance)
+    if (chain === "arbitrum") {
+      console.log(`Fetching Arbitrum native ETH balance via direct RPC for: ${address}`);
+      const [nativeBalance, tokens] = await Promise.all([
+        rpcGetNativeBalance("https://arb1.arbitrum.io/rpc", address),
+        getArbitrumTokensViaRPC(address),
+      ]);
+      console.log(`Arbitrum native ETH balance: ${nativeBalance} wei`);
+      return {
+        chain,
+        native: { symbol: "ETH", balance: nativeBalance, decimals: 18 },
+        tokens,
+        explorerUrl: config.explorerUrl(testnet),
+      };
+    }
+
+    // BSC: use direct RPC for accurate native BNB balance
+    if (chain === "bsc") {
+      console.log(`Fetching BSC native BNB balance via direct RPC for: ${address}`);
+      const [nativeBalance, tokens] = await Promise.all([
+        rpcGetNativeBalance("https://bsc-dataseed.binance.org", address),
+        getBSCTokensViaRPC(address),
+      ]);
+      console.log(`BSC native BNB balance: ${nativeBalance} wei`);
+      return {
+        chain,
+        native: { symbol: "BNB", balance: nativeBalance, decimals: 18 },
         tokens,
         explorerUrl: config.explorerUrl(testnet),
       };
