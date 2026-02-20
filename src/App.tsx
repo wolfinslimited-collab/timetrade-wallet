@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { BlockchainProvider } from "@/contexts/BlockchainContext";
 import { WalletConnectProvider } from "@/contexts/WalletConnectContext";
 import Index from "./pages/Index";
+import { AssetDetailPage } from "./pages/AssetDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/notifications" element={<Index />} />
+              <Route path="/asset" element={<AssetDetailPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

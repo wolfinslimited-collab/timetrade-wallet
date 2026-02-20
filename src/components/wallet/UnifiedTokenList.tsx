@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { cn } from "@/lib/utils";
-import { AssetDetailSheet } from "./AssetDetailSheet";
 
 // Get crypto logo URL from external API
 const getCryptoLogoUrl = (symbol: string): string => {
@@ -13,12 +13,8 @@ const getCryptoLogoUrl = (symbol: string): string => {
 // Get network logo URL
 const getNetworkLogoUrl = (chain: Chain): string => {
   const symbols: Record<Chain, string> = {
-    ethereum: "eth",
-    arbitrum: "arb",
-    polygon: "matic",
-    solana: "sol",
-    tron: "trx",
-    bitcoin: "btc",
+    ethereum: "eth", arbitrum: "arb", polygon: "matic",
+    solana: "sol", tron: "trx", bitcoin: "btc",
   };
   return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
 };
@@ -41,7 +37,6 @@ interface TokenWithValue extends UnifiedToken {
   change24h: number;
 }
 
-// Fallback icon for failed image loads
 const FallbackIcon = ({ symbol }: { symbol: string }) => (
   <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground">
     {symbol.slice(0, 2).toUpperCase()}
@@ -49,21 +44,15 @@ const FallbackIcon = ({ symbol }: { symbol: string }) => (
 );
 
 export const UnifiedTokenList = ({ className }: { className?: string }) => {
-  // Use unified assets from context - NO DUPLICATE QUERIES
   const { isConnected, unifiedAssets, prices, isLoadingBalance, isLoadingPrices } = useBlockchainContext();
+  const navigate = useNavigate();
   
-  // All hooks MUST be at the top, before any conditional returns
-  const [selectedAsset, setSelectedAsset] = useState<TokenWithValue | null>(null);
-  const [showAssetDetail, setShowAssetDetail] = useState(false);
-  
-  // Read addresses from localStorage only once on mount, and on account switch events
   const [addresses, setAddresses] = useState(() => ({
     evm: localStorage.getItem('timetrade_wallet_address_evm'),
     solana: localStorage.getItem('timetrade_wallet_address_solana'),
     tron: localStorage.getItem('timetrade_wallet_address_tron'),
   }));
 
-  // Listen for account switch events instead of polling
   useEffect(() => {
     const readAddresses = () => {
       setAddresses({
@@ -72,41 +61,26 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
         tron: localStorage.getItem('timetrade_wallet_address_tron'),
       });
     };
-    
-    // Listen for custom events when accounts switch
     window.addEventListener('timetrade:account-switched', readAddresses);
     window.addEventListener('timetrade:unlocked', readAddresses);
-    
     return () => {
       window.removeEventListener('timetrade:account-switched', readAddresses);
       window.removeEventListener('timetrade:unlocked', readAddresses);
     };
   }, []);
 
-  // Transform unified assets to token format for display
   const tokensWithValue = useMemo(() => {
     if (!unifiedAssets || unifiedAssets.length === 0) return [];
-    
-    // Map unified assets to display format
-    // unifiedAssets now include chain info directly from the balance source
     return unifiedAssets
       .filter(asset => asset.amount > 0)
       .map(asset => {
         const priceData = prices?.find(p => p.symbol.toUpperCase() === asset.symbol.toUpperCase());
         const change24h = priceData?.change24h || 0;
-        
         return {
-          symbol: asset.symbol,
-          name: asset.name,
-          balance: asset.balance,
-          decimals: asset.decimals,
-          chain: asset.chain, // Use chain directly from unified asset
-          isNative: asset.isNative,
-          contractAddress: asset.contractAddress,
-          numericBalance: asset.amount,
-          price: asset.price,
-          usdValue: asset.valueUsd,
-          change24h,
+          symbol: asset.symbol, name: asset.name, balance: asset.balance,
+          decimals: asset.decimals, chain: asset.chain, isNative: asset.isNative,
+          contractAddress: asset.contractAddress, numericBalance: asset.amount,
+          price: asset.price, usdValue: asset.valueUsd, change24h,
         } as TokenWithValue;
       })
       .sort((a, b) => b.usdValue - a.usdValue);
@@ -114,9 +88,7 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   const isLoading = isLoadingBalance || isLoadingPrices;
 
-  if (!isConnected || (!addresses.evm && !addresses.solana && !addresses.tron)) {
-    return null;
-  }
+  if (!isConnected || (!addresses.evm && !addresses.solana && !addresses.tron)) return null;
 
   if (isLoading && tokensWithValue.length === 0) {
     return (
@@ -145,104 +117,72 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
   if (tokensWithValue.length === 0) {
     return (
       <div className={cn("px-4 py-8 text-center", className)}>
-        <p className="text-sm text-muted-foreground">
-          No tokens found
-        </p>
+        <p className="text-sm text-muted-foreground">No tokens found</p>
       </div>
     );
   }
 
   const handleAssetClick = (token: TokenWithValue) => {
-    setSelectedAsset(token);
-    setShowAssetDetail(true);
-  };
-
-  // Get address for selected chain
-  const getAddressForChain = (chain: Chain): string | null => {
-    if (chain === 'solana') return addresses.solana;
-    if (chain === 'tron') return addresses.tron;
-    return addresses.evm;
+    const params = new URLSearchParams({
+      symbol: token.symbol,
+      chain: token.chain,
+    });
+    if (token.contractAddress) params.set("contract", token.contractAddress);
+    navigate(`/asset?${params.toString()}`);
   };
 
   return (
-    <>
-      <div className={cn("px-4", className)}>
-        <div className="space-y-1">
-          {tokensWithValue.map((token, index) => {
-            const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
-              minimumFractionDigits: 0, 
-              maximumFractionDigits: 8 
-            });
-            const isPositive = token.change24h >= 0;
-            const assetLogoUrl = getCryptoLogoUrl(token.symbol);
-            const networkLogoUrl = getNetworkLogoUrl(token.chain);
-            
-            return (
-              <button
-                key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-                className="w-full flex items-center justify-between py-3.5 hover:bg-card/50 transition-colors rounded-xl px-2 -mx-2"
-                onClick={() => handleAssetClick(token)}
-              >
-                <div className="flex items-center gap-3">
-                  {/* Token icon */}
-                  <div className="relative">
-                    <div className="w-11 h-11 rounded-full overflow-hidden bg-card border border-border/30">
-                      <img 
-                        src={assetLogoUrl}
-                        alt={token.symbol}
-                        className="w-full h-full object-contain p-1.5"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                      <div className="hidden w-full h-full">
-                        <FallbackIcon symbol={token.symbol} />
-                      </div>
-                    </div>
-                    {/* Network Badge */}
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-card">
-                      <img 
-                        src={networkLogoUrl}
-                        alt={token.chain}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+    <div className={cn("px-4", className)}>
+      <div className="space-y-1">
+        {tokensWithValue.map((token, index) => {
+          const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
+            minimumFractionDigits: 0, maximumFractionDigits: 8 
+          });
+          const isPositive = token.change24h >= 0;
+          const assetLogoUrl = getCryptoLogoUrl(token.symbol);
+          const networkLogoUrl = getNetworkLogoUrl(token.chain);
+          
+          return (
+            <button
+              key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
+              className="w-full flex items-center justify-between py-3.5 hover:bg-card/50 transition-colors rounded-xl px-2 -mx-2"
+              onClick={() => handleAssetClick(token)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-card border border-border/30">
+                    <img 
+                      src={assetLogoUrl} alt={token.symbol}
+                      className="w-full h-full object-contain p-1.5"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                    <div className="hidden w-full h-full"><FallbackIcon symbol={token.symbol} /></div>
                   </div>
-                  
-                  <div className="text-left">
-                    <p className="font-semibold text-foreground">{token.name || token.symbol}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {token.symbol} • ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-card">
+                    <img src={networkLogoUrl} alt={token.chain} className="w-full h-full object-contain" />
                   </div>
                 </div>
-                
-                <div className="text-right">
-                  <p className="font-semibold text-foreground">
-                    {formattedBalance}
-                  </p>
-                  <p className={cn(
-                    "text-xs mt-0.5",
-                    isPositive ? "text-success" : "text-destructive"
-                  )}>
-                    {isPositive ? "▲" : "▼"} {Math.abs(token.change24h).toFixed(2)}%
+                <div className="text-left">
+                  <p className="font-semibold text-foreground">{token.name || token.symbol}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {token.symbol} • ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold text-foreground">{formattedBalance}</p>
+                <p className={cn("text-xs mt-0.5", isPositive ? "text-success" : "text-destructive")}>
+                  {isPositive ? "▲" : "▼"} {Math.abs(token.change24h).toFixed(2)}%
+                </p>
+              </div>
+            </button>
+          );
+        })}
       </div>
-
-      {/* Asset Detail Sheet */}
-      <AssetDetailSheet
-        open={showAssetDetail}
-        onOpenChange={setShowAssetDetail}
-        asset={selectedAsset}
-        address={selectedAsset ? getAddressForChain(selectedAsset.chain) : null}
-      />
-    </>
+    </div>
   );
 };
