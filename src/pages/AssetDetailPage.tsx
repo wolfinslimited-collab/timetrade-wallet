@@ -168,10 +168,10 @@ export const AssetDetailPage = () => {
     <>
       <motion.div
         className="min-h-screen flex flex-col max-w-md mx-auto pb-8"
-        initial={{ opacity: 0, x: 30 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -30 }}
-        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
       >
         {/* Header */}
         <div className="flex items-center gap-3 p-4">
@@ -198,7 +198,12 @@ export const AssetDetailPage = () => {
         </div>
 
         {/* Balance */}
-        <div className="text-center pt-2 pb-1 px-4">
+        <motion.div
+          className="text-center pt-2 pb-1 px-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.08, ease: "easeOut" }}
+        >
           <p className="text-4xl font-bold font-mono">
             {asset.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
           </p>
@@ -214,7 +219,7 @@ export const AssetDetailPage = () => {
               {isPositive ? "+" : ""}{change24h.toFixed(2)}%
             </span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Price Chart */}
         <div className="px-4 mt-2">
@@ -257,7 +262,12 @@ export const AssetDetailPage = () => {
         )}
 
         {/* Transaction History */}
-        <div className="px-4 pt-2 flex-1">
+        <motion.div
+          className="px-4 pt-2 flex-1"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Recent Activity
@@ -283,7 +293,12 @@ export const AssetDetailPage = () => {
               <p className="text-sm text-muted-foreground">No transactions yet</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <motion.div
+              className="space-y-2"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } } }}
+              initial="hidden"
+              animate="visible"
+            >
               {filteredTx.map((tx, index) => {
                 const txFrom = chain === 'tron' ? (tronHexToBase58(tx.from) || tx.from) : tx.from;
                 const txTo = chain === 'tron' ? (tronHexToBase58(tx.to) || tx.to) : tx.to;
@@ -311,11 +326,14 @@ export const AssetDetailPage = () => {
                 const txHref = tx.hash ? getTxExplorerUrl(chain, txData?.explorerUrl || explorerUrl, tx.hash) : undefined;
 
                 return (
-                  <a
+                  <motion.a
                     key={`${tx.hash}-${index}`}
+                    variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" as const } } }}
                     href={txHref}
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 p-3 rounded-2xl bg-card/50 border border-border/30 hover:border-foreground/10 transition-colors"
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <div className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center",
@@ -333,12 +351,12 @@ export const AssetDetailPage = () => {
                       </p>
                       <p className="text-xs text-muted-foreground">{asset.symbol}</p>
                     </div>
-                  </a>
+                  </motion.a>
                 );
               })}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </motion.div>
 
       <SendCryptoSheet open={showSend} onOpenChange={setShowSend} preSelectedAsset={preSelectedForSend} />
