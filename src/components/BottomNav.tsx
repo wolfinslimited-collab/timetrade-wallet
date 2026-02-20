@@ -11,10 +11,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: (c) => <HomeIcon className="w-[30px] h-[30px]" color={c} />, label: "Wallet", tab: "wallet" },
-  { icon: (c) => <TransactionHistoryIcon className="w-[30px] h-[30px]" color={c} />, label: "History", tab: "history" },
-  { icon: (c) => <UsdtIcon className="w-[33px] h-[33px]" color={c} />, label: "Staking", tab: "staking" },
-  { icon: (c) => <AccountSettingsIcon className="w-[30px] h-[30px]" color={c} />, label: "Settings", tab: "settings" },
+  { icon: (c) => <HomeIcon className="w-[27px] h-[27px]" color={c} />, label: "Wallet", tab: "wallet" },
+  { icon: (c) => <TransactionHistoryIcon className="w-[27px] h-[27px]" color={c} />, label: "History", tab: "history" },
+  { icon: (c) => <UsdtIcon className="w-[30px] h-[30px]" color={c} />, label: "Staking", tab: "staking" },
+  { icon: (c) => <AccountSettingsIcon className="w-[27px] h-[27px]" color={c} />, label: "Settings", tab: "settings" },
 ];
 
 interface BottomNavProps {
