@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound, Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound, Bell, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -32,25 +31,25 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
   <button
     onClick={onClick}
     className={cn(
-      "w-full flex items-center gap-4 p-4 rounded-xl transition-colors text-left",
+      "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all duration-200 text-left group",
       danger 
-        ? "bg-destructive/5 hover:bg-destructive/10 border border-destructive/20" 
-        : "bg-card border border-border hover:border-primary/30"
+        ? "bg-destructive/5 hover:bg-destructive/10 border border-destructive/15" 
+        : "bg-card/50 border border-border/40 hover:border-primary/20 hover:bg-card/80"
     )}
   >
     <div className={cn(
-      "w-10 h-10 rounded-full flex items-center justify-center",
-      danger ? "bg-destructive/10" : "bg-primary/10"
+      "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+      danger ? "bg-destructive/10 group-hover:bg-destructive/15" : "bg-primary/8 group-hover:bg-primary/12"
     )}>
-      <Icon className={cn("w-5 h-5", danger ? "text-destructive" : "text-primary")} />
+      <Icon className={cn("w-[18px] h-[18px]", danger ? "text-destructive" : "text-primary")} />
     </div>
     <div className="flex-1 min-w-0">
-      <p className={cn("font-medium", danger && "text-destructive")}>{label}</p>
+      <p className={cn("text-[15px] font-medium leading-tight", danger && "text-destructive")}>{label}</p>
       {description && (
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
       )}
     </div>
-    {rightElement || <ChevronRight className="w-5 h-5 text-muted-foreground" />}
+    {rightElement || <ChevronRight className="w-4 h-4 text-muted-foreground/50" />}
   </button>
 );
 
@@ -67,7 +66,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
     refreshStatus: refreshBiometricStatus,
   } = useBiometricAuth();
   
-  // Sheet states
   const [changePinOpen, setChangePinOpen] = useState(false);
   const [viewSeedOpen, setViewSeedOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -83,10 +81,8 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
 
   const handleBiometricToggle = (enabled: boolean) => {
     if (enabled) {
-      // Open setup dialog to verify PIN and register biometric
       setBiometricSetupOpen(true);
     } else {
-      // Disable biometrics
       removeBiometric();
       toast({
         title: "Biometrics disabled",
@@ -105,7 +101,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
 
   const handlePinChanged = (newPin?: string) => {
     setChangePinOpen(false);
-    // Update the biometric stored PIN if biometrics are registered
     if (newPin && biometricRegistered) {
       updateStoredPin(newPin);
     }
@@ -117,48 +112,37 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
 
   const handleResetWallet = async () => {
     console.log('%c[SETTINGS] 🗑️ Reset Wallet initiated', 'color: #ef4444; font-weight: bold;');
-
-    // Broadcast first so other open tabs can wipe before we clear our own storage.
     broadcastWalletResetSignal();
-    
-    // Clear biometric registration first (uses its own storage)
     removeBiometric();
-    
-    // Wipe ALL timetrade_* localStorage keys
     wipeAllWalletData();
-
-    // Best-effort: also delete IndexedDB databases used by connectors/caches
     await wipeIndexedDb();
-    
-    // Reload the app to show onboarding
-    // Use replace() to drop any query params (like ?tab=settings) and fully re-init.
     window.location.replace(window.location.pathname);
   };
 
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border">
+      <div className="flex items-center gap-3 p-4 border-b border-border/30">
         <button 
           onClick={onBack}
-          className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+          className="p-2 rounded-xl bg-card/50 border border-border/40 hover:bg-secondary transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold">Settings</h1>
       </div>
 
-      <div className="flex-1 p-4 space-y-6 pb-8">
+      <div className="flex-1 p-4 space-y-5 pb-8">
         {/* Security Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Shield className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <Shield className="w-3.5 h-3.5 text-primary" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Security
             </h2>
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-2">
             <SettingItem
               icon={Key}
               label="Change PIN"
@@ -171,7 +155,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               label="Biometric Unlock"
               description={biometricAvailable 
                 ? (biometricEnabled && biometricRegistered
-                    ? "Enabled - use Face ID or fingerprint"
+                    ? "Enabled — Face ID or fingerprint"
                     : "Use Face ID or fingerprint to unlock")
                 : "Not available on this device"}
               onClick={biometricAvailable ? () => handleBiometricToggle(!biometricEnabled) : undefined}
@@ -198,13 +182,13 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               onClick={() => setManageKeysOpen(true)}
             />
           </div>
-        </div>
+        </section>
 
         {/* Notifications Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Bell className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <Bell className="w-3.5 h-3.5 text-primary" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Notifications
             </h2>
           </div>
@@ -214,42 +198,42 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
             label="Push Notifications"
             description={
               notificationPermission === 'granted' && notificationSettings.enabled
-                ? "Enabled - receiving alerts"
+                ? "Enabled — receiving alerts"
                 : notificationPermission === 'denied'
                 ? "Blocked by browser"
                 : "Get alerts for prices & transactions"
             }
             onClick={() => setNotificationSettingsOpen(true)}
           />
-        </div>
+        </section>
 
         {/* Auto-Lock Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Lock className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <Lock className="w-3.5 h-3.5 text-primary" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Auto-Lock
             </h2>
           </div>
           
-          <div className="bg-card border border-border rounded-xl p-4">
+          <div className="bg-card/50 border border-border/40 rounded-2xl p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Lock after inactivity</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Automatically lock wallet after 5 minutes
+                <p className="text-[15px] font-medium">Lock after inactivity</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  Auto-lock wallet after 5 minutes
                 </p>
               </div>
               <Switch defaultChecked />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Danger Zone */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-4 h-4 text-destructive" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-destructive">
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-destructive/70">
               Danger Zone
             </h2>
           </div>
@@ -261,12 +245,12 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
             onClick={() => setResetDialogOpen(true)}
             danger
           />
-        </div>
+        </section>
 
         {/* App Info */}
-        <div className="pt-4 text-center">
-          <p className="text-xs text-muted-foreground">Timetrade Wallet v1.0.0</p>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="pt-3 text-center space-y-1">
+          <p className="text-[11px] text-muted-foreground/60">Timetrade Wallet v1.0.0</p>
+          <p className="text-[11px] text-muted-foreground/40">
             Powered by secure encryption
           </p>
         </div>
@@ -278,30 +262,25 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
         onOpenChange={setChangePinOpen}
         onSuccess={handlePinChanged}
       />
-      
       <ViewSeedPhraseSheet 
         open={viewSeedOpen} 
         onOpenChange={setViewSeedOpen}
       />
-      
       <ResetWalletDialog 
         open={resetDialogOpen} 
         onOpenChange={setResetDialogOpen}
         onConfirm={handleResetWallet}
       />
-      
       <ManageStoredKeysSheet
         open={manageKeysOpen}
         onOpenChange={setManageKeysOpen}
       />
-      
       <BiometricSetupDialog
         open={biometricSetupOpen}
         onOpenChange={setBiometricSetupOpen}
         onSuccess={handleBiometricSetupSuccess}
         onRegister={registerBiometric}
       />
-      
       <NotificationSettingsSheet
         open={notificationSettingsOpen}
         onOpenChange={setNotificationSettingsOpen}

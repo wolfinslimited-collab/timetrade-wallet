@@ -906,6 +906,17 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
           {/* Account List */}
           {addMode === null && (
             <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+              {/* Add Account Button */}
+              <button
+                onClick={() => setAddMode("menu")}
+                className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all duration-200"
+              >
+                <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Plus className="w-5 h-5 text-primary" />
+                </div>
+                <span className="font-semibold text-primary">Add or Import Account</span>
+              </button>
+
               {isLoadingAccounts ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
