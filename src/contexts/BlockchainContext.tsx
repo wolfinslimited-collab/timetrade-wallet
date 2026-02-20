@@ -298,11 +298,18 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         setWalletAddress(newWalletAddress);
       }
 
-      // Only re-derive if the encrypted mnemonic changed
+      // Re-derive if the encrypted mnemonic changed
       const seedCipher = localStorage.getItem('timetrade_seed_phrase');
       if (seedCipher && seedCipher !== lastSeedCipherRef.current) {
         console.log(`%c[BLOCKCHAIN CONTEXT] 🔐 Seed phrase changed, re-deriving`, 'color: #a855f7;');
         deriveFromStoredMnemonic();
+      } else {
+        // Same mnemonic but different account index — force refetch with new addresses
+        console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Same mnemonic, forcing query refresh`, 'color: #06b6d4;');
+        queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
       }
     };
 

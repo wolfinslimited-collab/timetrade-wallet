@@ -1,37 +1,33 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, Bell, ChevronDown } from "lucide-react";
-import { NotificationCenter } from "./notifications/NotificationCenter";
+import { motion, AnimatePresence } from "framer-motion";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import type { Notification } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 
 interface WalletHeaderProps {
   onSettingsClick?: () => void;
-  notifications: Notification[];
   unreadCount: number;
-  onMarkAsRead: (id: string) => void;
-  onMarkAllAsRead: () => void;
-  onDeleteNotification: (id: string) => void;
-  onClearAllNotifications: () => void;
 }
 
 export const WalletHeader = ({ 
   onSettingsClick,
-  notifications,
   unreadCount,
-  onMarkAsRead,
-  onMarkAllAsRead,
-  onDeleteNotification,
-  onClearAllNotifications,
 }: WalletHeaderProps) => {
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
-  const { walletAddress } = useBlockchainContext();
+  const [walletName, setWalletName] = useState("Wallet");
+  const navigate = useNavigate();
 
-  const formatAddress = (addr: string | null) => {
-    if (!addr) return "0x0000...00";
-    return `${addr.slice(0, 7)}...${addr.slice(-2)}`;
-  };
+  useEffect(() => {
+    const readName = () => {
+      const name = localStorage.getItem("timetrade_wallet_name") || "Wallet";
+      setWalletName(name);
+    };
+    readName();
+    window.addEventListener("timetrade:account-switched", readName);
+    return () => window.removeEventListener("timetrade:account-switched", readName);
+  }, []);
 
   return (
     <>
@@ -44,29 +40,41 @@ export const WalletHeader = ({
           <User className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
         </button>
 
-        {/* Wallet address pill */}
+        {/* Wallet name pill */}
         <button
           onClick={() => setShowAccountSwitcher(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/60 border border-border/50 backdrop-blur-sm"
         >
-          <div className="w-4 h-4 rounded-full bg-primary/80 flex items-center justify-center">
-            <span className="text-[8px] font-bold text-primary-foreground">B</span>
+          <div className="w-4 h-4 rounded-full bg-foreground/80 flex items-center justify-center">
+            <span className="text-[8px] font-bold text-background">B</span>
           </div>
-          <span className="text-sm text-foreground/80 font-mono">
-            {formatAddress(walletAddress)}
+          <span className="text-sm text-foreground/80 font-medium">
+            {walletName}
           </span>
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
 
-        {/* Notification bell */}
-        <NotificationCenter
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAsRead={onMarkAsRead}
-          onMarkAllAsRead={onMarkAllAsRead}
-          onDelete={onDeleteNotification}
-          onClearAll={onClearAllNotifications}
-        />
+        {/* Notification bell - navigates to /notifications route */}
+        <button
+          onClick={() => navigate("/notifications")}
+          className="relative p-2 rounded-full bg-card border border-border hover:border-foreground/30 transition-colors"
+        >
+          <Bell className="w-5 h-5 text-muted-foreground" />
+          <AnimatePresence>
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center"
+              >
+                <span className="text-xs font-bold text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </button>
       </header>
 
       <AccountSwitcherSheet
