@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info } from "lucide-react";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { SUPPORTED_CHAINS } from "@/hooks/useBlockchain";
 import { useToast } from "@/hooks/use-toast";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { useWebNotifications } from "@/hooks/useWebNotifications";
@@ -174,6 +175,30 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               description="Lock after 5 min of inactivity"
               rightElement={<Switch defaultChecked />}
             />
+          </div>
+        </section>
+
+        {/* Supported Networks */}
+        <section>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 mb-2">
+            Supported Networks
+          </p>
+          <div className="bg-card/50 border border-border/30 rounded-2xl divide-y divide-border/20 overflow-hidden">
+            {SUPPORTED_CHAINS.map((chain) => (
+              <div key={chain.id} className="flex items-center gap-4 px-4 py-3.5">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg"
+                  style={{ backgroundColor: `${chain.color}20` }}
+                >
+                  <span style={{ color: chain.color }}>{chain.icon}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium leading-tight">{chain.name}</p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">{chain.symbol}</p>
+                </div>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Active" />
+              </div>
+            ))}
           </div>
         </section>
 
