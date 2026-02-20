@@ -331,7 +331,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-border">
         <button 
