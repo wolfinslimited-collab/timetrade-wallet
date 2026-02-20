@@ -110,9 +110,9 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-8"
+          className="mb-5"
         >
-          <div className="w-28 h-28 overflow-hidden">
+          <div className="w-16 h-16 overflow-hidden">
             <img
               src="/app-logo.png"
               alt="Timetrade"
@@ -126,10 +126,10 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-10"
+          className="text-center mb-6"
         >
-          <h1 className="text-[32px] font-bold tracking-tight mb-2">Welcome Back</h1>
-          <p className="text-muted-foreground text-base">Enter your PIN to continue</p>
+          <h1 className="text-xl font-bold tracking-tight mb-1">Welcome Back</h1>
+          <p className="text-muted-foreground text-sm">Enter your PIN to continue</p>
         </motion.div>
 
         {/* Lock Timer */}
@@ -154,7 +154,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex gap-5 mb-4"
+          className="flex gap-4 mb-4"
         >
           {[0, 1, 2, 3, 4, 5].map((index) => (
             <motion.div
@@ -170,7 +170,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             >
               <div
                 className={cn(
-                  "w-[18px] h-[18px] rounded-full transition-all duration-200",
+                  "w-3 h-3 rounded-full transition-all duration-200",
                   index < pin.length
                     ? showError
                       ? "bg-destructive shadow-[0_0_12px_hsl(0,72%,51%,0.5)]"
@@ -205,7 +205,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="w-full pb-4"
       >
-        <div className="grid grid-cols-3 gap-[14px] max-w-[360px] mx-auto">
+        <div className="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <motion.button
               key={digit}
@@ -213,7 +213,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
               onClick={() => handleKeyPress(String(digit))}
               disabled={isLocked}
               className={cn(
-                "aspect-square rounded-2xl text-[28px] font-medium transition-colors duration-100",
+                "h-14 rounded-xl text-lg font-medium transition-colors duration-100",
                 "bg-card/40 border border-border/25",
                 isLocked
                   ? "opacity-25 cursor-not-allowed"
@@ -231,7 +231,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             onClick={() => handleKeyPress("0")}
             disabled={isLocked}
             className={cn(
-              "aspect-square rounded-2xl text-[28px] font-medium transition-colors duration-100",
+              "h-14 rounded-xl text-lg font-medium transition-colors duration-100",
               "bg-card/40 border border-border/25",
               isLocked
                 ? "opacity-25 cursor-not-allowed"
@@ -246,14 +246,14 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             onClick={handleDelete}
             disabled={isLocked}
             className={cn(
-              "aspect-square rounded-2xl flex items-center justify-center transition-colors duration-100",
+              "h-14 rounded-xl flex items-center justify-center transition-colors duration-100",
               "bg-card/40 border border-border/25",
               isLocked
                 ? "opacity-25 cursor-not-allowed"
                 : "active:bg-secondary"
             )}
           >
-            <Delete className="w-6 h-6 text-muted-foreground" />
+            <Delete className="w-5 h-5 text-muted-foreground" />
           </motion.button>
         </div>
       </motion.div>
