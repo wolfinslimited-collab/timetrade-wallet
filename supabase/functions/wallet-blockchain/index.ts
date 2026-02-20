@@ -15,7 +15,7 @@ const TATUM_V4_BASE_URL = "https://api.tatum.io/v4";
 const HELIUS_MAINNET_RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
 const HELIUS_DEVNET_RPC = `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
 
-type Chain = "ethereum" | "bitcoin" | "solana" | "polygon" | "tron" | "arbitrum";
+type Chain = "ethereum" | "bitcoin" | "solana" | "polygon" | "tron" | "arbitrum" | "bsc";
 
 type ActionType =
   | "getBalance"
@@ -116,6 +116,17 @@ const chainConfigs: Record<Chain, ChainConfig> = {
     gasEndpoint: (testnet) => `/ethereum/gas?type=arbitrum-one${testnet ? "&testnet=true" : ""}`,
     explorerUrl: (testnet) =>
       testnet ? "https://sepolia.arbiscan.io" : "https://arbiscan.io",
+  },
+  bsc: {
+    symbol: "BNB",
+    decimals: 18,
+    balanceEndpoint: (address, testnet) =>
+      `/bsc/account/balance/${address}${testnet ? "?testnet=true" : ""}`,
+    txEndpoint: (address, testnet) =>
+      `/bsc/account/transaction/${address}?pageSize=20${testnet ? "&testnet=true" : ""}`,
+    gasEndpoint: (testnet) => `/bsc/gas${testnet ? "?testnet=true" : ""}`,
+    explorerUrl: (testnet) =>
+      testnet ? "https://testnet.bscscan.com" : "https://bscscan.com",
   },
 };
 
@@ -653,6 +664,88 @@ const KNOWN_TOKENS: Record<
     decimals: 6,
     logo: "💵",
   },
+  "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619": {
+    name: "Wrapped Ether",
+    symbol: "WETH",
+    decimals: 18,
+    logo: "⟠",
+  },
+  "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": {
+    name: "Tether USD",
+    symbol: "USDT",
+    decimals: 6,
+    logo: "💲",
+  },
+
+  // Arbitrum One Mainnet
+  "0xaf88d065e77c8cc2239327c5edb3a432268e5831": {
+    name: "USD Coin",
+    symbol: "USDC",
+    decimals: 6,
+    logo: "💵",
+  },
+  "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": {
+    name: "USD Coin (Bridged)",
+    symbol: "USDC.e",
+    decimals: 6,
+    logo: "💵",
+  },
+  "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": {
+    name: "Tether USD",
+    symbol: "USDT",
+    decimals: 6,
+    logo: "💲",
+  },
+  "0x912ce59144191c1204e64559fe8253a0e49e6548": {
+    name: "Arbitrum",
+    symbol: "ARB",
+    decimals: 18,
+    logo: "◆",
+  },
+  "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": {
+    name: "Wrapped Ether",
+    symbol: "WETH",
+    decimals: 18,
+    logo: "⟠",
+  },
+  "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f": {
+    name: "Wrapped BTC",
+    symbol: "WBTC",
+    decimals: 8,
+    logo: "₿",
+  },
+
+  // BSC Mainnet
+  "0x55d398326f99059ff775485246999027b3197955": {
+    name: "Tether USD",
+    symbol: "USDT",
+    decimals: 18,
+    logo: "💲",
+  },
+  "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": {
+    name: "USD Coin",
+    symbol: "USDC",
+    decimals: 18,
+    logo: "💵",
+  },
+  "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+    name: "BUSD Token",
+    symbol: "BUSD",
+    decimals: 18,
+    logo: "💵",
+  },
+  "0x2170ed0880ac9a755fd29b2688956bd959f933f8": {
+    name: "Wrapped Ether",
+    symbol: "ETH",
+    decimals: 18,
+    logo: "⟠",
+  },
+  "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c": {
+    name: "Wrapped BTC",
+    symbol: "BTCB",
+    decimals: 18,
+    logo: "₿",
+  },
 };
 
 async function getERC20Tokens(
@@ -669,9 +762,38 @@ async function getERC20Tokens(
     logo?: string;
   }>
 > {
-  // Only fetch tokens for EVM chains
-  if (chain !== "ethereum" && chain !== "polygon" && chain !== "arbitrum") {
+  // Only fetch tokens for supported EVM chains
+  if (chain !== "ethereum" && chain !== "polygon" && chain !== "arbitrum" && chain !== "bsc") {
     return [];
+  }
+
+  // BSC uses Tatum v3 endpoint which returns tokens differently
+  if (chain === "bsc") {
+    try {
+      const endpoint = `/bsc/account/balance/${address}`;
+      console.log(`Fetching BEP-20 tokens for BSC: ${endpoint}`);
+      const data = await tatumRequest(endpoint);
+      const rawTokens: Array<{contractAddress?: string; symbol?: string; name?: string; decimals?: number; balance?: string | number}> = data?.tokens || [];
+      return rawTokens
+        .map((t) => {
+          const addr = (t.contractAddress || "").toLowerCase();
+          const known = KNOWN_TOKENS[addr];
+          const decimals = known?.decimals ?? (typeof t.decimals === "number" ? t.decimals : 18);
+          const baseBalance = toBaseUnits(String(t.balance ?? "0"), decimals);
+          return {
+            symbol: known?.symbol || t.symbol || "UNKNOWN",
+            name: known?.name || t.name || "Unknown Token",
+            balance: baseBalance,
+            decimals,
+            contractAddress: t.contractAddress || "",
+            logo: known?.logo,
+          };
+        })
+        .filter((t) => isNonZeroBaseUnit(t.balance) && t.symbol !== "UNKNOWN" && t.contractAddress);
+    } catch (err) {
+      console.error("Error fetching BSC BEP-20 tokens:", err);
+      return [];
+    }
   }
 
   try {
@@ -901,7 +1023,7 @@ async function getTokens(
     return getSPLTokens(address, testnet);
   } else if (chain === "tron") {
     return getTRC20Tokens(address);
-  } else if (chain === "ethereum" || chain === "polygon") {
+  } else if (chain === "ethereum" || chain === "polygon" || chain === "arbitrum" || chain === "bsc") {
     return getERC20Tokens(chain, address, testnet);
   }
   return [];
