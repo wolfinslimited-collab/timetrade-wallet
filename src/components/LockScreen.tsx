@@ -209,7 +209,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ y: 24, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.35, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-3 gap-3 w-full max-w-[260px]"
+          className="grid grid-cols-3 gap-3 w-full max-w-[340px]"
         >
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <motion.button
@@ -218,7 +218,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
               onClick={() => handleKeyPress(String(digit))}
               disabled={isLocked}
               className={cn(
-                "h-[56px] rounded-2xl text-xl font-medium transition-all duration-150",
+                "h-[72px] rounded-2xl text-2xl font-medium transition-all duration-150",
                 "bg-card/60 border border-border/40",
                 isLocked
                   ? "opacity-30 cursor-not-allowed"
@@ -228,13 +228,13 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
               {digit}
             </motion.button>
           ))}
-          <div className="h-[56px]" />
+          <div className="h-[72px]" />
           <motion.button
             whileTap={{ scale: 0.92 }}
             onClick={() => handleKeyPress("0")}
             disabled={isLocked}
             className={cn(
-              "h-[56px] rounded-2xl text-xl font-medium transition-all duration-150",
+              "h-[72px] rounded-2xl text-2xl font-medium transition-all duration-150",
               "bg-card/60 border border-border/40",
               isLocked
                 ? "opacity-30 cursor-not-allowed"
@@ -248,7 +248,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             onClick={handleDelete}
             disabled={isLocked}
             className={cn(
-              "h-[56px] rounded-2xl flex items-center justify-center transition-all duration-150",
+              "h-[72px] rounded-2xl flex items-center justify-center transition-all duration-150",
               "bg-card/60 border border-border/40",
               isLocked
                 ? "opacity-30 cursor-not-allowed"
@@ -259,19 +259,6 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           </motion.button>
         </motion.div>
       </div>
-
-      {/* Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-        className="pb-8 px-6"
-      >
-        <div className="flex items-center justify-center gap-1.5 text-muted-foreground/40">
-          <Shield className="w-3 h-3" />
-          <p className="text-[10px]">Secured by Timetrade</p>
-        </div>
-      </motion.div>
     </div>
   );
 };
