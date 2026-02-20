@@ -27,39 +27,10 @@ interface AssetDetailSheetProps {
   address: string | null;
 }
 
-// Get chain explorer URL
-const getExplorerUrl = (chain: Chain): string => {
-  const urls: Record<Chain, string> = {
-    ethereum: "https://etherscan.io",
-    arbitrum: "https://arbiscan.io",
-    polygon: "https://polygonscan.com",
-    solana: "https://explorer.solana.com",
-    tron: "https://tronscan.org",
-    bitcoin: "https://blockstream.info",
-    bsc: "https://bscscan.com",
-  };
-  return urls[chain] || urls.ethereum;
-};
+import { getExplorerUrl, getTxExplorerUrl as _getTxExplorerUrl, getNetworkLogoUrl } from "@/config/networks";
 
-const getTxExplorerUrl = (chain: Chain, explorerBase: string, txHash: string) => {
-  const base = explorerBase.replace(/\/$/, "");
-  if (chain === "tron") return `${base}/#/transaction/${txHash}`;
-  return `${base}/tx/${txHash}`;
-};
-
-// Get network logo URL
-const getNetworkLogoUrl = (chain: Chain): string => {
-  const symbols: Record<Chain, string> = {
-    ethereum: "eth",
-    arbitrum: "arb",
-    polygon: "matic",
-    solana: "sol",
-    tron: "trx",
-    bitcoin: "btc",
-    bsc: "bnb",
-  };
-  return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
-};
+const getTxExplorerUrl = (chain: Chain, _explorerBase: string, txHash: string) =>
+  _getTxExplorerUrl(chain, txHash);
 
 export const AssetDetailSheet = ({ open, onOpenChange, asset, address }: AssetDetailSheetProps) => {
   const [showSend, setShowSend] = useState(false);

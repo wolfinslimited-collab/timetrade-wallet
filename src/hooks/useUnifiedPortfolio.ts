@@ -244,10 +244,10 @@ export function useUnifiedPortfolio(enabled: boolean) {
         ethereum: "Ethereum",
         polygon: "Polygon",
         arbitrum: "Arbitrum One",
+        bsc: "BNB Chain",
         solana: "Solana",
         tron: "Tron",
         bitcoin: "Bitcoin",
-        bsc: "BNB Chain",
       };
       // For ETH-like symbols on non-Ethereum chains, add the chain name
       if (symbol.toUpperCase() === "ETH" && chain !== "ethereum") {

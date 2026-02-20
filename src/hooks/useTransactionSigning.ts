@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { Chain, getChainInfo } from './useBlockchain';
+import { NETWORK_MAP } from '@/config/networks';
 
 export interface TransactionParams {
   to: string;
@@ -25,52 +26,21 @@ interface UseTransactionSigningReturn {
   clearError: () => void;
 }
 
-// Chain IDs for supported networks
-const CHAIN_IDS: Record<Chain, { mainnet: number; testnet: number }> = {
-  ethereum: { mainnet: 1, testnet: 11155111 }, // Sepolia
-  arbitrum: { mainnet: 42161, testnet: 421614 }, // Arbitrum One / Sepolia
-  polygon: { mainnet: 137, testnet: 80002 }, // Amoy
-  bsc: { mainnet: 56, testnet: 97 }, // BSC / BSC Testnet
-  bitcoin: { mainnet: 0, testnet: 0 }, // Not EVM
-  solana: { mainnet: 0, testnet: 0 }, // Not EVM
-  tron: { mainnet: 0, testnet: 0 }, // Not EVM (uses its own protocol)
-};
-
-// RPC URLs for different chains
-const RPC_URLS: Record<Chain, { mainnet: string; testnet: string }> = {
-  ethereum: {
-    mainnet: 'https://eth.llamarpc.com',
-    testnet: 'https://rpc.sepolia.org',
-  },
-  arbitrum: {
-    mainnet: 'https://arb1.arbitrum.io/rpc',
-    testnet: 'https://sepolia-rollup.arbitrum.io/rpc',
-  },
-  polygon: {
-    mainnet: 'https://polygon-rpc.com',
-    testnet: 'https://rpc-amoy.polygon.technology',
-  },
-  bsc: {
-    mainnet: 'https://bsc-dataseed.binance.org',
-    testnet: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-  },
-  bitcoin: { mainnet: '', testnet: '' },
-  solana: { mainnet: '', testnet: '' },
-  tron: { mainnet: '', testnet: '' },
-};
-
 export function getChainId(chain: Chain, isTestnet: boolean): number {
-  const chainIds = CHAIN_IDS[chain];
-  return isTestnet ? chainIds.testnet : chainIds.mainnet;
+  const cfg = NETWORK_MAP[chain];
+  if (!cfg?.chainId) return 0;
+  return isTestnet ? cfg.chainId.testnet : cfg.chainId.mainnet;
 }
 
 export function getRpcUrl(chain: Chain, isTestnet: boolean): string {
-  const urls = RPC_URLS[chain];
-  return isTestnet ? urls.testnet : urls.mainnet;
+  const cfg = NETWORK_MAP[chain];
+  if (!cfg?.rpcUrl) return '';
+  return isTestnet ? cfg.rpcUrl.testnet : cfg.rpcUrl.mainnet;
 }
 
+
 export function isEvmChain(chain: Chain): boolean {
-  return chain === 'ethereum' || chain === 'polygon';
+  return chain === 'ethereum' || chain === 'polygon' || chain === 'arbitrum' || chain === 'bsc';
 }
 
 export function isTronChain(chain: Chain): boolean {

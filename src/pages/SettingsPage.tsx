@@ -13,30 +13,16 @@ import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
 import { broadcastWalletResetSignal, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 
-const CHAIN_LOGO_SYMBOLS: Record<string, string> = {
-  ethereum: 'eth',
-  polygon: 'pol',
-  bitcoin: 'btc',
-  solana: 'sol',
-  tron: 'trx',
-  arbitrum: 'arb',
-  bsc: 'bnb',
-};
+import { getNetworkLogoUrl as _getNetworkLogoUrl } from "@/config/networks";
+import type { Chain } from "@/config/networks";
 
 const NetworkLogo = ({ chainId }: { chainId: string }) => {
-  const symbol = CHAIN_LOGO_SYMBOLS[chainId] || chainId;
   const [errored, setErrored] = React.useState(false);
-
-  if (errored) {
-    return (
-      <span className="text-[10px] font-bold text-muted-foreground uppercase">{symbol}</span>
-    );
-  }
-
+  if (errored) return <span className="text-[10px] font-bold text-muted-foreground uppercase">{chainId}</span>;
   return (
     <img
-      src={`https://api.elbstream.com/logos/crypto/${symbol}`}
-      alt={symbol}
+      src={_getNetworkLogoUrl(chainId as Chain)}
+      alt={chainId}
       className="w-8 h-8 object-contain"
       onError={() => setErrored(true)}
     />

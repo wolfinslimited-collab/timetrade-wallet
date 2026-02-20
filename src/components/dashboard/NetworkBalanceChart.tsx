@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+import { NETWORK_MAP } from "@/config/networks";
 
 interface NetworkBalanceChartProps {
   networkBalances: {
@@ -31,15 +32,10 @@ const generateChartData = (networkBalances: NetworkBalanceChartProps["networkBal
   return data;
 };
 
-const NETWORK_COLORS: Record<Chain, string> = {
-  ethereum: "#627EEA",
-  arbitrum: "#28A0F0",
-  polygon: "#8247E5",
-  solana: "#9945FF",
-  tron: "#FF0013",
-  bitcoin: "#F7931A",
-  bsc: "#F3BA2F",
-};
+// Colors derived from central config
+const NETWORK_COLORS: Record<Chain, string> = Object.fromEntries(
+  Object.entries(NETWORK_MAP).map(([id, cfg]) => [id, cfg.color])
+) as Record<Chain, string>;
 
 export const NetworkBalanceChart = ({ networkBalances }: NetworkBalanceChartProps) => {
   const chartData = useMemo(() => generateChartData(networkBalances), [networkBalances]);

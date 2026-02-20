@@ -366,7 +366,7 @@ export function deriveTronPrivateKey(phrase: string, accountIndex: number = 0): 
   return wallet.privateKey;
 }
 
-export type Chain = "ethereum" | "polygon" | "solana" | "tron" | "bitcoin" | "arbitrum" | "bsc";
+export type Chain = "ethereum" | "polygon" | "arbitrum" | "bsc" | "solana" | "tron" | "bitcoin";
 
 /**
  * Derive private key for any supported chain

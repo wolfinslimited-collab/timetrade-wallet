@@ -6,22 +6,11 @@ import { Chain, SUPPORTED_CHAINS, getChainInfo } from "@/hooks/useBlockchain";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
-// Logo helpers
-const getCryptoLogoUrl = (symbol: string) => 
+import { getNetworkLogoUrl } from "@/config/networks";
+
+const getCryptoLogoUrl = (symbol: string) =>
   `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
 
-const getNetworkLogoUrl = (chain: Chain) => {
-  const symbols: Record<Chain, string> = {
-    ethereum: "eth",
-    arbitrum: "arb",
-    polygon: "matic",
-    solana: "sol",
-    tron: "trx",
-    bitcoin: "btc",
-    bsc: "bnb",
-  };
-  return getCryptoLogoUrl(symbols[chain]);
-};
 
 export interface AvailableAsset {
   symbol: string;
