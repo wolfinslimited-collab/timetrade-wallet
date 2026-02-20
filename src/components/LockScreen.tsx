@@ -102,14 +102,16 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   };
 
   const btnStyle = cn(
-    "aspect-square rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
+    "w-[56px] h-[56px] rounded-full flex items-center justify-center text-lg font-semibold text-foreground/90 transition-all duration-100",
     "bg-gradient-to-b from-muted/70 to-muted/30",
     "shadow-[inset_0_-4px_8px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(255,255,255,0.06),0_2px_6px_rgba(0,0,0,0.25)]",
     "border border-white/[0.04]",
   );
 
   return (
-    <div className="h-screen bg-background flex flex-col items-center max-w-md mx-auto overflow-hidden relative">
+    <div className="h-screen flex flex-col items-center max-w-md mx-auto overflow-hidden relative"
+      style={{ background: 'radial-gradient(ellipse at top center, hsl(120 15% 12%), hsl(120 8% 5%))' }}
+    >
       {/* Upper */}
       <div className="flex flex-col items-center pt-12 pb-4 w-full">
         <motion.div
@@ -197,7 +199,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="w-full flex-1 flex flex-col justify-center pb-8 px-8"
       >
-        <div className="grid grid-cols-3 gap-4 max-w-[300px] mx-auto w-full">
+        <div className="grid grid-cols-3 gap-3 mx-auto w-fit">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <motion.button
               key={digit}
