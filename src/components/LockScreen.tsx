@@ -154,7 +154,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex gap-4 mb-4"
+          className="flex gap-3 mb-4"
         >
           {[0, 1, 2, 3, 4, 5].map((index) => (
             <motion.div
@@ -163,38 +163,43 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
                 showError
                   ? { x: [-4, 4, -4, 4, 0] }
                   : index < pin.length
-                  ? { scale: [1, 1.4, 1] }
+                  ? { scale: [1, 1.3, 1] }
                   : {}
               }
               transition={{ duration: 0.25 }}
             >
               <div
                 className={cn(
-                  "w-3 h-3 rounded-full transition-all duration-200",
-                  index < pin.length
-                    ? showError
-                      ? "bg-destructive shadow-[0_0_12px_hsl(0,72%,51%,0.5)]"
-                      : "bg-primary shadow-[0_0_12px_hsl(0,0%,98%,0.35)]"
-                    : "bg-muted-foreground/20"
+                  "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200",
+                  "bg-muted/60 border border-border/30",
+                  showError && index < pin.length && "border-destructive/50"
                 )}
-              />
+              >
+                <div
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full transition-all duration-200",
+                    index < pin.length
+                      ? showError
+                        ? "bg-destructive shadow-[0_0_8px_hsl(0,72%,51%,0.5)]"
+                        : "bg-foreground shadow-[0_0_8px_hsl(0,0%,98%,0.3)]"
+                      : "bg-muted-foreground/40"
+                  )}
+                />
+              </div>
             </motion.div>
           ))}
         </motion.div>
 
         {/* Biometric Button */}
         {biometricAvailable && !isLocked && (
-          <motion.button
+          <motion.p
             initial={{ y: 12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleBiometric}
-            className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-card border border-border/60 hover:border-primary/30 hover:bg-card/80 transition-all mt-4"
+            className="text-xs text-muted-foreground mt-2"
           >
-            <Fingerprint className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium text-foreground/80">Use Biometrics</span>
-          </motion.button>
+            Or use biometrics below
+          </motion.p>
         )}
       </div>
 
@@ -205,7 +210,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="w-full pb-4"
       >
-        <div className="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto">
+        <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <motion.button
               key={digit}
@@ -213,8 +218,8 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
               onClick={() => handleKeyPress(String(digit))}
               disabled={isLocked}
               className={cn(
-                "h-14 rounded-xl text-lg font-medium transition-colors duration-100",
-                "bg-card/40 border border-border/25",
+                "aspect-square rounded-full text-xl font-semibold transition-colors duration-100",
+                "bg-muted/50 border border-border/20",
                 isLocked
                   ? "opacity-25 cursor-not-allowed"
                   : "active:bg-secondary"
@@ -224,15 +229,25 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             </motion.button>
           ))}
 
-          <div />
+          {biometricAvailable && !isLocked ? (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleBiometric}
+              className="aspect-square rounded-full flex items-center justify-center transition-colors duration-100 bg-muted/50 border border-border/20 active:bg-secondary"
+            >
+              <Fingerprint className="w-6 h-6 text-muted-foreground" />
+            </motion.button>
+          ) : (
+            <div />
+          )}
 
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => handleKeyPress("0")}
             disabled={isLocked}
             className={cn(
-              "h-14 rounded-xl text-lg font-medium transition-colors duration-100",
-              "bg-card/40 border border-border/25",
+              "aspect-square rounded-full text-xl font-semibold transition-colors duration-100",
+              "bg-muted/50 border border-border/20",
               isLocked
                 ? "opacity-25 cursor-not-allowed"
                 : "active:bg-secondary"
@@ -246,8 +261,8 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             onClick={handleDelete}
             disabled={isLocked}
             className={cn(
-              "h-14 rounded-xl flex items-center justify-center transition-colors duration-100",
-              "bg-card/40 border border-border/25",
+              "aspect-square rounded-full flex items-center justify-center transition-colors duration-100",
+              "bg-muted/50 border border-border/20",
               isLocked
                 ? "opacity-25 cursor-not-allowed"
                 : "active:bg-secondary"
