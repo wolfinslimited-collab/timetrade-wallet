@@ -247,6 +247,7 @@ export function useUnifiedPortfolio(enabled: boolean) {
         solana: "Solana",
         tron: "Tron",
         bitcoin: "Bitcoin",
+        bsc: "BNB Chain",
       };
       // For ETH-like symbols on non-Ethereum chains, add the chain name
       if (symbol.toUpperCase() === "ETH" && chain !== "ethereum") {

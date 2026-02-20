@@ -24,6 +24,7 @@ const getNetworkLogoUrl = (chain: Chain): string => {
     solana: "sol",
     tron: "trx",
     bitcoin: "btc",
+    bsc: "bnb",
   };
   return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
 };

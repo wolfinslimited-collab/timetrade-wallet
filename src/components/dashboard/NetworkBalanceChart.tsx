@@ -38,6 +38,7 @@ const NETWORK_COLORS: Record<Chain, string> = {
   solana: "#9945FF",
   tron: "#FF0013",
   bitcoin: "#F7931A",
+  bsc: "#F3BA2F",
 };
 
 export const NetworkBalanceChart = ({ networkBalances }: NetworkBalanceChartProps) => {
