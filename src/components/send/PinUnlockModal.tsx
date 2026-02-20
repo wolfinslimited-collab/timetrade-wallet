@@ -140,13 +140,13 @@ export const PinUnlockModal = ({
           )}
 
           {/* Number Pad */}
-          <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+          <div className="grid grid-cols-3 gap-3 max-w-[260px] mx-auto">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
               <button
                 key={num}
                 onClick={() => handleKeyPress(num.toString())}
                 disabled={isLoading}
-                className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+                className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
               >
                 {num}
               </button>
@@ -154,14 +154,14 @@ export const PinUnlockModal = ({
             <button
               onClick={handleBackspace}
               disabled={isLoading}
-              className="aspect-square rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+              className="w-[76px] h-[76px] rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
             >
               <Delete className="w-5 h-5" />
             </button>
             <button
               onClick={() => handleKeyPress("0")}
               disabled={isLoading}
-              className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+              className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
             >
               0
             </button>
