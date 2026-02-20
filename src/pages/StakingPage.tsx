@@ -416,55 +416,52 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
   return (
     <div className="flex flex-col max-w-md mx-auto pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center gap-3 px-4 py-4">
-          <button onClick={onBack} className="p-2 -ml-2 hover:bg-muted rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+      {/* Header - clean, no back button */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl border-b border-border/30">
+        <div className="flex items-center justify-between px-4 py-4">
           <div>
-            <h1 className="text-lg font-semibold">Staking</h1>
-            <p className="text-xs text-muted-foreground">Earn 15% monthly on stablecoins</p>
+            <h1 className="text-xl font-bold">Staking</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Earn 15% monthly on stablecoins</p>
           </div>
+          <button
+            onClick={() => setShowTokenSheet(true)}
+            className="w-10 h-10 rounded-full bg-foreground flex items-center justify-center hover:bg-foreground/90 transition-colors"
+          >
+            <Plus className="w-5 h-5 text-background" />
+          </button>
         </div>
       </div>
 
-      <div className="px-4 py-6 space-y-6">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="p-4 bg-card/50 border-border/50">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <Wallet className="w-4 h-4" />
-              <span className="text-xs font-medium">Total Staked</span>
+      <div className="px-4 py-5 space-y-5">
+        {/* Hero Stats Card */}
+        <Card className="p-0 bg-gradient-to-br from-card/90 to-card/40 border-border/30 overflow-hidden relative">
+          <div className="absolute -top-20 -right-20 w-48 h-48 bg-foreground/5 rounded-full blur-3xl" />
+          <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-foreground/3 rounded-full blur-3xl" />
+          <div className="relative p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="px-3 py-1 rounded-full bg-foreground/10 border border-foreground/10">
+                <span className="text-xs font-semibold text-foreground/80">Fixed 15% /month</span>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-success/10 border border-success/20">
+                <span className="text-xs font-semibold text-success">Active</span>
+              </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight">{formatCurrency(totalStaked)}</p>
-          </Card>
-          <Card className="p-4 bg-card/50 border-border/50">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <span className="text-xs font-medium">Earnings</span>
-            </div>
-            <p className="text-2xl font-bold tracking-tight text-primary">+{formatCurrency(totalEarnings)}</p>
-          </Card>
-        </div>
-
-        {/* APY Card */}
-        <Card className="p-5 bg-gradient-to-br from-primary/15 via-primary/10 to-transparent border-primary/20 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Fixed Monthly Yield</p>
-              <p className="text-4xl font-bold text-primary mt-1">15% <span className="text-lg font-medium">/month</span></p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
-              <Coins className="w-7 h-7 text-primary" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Total Staked</p>
+                <p className="text-2xl font-bold tracking-tight font-mono">{formatCurrency(totalStaked)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Total Earned</p>
+                <p className="text-2xl font-bold tracking-tight font-mono text-success">+{formatCurrency(totalEarnings)}</p>
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Supported Stablecoins */}
+        {/* Available Stablecoins */}
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Your Stablecoins</h2>
+          <h2 className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Available to Stake</h2>
           {isLoadingBalance ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -473,62 +470,55 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           ) : (
             <div className="space-y-2">
               {availableStablecoinList.length === 0 ? (
-                <Card className="p-6 text-center bg-card/30 border-border/50">
-                  <p className="font-medium text-muted-foreground">No stablecoins found</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    USDT/USDC/DAI with a non-zero balance will appear here.
-                  </p>
+                <Card className="p-6 text-center bg-card/30 border-border/30 border-dashed">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-muted/30 flex items-center justify-center">
+                    <Coins className="w-6 h-6 text-muted-foreground/40" />
+                  </div>
+                  <p className="font-medium text-muted-foreground text-sm">No stablecoins found</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Add USDT, USDC, or DAI to start earning</p>
                 </Card>
               ) : (
                 availableStablecoinList.map((token) => (
-                  <Card 
+                  <button
                     key={token.symbol}
-                    className="p-4 bg-card/50 border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="w-full p-4 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 hover:border-border/50 transition-all flex items-center justify-between group"
                     onClick={() => handleSelectToken(token)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <TokenLogo symbol={token.symbol} size="md" />
-                        <div>
-                          <p className="font-semibold">{token.symbol}</p>
-                          <p className="text-xs text-muted-foreground">{token.name}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-semibold">{formatTokenAmount(token.balance)}</span>
-                        <span className="text-xs text-primary font-medium">15% /month</span>
+                    <div className="flex items-center gap-3">
+                      <TokenLogo symbol={token.symbol} size="md" />
+                      <div className="text-left">
+                        <p className="font-semibold text-sm">{token.symbol}</p>
+                        <p className="text-xs text-muted-foreground">{token.name}</p>
                       </div>
                     </div>
-                  </Card>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold text-sm font-mono">{formatTokenAmount(token.balance)}</p>
+                        <p className="text-[11px] text-success font-medium">15% /mo</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                    </div>
+                  </button>
                 ))
               )}
             </div>
           )}
         </div>
 
-        {/* Stake Button */}
-        <Button 
-          className="w-full h-12 text-base font-semibold rounded-xl"
-          onClick={() => setShowTokenSheet(true)}
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Stake Stablecoins
-        </Button>
-
         {/* Active Positions */}
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Active Stakes</h2>
+          <h2 className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Active Stakes</h2>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
             </div>
           ) : positions.length === 0 ? (
-            <Card className="p-8 text-center bg-card/30 border-border/50">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
-                <Coins className="w-8 h-8 text-muted-foreground/50" />
+            <Card className="p-8 text-center bg-card/20 border-border/20 border-dashed">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-muted/20 flex items-center justify-center">
+                <Coins className="w-7 h-7 text-muted-foreground/30" />
               </div>
-              <p className="font-medium text-muted-foreground">No active stakes</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Start earning 15% monthly today</p>
+              <p className="font-medium text-muted-foreground text-sm">No active stakes</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Start earning 15% monthly today</p>
             </Card>
           ) : (
             <div className="space-y-3">
@@ -537,55 +527,69 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                 const unlockDate = new Date(position.unlock_at);
                 const isUnlocked = unlockDate <= new Date();
                 const daysRemaining = Math.max(0, Math.ceil((unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                const totalDays = Math.ceil((unlockDate.getTime() - new Date(position.staked_at).getTime()) / (1000 * 60 * 60 * 24));
+                const progress = Math.min(1, 1 - (daysRemaining / totalDays));
 
                 return (
-                  <Card key={position.id} className="p-4 bg-card/50 border-border/50">
-                    <div className="flex items-start justify-between mb-4">
+                  <Card key={position.id} className="p-4 bg-card/50 border-border/30 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <TokenLogo symbol={position.token_symbol} size="md" />
                         <div>
-                          <p className="font-semibold">{position.token_symbol}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{position.chain}</p>
+                          <p className="font-semibold text-sm">{position.token_symbol}</p>
+                          <p className="text-[11px] text-muted-foreground capitalize">{position.chain}</p>
                         </div>
                       </div>
                       <div className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium",
+                        "px-2.5 py-1 rounded-full text-[11px] font-semibold",
                         isUnlocked 
-                          ? "bg-primary/20 text-primary" 
-                          : "bg-muted text-muted-foreground"
+                          ? "bg-success/15 text-success border border-success/20" 
+                          : "bg-muted/50 text-muted-foreground border border-border/30"
                       )}>
-                        {isUnlocked ? "Unlocked" : `${daysRemaining}d left`}
+                        {isUnlocked ? "✓ Unlocked" : `${daysRemaining}d remaining`}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-muted/30 rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground mb-1">Staked</p>
-                        <p className="font-semibold">{formatCurrency(Number(position.amount))}</p>
+                    {!isUnlocked && (
+                      <div className="w-full h-1 bg-muted/30 rounded-full mb-3 overflow-hidden">
+                        <div 
+                          className="h-full bg-foreground/40 rounded-full transition-all duration-500"
+                          style={{ width: `${progress * 100}%` }}
+                        />
                       </div>
-                      <div className="bg-primary/10 rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground mb-1">Earned</p>
-                        <p className="font-semibold text-primary">+{formatCurrency(earnings)}</p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="bg-muted/20 rounded-xl p-3">
+                        <p className="text-[11px] text-muted-foreground mb-0.5 uppercase tracking-wider">Staked</p>
+                        <p className="font-bold text-sm font-mono">{formatCurrency(Number(position.amount))}</p>
+                      </div>
+                      <div className="bg-success/5 rounded-xl p-3">
+                        <p className="text-[11px] text-muted-foreground mb-0.5 uppercase tracking-wider">Earned</p>
+                        <p className="font-bold text-sm font-mono text-success">+{formatCurrency(earnings)}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-4 px-1">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-3 px-0.5">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{unlockDate.toLocaleDateString()}</span>
+                        <Clock className="w-3 h-3" />
+                        <span>Unlock: {unlockDate.toLocaleDateString()}</span>
                       </div>
-                      <span className="font-medium">{position.apy_rate}% /month</span>
+                      <span className="font-semibold">{position.apy_rate}% /mo</span>
                     </div>
 
                     <Button
                       variant={isUnlocked ? "default" : "outline"}
                       size="sm"
-                      className="w-full rounded-lg"
+                      className={cn(
+                        "w-full rounded-xl h-10",
+                        isUnlocked && "bg-foreground text-background hover:bg-foreground/90"
+                      )}
                       onClick={() => handleUnstake(position)}
                       disabled={!isUnlocked}
                     >
                       <Minus className="w-4 h-4 mr-1.5" />
-                      {isUnlocked ? "Unstake + Claim" : "Locked"}
+                      {isUnlocked ? "Unstake + Claim Rewards" : "Locked"}
                     </Button>
                   </Card>
                 );

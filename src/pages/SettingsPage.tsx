@@ -114,12 +114,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
     <div className="min-h-screen flex flex-col max-w-md mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 p-4">
-        <button 
-          onClick={onBack}
-          className="p-2 rounded-xl bg-card/50 border border-border/40 hover:bg-secondary transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
         <h1 className="text-xl font-bold">Settings</h1>
       </div>
 

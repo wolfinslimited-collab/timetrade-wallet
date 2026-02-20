@@ -11,12 +11,6 @@ export const AllAssetsPage = () => {
       {/* Header */}
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-background/80 border-b border-border/20">
         <div className="flex items-center gap-3 px-4 py-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-full hover:bg-secondary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground" />
-          </button>
           <h1 className="text-lg font-semibold text-foreground">All Assets</h1>
         </div>
       </div>
