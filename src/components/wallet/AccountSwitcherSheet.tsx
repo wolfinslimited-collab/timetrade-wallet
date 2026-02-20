@@ -829,18 +829,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
             </SheetTitle>
           </SheetHeader>
 
-          {/* Add Account Button */}
-          {addMode === null && (
-            <button
-              onClick={() => setAddMode("menu")}
-              className="w-full flex items-center gap-4 p-4 mb-4 rounded-2xl border border-dashed border-border/50 bg-muted/10 hover:bg-muted/20 transition-all duration-200"
-            >
-              <div className="w-11 h-11 rounded-full bg-muted/30 flex items-center justify-center">
-                <Plus className="w-5 h-5 text-foreground" />
-              </div>
-              <span className="font-medium text-foreground">Add or Import Account</span>
-            </button>
-          )}
+          {/* Account List - no add button, use menu from header */}
 
           {/* Add Account Menu */}
           {addMode === "menu" && (
