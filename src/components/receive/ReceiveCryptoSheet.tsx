@@ -20,6 +20,7 @@ const getNetworkLogoUrl = (networkId: string): string => {
     solana: "sol",
     tron: "trx",
     bitcoin: "btc",
+    bsc: "bnb",
   };
   return `https://api.elbstream.com/logos/crypto/${symbols[networkId] || networkId}`;
 };
@@ -64,6 +65,14 @@ const tokens: TokenOption[] = [
     network: "Tron Mainnet", 
     networkId: "tron",
     addressKey: "tron",
+    isNativeToken: true
+  },
+  { 
+    symbol: "BNB", 
+    name: "BNB Chain", 
+    network: "BSC Mainnet", 
+    networkId: "bsc",
+    addressKey: "evm",
     isNativeToken: true
   },
   { 
