@@ -122,9 +122,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mb-4"
         >
-          <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-white" />
-          </div>
+          <img src="/app-logo.png" alt="Logo" className="w-14 h-14 rounded-full object-cover" />
         </motion.div>
 
         {/* Title */}
@@ -173,23 +171,12 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             >
               <div
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200",
-                  "bg-white/5 border border-white/10",
-                  "shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]",
-                  showError && index < pin.length && "border-destructive/40"
+                  "w-3 h-3 rounded-full transition-all duration-200",
+                  index < pin.length
+                    ? (showError ? "bg-destructive" : "bg-foreground")
+                    : "bg-muted-foreground/30"
                 )}
-              >
-                {index < pin.length ? (
-                  <div
-                    className={cn(
-                      "w-2.5 h-2.5 rounded-full transition-all duration-200",
-                      showError ? "bg-destructive" : "bg-foreground"
-                    )}
-                  />
-                ) : (
-                  <div className="w-2 h-[2px] rounded-full bg-muted-foreground/40" />
-                )}
-              </div>
+              />
             </motion.div>
           ))}
         </motion.div>
@@ -203,8 +190,6 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           onBiometric={handleBiometric}
         />
 
-        {/* Version footer */}
-        <p className="text-[10px] text-muted-foreground/40 text-center mt-6">Version 1.0.1 (beta)</p>
       </div>
     </div>
   );
