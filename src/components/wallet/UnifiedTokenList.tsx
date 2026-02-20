@@ -164,7 +164,7 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
                 <div className="text-left">
                   <p className="font-semibold text-foreground">{token.name || token.symbol}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {token.symbol} • ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {token.symbol} • {getChainInfo(token.chain).name} • ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>

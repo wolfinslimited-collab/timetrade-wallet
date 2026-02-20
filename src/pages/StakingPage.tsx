@@ -417,7 +417,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   return (
     <div className="flex flex-col max-w-md mx-auto pb-20">
       {/* Header - clean, no back button */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl border-b border-border/30">
+      <div className="sticky top-0 z-10 backdrop-blur-xl border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-4">
           <div>
             <h1 className="text-xl font-bold">Staking</h1>
