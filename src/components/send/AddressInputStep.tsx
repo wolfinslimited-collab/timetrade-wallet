@@ -7,48 +7,37 @@ import { useToast } from "@/hooks/use-toast";
 import { QRScannerModal } from "./QRScannerModal";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useSavedAddresses, SavedAddress } from "@/hooks/useSavedAddresses";
-import { isValidSolanaAddress } from "@/hooks/useSolanaTransactionSigning";
+import { validateCryptoAddress } from "@nodehash/address-validator";
 
 interface AddressInputStepProps {
   selectedChain: Chain;
   onSubmit: (address: string) => void;
 }
 
-// Validate address based on chain
+// Map our chain names to @nodehash/address-validator chain names
+function getValidatorChain(chain: Chain): string {
+  switch (chain) {
+    case 'solana': return 'solana';
+    case 'tron': return 'tron';
+    case 'ethereum': return 'ethereum';
+    case 'polygon': return 'polygon';
+    case 'bitcoin': return 'bitcoin';
+    default: return chain;
+  }
+}
+
+// Validate address based on chain using @nodehash/address-validator
 function validateAddressForChain(addr: string, chain: Chain): { valid: boolean; error?: string } {
   const trimmed = addr.trim();
   if (!trimmed) return { valid: false, error: "Please enter a wallet address" };
   
-  switch (chain) {
-    case 'solana':
-      if (isValidSolanaAddress(trimmed)) {
-        return { valid: true };
-      }
-      return { valid: false, error: "Invalid Solana address (Base58 format required)" };
-    
-    case 'tron':
-      if (/^T[a-zA-Z0-9]{33}$/.test(trimmed)) {
-        return { valid: true };
-      }
-      return { valid: false, error: "Invalid Tron address (should start with T, 34 chars)" };
-    
-    case 'ethereum':
-    case 'polygon':
-      if (/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
-        return { valid: true };
-      }
-      return { valid: false, error: "Invalid EVM address (0x + 40 hex chars)" };
-    
-    case 'bitcoin':
-      // Basic Bitcoin address validation
-      if (/^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/.test(trimmed)) {
-        return { valid: true };
-      }
-      return { valid: false, error: "Invalid Bitcoin address format" };
-    
-    default:
-      return { valid: true };
+  const validatorChain = getValidatorChain(chain);
+  const res = validateCryptoAddress(trimmed, validatorChain);
+  
+  if (res.valid) {
+    return { valid: true };
   }
+  return { valid: false, error: res.error || `Invalid ${getChainInfo(chain).name} address` };
 }
 
 export const AddressInputStep = ({ selectedChain, onSubmit }: AddressInputStepProps) => {
