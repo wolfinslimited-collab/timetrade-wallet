@@ -214,12 +214,12 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 max-w-[260px] mx-auto">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
                 <button
                   key={digit}
                   onClick={() => handleKeyPress(String(digit))}
-                  className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+                  className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
                 >
                   {digit}
                 </button>
@@ -227,13 +227,13 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
               <div />
               <button
                 onClick={() => handleKeyPress("0")}
-                className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+                className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
               >
                 0
               </button>
               <button
                 onClick={handleDelete}
-                className="aspect-square rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
+                className="w-[76px] h-[76px] rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
               >
                 Delete
               </button>
