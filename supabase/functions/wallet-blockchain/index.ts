@@ -748,6 +748,82 @@ const KNOWN_TOKENS: Record<
   },
 };
 
+// Known ERC-20 tokens per chain for direct RPC balance fetching
+const ARBITRUM_TOKENS: Array<{ address: string; symbol: string; name: string; decimals: number }> = [
+  { address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", symbol: "USDC", name: "USD Coin", decimals: 6 },
+  { address: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", symbol: "USDC.e", name: "USD Coin (Bridged)", decimals: 6 },
+  { address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", symbol: "USDT", name: "Tether USD", decimals: 6 },
+  { address: "0x912CE59144191C1204E64559FE8253a0e49E6548", symbol: "ARB", name: "Arbitrum", decimals: 18 },
+  { address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", symbol: "WETH", name: "Wrapped Ether", decimals: 18 },
+  { address: "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f", symbol: "WBTC", name: "Wrapped BTC", decimals: 8 },
+  { address: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1", symbol: "DAI", name: "Dai Stablecoin", decimals: 18 },
+];
+
+const BSC_TOKENS: Array<{ address: string; symbol: string; name: string; decimals: number }> = [
+  { address: "0x55d398326f99059fF775485246999027B3197955", symbol: "USDT", name: "Tether USD", decimals: 18 },
+  { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", symbol: "USDC", name: "USD Coin", decimals: 18 },
+  { address: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", symbol: "BUSD", name: "BUSD Token", decimals: 18 },
+  { address: "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", symbol: "ETH", name: "Wrapped Ether", decimals: 18 },
+  { address: "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", symbol: "BTCB", name: "Wrapped BTC", decimals: 18 },
+  { address: "0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE", symbol: "XRP", name: "XRP Token", decimals: 18 },
+];
+
+// Call balanceOf(address) via JSON-RPC eth_call
+async function rpcERC20BalanceOf(rpcUrl: string, tokenAddress: string, walletAddress: string): Promise<string> {
+  // ABI encode: balanceOf(address) selector = 0x70a08231, pad address to 32 bytes
+  const paddedAddress = walletAddress.replace("0x", "").toLowerCase().padStart(64, "0");
+  const data = "0x70a08231" + paddedAddress;
+
+  const body = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "eth_call",
+    params: [{ to: tokenAddress, data }, "latest"],
+  };
+
+  const resp = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await resp.json();
+  const hex = json?.result;
+  if (!hex || hex === "0x" || hex === "0x0000000000000000000000000000000000000000000000000000000000000000") return "0";
+  return BigInt(hex).toString();
+}
+
+// Direct RPC token fetching for Arbitrum (Tatum v4 doesn't reliably return Arbitrum tokens)
+async function getArbitrumTokensViaRPC(address: string): Promise<Array<{ symbol: string; name: string; balance: string; decimals: number; contractAddress: string }>> {
+  const RPC_URL = "https://arb1.arbitrum.io/rpc";
+  const results = await Promise.allSettled(
+    ARBITRUM_TOKENS.map(async (token) => {
+      const balance = await rpcERC20BalanceOf(RPC_URL, token.address, address);
+      return { ...token, balance, contractAddress: token.address };
+    })
+  );
+  return results
+    .filter((r): r is PromiseFulfilledResult<{ symbol: string; name: string; balance: string; decimals: number; contractAddress: string }> =>
+      r.status === "fulfilled" && r.value.balance !== "0"
+    )
+    .map((r) => r.value);
+}
+
+// Direct RPC token fetching for BSC
+async function getBSCTokensViaRPC(address: string): Promise<Array<{ symbol: string; name: string; balance: string; decimals: number; contractAddress: string }>> {
+  const RPC_URL = "https://bsc-dataseed.binance.org";
+  const results = await Promise.allSettled(
+    BSC_TOKENS.map(async (token) => {
+      const balance = await rpcERC20BalanceOf(RPC_URL, token.address, address);
+      return { ...token, balance, contractAddress: token.address };
+    })
+  );
+  return results
+    .filter((r): r is PromiseFulfilledResult<{ symbol: string; name: string; balance: string; decimals: number; contractAddress: string }> =>
+      r.status === "fulfilled" && r.value.balance !== "0"
+    )
+    .map((r) => r.value);
+}
+
 async function getERC20Tokens(
   chain: Chain,
   address: string,
@@ -767,35 +843,19 @@ async function getERC20Tokens(
     return [];
   }
 
-  // BSC uses Tatum v3 endpoint which returns tokens differently
-  if (chain === "bsc") {
-    try {
-      const endpoint = `/bsc/account/balance/${address}`;
-      console.log(`Fetching BEP-20 tokens for BSC: ${endpoint}`);
-      const data = await tatumRequest(endpoint);
-      const rawTokens: Array<{contractAddress?: string; symbol?: string; name?: string; decimals?: number; balance?: string | number}> = data?.tokens || [];
-      return rawTokens
-        .map((t) => {
-          const addr = (t.contractAddress || "").toLowerCase();
-          const known = KNOWN_TOKENS[addr];
-          const decimals = known?.decimals ?? (typeof t.decimals === "number" ? t.decimals : 18);
-          const baseBalance = toBaseUnits(String(t.balance ?? "0"), decimals);
-          return {
-            symbol: known?.symbol || t.symbol || "UNKNOWN",
-            name: known?.name || t.name || "Unknown Token",
-            balance: baseBalance,
-            decimals,
-            contractAddress: t.contractAddress || "",
-            logo: known?.logo,
-          };
-        })
-        .filter((t) => isNonZeroBaseUnit(t.balance) && t.symbol !== "UNKNOWN" && t.contractAddress);
-    } catch (err) {
-      console.error("Error fetching BSC BEP-20 tokens:", err);
-      return [];
-    }
+  // Arbitrum: use direct RPC calls (Tatum v4 doesn't reliably return Arbitrum tokens)
+  if (chain === "arbitrum") {
+    console.log(`Fetching Arbitrum tokens via direct RPC for: ${address}`);
+    return getArbitrumTokensViaRPC(address);
   }
 
+  // BSC: use direct RPC calls
+  if (chain === "bsc") {
+    console.log(`Fetching BSC tokens via direct RPC for: ${address}`);
+    return getBSCTokensViaRPC(address);
+  }
+
+  // Ethereum & Polygon: use Tatum v4
   try {
     const endpoint = `/data/balances?chain=${chain}&addresses=${encodeURIComponent(address)}`;
     console.log(`Fetching ERC-20 tokens (v4) for ${chain}: ${endpoint}`);
