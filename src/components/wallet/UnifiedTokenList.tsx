@@ -167,11 +167,11 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
   return (
     <>
       <div className={cn("px-4", className)}>
-        <div className="divide-y divide-border/50">
+        <div className="space-y-1">
           {tokensWithValue.map((token, index) => {
             const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
               minimumFractionDigits: 0, 
-              maximumFractionDigits: 6 
+              maximumFractionDigits: 8 
             });
             const isPositive = token.change24h >= 0;
             const assetLogoUrl = getCryptoLogoUrl(token.symbol);
@@ -180,17 +180,17 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
             return (
               <button
                 key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-                className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors rounded-lg -mx-2 px-2"
+                className="w-full flex items-center justify-between py-3.5 hover:bg-card/50 transition-colors rounded-xl px-2 -mx-2"
                 onClick={() => handleAssetClick(token)}
               >
                 <div className="flex items-center gap-3">
-                  {/* Token icon with network badge */}
+                  {/* Token icon */}
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-card border border-border/30">
                       <img 
                         src={assetLogoUrl}
                         alt={token.symbol}
-                        className="w-full h-full object-contain p-1"
+                        className="w-full h-full object-contain p-1.5"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -202,7 +202,7 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
                       </div>
                     </div>
                     {/* Network Badge */}
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-secondary">
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-card">
                       <img 
                         src={networkLogoUrl}
                         alt={token.chain}
@@ -212,22 +212,22 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
                   </div>
                   
                   <div className="text-left">
-                    <p className="font-medium">{token.name || token.symbol}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formattedBalance} {token.symbol}
+                    <p className="font-semibold text-foreground">{token.name || token.symbol}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {token.symbol} • ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <p className="font-medium">
-                    ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="font-semibold text-foreground">
+                    {formattedBalance}
                   </p>
                   <p className={cn(
-                    "text-sm",
-                    isPositive ? "text-primary" : "text-destructive"
+                    "text-xs mt-0.5",
+                    isPositive ? "text-success" : "text-destructive"
                   )}>
-                    {isPositive ? "+" : ""}{token.change24h !== 0 ? `$${Math.abs(token.usdValue * token.change24h / 100).toFixed(2)}` : "$0.00"}
+                    {isPositive ? "▲" : "▼"} {Math.abs(token.change24h).toFixed(2)}%
                   </p>
                 </div>
               </button>

@@ -205,7 +205,7 @@ const Index = () => {
 
   // Main wallet view
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative pb-20">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto relative pb-24">
       <PullToRefresh onRefresh={handleRefresh}>
         {/* Minimal Header */}
         <WalletHeader 
@@ -218,29 +218,27 @@ const Index = () => {
           onClearAllNotifications={clearAll}
         />
 
-        {/* Total Balance - Centered */}
-        <div className="px-4 pt-6 pb-4 text-center">
+        {/* Total Balance */}
+        <div className="px-4 pt-8 pb-2 text-center">
           {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
-            <div className="flex items-center justify-center gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground">Syncing wallet…</span>
+            <div className="flex items-center justify-center gap-2 py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <span className="text-muted-foreground text-sm">Syncing wallet…</span>
             </div>
           ) : (
             <>
-              <h1 className="text-5xl font-bold tracking-tight">
-                {formatBalance(displayBalance)}
+              <p className="text-muted-foreground text-sm mb-2">Current balance</p>
+              <h1 className="text-[42px] font-bold tracking-tight leading-none">
+                <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
+                <span className="text-muted-foreground">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
               </h1>
               {displayBalance > 0 && (
                 <div className={cn(
-                  "text-base font-medium mt-2 flex items-center justify-center gap-2",
-                  isPositive ? "text-primary" : "text-destructive"
+                  "text-sm font-medium mt-3 flex items-center justify-center gap-1",
+                  isPositive ? "text-success" : "text-destructive"
                 )}>
-                  <span>
-                    {isPositive ? "+" : "-"}${Math.abs(dollarChange).toFixed(2)}
-                  </span>
-                  <span>
-                    {isPositive ? "+" : ""}{percentChange.toFixed(2)}%
-                  </span>
+                  <span>{isPositive ? "▲" : "▼"}</span>
+                  <span>{Math.abs(percentChange).toFixed(2)}% (1d)</span>
                 </div>
               )}
             </>
@@ -250,8 +248,18 @@ const Index = () => {
         {/* Quick Actions */}
         <QuickActions />
 
+        {/* My Assets Section */}
+        <div className="mt-2 px-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-foreground">My assets</h2>
+            <button className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-card transition-colors">
+              see all
+            </button>
+          </div>
+        </div>
+        
         {/* Token List */}
-        <div className="mt-4">
+        <div>
           <UnifiedTokenList key={`tokens-${refreshKey}`} />
         </div>
       </PullToRefresh>

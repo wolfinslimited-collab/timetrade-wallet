@@ -8,33 +8,33 @@
 
 @layer base {
   :root {
-    /* Core backgrounds */
-    --background: 240 6% 3%;
-    --foreground: 0 0% 98%;
+    /* Core backgrounds - Dark olive/green */
+    --background: 120 8% 5%;
+    --foreground: 0 0% 95%;
 
     /* Card surfaces */
-    --card: 240 5% 7%;
-    --card-foreground: 0 0% 98%;
-    --card-elevated: 240 5% 10%;
+    --card: 120 6% 10%;
+    --card-foreground: 0 0% 95%;
+    --card-elevated: 120 6% 14%;
 
     /* Popover */
-    --popover: 240 5% 7%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 120 6% 10%;
+    --popover-foreground: 0 0% 95%;
 
-    /* Primary - Clean White */
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 6% 3%;
-    --primary-glow: 0 0% 100%;
+    /* Primary - Lime Green accent */
+    --primary: 90 60% 65%;
+    --primary-foreground: 120 8% 5%;
+    --primary-glow: 90 70% 70%;
 
-    /* Secondary - Muted surface */
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 70%;
+    /* Secondary - Muted dark surface */
+    --secondary: 120 5% 15%;
+    --secondary-foreground: 0 0% 65%;
 
     /* Muted */
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 50%;
+    --muted: 120 5% 15%;
+    --muted-foreground: 120 5% 45%;
 
-    /* Accent - Orange/Coral */
+    /* Accent - Orange */
     --accent: 24 95% 53%;
     --accent-foreground: 0 0% 90%;
 
@@ -43,32 +43,32 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Success */
-    --success: 160 84% 45%;
+    --success: 142 70% 50%;
     --success-foreground: 0 0% 2%;
 
     /* Borders */
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 0 0% 98%;
+    --border: 120 4% 18%;
+    --input: 120 4% 18%;
+    --ring: 90 60% 65%;
 
     --radius: 1rem;
 
     /* Chart colors */
-    --chart-1: 0 0% 98%;
+    --chart-1: 90 60% 65%;
     --chart-2: 280 65% 60%;
     --chart-3: 200 80% 55%;
     --chart-4: 24 95% 53%;
     --chart-5: 340 75% 55%;
 
-    /* Sidebar - for completeness */
-    --sidebar-background: 240 6% 3%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 6% 3%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 0 0% 98%;
+    /* Sidebar */
+    --sidebar-background: 120 8% 5%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 90 60% 65%;
+    --sidebar-primary-foreground: 120 8% 5%;
+    --sidebar-accent: 120 5% 15%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 120 4% 18%;
+    --sidebar-ring: 90 60% 65%;
   }
 }
 
@@ -80,6 +80,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    background-image: radial-gradient(ellipse at 50% 0%, hsl(120 15% 12%) 0%, hsl(120 8% 5%) 60%);
+    background-attachment: fixed;
   }
 
   /* Monospace numbers for financial data */
