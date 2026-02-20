@@ -108,7 +108,7 @@ export const BiometricSetupDialog = ({
                 key={num}
                 onClick={() => handleKeyPress(num.toString())}
                 disabled={isLoading}
-                className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+                className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
               >
                 {num}
               </button>
@@ -116,18 +116,18 @@ export const BiometricSetupDialog = ({
             <button
               onClick={handleBackspace}
               disabled={isLoading}
-              className="h-14 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+              className="aspect-square rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
             >
               <Delete className="w-5 h-5" />
             </button>
             <button
               onClick={() => handleKeyPress("0")}
               disabled={isLoading}
-              className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+              className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
             >
               0
             </button>
-            <div className="h-14" />
+            <div />
           </div>
         </div>
 

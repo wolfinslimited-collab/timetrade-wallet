@@ -190,21 +190,21 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
               <button
                 key={digit}
                 onClick={() => handleKeyPress(String(digit))}
-                className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+                className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
               >
                 {digit}
               </button>
             ))}
-            <div className="h-14" />
+            <div />
             <button
               onClick={() => handleKeyPress("0")}
-              className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+              className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
             >
               0
             </button>
             <button
               onClick={handleDelete}
-              className="h-14 rounded-xl bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
+              className="aspect-square rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
             >
               Delete
             </button>
