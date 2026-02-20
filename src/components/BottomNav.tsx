@@ -30,7 +30,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
         ref={ref}
         className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[398px]"
       >
-        <div className="bg-card/90 backdrop-blur-xl border border-border/50 rounded-full px-2 py-1.5">
+        <div className="bg-card/40 backdrop-blur-2xl border border-border/30 rounded-full px-2 py-1.5 shadow-lg shadow-black/20">
           <div className="flex items-center justify-around">
             {navItems.map((item) => {
               const isActive = activeTab === item.tab;
