@@ -37,9 +37,6 @@ export const WalletHeader = ({
           onClick={() => setShowAccountSwitcher(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/60 border border-border/50 backdrop-blur-sm"
         >
-          <div className="w-4 h-4 rounded-full bg-foreground/80 flex items-center justify-center">
-            <span className="text-[8px] font-bold text-background">B</span>
-          </div>
           <span className="text-sm text-foreground/80 font-medium">
             {walletName}
           </span>

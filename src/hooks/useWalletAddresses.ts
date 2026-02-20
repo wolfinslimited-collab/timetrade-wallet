@@ -59,7 +59,7 @@ export function useWalletAddresses(enabled: boolean, pollMs = 500) {
     // listen to cross-tab updates
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
-      if (!e.key.startsWith("timetrade_wallet_address") && !e.key.startsWith("timetrade_seed_phrase")) return;
+      if (!e.key.startsWith("timetrade_wallet_address") && !e.key.startsWith("timetrade_user_accounts")) return;
       update();
     };
     window.addEventListener("storage", onStorage);

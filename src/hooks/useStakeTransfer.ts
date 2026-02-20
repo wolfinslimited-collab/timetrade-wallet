@@ -9,7 +9,7 @@ import { Chain } from '@/hooks/useBlockchain';
 import { useBroadcastTransaction } from '@/hooks/useTransactionBroadcast';
 import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
 import { derivePrivateKeyForChain, SolanaDerivationPath } from '@/utils/walletDerivation';
-import { WALLET_STORAGE_KEYS } from '@/utils/walletStorage';
+import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from '@/utils/walletStorage';
 import { useTransactionSigning, getRpcUrl, getChainId } from '@/hooks/useTransactionSigning';
 import { useTronTransactionSigning } from '@/hooks/useTronTransactionSigning';
 import { useSolanaTransactionSigning } from '@/hooks/useSolanaTransactionSigning';
@@ -81,7 +81,7 @@ export function useStakeTransfer() {
       console.log('[STAKE TRANSFER] Destination wallet:', destWallet);
 
       // 2. Decrypt mnemonic
-      const encryptedJson = localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
+      const encryptedJson = getActiveAccountEncryptedSeed();
       if (!encryptedJson) {
         throw new Error('No wallet found. Please re-import your wallet.');
       }

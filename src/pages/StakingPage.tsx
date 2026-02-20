@@ -12,7 +12,7 @@ import { Chain } from "@/hooks/useBlockchain";
 import { PinUnlockModal } from "@/components/send/PinUnlockModal";
 import { useStakeTransfer, getStakeWalletAddress } from "@/hooks/useStakeTransfer";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
-import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
+import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 
 interface StakingPageProps {
   onBack: () => void;
@@ -127,7 +127,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const { transfer: executeStakeTransfer, isTransferring } = useStakeTransfer();
 
   // Check if user has mnemonic stored (for signing)
-  const hasMnemonicStored = !!localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
+  const hasMnemonicStored = !!getActiveAccountEncryptedSeed();
 
   // Get real portfolio data from blockchain context
   const { unifiedAssets, isLoadingBalance } = useBlockchainContext();

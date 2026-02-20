@@ -238,7 +238,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto relative pb-24">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-30 backdrop-blur-xl">
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
           unreadCount={unreadCount}

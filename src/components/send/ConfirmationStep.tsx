@@ -15,7 +15,7 @@ import { LiveFeeData, getFeeForSpeed } from "@/hooks/useLiveFeeEstimation";
 import { ethers } from "ethers";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 import { derivePrivateKeyForChain, SolanaDerivationPath } from "@/utils/walletDerivation";
-import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
+import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -45,7 +45,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   const chainGasEstimate = gasEstimateQuery.data;
 
   // Check if user has a mnemonic stored (for deriving private key)
-  const hasMnemonicStored = !!localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
+  const hasMnemonicStored = !!getActiveAccountEncryptedSeed();
 
   // Use native token price for fee USD (fees are paid in the network native asset)
   const nativePriceSymbol = selectedChain === 'polygon' ? 'MATIC' : chainInfo.symbol;
@@ -240,8 +240,8 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
     setPinError(null);
     
     try {
-      // Get stored encrypted seed phrase
-      const encryptedSeedJson = localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
+      // Get stored encrypted seed phrase from active account
+      const encryptedSeedJson = getActiveAccountEncryptedSeed();
       if (!encryptedSeedJson) {
         setPinError("No wallet found. Please re-import your wallet.");
         setIsProcessing(false);

@@ -14,6 +14,7 @@ import {
   deriveTronAddress
 } from '@/utils/walletDerivation';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
+import { getActiveAccountEncryptedSeed } from '@/utils/walletStorage';
 
 interface BlockchainContextType {
   // Wallet state
@@ -131,7 +132,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       timestamp: new Date().toISOString(),
     });
 
-    const encryptedDataStr = localStorage.getItem('timetrade_seed_phrase');
+    const encryptedDataStr = getActiveAccountEncryptedSeed();
     const storedPin = localStorage.getItem('timetrade_pin');
     if (!encryptedDataStr) {
       console.log(`%c[BLOCKCHAIN CONTEXT] ⚠️ No seed phrase found`, 'color: #f59e0b;');
@@ -299,7 +300,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       }
 
       // Re-derive if the encrypted mnemonic changed
-      const seedCipher = localStorage.getItem('timetrade_seed_phrase');
+      const seedCipher = getActiveAccountEncryptedSeed();
       if (seedCipher && seedCipher !== lastSeedCipherRef.current) {
         console.log(`%c[BLOCKCHAIN CONTEXT] 🔐 Seed phrase changed, re-deriving`, 'color: #a855f7;');
         deriveFromStoredMnemonic();

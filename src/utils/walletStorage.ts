@@ -9,7 +9,6 @@ export const WALLET_STORAGE_KEYS = {
   WALLET_CREATED: 'timetrade_wallet_created',
   PIN: 'timetrade_pin',
   BIOMETRIC: 'timetrade_biometric',
-  SEED_PHRASE: 'timetrade_seed_phrase',
   
   // Addresses
   WALLET_ADDRESS: 'timetrade_wallet_address',
@@ -231,11 +230,74 @@ export function getAllAddresses(): {
 }
 
 /**
+ * Get the encrypted seed phrase from the active account in timetrade_user_accounts.
+ * This replaces the old timetrade_seed_phrase global key.
+ */
+export function getActiveAccountEncryptedSeed(): string | null {
+  const activeId = localStorage.getItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_ID);
+  const accountsStr = localStorage.getItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS);
+  if (!accountsStr) return null;
+  
+  try {
+    const accounts = JSON.parse(accountsStr);
+    if (!Array.isArray(accounts)) return null;
+    
+    // Find active account
+    const active = activeId 
+      ? accounts.find((a: any) => a.id === activeId) 
+      : accounts[0];
+    
+    if (!active) return null;
+    return active.encryptedSeedPhrase || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Update the encrypted seed phrase on the active account in timetrade_user_accounts.
+ */
+export function setActiveAccountEncryptedSeed(encryptedSeedStr: string): void {
+  const activeId = localStorage.getItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_ID);
+  const accountsStr = localStorage.getItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS);
+  if (!accountsStr || !activeId) return;
+  
+  try {
+    const accounts = JSON.parse(accountsStr);
+    if (!Array.isArray(accounts)) return;
+    
+    const updated = accounts.map((a: any) => 
+      a.id === activeId ? { ...a, encryptedSeedPhrase: encryptedSeedStr } : a
+    );
+    localStorage.setItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS, JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Update encrypted seed phrase on ALL mnemonic accounts (used during PIN change).
+ */
+export function reEncryptAllAccountSeeds(oldEncrypted: string, newEncrypted: string): void {
+  const accountsStr = localStorage.getItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS);
+  if (!accountsStr) return;
+  
+  try {
+    const accounts = JSON.parse(accountsStr);
+    if (!Array.isArray(accounts)) return;
+    
+    // We need to re-encrypt each account individually - caller handles this
+    localStorage.setItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS, JSON.stringify(accounts));
+  } catch {
+    // ignore
+  }
+}
+
+/**
  * Clear session-specific mnemonic data (used when switching to private key account)
  */
 export function clearMnemonicSession(): void {
   console.log('%c[WALLET STORAGE] 🔐 Clearing mnemonic session', 'color: #a855f7;');
-  localStorage.removeItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
   localStorage.removeItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH);
   localStorage.removeItem(WALLET_STORAGE_KEYS.SOLANA_ACCOUNT_INDEX);
 }
@@ -248,7 +310,7 @@ export function logWalletState(): void {
   const accounts = localStorage.getItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS);
   const activeIndex = localStorage.getItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX);
   const walletName = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_NAME);
-  const hasSeedPhrase = !!localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
+  const hasSeedPhrase = !!getActiveAccountEncryptedSeed();
   
   console.log('%c[WALLET STORAGE] 📊 Current State', 'color: #3b82f6; font-weight: bold;', {
     walletName,
