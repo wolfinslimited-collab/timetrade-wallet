@@ -1,21 +1,21 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
-import { Wallet, History, Layers, Settings } from "lucide-react";
+import { HomeIcon, TransactionHistoryIcon, UsdtIcon, AccountSettingsIcon } from "./icons/NavIcons";
 
 export type NavTab = "wallet" | "history" | "staking" | "settings";
 
 interface NavItem {
-  icon: React.ReactNode;
+  icon: (color: string) => React.ReactNode;
   label: string;
   tab: NavTab;
   isCenter?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { icon: <Wallet className="w-5 h-5" />, label: "Wallet", tab: "wallet" },
-  { icon: <History className="w-5 h-5" />, label: "History", tab: "history" },
-  { icon: <Layers className="w-[22px] h-[22px]" />, label: "Staking", tab: "staking", isCenter: true },
-  { icon: <Settings className="w-5 h-5" />, label: "Settings", tab: "settings" },
+  { icon: (c) => <HomeIcon className="w-5 h-5" color={c} />, label: "Wallet", tab: "wallet" },
+  { icon: (c) => <TransactionHistoryIcon className="w-5 h-5" color={c} />, label: "History", tab: "history" },
+  { icon: (c) => <UsdtIcon className="w-[22px] h-[22px]" color={c} />, label: "Staking", tab: "staking", isCenter: true },
+  { icon: (c) => <AccountSettingsIcon className="w-5 h-5" color={c} />, label: "Settings", tab: "settings" },
 ];
 
 interface BottomNavProps {
@@ -42,12 +42,10 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                     onClick={() => onTabChange?.(item.tab)}
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 -my-1",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                        : "bg-primary/20 text-primary hover:bg-primary/30"
+                      "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                     )}
                   >
-                    {item.icon}
+                    {item.icon("hsl(var(--primary-foreground))")}
                   </button>
                 );
               }
@@ -63,7 +61,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                       : "text-muted-foreground hover:text-foreground/70"
                   )}
                 >
-                  {item.icon}
+                  {item.icon(isActive ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))")}
                 </button>
               );
             })}
