@@ -203,11 +203,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
           </div>
         </section>
 
-        {/* App Info */}
-        <div className="text-center space-y-1 pt-2">
-          <p className="text-[11px] text-muted-foreground/50">Timetrade Wallet v1.0.0</p>
-          <p className="text-[10px] text-muted-foreground/30">Powered by secure encryption</p>
-        </div>
       </div>
 
       {/* Sheets */}

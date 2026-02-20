@@ -1,20 +1,47 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Copy, AlertTriangle, Lock, Shield, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Copy, AlertTriangle, Lock, Shield, Loader2, ChevronRight, Wallet } from "lucide-react";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
-import { getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
+import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
 
 interface ViewSeedPhraseSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface AccountInfo {
+  id: string;
+  nickname: string;
+  encryptedSeedPhrase: string;
+}
+
+function getAccounts(): AccountInfo[] {
+  try {
+    const raw = localStorage.getItem(WALLET_STORAGE_KEYS.USER_ACCOUNTS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((a: any) => a.encryptedSeedPhrase)
+      .map((a: any) => ({
+        id: a.id,
+        nickname: a.nickname || `Account`,
+        encryptedSeedPhrase: a.encryptedSeedPhrase,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+type Step = "select-account" | "enter-pin" | "view-seed";
+
 export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetProps) => {
   const { toast } = useToast();
-  const [authenticated, setAuthenticated] = useState(false);
+  const [step, setStep] = useState<Step>("select-account");
+  const [selectedAccount, setSelectedAccount] = useState<AccountInfo | null>(null);
   const [pin, setPin] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,30 +49,33 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   const [isDecrypting, setIsDecrypting] = useState(false);
 
   const storedPin = localStorage.getItem("timetrade_pin");
+  const accounts = getAccounts();
+
+  const handleSelectAccount = (account: AccountInfo) => {
+    setSelectedAccount(account);
+    setStep("enter-pin");
+  };
 
   const handleKeyPress = async (digit: string) => {
     if (pin.length >= 6) return;
-    
     const newPin = pin + digit;
     setPin(newPin);
     setError(null);
 
     if (newPin.length === 6) {
       if (newPin === storedPin) {
-        // Decrypt the seed phrase
         setIsDecrypting(true);
         try {
-          const encryptedDataStr = getActiveAccountEncryptedSeed();
-          if (encryptedDataStr) {
-            const encryptedData: EncryptedData = JSON.parse(encryptedDataStr);
+          if (selectedAccount?.encryptedSeedPhrase) {
+            const encryptedData: EncryptedData = JSON.parse(selectedAccount.encryptedSeedPhrase);
             const decryptedPhrase = await decryptPrivateKey(encryptedData, newPin);
             setSeedPhrase(decryptedPhrase.split(" "));
-            setAuthenticated(true);
+            setStep("view-seed");
           } else {
             setError("No seed phrase found");
             setPin("");
           }
-        } catch (err) {
+        } catch {
           setError("Failed to decrypt seed phrase");
           setPin("");
         } finally {
@@ -65,16 +95,14 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(seedPhrase.join(" "));
-    toast({
-      title: "Copied!",
-      description: "Seed phrase copied to clipboard. Keep it safe!",
-    });
+    toast({ title: "Copied!", description: "Seed phrase copied to clipboard. Keep it safe!" });
   };
 
   const handleClose = () => {
     onOpenChange(false);
     setTimeout(() => {
-      setAuthenticated(false);
+      setStep("select-account");
+      setSelectedAccount(null);
       setPin("");
       setRevealed(false);
       setError(null);
@@ -82,12 +110,72 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
     }, 300);
   };
 
-  if (!authenticated) {
+  const handleBack = () => {
+    if (step === "enter-pin") {
+      setStep("select-account");
+      setSelectedAccount(null);
+      setPin("");
+      setError(null);
+    } else if (step === "view-seed") {
+      setStep("select-account");
+      setSelectedAccount(null);
+      setPin("");
+      setRevealed(false);
+      setSeedPhrase([]);
+    }
+  };
+
+  // Step 1: Account selection
+  if (step === "select-account") {
+    return (
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl bg-background border-border p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle className="text-xl font-bold">Select Account</SheetTitle>
+          </SheetHeader>
+          <div className="px-6 pb-8 mt-2">
+            <p className="text-sm text-muted-foreground mb-4">
+              Choose which account's seed phrase to view
+            </p>
+            <div className="space-y-2">
+              {accounts.map((account, idx) => (
+                <button
+                  key={account.id}
+                  onClick={() => handleSelectAccount(account)}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:bg-secondary active:scale-[0.98] transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[15px] truncate">{account.nickname}</p>
+                    <p className="text-xs text-muted-foreground">Account {idx + 1}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                </button>
+              ))}
+              {accounts.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No accounts found</p>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Step 2: PIN entry
+  if (step === "enter-pin") {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
         <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl bg-background border-border p-0">
           <SheetHeader className="px-6 pt-6 pb-2">
-            <SheetTitle className="text-xl font-bold">Enter PIN to View</SheetTitle>
+            <div className="flex items-center gap-2">
+              <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                ← Back
+              </button>
+              <SheetTitle className="text-xl font-bold">Enter PIN</SheetTitle>
+            </div>
           </SheetHeader>
 
           <div className="flex flex-col h-full px-6 pb-8">
@@ -104,15 +192,11 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
                   <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
                     <Lock className="w-10 h-10 text-primary" />
                   </div>
-
-                  <p className="text-muted-foreground text-center mb-8 max-w-xs">
-                    Enter your PIN to view your seed phrase
+                  <p className="text-sm font-medium mb-1">{selectedAccount?.nickname}</p>
+                  <p className="text-muted-foreground text-center mb-8 max-w-xs text-sm">
+                    Enter your PIN to view the seed phrase
                   </p>
-
-                  {error && (
-                    <p className="text-destructive text-sm mb-4">{error}</p>
-                  )}
-
+                  {error && <p className="text-destructive text-sm mb-4">{error}</p>}
                   <div className="flex gap-4 mb-8">
                     {[0, 1, 2, 3, 4, 5].map((index) => (
                       <div
@@ -160,15 +244,20 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
     );
   }
 
+  // Step 3: View seed phrase
   return (
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0">
         <SheetHeader className="px-6 pt-6 pb-2">
-          <SheetTitle className="text-xl font-bold">Your Seed Phrase</SheetTitle>
+          <div className="flex items-center gap-2">
+            <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+              ← Back
+            </button>
+            <SheetTitle className="text-xl font-bold">{selectedAccount?.nickname}</SheetTitle>
+          </div>
         </SheetHeader>
 
         <div className="flex flex-col h-full px-6 pb-8">
-          {/* Warning */}
           <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 mt-4">
             <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
             <div className="text-sm">
@@ -179,7 +268,6 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </div>
           </div>
 
-          {/* Seed Phrase Grid */}
           <div className="flex-1 mt-6">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium">Recovery Phrase</span>
@@ -187,41 +275,20 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
                 onClick={() => setRevealed(!revealed)}
                 className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
               >
-                {revealed ? (
-                  <>
-                    <EyeOff className="w-4 h-4" />
-                    Hide
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    Reveal
-                  </>
-                )}
+                {revealed ? <><EyeOff className="w-4 h-4" />Hide</> : <><Eye className="w-4 h-4" />Reveal</>}
               </button>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
               {seedPhrase.map((word, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border"
-                >
-                  <span className="text-xs text-muted-foreground font-mono w-5">
-                    {index + 1}.
-                  </span>
-                  <span className={cn(
-                    "font-mono text-sm flex-1",
-                    !revealed && "blur-sm select-none"
-                  )}>
-                    {word}
-                  </span>
+                <div key={index} className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border">
+                  <span className="text-xs text-muted-foreground font-mono w-5">{index + 1}.</span>
+                  <span className={cn("font-mono text-sm flex-1", !revealed && "blur-sm select-none")}>{word}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Security Tips */}
           <div className="mt-4 p-4 rounded-xl bg-card border border-border">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="w-4 h-4 text-primary" />
@@ -234,22 +301,12 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </ul>
           </div>
 
-          {/* Copy Button */}
-          <Button
-            onClick={handleCopy}
-            variant="outline"
-            className="mt-4 h-14 border-border bg-card hover:bg-secondary"
-            disabled={!revealed}
-          >
+          <Button onClick={handleCopy} variant="outline" className="mt-4 h-14 border-border bg-card hover:bg-secondary" disabled={!revealed}>
             <Copy className="w-5 h-5 mr-2" />
             Copy to Clipboard
           </Button>
 
-          {/* Done Button */}
-          <Button
-            onClick={handleClose}
-            className="mt-3 h-14 bg-primary hover:bg-primary/90"
-          >
+          <Button onClick={handleClose} className="mt-3 h-14 bg-primary hover:bg-primary/90">
             Done
           </Button>
         </div>
