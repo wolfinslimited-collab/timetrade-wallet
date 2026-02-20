@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Copy, AlertTriangle, Lock, Shield, Loader2 } from "lucide-react";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
+import { getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 
 interface ViewSeedPhraseSheetProps {
   open: boolean;
@@ -34,7 +35,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
         // Decrypt the seed phrase
         setIsDecrypting(true);
         try {
-          const encryptedDataStr = localStorage.getItem("timetrade_seed_phrase");
+          const encryptedDataStr = getActiveAccountEncryptedSeed();
           if (encryptedDataStr) {
             const encryptedData: EncryptedData = JSON.parse(encryptedDataStr);
             const decryptedPhrase = await decryptPrivateKey(encryptedData, newPin);

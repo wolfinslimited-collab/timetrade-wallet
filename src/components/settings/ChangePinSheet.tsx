@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { decryptPrivateKey, EncryptedData, encryptPrivateKey } from "@/utils/encryption";
+import { getActiveAccountEncryptedSeed, setActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 import { Lock, Check } from "lucide-react";
 
 interface ChangePinSheetProps {
@@ -68,13 +69,13 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
               }
             }
 
-            // 2) Re-encrypt the seed phrase (if present)
-            const encryptedSeedStr = localStorage.getItem("timetrade_seed_phrase");
+            // 2) Re-encrypt the seed phrase in all accounts
+            const encryptedSeedStr = getActiveAccountEncryptedSeed();
             if (encryptedSeedStr) {
               const encryptedSeed: EncryptedData = JSON.parse(encryptedSeedStr);
               const decryptedSeed = await decryptPrivateKey(encryptedSeed, currentPin);
               const reEncryptedSeed = await encryptPrivateKey(decryptedSeed, pin);
-              localStorage.setItem("timetrade_seed_phrase", JSON.stringify(reEncryptedSeed));
+              setActiveAccountEncryptedSeed(JSON.stringify(reEncryptedSeed));
             }
 
             // 3) Update PIN and trigger re-derivation in the same tab

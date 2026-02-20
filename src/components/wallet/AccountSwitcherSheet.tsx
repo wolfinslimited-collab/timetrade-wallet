@@ -190,30 +190,12 @@ function useUserAccounts() {
         }))
       });
 
-      // If we have accounts, use them (and lightly hydrate legacy entries)
+      // If we have accounts, use them directly (no hydration from global seed needed)
       if (normalized.length > 0) {
-        const seedCipher = localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE) || undefined;
-        let didHydrate = false;
-        const hydrated = normalized.map((a) => {
-          // Only hydrate accounts that are known to be derived from the active/global mnemonic:
-          // - the legacy main account
-          // - accounts that declare a derivation index
-          if (a.type === "mnemonic" && !a.encryptedSeedPhrase && seedCipher && (a.id === "main" || typeof a.derivationIndex === "number")) {
-            didHydrate = true;
-            return { ...a, encryptedSeedPhrase: seedCipher };
-          }
-          return a;
-        });
-
-        setAccounts(hydrated);
-        if (didHydrate) {
-          // Persist hydration so switching works after refresh
-          localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(hydrated));
-          console.log('%c[ACCOUNT LOADER] 💧 Hydrated accounts saved', 'color: #06b6d4;');
-        }
+        setAccounts(normalized);
 
         // Set active account ID - use stored or default to first account
-        const activeId = storedActiveId && hydrated.some((a) => a.id === storedActiveId) ? storedActiveId : hydrated[0]?.id;
+        const activeId = storedActiveId && normalized.some((a) => a.id === storedActiveId) ? storedActiveId : normalized[0]?.id;
         setActiveAccountIdState(activeId || null);
         if (activeId) {
           localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, activeId);
@@ -222,34 +204,7 @@ function useUserAccounts() {
         return;
       }
 
-      // Recovery: Check if there's an existing seed phrase but no accounts registered
-      const seedCipher = localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE);
-      const walletName = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_NAME) || "Main Wallet";
-      if (seedCipher) {
-        console.log('%c[ACCOUNT LOADER] 🔄 Recovery: Creating main account from seed phrase', 'color: #f59e0b;');
-        
-        // Also grab any existing addresses from global storage
-        const evmAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_EVM) || undefined;
-        const solanaAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || undefined;
-        const tronAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || undefined;
-        
-        const mainAccount: StoredAccount = {
-          id: "main",
-          name: walletName,
-          type: "mnemonic",
-          encryptedSeedPhrase: seedCipher,
-          derivationIndex: 0,
-          evmAddress,
-          solanaAddress,
-          tronAddress,
-          createdAt: new Date().toISOString(),
-        };
-        setAccounts([mainAccount]);
-        setActiveAccountIdState("main");
-        localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify([mainAccount]));
-        localStorage.setItem(ACTIVE_ACCOUNT_ID_KEY, "main");
-        console.log('%c[ACCOUNT LOADER] 💾 Recovered main account with addresses:', 'color: #22c55e;', { evmAddress, solanaAddress, tronAddress });
-      }
+      // No accounts found - nothing to recover (timetrade_seed_phrase no longer used)
     };
 
     load();
@@ -381,6 +336,9 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     });
 
     try {
+      // CRITICAL: Set active account ID FIRST so getActiveAccountEncryptedSeed() works
+      setActiveAccountId(accountId);
+      
       // Always update wallet name so header reflects selection
       localStorage.setItem(WALLET_STORAGE_KEYS.WALLET_NAME, account.name);
 
@@ -392,8 +350,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       }
 
       if (account.type === "mnemonic") {
-        const effectiveSeedCipher =
-          account.encryptedSeedPhrase || localStorage.getItem(WALLET_STORAGE_KEYS.SEED_PHRASE) || "";
+        const effectiveSeedCipher = account.encryptedSeedPhrase || "";
 
         if (!effectiveSeedCipher) {
           console.error(`%c[ACCOUNT SWITCHER] ❌ No encrypted seed phrase`, 'color: #ef4444;');
@@ -403,8 +360,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
         const index = typeof account.derivationIndex === "number" ? account.derivationIndex : 0;
 
-        // Store the encrypted seed phrase FIRST
-        localStorage.setItem(WALLET_STORAGE_KEYS.SEED_PHRASE, effectiveSeedCipher);
+        // Set active account index
         localStorage.setItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX, String(index));
 
         // FAST PATH: If account already has stored addresses, use them directly
@@ -572,8 +528,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         }, 150);
       }
 
-      // CRITICAL: Update the active account ID in state and storage
-      setActiveAccountId(accountId);
+      // Active account ID already set at start of handleSelectAccount
 
       toast.success(`Switched to ${account.name}`);
       onOpenChange(false);
@@ -608,7 +563,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       console.log(`%c[ACCOUNT SWITCHER] 🔐 Encrypting seed phrase`, 'color: #22c55e;');
       const encrypted = await encryptPrivateKey(words.join(" "), storedPin);
       const encryptedStr = JSON.stringify(encrypted);
-      localStorage.setItem(WALLET_STORAGE_KEYS.SEED_PHRASE, encryptedStr);
+      // encryptedSeedPhrase will be stored in the account object, not globally
 
       console.log(`%c[ACCOUNT SWITCHER] 🔑 Deriving addresses`, 'color: #3b82f6;');
       const evmAddress = deriveEvmAddress(words.join(" "), 0);

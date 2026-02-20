@@ -26,6 +26,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
+  const [encryptedSeedStr, setEncryptedSeedStr] = useState<string | null>(null);
 
   const handleCreateWallet = () => {
     const newSeedPhrase = generateSeedPhrase(12);
@@ -61,7 +62,8 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     try {
       const phraseString = seedPhrase.join(" ");
       const encryptedData = await encryptPrivateKey(phraseString, pin);
-      localStorage.setItem("timetrade_seed_phrase", JSON.stringify(encryptedData));
+      const encStr = JSON.stringify(encryptedData);
+      setEncryptedSeedStr(encStr);
 
       // Derive accounts for all chains and persist addresses immediately.
       // (BlockchainContext auto-connect runs on initial mount only; without this, SOL/TRX may stay empty until refresh.)
@@ -109,14 +111,25 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     // Store wallet name for header display
     localStorage.setItem("timetrade_wallet_name", walletName);
     
-    // Register the main account in the accounts list for the account switcher
+    // Grab derived addresses from storage
+    const evmAddress = localStorage.getItem("timetrade_wallet_address_evm") || undefined;
+    const solanaAddress = localStorage.getItem("timetrade_wallet_address_solana") || undefined;
+    const tronAddress = localStorage.getItem("timetrade_wallet_address_tron") || undefined;
+    
+    // Register the main account with encrypted seed stored IN the account
     const mainAccount = {
       id: "main",
       name: walletName || "Main Wallet",
       type: "mnemonic" as const,
+      encryptedSeedPhrase: encryptedSeedStr || undefined,
+      derivationIndex: 0,
+      evmAddress,
+      solanaAddress,
+      tronAddress,
       createdAt: new Date().toISOString(),
     };
     localStorage.setItem("timetrade_user_accounts", JSON.stringify([mainAccount]));
+    localStorage.setItem("timetrade_active_account_id", "main");
     
     onComplete();
   };
