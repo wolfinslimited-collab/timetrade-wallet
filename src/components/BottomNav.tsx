@@ -42,12 +42,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                   <button
                     key={item.label}
                     onClick={() => onTabChange?.(item.tab)}
-                    className={cn(
-                      "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 -my-1",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    )}
+                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 -my-1 bg-muted text-muted-foreground hover:bg-muted/80"
                   >
                     {item.icon(isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))")}
                   </button>
