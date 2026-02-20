@@ -53,12 +53,12 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                 <button
                   key={item.label}
                   onClick={() => onTabChange?.(item.tab)}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200",
-                    isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground/70"
-                  )}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200",
+                      isActive
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:text-foreground/70"
+                    )}
                 >
                   {item.icon(isActive ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))")}
                 </button>
