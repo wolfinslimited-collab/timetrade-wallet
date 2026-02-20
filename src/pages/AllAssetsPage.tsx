@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, SlidersHorizontal, Check } from "lucide-react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getNetworkLogoUrl, NETWORKS } from "@/config/networks";
@@ -7,6 +8,16 @@ import { Chain } from "@/hooks/useBlockchain";
 import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 import { getChainInfo } from "@/hooks/useBlockchain";
+
+const listVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.055, delayChildren: 0.05 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: "easeOut" as const } },
+};
+
 
 const getCryptoLogoUrl = (symbol: string) =>
   `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
@@ -104,44 +115,60 @@ export const AllAssetsPage = () => {
           </button>
         </div>
 
-        {/* Network filter dropdown */}
-        {showFilter && (
-          <div className="px-4 pb-3 border-t border-border/20 pt-3">
-            <div className="flex flex-wrap gap-2">
-              {availableChains.map((chain) => {
-                const isActive = selectedNetworks.has(chain);
-                return (
-                  <button
-                    key={chain}
-                    onClick={() => toggleNetwork(chain)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors",
-                      isActive
-                        ? "bg-primary/10 border-primary/40 text-primary"
-                        : "border-border text-muted-foreground hover:bg-secondary"
-                    )}
-                  >
-                    <img
-                      src={getNetworkLogoUrl(chain as Chain)}
-                      alt={chain}
-                      className="w-3.5 h-3.5 object-contain rounded-full"
-                    />
-                    {NETWORK_NAMES[chain] || chain}
-                    {isActive && <Check className="w-3 h-3 ml-0.5" />}
-                  </button>
-                );
-              })}
-              {hasActiveFilter && (
-                <button
-                  onClick={clearFilter}
-                  className="px-3 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:bg-secondary transition-colors"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Network filter dropdown — animated */}
+        <AnimatePresence>
+          {showFilter && (
+            <motion.div
+              key="filter-panel"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1, transition: { duration: 0.22, ease: "easeOut" } }}
+              exit={{ height: 0, opacity: 0, transition: { duration: 0.18, ease: "easeIn" } }}
+              className="overflow-hidden border-t border-border/20"
+            >
+              <div className="px-4 pb-3 pt-3">
+                <div className="flex flex-wrap gap-2">
+                  {availableChains.map((chain) => {
+                    const isActive = selectedNetworks.has(chain);
+                    return (
+                      <motion.button
+                        key={chain}
+                        initial={{ scale: 0.85, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => toggleNetwork(chain)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors",
+                          isActive
+                            ? "bg-primary/10 border-primary/40 text-primary"
+                            : "border-border text-muted-foreground hover:bg-secondary"
+                        )}
+                      >
+                        <img
+                          src={getNetworkLogoUrl(chain as Chain)}
+                          alt={chain}
+                          className="w-3.5 h-3.5 object-contain rounded-full"
+                        />
+                        {NETWORK_NAMES[chain] || chain}
+                        {isActive && <Check className="w-3 h-3 ml-0.5" />}
+                      </motion.button>
+                    );
+                  })}
+                  {hasActiveFilter && (
+                    <motion.button
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      whileTap={{ scale: 0.93 }}
+                      onClick={clearFilter}
+                      className="px-3 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    >
+                      Clear
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Token List */}
@@ -149,7 +176,12 @@ export const AllAssetsPage = () => {
         {isLoading && tokensWithValue.length === 0 ? (
           <div className="px-4 space-y-1 pt-2">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center justify-between py-4 animate-pulse">
+              <motion.div
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { delay: i * 0.08 } }}
+                className="flex items-center justify-between py-4 animate-pulse"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-muted" />
                   <div className="space-y-2">
@@ -161,36 +193,41 @@ export const AllAssetsPage = () => {
                   <div className="w-14 h-4 bg-muted rounded ml-auto" />
                   <div className="w-10 h-3 bg-muted rounded ml-auto" />
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : tokensWithValue.length === 0 ? (
-          <div className="px-4 py-16 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 py-16 text-center"
+          >
             <p className="text-sm text-muted-foreground">
               {hasActiveFilter ? "No assets on selected networks" : "No assets found"}
             </p>
-          </div>
+          </motion.div>
         ) : (
-          <div className="px-4 space-y-1">
+          <motion.div
+            className="px-4 space-y-1"
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {tokensWithValue.map((token, index) => {
               const formattedBalance = token.amount.toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 8,
               });
-              const formattedUsd = token.valueUsd.toLocaleString(undefined, {
-                style: "currency",
-                currency: "USD",
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              });
               const isPositive = token.change24h >= 0;
               const networkName = NETWORK_NAMES[token.chain] || token.chain;
 
               return (
-                <button
+                <motion.button
                   key={`${token.chain}-${token.symbol}-${token.contractAddress || "native"}-${index}`}
+                  variants={itemVariants}
                   className="w-full flex items-center justify-between py-3.5 hover:bg-card/50 transition-colors rounded-xl px-2 -mx-2"
                   onClick={() => handleAssetClick(token)}
+                  whileTap={{ scale: 0.97 }}
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
@@ -230,10 +267,10 @@ export const AllAssetsPage = () => {
                       {isPositive ? "▲" : "▼"} {Math.abs(token.change24h).toFixed(2)}%
                     </p>
                   </div>
-                </button>
+                </motion.button>
               );
             })}
-          </div>
+          </motion.div>
         )}
       </div>
 
