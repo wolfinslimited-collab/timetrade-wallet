@@ -43,11 +43,11 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                     className={cn(
                       "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200",
                       isActive
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground hover:text-foreground/70"
+                        ? "bg-foreground/15 text-foreground"
+                        : "text-foreground/40 hover:text-foreground/70"
                     )}
                 >
-                  {item.icon(isActive ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))")}
+                  {item.icon(isActive ? "#FAFAFA" : "rgba(250,250,250,0.4)")}
                 </button>
               );
             })}

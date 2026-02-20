@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound, Bell, ChevronRight } from "lucide-react";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound, Bell, ChevronRight, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -31,17 +31,18 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
   <button
     onClick={onClick}
     className={cn(
-      "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all duration-200 text-left group",
+      "w-full flex items-center gap-4 px-4 py-3.5 transition-all duration-150 text-left",
+      "first:rounded-t-2xl last:rounded-b-2xl",
       danger 
-        ? "bg-destructive/5 hover:bg-destructive/10 border border-destructive/15" 
-        : "bg-card/50 border border-border/40 hover:border-primary/20 hover:bg-card/80"
+        ? "active:bg-destructive/10" 
+        : "active:bg-foreground/5"
     )}
   >
     <div className={cn(
-      "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-      danger ? "bg-destructive/10 group-hover:bg-destructive/15" : "bg-primary/8 group-hover:bg-primary/12"
+      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+      danger ? "bg-destructive/10" : "bg-foreground/8"
     )}>
-      <Icon className={cn("w-[18px] h-[18px]", danger ? "text-destructive" : "text-primary")} />
+      <Icon className={cn("w-[18px] h-[18px]", danger ? "text-destructive" : "text-foreground")} />
     </div>
     <div className="flex-1 min-w-0">
       <p className={cn("text-[15px] font-medium leading-tight", danger && "text-destructive")}>{label}</p>
@@ -49,7 +50,9 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
         <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
       )}
     </div>
-    {rightElement || <ChevronRight className="w-4 h-4 text-muted-foreground/50" />}
+    {rightElement || (
+      <ChevronRight className={cn("w-4 h-4 shrink-0", danger ? "text-destructive/40" : "text-muted-foreground/40")} />
+    )}
   </button>
 );
 
@@ -84,34 +87,22 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
       setBiometricSetupOpen(true);
     } else {
       removeBiometric();
-      toast({
-        title: "Biometrics disabled",
-        description: "PIN will be required to unlock stored keys",
-      });
+      toast({ title: "Biometrics disabled", description: "PIN will be required to unlock" });
     }
   };
 
   const handleBiometricSetupSuccess = () => {
     refreshBiometricStatus();
-    toast({
-      title: "Biometrics enabled",
-      description: "You can now use Face ID or fingerprint to unlock stored keys",
-    });
+    toast({ title: "Biometrics enabled", description: "You can now use Face ID or fingerprint" });
   };
 
   const handlePinChanged = (newPin?: string) => {
     setChangePinOpen(false);
-    if (newPin && biometricRegistered) {
-      updateStoredPin(newPin);
-    }
-    toast({
-      title: "PIN updated",
-      description: "Your new PIN has been saved",
-    });
+    if (newPin && biometricRegistered) updateStoredPin(newPin);
+    toast({ title: "PIN updated", description: "Your new PIN has been saved" });
   };
 
   const handleResetWallet = async () => {
-    console.log('%c[SETTINGS] 🗑️ Reset Wallet initiated', 'color: #ef4444; font-weight: bold;');
     broadcastWalletResetSignal();
     removeBiometric();
     wipeAllWalletData();
@@ -122,7 +113,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border/30">
+      <div className="flex items-center gap-3 p-4">
         <button 
           onClick={onBack}
           className="p-2 rounded-xl bg-card/50 border border-border/40 hover:bg-secondary transition-colors"
@@ -132,31 +123,24 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
         <h1 className="text-xl font-bold">Settings</h1>
       </div>
 
-      <div className="flex-1 p-4 space-y-5 pb-8">
-        {/* Security Section */}
+      <div className="flex-1 px-4 space-y-6 pb-28">
+        {/* Security */}
         <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <Shield className="w-3.5 h-3.5 text-primary" />
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Security
-            </h2>
-          </div>
-          
-          <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 mb-2">
+            Security
+          </p>
+          <div className="bg-card/50 border border-border/30 rounded-2xl divide-y divide-border/20 overflow-hidden">
             <SettingItem
               icon={Key}
               label="Change PIN"
               description="Update your 6-digit security PIN"
               onClick={() => setChangePinOpen(true)}
             />
-            
             <SettingItem
               icon={Fingerprint}
               label="Biometric Unlock"
               description={biometricAvailable 
-                ? (biometricEnabled && biometricRegistered
-                    ? "Enabled — Face ID or fingerprint"
-                    : "Use Face ID or fingerprint to unlock")
+                ? (biometricEnabled && biometricRegistered ? "Enabled" : "Use Face ID or fingerprint")
                 : "Not available on this device"}
               onClick={biometricAvailable ? () => handleBiometricToggle(!biometricEnabled) : undefined}
               rightElement={
@@ -167,124 +151,78 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
                 />
               }
             />
-            
             <SettingItem
               icon={Eye}
               label="View Seed Phrase"
               description="Backup your recovery phrase"
               onClick={() => setViewSeedOpen(true)}
             />
-            
             <SettingItem
               icon={KeyRound}
-              label="Manage Stored Keys"
-              description={`${storedKeys.length} key${storedKeys.length !== 1 ? 's' : ''} saved for quick signing`}
+              label="Stored Keys"
+              description={`${storedKeys.length} key${storedKeys.length !== 1 ? 's' : ''} saved`}
               onClick={() => setManageKeysOpen(true)}
             />
           </div>
         </section>
 
-        {/* Notifications Section */}
+        {/* Preferences */}
         <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <Bell className="w-3.5 h-3.5 text-primary" />
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Notifications
-            </h2>
-          </div>
-          
-          <SettingItem
-            icon={Bell}
-            label="Push Notifications"
-            description={
-              notificationPermission === 'granted' && notificationSettings.enabled
-                ? "Enabled — receiving alerts"
-                : notificationPermission === 'denied'
-                ? "Blocked by browser"
-                : "Get alerts for prices & transactions"
-            }
-            onClick={() => setNotificationSettingsOpen(true)}
-          />
-        </section>
-
-        {/* Auto-Lock Section */}
-        <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <Lock className="w-3.5 h-3.5 text-primary" />
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Auto-Lock
-            </h2>
-          </div>
-          
-          <div className="bg-card/50 border border-border/40 rounded-2xl p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[15px] font-medium">Lock after inactivity</p>
-                <p className="text-[12px] text-muted-foreground mt-0.5">
-                  Auto-lock wallet after 5 minutes
-                </p>
-              </div>
-              <Switch defaultChecked />
-            </div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 mb-2">
+            Preferences
+          </p>
+          <div className="bg-card/50 border border-border/30 rounded-2xl divide-y divide-border/20 overflow-hidden">
+            <SettingItem
+              icon={Bell}
+              label="Notifications"
+              description={
+                notificationPermission === 'granted' && notificationSettings.enabled
+                  ? "Enabled"
+                  : notificationPermission === 'denied'
+                  ? "Blocked by browser"
+                  : "Price & transaction alerts"
+              }
+              onClick={() => setNotificationSettingsOpen(true)}
+            />
+            <SettingItem
+              icon={Lock}
+              label="Auto-Lock"
+              description="Lock after 5 min of inactivity"
+              rightElement={<Switch defaultChecked />}
+            />
           </div>
         </section>
 
-        {/* Danger Zone */}
+        {/* Danger */}
         <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-destructive/70">
-              Danger Zone
-            </h2>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-destructive/60 px-1 mb-2">
+            Danger Zone
+          </p>
+          <div className="bg-card/50 border border-destructive/15 rounded-2xl overflow-hidden">
+            <SettingItem
+              icon={Trash2}
+              label="Reset Wallet"
+              description="Delete all data and start fresh"
+              onClick={() => setResetDialogOpen(true)}
+              danger
+            />
           </div>
-          
-          <SettingItem
-            icon={Trash2}
-            label="Reset Wallet"
-            description="Delete all data and start fresh"
-            onClick={() => setResetDialogOpen(true)}
-            danger
-          />
         </section>
 
         {/* App Info */}
-        <div className="pt-3 text-center space-y-1">
-          <p className="text-[11px] text-muted-foreground/60">Timetrade Wallet v1.0.0</p>
-          <p className="text-[11px] text-muted-foreground/40">
-            Powered by secure encryption
-          </p>
+        <div className="text-center space-y-1 pt-2">
+          <p className="text-[11px] text-muted-foreground/50">Timetrade Wallet v1.0.0</p>
+          <p className="text-[10px] text-muted-foreground/30">Powered by secure encryption</p>
         </div>
       </div>
 
-      {/* Sheets and Dialogs */}
-      <ChangePinSheet 
-        open={changePinOpen} 
-        onOpenChange={setChangePinOpen}
-        onSuccess={handlePinChanged}
-      />
-      <ViewSeedPhraseSheet 
-        open={viewSeedOpen} 
-        onOpenChange={setViewSeedOpen}
-      />
-      <ResetWalletDialog 
-        open={resetDialogOpen} 
-        onOpenChange={setResetDialogOpen}
-        onConfirm={handleResetWallet}
-      />
-      <ManageStoredKeysSheet
-        open={manageKeysOpen}
-        onOpenChange={setManageKeysOpen}
-      />
-      <BiometricSetupDialog
-        open={biometricSetupOpen}
-        onOpenChange={setBiometricSetupOpen}
-        onSuccess={handleBiometricSetupSuccess}
-        onRegister={registerBiometric}
-      />
-      <NotificationSettingsSheet
-        open={notificationSettingsOpen}
-        onOpenChange={setNotificationSettingsOpen}
-      />
+      {/* Sheets */}
+      <ChangePinSheet open={changePinOpen} onOpenChange={setChangePinOpen} onSuccess={handlePinChanged} />
+      <ViewSeedPhraseSheet open={viewSeedOpen} onOpenChange={setViewSeedOpen} />
+      <ResetWalletDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen} onConfirm={handleResetWallet} />
+      <ManageStoredKeysSheet open={manageKeysOpen} onOpenChange={setManageKeysOpen} />
+      <BiometricSetupDialog open={biometricSetupOpen} onOpenChange={setBiometricSetupOpen} onSuccess={handleBiometricSetupSuccess} onRegister={registerBiometric} />
+      <NotificationSettingsSheet open={notificationSettingsOpen} onOpenChange={setNotificationSettingsOpen} />
     </div>
   );
 };
