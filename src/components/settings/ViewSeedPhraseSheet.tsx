@@ -26,9 +26,9 @@ function getAccounts(): AccountInfo[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((a: any) => a.encryptedSeedPhrase)
-      .map((a: any) => ({
+      .map((a: any, idx: number) => ({
         id: a.id,
-        nickname: a.nickname || `Account`,
+        nickname: a.name || a.nickname || `Wallet ${idx + 1}`,
         encryptedSeedPhrase: a.encryptedSeedPhrase,
       }));
   } catch {
