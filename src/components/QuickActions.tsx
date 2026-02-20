@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { SendCryptoSheet } from "./send/SendCryptoSheet";
 import { ReceiveCryptoSheet } from "./receive/ReceiveCryptoSheet";
 import { SwapCryptoSheet } from "./swap/SwapCryptoSheet";
+import { ArrowDownToLine, Send, ArrowLeftRight } from "lucide-react";
 
 interface QuickAction {
   icon: React.ReactNode;
@@ -10,31 +11,10 @@ interface QuickAction {
   action?: string;
 }
 
-const ReceiveIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3v14m0 0l-5-5m5 5l5-5" />
-    <path d="M5 21h14" />
-  </svg>
-);
-
-const SendIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14" />
-    <path d="M12 5l7 7-7 7" />
-  </svg>
-);
-
-const SwapIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 16V4m0 0L3 8m4-4l4 4" />
-    <path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
-  </svg>
-);
-
 const actions: QuickAction[] = [
-  { icon: <ReceiveIcon />, label: "Receive", action: "receive" },
-  { icon: <SendIcon />, label: "Send", action: "send" },
-  { icon: <SwapIcon />, label: "Swap", action: "swap" },
+  { icon: <ArrowDownToLine className="w-5 h-5" />, label: "Receive", action: "receive" },
+  { icon: <Send className="w-5 h-5" />, label: "Send", action: "send" },
+  { icon: <ArrowLeftRight className="w-5 h-5" />, label: "Swap", action: "swap" },
 ];
 
 export const QuickActions = () => {
