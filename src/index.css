@@ -34,9 +34,9 @@
     --muted: 120 5% 15%;
     --muted-foreground: 120 5% 45%;
 
-    /* Accent - Orange */
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 90%;
+    /* Accent - matches primary */
+    --accent: 90 60% 65%;
+    --accent-foreground: 120 8% 5%;
 
     /* Destructive */
     --destructive: 0 72% 51%;

@@ -247,16 +247,14 @@ export const AssetDetailPage = () => {
         {/* Quick Actions */}
         <div className="flex justify-center gap-3 px-4 py-5">
           <Button
-            variant="outline"
-            className="flex-1 h-14 flex-col gap-0.5 rounded-2xl border-border/40 bg-card/50"
+            className="flex-1 h-14 flex-col gap-0.5 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => setShowReceive(true)}
           >
             <ArrowDownLeft className="w-5 h-5" />
             <span className="text-[11px]">Receive</span>
           </Button>
           <Button
-            variant="outline"
-            className="flex-1 h-14 flex-col gap-0.5 rounded-2xl border-border/40 bg-card/50"
+            className="flex-1 h-14 flex-col gap-0.5 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => setShowSend(true)}
           >
             <ArrowUpRight className="w-5 h-5" />
