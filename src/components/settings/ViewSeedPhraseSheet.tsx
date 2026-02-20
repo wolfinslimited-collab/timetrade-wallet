@@ -168,7 +168,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   if (step === "enter-pin") {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
+        <SheetContent side="bottom" className="h-[100dvh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
           <SheetHeader className="px-6 pt-6 pb-2">
             <div className="flex items-center gap-2">
               <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
