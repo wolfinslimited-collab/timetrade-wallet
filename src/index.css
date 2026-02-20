@@ -21,10 +21,10 @@
     --popover: 120 6% 10%;
     --popover-foreground: 0 0% 95%;
 
-    /* Primary - Lime Green accent */
-    --primary: 90 60% 65%;
+    /* Primary - White */
+    --primary: 0 0% 98%;
     --primary-foreground: 120 8% 5%;
-    --primary-glow: 90 70% 70%;
+    --primary-glow: 0 0% 100%;
 
     /* Secondary - Muted dark surface */
     --secondary: 120 5% 15%;
@@ -34,8 +34,8 @@
     --muted: 120 5% 15%;
     --muted-foreground: 120 5% 45%;
 
-    /* Accent - matches primary */
-    --accent: 90 60% 65%;
+    /* Accent - matches primary (white) */
+    --accent: 0 0% 98%;
     --accent-foreground: 120 8% 5%;
 
     /* Destructive */
@@ -49,12 +49,12 @@
     /* Borders */
     --border: 120 4% 18%;
     --input: 120 4% 18%;
-    --ring: 90 60% 65%;
+    --ring: 0 0% 98%;
 
     --radius: 1rem;
 
     /* Chart colors */
-    --chart-1: 90 60% 65%;
+    --chart-1: 0 0% 98%;
     --chart-2: 280 65% 60%;
     --chart-3: 200 80% 55%;
     --chart-4: 24 95% 53%;
@@ -63,12 +63,12 @@
     /* Sidebar */
     --sidebar-background: 120 8% 5%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 90 60% 65%;
+    --sidebar-primary: 0 0% 98%;
     --sidebar-primary-foreground: 120 8% 5%;
     --sidebar-accent: 120 5% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 120 4% 18%;
-    --sidebar-ring: 90 60% 65%;
+    --sidebar-ring: 0 0% 98%;
   }
 }
 
