@@ -3,7 +3,7 @@ import { invokeBlockchain } from '@/lib/blockchain';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
 
-export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron' | 'arbitrum';
+export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron' | 'arbitrum' | 'bsc';
 
 export interface ChainInfo {
   id: Chain;
@@ -67,6 +67,15 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     symbol: 'ETH', 
     icon: '◆', 
     color: '#28A0F0',
+    decimals: 18,
+    testnetName: 'Mainnet',
+  },
+  { 
+    id: 'bsc', 
+    name: 'BNB Chain', 
+    symbol: 'BNB', 
+    icon: '◈', 
+    color: '#F3BA2F',
     decimals: 18,
     testnetName: 'Mainnet',
   },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -13,24 +13,34 @@ import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
 import { broadcastWalletResetSignal, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 
-const NetworkLogo = ({ chainId, color }: { chainId: string; color: string }) => {
-  const cls = "w-5 h-5";
-  switch (chainId) {
-    case 'ethereum':
-      return <svg viewBox="0 0 32 32" className={cls} fill={color}><path d="M16 0L6.5 16.5L16 22.5L25.5 16.5L16 0Z" opacity="0.6" /><path d="M6.5 16.5L16 32L25.5 16.5L16 22.5L6.5 16.5Z" /></svg>;
-    case 'polygon':
-      return <svg viewBox="0 0 32 32" className={cls} fill={color}><path d="M21.6 13.4c-.6-.3-1.3-.3-1.8 0l-4.2 2.4-2.8 1.6-4.2 2.4c-.6.3-1.3.3-1.8 0l-3.3-1.9c-.6-.3-.9-.9-.9-1.5v-3.7c0-.6.3-1.2.9-1.5l3.2-1.8c.6-.3 1.3-.3 1.8 0l3.2 1.8c.6.3.9.9.9 1.5v2.4l2.8-1.6v-2.4c0-.6-.3-1.2-.9-1.5l-6-3.4c-.6-.3-1.3-.3-1.8 0l-6.1 3.5c-.6.3-.9.9-.9 1.5v6.9c0 .6.3 1.2.9 1.5l6 3.4c.6.3 1.3.3 1.8 0l4.2-2.4 2.8-1.6 4.2-2.4c.6-.3 1.3-.3 1.8 0l3.2 1.8c.6.3.9.9.9 1.5v3.7c0 .6-.3 1.2-.9 1.5l-3.2 1.9c-.6.3-1.3.3-1.8 0l-3.2-1.8c-.6-.3-.9-.9-.9-1.5v-2.4l-2.8 1.6v2.4c0 .6.3 1.2.9 1.5l6 3.4c.6.3 1.3.3 1.8 0l6-3.4c.6-.3.9-.9.9-1.5v-6.9c0-.6-.3-1.2-.9-1.5l-6.1-3.4z" /></svg>;
-    case 'bitcoin':
-      return <svg viewBox="0 0 32 32" className={cls} fill={color}><path d="M22.2 14.4c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.8-.2-1.3-.3l.7-2.7-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.3l-2.2-.5-.4 1.7s1.2.3 1.2.3c.7.2.8.6.8 1l-.8 3.2c0 .1.1.1.1.1l-.1 0-1.1 4.5c-.1.2-.3.5-.7.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.2.3l-.7 2.8 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.8c2.9.5 5.1.3 6-2.3.7-2.1 0-3.3-1.5-4.1 1.1-.3 1.9-1 2.1-2.5zM19 19.1c-.5 2.1-4 1-5.1.7l.9-3.7c1.1.3 4.7.8 4.2 3zM19.5 14.3c-.5 1.9-3.4.9-4.3.7l.8-3.3c.9.2 4 .6 3.5 2.6z" /></svg>;
-    case 'solana':
-      return <svg viewBox="0 0 32 32" className={cls} fill={color}><path d="M7.5 21.5c.2-.2.4-.3.7-.3h18.4c.4 0 .6.5.3.8l-3.7 3.7c-.2.2-.4.3-.7.3H4.1c-.4 0-.6-.5-.3-.8l3.7-3.7z" /><path d="M7.5 6.3c.2-.2.4-.3.7-.3h18.4c.4 0 .6.5.3.8l-3.7 3.7c-.2.2-.4.3-.7.3H4.1c-.4 0-.6-.5-.3-.8l3.7-3.7z" /><path d="M22.5 13.8c-.2-.2-.4-.3-.7-.3H3.4c-.4 0-.6.5-.3.8l3.7 3.7c.2.2.4.3.7.3h18.4c.4 0 .6-.5.3-.8l-3.7-3.7z" /></svg>;
-    case 'tron':
-      return <svg viewBox="0 0 32 32" className={cls} fill={color}><path d="M16 2L3 9v14l13 7 13-7V9L16 2zm0 3.5l9.5 5.2v10.6L16 26.5l-9.5-5.2V10.7L16 5.5z" /><path d="M16 8v16l7-4V12l-7-4z" opacity="0.6" /></svg>;
-    case 'arbitrum':
-      return <svg viewBox="0 0 32 32" className={cls} fill={color}><path d="M16 2L4 9v14l12 7 12-7V9L16 2z" opacity="0.3" /><path d="M16 6l-8 4.5v9L16 24l8-4.5v-9L16 6z" /><path d="M16 10l-4 2.5v5l4 2.5 4-2.5v-5l-4-2.5z" opacity="0.6" /></svg>;
-    default:
-      return <span style={{ color }} className="text-lg font-bold">?</span>;
+const CHAIN_LOGO_SYMBOLS: Record<string, string> = {
+  ethereum: 'eth',
+  polygon: 'pol',
+  bitcoin: 'btc',
+  solana: 'sol',
+  tron: 'trx',
+  arbitrum: 'arb',
+  bsc: 'bnb',
+};
+
+const NetworkLogo = ({ chainId }: { chainId: string }) => {
+  const symbol = CHAIN_LOGO_SYMBOLS[chainId] || chainId;
+  const [errored, setErrored] = React.useState(false);
+
+  if (errored) {
+    return (
+      <span className="text-[10px] font-bold text-muted-foreground uppercase">{symbol}</span>
+    );
   }
+
+  return (
+    <img
+      src={`https://api.elbstream.com/logos/crypto/${symbol}`}
+      alt={symbol}
+      className="w-8 h-8 object-contain"
+      onError={() => setErrored(true)}
+    />
+  );
 };
 
 interface SettingsPageProps {
@@ -208,14 +218,10 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               {SUPPORTED_CHAINS.map((chain) => (
                 <div
                   key={chain.id}
-                  className="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl"
-                  style={{ backgroundColor: `${chain.color}08` }}
+                  className="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl bg-muted/30"
                 >
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: `${chain.color}18` }}
-                  >
-                    <NetworkLogo chainId={chain.id} color={chain.color} />
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50">
+                    <NetworkLogo chainId={chain.id} />
                   </div>
                   <p className="text-[12px] font-medium leading-tight text-center">{chain.name}</p>
                   <div className="flex items-center gap-1">

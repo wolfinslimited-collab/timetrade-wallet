@@ -18,6 +18,7 @@ const getNetworkLogoUrl = (chain: Chain) => {
     solana: "sol",
     tron: "trx",
     bitcoin: "btc",
+    bsc: "bnb",
   };
   return getCryptoLogoUrl(symbols[chain]);
 };

@@ -36,6 +36,7 @@ const getExplorerUrl = (chain: Chain): string => {
     solana: "https://explorer.solana.com",
     tron: "https://tronscan.org",
     bitcoin: "https://blockstream.info",
+    bsc: "https://bscscan.com",
   };
   return urls[chain] || urls.ethereum;
 };
@@ -55,6 +56,7 @@ const getNetworkLogoUrl = (chain: Chain): string => {
     solana: "sol",
     tron: "trx",
     bitcoin: "btc",
+    bsc: "bnb",
   };
   return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
 };
