@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -32,15 +32,7 @@ export const WalletHeader = ({
   return (
     <>
       <header className="flex items-center justify-between px-4 py-3">
-        {/* User avatar button */}
-        <button
-          onClick={() => setShowAccountSwitcher(true)}
-          className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-        >
-          <User className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
-        </button>
-
-        {/* Wallet name pill */}
+        {/* Wallet name pill - moved to left */}
         <button
           onClick={() => setShowAccountSwitcher(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/60 border border-border/50 backdrop-blur-sm"

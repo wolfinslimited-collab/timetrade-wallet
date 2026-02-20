@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
@@ -17,6 +18,13 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
+
+const pageTransition = {
+  initial: { opacity: 0, x: 20 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -20 },
+  transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
+};
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -175,60 +183,69 @@ const Index = () => {
     return <LockScreen onUnlock={handleUnlock} />;
   }
 
+  // Determine which view to show
+  const currentView = location.pathname === "/notifications" 
+    ? "notifications" 
+    : activeTab;
+
   // Show notifications page
-  if (location.pathname === "/notifications") {
+  if (currentView === "notifications") {
     return (
-      <NotificationsPage
-        notifications={notifications}
-        unreadCount={unreadCount}
-        onMarkAsRead={markAsRead}
-        onMarkAllAsRead={markAllAsRead}
-        onDelete={deleteNotification}
-        onClearAll={clearAll}
-      />
+      <motion.div key="notifications" {...pageTransition}>
+        <NotificationsPage
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onDelete={deleteNotification}
+          onClearAll={clearAll}
+        />
+      </motion.div>
     );
   }
 
   // Show settings page
-  if (activeTab === "settings") {
+  if (currentView === "settings") {
     return (
-      <>
+      <motion.div key="settings" {...pageTransition}>
         <SettingsPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </>
+      </motion.div>
     );
   }
 
   // Show transaction history page
-  if (activeTab === "history") {
+  if (currentView === "history") {
     return (
-      <>
+      <motion.div key="history" {...pageTransition}>
         <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </>
+      </motion.div>
     );
   }
 
   // Show staking page
-  if (activeTab === "staking") {
+  if (currentView === "staking") {
     return (
-      <>
+      <motion.div key="staking" {...pageTransition}>
         <StakingPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </>
+      </motion.div>
     );
   }
 
   // Main wallet view
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto relative pb-24">
-      <PullToRefresh onRefresh={handleRefresh}>
-        {/* Minimal Header */}
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl">
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
           unreadCount={unreadCount}
         />
+      </div>
 
+      <PullToRefresh onRefresh={handleRefresh}>
         {/* Total Balance */}
         <div className="px-4 pt-8 pb-2 text-center">
           {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
@@ -243,13 +260,13 @@ const Index = () => {
                 <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
                 <span className="text-muted-foreground">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
               </h1>
-              {displayBalance > 0 && (
+              {displayBalance > 0 && percentChange !== 0 && (
                 <div className={cn(
                   "text-sm font-medium mt-3 flex items-center justify-center gap-1",
                   isPositive ? "text-success" : "text-destructive"
                 )}>
                   <span>{isPositive ? "▲" : "▼"}</span>
-                  <span>{Math.abs(percentChange).toFixed(2)}% (1d)</span>
+                  <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
                 </div>
               )}
             </>
@@ -259,8 +276,8 @@ const Index = () => {
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* My Assets Section - separated background */}
-        <div className="mt-6 bg-card/60 backdrop-blur-sm rounded-t-3xl border-t border-border/30 pt-5 pb-4 min-h-[40vh]">
+        {/* My Assets Section - separated background with full border-radius */}
+        <div className="mt-6 bg-card/60 backdrop-blur-sm rounded-3xl border-t border-border/30 pt-5 pb-4 min-h-[40vh]">
           <div className="px-5 flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold text-foreground">My assets</h2>
             <button className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-secondary transition-colors">
