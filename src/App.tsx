@@ -7,6 +7,7 @@ import { BlockchainProvider } from "@/contexts/BlockchainContext";
 import { WalletConnectProvider } from "@/contexts/WalletConnectContext";
 import Index from "./pages/Index";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
+import { AllAssetsPage } from "./pages/AllAssetsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/notifications" element={<Index />} />
               <Route path="/asset" element={<AssetDetailPage />} />
+              <Route path="/assets" element={<AllAssetsPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
