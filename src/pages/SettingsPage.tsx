@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, KeyRound, Bell, ChevronRight, Info } from "lucide-react";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { useWebNotifications } from "@/hooks/useWebNotifications";
 import { ChangePinSheet } from "@/components/settings/ChangePinSheet";
 import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
 import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
-import { ManageStoredKeysSheet } from "@/components/settings/ManageStoredKeysSheet";
 import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
 import { broadcastWalletResetSignal, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
@@ -58,8 +56,7 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
 
 export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const { toast } = useToast();
-  const { storedKeys, clearAllStoredKeys } = useStoredKeys();
-  const { 
+  const {
     isAvailable: biometricAvailable, 
     isEnabled: biometricEnabled, 
     isRegistered: biometricRegistered,
@@ -72,7 +69,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const [changePinOpen, setChangePinOpen] = useState(false);
   const [viewSeedOpen, setViewSeedOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [manageKeysOpen, setManageKeysOpen] = useState(false);
   const [biometricSetupOpen, setBiometricSetupOpen] = useState(false);
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   
@@ -151,12 +147,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               description="Backup your recovery phrase"
               onClick={() => setViewSeedOpen(true)}
             />
-            <SettingItem
-              icon={KeyRound}
-              label="Stored Keys"
-              description={`${storedKeys.length} key${storedKeys.length !== 1 ? 's' : ''} saved`}
-              onClick={() => setManageKeysOpen(true)}
-            />
           </div>
         </section>
 
@@ -209,7 +199,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
       <ChangePinSheet open={changePinOpen} onOpenChange={setChangePinOpen} onSuccess={handlePinChanged} />
       <ViewSeedPhraseSheet open={viewSeedOpen} onOpenChange={setViewSeedOpen} />
       <ResetWalletDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen} onConfirm={handleResetWallet} />
-      <ManageStoredKeysSheet open={manageKeysOpen} onOpenChange={setManageKeysOpen} />
+      
       <BiometricSetupDialog open={biometricSetupOpen} onOpenChange={setBiometricSetupOpen} onSuccess={handleBiometricSetupSuccess} onRegister={registerBiometric} />
       <NotificationSettingsSheet open={notificationSettingsOpen} onOpenChange={setNotificationSettingsOpen} />
     </div>
