@@ -2,9 +2,13 @@ import * as React from 'react';
 import { invokeBlockchain } from '@/lib/blockchain';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { evmToTronAddress, isEvmAddress, isTronAddress } from '@/utils/tronAddress';
+import { Chain, NetworkConfig, NETWORKS, NETWORK_MAP, getNetwork, getNetworkLogoUrl } from '@/config/networks';
 
-export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'polygon' | 'tron' | 'arbitrum' | 'bsc';
+// Re-export everything from central source
+export type { Chain, NetworkConfig };
+export { NETWORKS, NETWORK_MAP, getNetwork, getNetworkLogoUrl };
 
+// Legacy ChainInfo shape — mapped from NetworkConfig for backward compatibility
 export interface ChainInfo {
   id: Chain;
   name: string;
@@ -15,75 +19,31 @@ export interface ChainInfo {
   testnetName: string;
 }
 
-export const SUPPORTED_CHAINS: ChainInfo[] = [
-  { 
-    id: 'ethereum', 
-    name: 'Ethereum', 
-    symbol: 'ETH', 
-    icon: '⟠', 
-    color: '#627EEA',
-    decimals: 18,
-    testnetName: 'Mainnet',
-  },
-  { 
-    id: 'polygon', 
-    name: 'Polygon', 
-    symbol: 'POL', 
-    icon: '⬡', 
-    color: '#8247E5',
-    decimals: 18,
-    testnetName: 'Mainnet',
-  },
-  { 
-    id: 'bitcoin', 
-    name: 'Bitcoin', 
-    symbol: 'BTC', 
-    icon: '₿', 
-    color: '#F7931A',
-    decimals: 8,
-    testnetName: 'Mainnet',
-  },
-  { 
-    id: 'solana', 
-    name: 'Solana', 
-    symbol: 'SOL', 
-    icon: '◎', 
-    color: '#9945FF',
-    decimals: 9,
-    testnetName: 'Mainnet',
-  },
-  { 
-    id: 'tron', 
-    name: 'Tron', 
-    symbol: 'TRX', 
-    icon: '◈', 
-    color: '#FF0013',
-    decimals: 6,
-    testnetName: 'Mainnet',
-  },
-  { 
-    id: 'arbitrum', 
-    name: 'Arbitrum One', 
-    symbol: 'ETH', 
-    icon: '◆', 
-    color: '#28A0F0',
-    decimals: 18,
-    testnetName: 'Mainnet',
-  },
-  { 
-    id: 'bsc', 
-    name: 'BNB Chain', 
-    symbol: 'BNB', 
-    icon: '◈', 
-    color: '#F3BA2F',
-    decimals: 18,
-    testnetName: 'Mainnet',
-  },
-];
+// Map NetworkConfig → legacy ChainInfo
+const ICON_MAP: Record<string, string> = {
+  ethereum: '⟠',
+  polygon: '⬡',
+  arbitrum: '◆',
+  bsc: '◈',
+  solana: '◎',
+  tron: '◈',
+  bitcoin: '₿',
+};
+
+export const SUPPORTED_CHAINS: ChainInfo[] = NETWORKS.map(n => ({
+  id: n.id,
+  name: n.name,
+  symbol: n.symbol,
+  icon: ICON_MAP[n.id] ?? '●',
+  color: n.color,
+  decimals: n.decimals,
+  testnetName: 'Mainnet',
+}));
 
 export function getChainInfo(chain: Chain): ChainInfo {
-  return SUPPORTED_CHAINS.find(c => c.id === chain) || SUPPORTED_CHAINS[0];
+  return SUPPORTED_CHAINS.find(c => c.id === chain) ?? SUPPORTED_CHAINS[0];
 }
+
 
 export interface TokenBalance {
   symbol: string;

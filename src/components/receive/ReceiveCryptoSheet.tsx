@@ -12,18 +12,12 @@ const getCryptoLogoUrl = (symbol: string): string => {
   return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
 };
 
-// Get network logo URL  
-const getNetworkLogoUrl = (networkId: string): string => {
-  const symbols: Record<string, string> = {
-    ethereum: "eth",
-    polygon: "matic",
-    solana: "sol",
-    tron: "trx",
-    bitcoin: "btc",
-    bsc: "bnb",
-  };
-  return `https://api.elbstream.com/logos/crypto/${symbols[networkId] || networkId}`;
-};
+import { getNetworkLogoUrl as _getNetworkLogoUrl } from "@/config/networks";
+import type { Chain } from "@/config/networks";
+
+const getNetworkLogoUrl = (networkId: string): string =>
+  _getNetworkLogoUrl(networkId as Chain);
+
 
 interface TokenOption {
   symbol: string;
@@ -35,54 +29,13 @@ interface TokenOption {
 }
 
 const tokens: TokenOption[] = [
-  { 
-    symbol: "ETH", 
-    name: "Ethereum", 
-    network: "Ethereum Mainnet", 
-    networkId: "ethereum",
-    addressKey: "evm",
-    isNativeToken: true
-  },
-  { 
-    symbol: "POL", 
-    name: "Polygon", 
-    network: "Polygon Mainnet", 
-    networkId: "polygon",
-    addressKey: "evm",
-    isNativeToken: true
-  },
-  { 
-    symbol: "SOL", 
-    name: "Solana", 
-    network: "Solana Mainnet", 
-    networkId: "solana",
-    addressKey: "solana",
-    isNativeToken: true
-  },
-  { 
-    symbol: "TRX", 
-    name: "Tron", 
-    network: "Tron Mainnet", 
-    networkId: "tron",
-    addressKey: "tron",
-    isNativeToken: true
-  },
-  { 
-    symbol: "BNB", 
-    name: "BNB Chain", 
-    network: "BSC Mainnet", 
-    networkId: "bsc",
-    addressKey: "evm",
-    isNativeToken: true
-  },
-  { 
-    symbol: "BTC", 
-    name: "Bitcoin", 
-    network: "Bitcoin Network", 
-    networkId: "bitcoin",
-    addressKey: "btc",
-    isNativeToken: true
-  },
+  { symbol: "ETH",  name: "Ethereum",    network: "Ethereum Mainnet", networkId: "ethereum", addressKey: "evm",    isNativeToken: true },
+  { symbol: "POL",  name: "Polygon",     network: "Polygon Mainnet",  networkId: "polygon",  addressKey: "evm",    isNativeToken: true },
+  { symbol: "ETH",  name: "Arbitrum One",network: "Arbitrum Mainnet", networkId: "arbitrum", addressKey: "evm",    isNativeToken: true },
+  { symbol: "BNB",  name: "BNB Chain",   network: "BSC Mainnet",      networkId: "bsc",      addressKey: "evm",    isNativeToken: true },
+  { symbol: "SOL",  name: "Solana",      network: "Solana Mainnet",   networkId: "solana",   addressKey: "solana", isNativeToken: true },
+  { symbol: "TRX",  name: "Tron",        network: "Tron Mainnet",     networkId: "tron",     addressKey: "tron",   isNativeToken: true },
+  { symbol: "BTC",  name: "Bitcoin",     network: "Bitcoin Network",  networkId: "bitcoin",  addressKey: "btc",    isNativeToken: true },
 ];
 
 interface ReceiveCryptoSheetProps {

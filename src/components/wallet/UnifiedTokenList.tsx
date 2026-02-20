@@ -11,13 +11,8 @@ const getCryptoLogoUrl = (symbol: string): string => {
 };
 
 // Get network logo URL
-const getNetworkLogoUrl = (chain: Chain): string => {
-  const symbols: Record<Chain, string> = {
-    ethereum: "eth", arbitrum: "arb", polygon: "matic",
-    solana: "sol", tron: "trx", bitcoin: "btc", bsc: "bnb",
-  };
-  return `https://api.elbstream.com/logos/crypto/${symbols[chain]}`;
-};
+import { getNetworkLogoUrl } from "@/config/networks";
+
 
 interface UnifiedToken {
   symbol: string;
