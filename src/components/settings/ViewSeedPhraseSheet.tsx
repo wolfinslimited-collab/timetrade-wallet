@@ -168,7 +168,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   if (step === "enter-pin") {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl bg-background border-border p-0">
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
           <SheetHeader className="px-6 pt-6 pb-2">
             <div className="flex items-center gap-2">
               <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
@@ -178,26 +178,26 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </div>
           </SheetHeader>
 
-          <div className="flex flex-col h-full px-6 pb-8">
-            <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="flex flex-col px-6 pb-8">
+            <div className="flex flex-col items-center justify-center py-6">
               {isDecrypting ? (
                 <>
-                  <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
-                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
                   </div>
                   <p className="text-muted-foreground text-center">Decrypting...</p>
                 </>
               ) : (
                 <>
-                  <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
-                    <Lock className="w-10 h-10 text-primary" />
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4">
+                    <Lock className="w-8 h-8 text-primary" />
                   </div>
                   <p className="text-sm font-medium mb-1">{selectedAccount?.nickname}</p>
-                  <p className="text-muted-foreground text-center mb-8 max-w-xs text-sm">
+                  <p className="text-muted-foreground text-center mb-6 max-w-xs text-sm">
                     Enter your PIN to view the seed phrase
                   </p>
                   {error && <p className="text-destructive text-sm mb-4">{error}</p>}
-                  <div className="flex gap-4 mb-8">
+                  <div className="flex gap-4 mb-6">
                     {[0, 1, 2, 3, 4, 5].map((index) => (
                       <div
                         key={index}
@@ -219,21 +219,21 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
                 <button
                   key={digit}
                   onClick={() => handleKeyPress(String(digit))}
-                  className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+                  className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
                 >
                   {digit}
                 </button>
               ))}
-              <div className="h-14" />
+              <div />
               <button
                 onClick={() => handleKeyPress("0")}
-                className="h-14 rounded-xl bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+                className="aspect-square rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
               >
                 0
               </button>
               <button
                 onClick={handleDelete}
-                className="h-14 rounded-xl bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
+                className="aspect-square rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
               >
                 Delete
               </button>
@@ -247,7 +247,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   // Step 3: View seed phrase
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0">
+      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
         <SheetHeader className="px-6 pt-6 pb-2">
           <div className="flex items-center gap-2">
             <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
@@ -257,7 +257,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
           </div>
         </SheetHeader>
 
-        <div className="flex flex-col h-full px-6 pb-8">
+        <div className="flex flex-col px-6 pb-8">
           <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 mt-4">
             <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
             <div className="text-sm">
@@ -268,7 +268,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </div>
           </div>
 
-          <div className="flex-1 mt-6">
+          <div className="mt-6">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium">Recovery Phrase</span>
               <button
@@ -301,7 +301,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </ul>
           </div>
 
-          <Button onClick={handleCopy} variant="outline" className="mt-4 h-14 border-border bg-card hover:bg-secondary" disabled={!revealed}>
+          <Button onClick={handleCopy} variant="outline" className="mt-4 h-14 border-border bg-card hover:bg-secondary">
             <Copy className="w-5 h-5 mr-2" />
             Copy to Clipboard
           </Button>
