@@ -113,7 +113,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
       {/* Orange gradient top section */}
       <div
         className="flex flex-col items-center pt-10 pb-8 w-full relative z-10"
-        style={{ background: 'linear-gradient(180deg, hsl(25 90% 55%), hsl(30 85% 50%))' }}
+        style={{ background: 'radial-gradient(ellipse at top center, hsl(120 15% 16%), hsl(120 10% 8%))' }}
       >
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
