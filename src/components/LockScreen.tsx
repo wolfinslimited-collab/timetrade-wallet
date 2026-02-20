@@ -122,7 +122,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mb-4"
         >
-          <img src="/app-logo.png" alt="Logo" className="w-14 h-14 rounded-full object-cover" />
+          <img src="/app-logo.png" alt="Logo" className="w-14 h-14 object-cover" />
         </motion.div>
 
         {/* Title */}
@@ -171,7 +171,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             >
               <div
                 className={cn(
-                  "w-3 h-3 rounded-full transition-all duration-200",
+                  "w-6 h-6 rounded-full transition-all duration-200",
                   index < pin.length
                     ? (showError ? "bg-destructive" : "bg-foreground")
                     : "bg-muted-foreground/30"
