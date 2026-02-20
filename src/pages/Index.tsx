@@ -248,18 +248,16 @@ const Index = () => {
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* My Assets Section */}
-        <div className="mt-2 px-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-foreground">My assets</h2>
-            <button className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-card transition-colors">
+        {/* My Assets Section - separated background */}
+        <div className="mt-6 bg-card/60 backdrop-blur-sm rounded-t-3xl border-t border-border/30 pt-5 pb-4 min-h-[40vh]">
+          <div className="px-5 flex items-center justify-between mb-3">
+            <h2 className="text-xl font-semibold text-foreground">My assets</h2>
+            <button className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-secondary transition-colors">
               see all
             </button>
           </div>
-        </div>
-        
-        {/* Token List */}
-        <div>
+          
+          {/* Token List */}
           <UnifiedTokenList key={`tokens-${refreshKey}`} />
         </div>
       </PullToRefresh>
