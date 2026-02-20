@@ -18,7 +18,7 @@ export const PinKeypad = ({
   onBiometric,
 }: PinKeypadProps) => {
   const btnStyle = cn(
-    "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
+    "w-[76px] h-[76px] rounded-2xl flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
     "bg-white/[0.06]",
     "border border-white/[0.08]",
     "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
