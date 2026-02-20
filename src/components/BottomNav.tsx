@@ -30,7 +30,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
         ref={ref}
         className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[398px]"
       >
-        <div className="bg-background/60 backdrop-blur-3xl border border-border/20 rounded-full px-3 py-2.5 shadow-2xl shadow-black/40"
+        <div className="bg-muted/40 backdrop-blur-3xl border border-border/20 rounded-full px-3 py-2.5 shadow-2xl shadow-black/40"
           style={{ backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)' }}
         >
           <div className="flex items-center justify-around">
@@ -42,7 +42,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                   <button
                     key={item.label}
                     onClick={() => onTabChange?.(item.tab)}
-                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 -my-1 bg-muted text-muted-foreground hover:bg-muted/80"
+                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 -my-1 text-muted-foreground hover:text-foreground/70"
                   >
                     {item.icon(isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))")}
                   </button>
