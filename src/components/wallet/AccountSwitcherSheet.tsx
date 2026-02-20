@@ -818,10 +818,10 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { resetAddMode(); setEditingAccountId(null); } }}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[80vh] bg-background/95 backdrop-blur-xl border-border/50">
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[80vh] max-w-md mx-auto bg-background/95 backdrop-blur-xl border-border/50">
           <SheetHeader className="pb-4">
             <SheetTitle className="text-left flex items-center gap-2 text-lg">
-              <Layers className="w-5 h-5 text-primary" />
+              <Layers className="w-5 h-5 text-foreground" />
               {addMode === null && "Switch Account"}
               {addMode === "menu" && "Add Account"}
               {addMode === "mnemonic" && "Import Seed Phrase"}
@@ -833,12 +833,12 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
           {addMode === null && (
             <button
               onClick={() => setAddMode("menu")}
-              className="w-full flex items-center gap-4 p-4 mb-4 rounded-2xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all duration-200"
+              className="w-full flex items-center gap-4 p-4 mb-4 rounded-2xl border border-dashed border-border/50 bg-muted/10 hover:bg-muted/20 transition-all duration-200"
             >
-              <div className="w-11 h-11 rounded-full bg-primary/20 flex items-center justify-center">
-                <Plus className="w-5 h-5 text-primary" />
+              <div className="w-11 h-11 rounded-full bg-muted/30 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-foreground" />
               </div>
-              <span className="font-medium text-primary">Add or Import Account</span>
+              <span className="font-medium text-foreground">Add or Import Account</span>
             </button>
           )}
 
@@ -849,8 +849,8 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                 onClick={() => setAddMode("mnemonic")}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/50 hover:bg-secondary/50 transition-all duration-200"
               >
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-primary" />
+                <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-foreground" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-foreground">Import Seed Phrase</p>
@@ -863,8 +863,8 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                 onClick={() => setAddMode("privateKey")}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/50 hover:bg-secondary/50 transition-all duration-200"
               >
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Key className="w-5 h-5 text-primary" />
+                <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
+                  <Key className="w-5 h-5 text-foreground" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-foreground">Import Private Key</p>
@@ -984,7 +984,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                       className={cn(
                         "w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-all duration-200",
                         isActive
-                          ? "border-primary/50 bg-primary/10"
+                          ? "border-foreground/30 bg-foreground/10"
                           : "border-border/30 bg-card/30 hover:bg-secondary/50"
                       )}
                     >
@@ -994,7 +994,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                         className={cn(
                           "w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg shrink-0 transition-colors",
                           isActive
-                            ? "bg-primary text-primary-foreground"
+                            ? "bg-foreground text-background"
                             : "bg-muted/50 text-muted-foreground"
                         )}
                       >
@@ -1026,7 +1026,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                               className="h-8 w-8 p-0"
                               onClick={() => handleSaveNickname(account.id)}
                             >
-                              <Check className="w-4 h-4 text-primary" />
+                              <Check className="w-4 h-4 text-foreground" />
                             </Button>
                           </div>
                         ) : (
@@ -1036,7 +1036,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                               <Key className="w-3 h-3 text-muted-foreground shrink-0" />
                             )}
                             {isActive && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-semibold shrink-0">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/20 text-foreground font-semibold shrink-0">
                                 Active
                               </span>
                             )}
