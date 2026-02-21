@@ -11,7 +11,16 @@ import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { AllAssetsPage } from "./pages/AllAssetsPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      staleTime: Infinity,
+    },
+  },
+});
 
 // Page transition config — sub-pages slide in from right, root from left
 const slideTransition = { duration: 0.28, ease: "easeOut" as const };
