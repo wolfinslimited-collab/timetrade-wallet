@@ -209,15 +209,12 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("staking_positions")
-        .select("*")
-        .eq("wallet_address", walletAddress.toLowerCase())
-        .eq("is_active", true)
-        .order("staked_at", { ascending: false });
+      const { data, error } = await supabase.functions.invoke('staking', {
+        body: { action: 'get-positions', wallet_address: walletAddress },
+      });
 
       if (error) throw error;
-      setPositions(data || []);
+      setPositions(data?.data || []);
     } catch (err) {
       console.error("Error fetching staking positions:", err);
     } finally {
