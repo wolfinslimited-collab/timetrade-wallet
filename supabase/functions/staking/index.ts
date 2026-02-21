@@ -84,6 +84,36 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "get-positions") {
+      const { wallet_address } = params;
+      if (!wallet_address || typeof wallet_address !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Missing wallet_address" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("staking_positions")
+        .select("*")
+        .eq("wallet_address", wallet_address.toLowerCase())
+        .eq("is_active", true)
+        .order("staked_at", { ascending: false });
+
+      if (error) {
+        console.error("Fetch positions error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch positions" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ data: data || [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (action === "get-stake-wallet") {
       const { chain } = params;
       if (!chain || typeof chain !== "string") {
