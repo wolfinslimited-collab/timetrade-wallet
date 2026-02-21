@@ -42,8 +42,10 @@ export function useCryptoPrices(symbols: string[] = ['ETH', 'BTC', 'SOL', 'MATIC
   return useQuery({
     queryKey: ['cryptoPrices', symbols.join(',')],
     queryFn: () => fetchPrices(symbols),
-    staleTime: 60000, // 1 minute
-    refetchInterval: 120000, // 2 minutes
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 

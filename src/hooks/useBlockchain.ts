@@ -205,8 +205,10 @@ export function useWalletBalance(address: string | null, chain: Chain = 'ethereu
     queryKey: ['walletBalance', chain, address],
     queryFn: () => callBlockchainFunction<WalletBalance>('getBalance', chain, address!, false),
     enabled: !!address,
-    staleTime: 30000,
-    refetchInterval: 60000,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -247,8 +249,10 @@ export function useTransactions(address: string | null, chain: Chain = 'ethereum
     queryKey: ['transactions', chain, address],
     queryFn: () => callBlockchainFunction<TransactionsResponse>('getTransactions', chain, address!, false),
     enabled: !!address,
-    staleTime: 30000,
-    refetchInterval: 60000,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -256,8 +260,10 @@ export function useGasEstimate(chain: Chain = 'ethereum') {
   return useQuery({
     queryKey: ['gasEstimate', chain],
     queryFn: () => callBlockchainFunction<GasEstimate>('estimateGas', chain, '', false),
-    staleTime: 15000,
-    refetchInterval: 30000,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
