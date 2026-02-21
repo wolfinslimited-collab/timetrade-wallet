@@ -1602,6 +1602,37 @@ async function getSolanaTransactions(
   }
 }
 
+// Fetch Arbitrum token transfers via Blockscout API (free, no API key)
+async function fetchArbitrumTokenTransfers(address: string): Promise<Array<Record<string, unknown>>> {
+  try {
+    const url = `https://arbitrum.blockscout.com/api?module=account&action=tokentx&address=${address}&page=1&offset=50&sort=desc`;
+    console.log(`Fetching Arbitrum token transfers via Blockscout`);
+    const resp = await fetch(url, { headers: { accept: "application/json" } });
+    const text = await resp.text();
+    console.log(`Blockscout response status=${resp.status}, body=${text.slice(0, 500)}`);
+    if (!resp.ok) return [];
+    const json = JSON.parse(text);
+    if (json.status !== "1" || !Array.isArray(json.result)) {
+      console.log(`Blockscout: status=${json.status}, message=${json.message}`);
+      return [];
+    }
+    console.log(`Blockscout: found ${json.result.length} token transfers`);
+    return json.result.map((t: any) => ({
+      hash: t.hash,
+      from: t.from,
+      to: t.to,
+      value: t.value || "0",
+      timestamp: Number(t.timeStamp) || 0,
+      status: "confirmed",
+      blockNumber: Number(t.blockNumber),
+      contractAddress: t.contractAddress,
+      tokenSymbol: t.tokenSymbol || "ERC20",
+      tokenName: t.tokenName || "Unknown Token",
+      tokenDecimal: Number(t.tokenDecimal) || 18,
+    }));
+  } catch (e) { console.warn("Blockscout Arbitrum token tx fetch failed:", e); return []; }
+}
+
 async function getTransactions(
   chain: Chain,
   address: string,
@@ -1742,6 +1773,22 @@ async function getTransactions(
       parsedTransactions = Array.from(uniq.values()).sort(
         (a, b) =>
           Number((b as any).timestamp || 0) - Number((a as any).timestamp || 0),
+      );
+    }
+
+    // Arbitrum: merge ERC-20 token transfers from Arbiscan
+    if (chain === "arbitrum" && !testnet) {
+      const tokenTxs = await fetchArbitrumTokenTransfers(address);
+      const uniq = new Map<string, any>();
+      for (const t of [...parsedTransactions, ...tokenTxs]) {
+        if (!t) continue;
+        const h = String((t as any).hash || "");
+        if (!h) continue;
+        // Token transfers have more info, prefer them over native-only entries
+        if (!uniq.has(h) || (t as any).tokenSymbol) uniq.set(h, t);
+      }
+      parsedTransactions = Array.from(uniq.values()).sort(
+        (a, b) => Number((b as any).timestamp || 0) - Number((a as any).timestamp || 0),
       );
     }
 
