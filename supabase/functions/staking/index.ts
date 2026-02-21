@@ -84,6 +84,36 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "get-stake-wallet") {
+      const { chain } = params;
+      if (!chain || typeof chain !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Missing chain parameter" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("stake_wallets")
+        .select("wallet_address")
+        .eq("chain", chain)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Stake wallet fetch error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch stake wallet" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ wallet_address: data?.wallet_address ?? null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (action === "unstake") {
       const { position_id, wallet_address } = params;
 
