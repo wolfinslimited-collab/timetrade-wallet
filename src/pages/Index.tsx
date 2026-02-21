@@ -28,7 +28,10 @@ const pageTransition = {
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
-  const [isLocked, setIsLocked] = useState(true);
+  const [isLocked, setIsLocked] = useState(() => {
+    // If already unlocked this session, don't show lock screen again
+    return sessionStorage.getItem("timetrade_unlocked") !== "true";
+  });
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,9 +60,10 @@ const Index = () => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
     const hasPin = localStorage.getItem("timetrade_pin");
     setHasWallet(walletCreated === "true");
-    // Only show lock screen in production mode
+    // Only show lock screen in production mode and if not already unlocked this session
     const isProduction = import.meta.env.PROD;
-    setIsLocked(isProduction && walletCreated === "true" && !!hasPin);
+    const alreadyUnlocked = sessionStorage.getItem("timetrade_unlocked") === "true";
+    setIsLocked(isProduction && walletCreated === "true" && !!hasPin && !alreadyUnlocked);
   }, []);
 
   // If another tab performs a reset, wipe this tab too so nothing can re-populate storage.
@@ -123,11 +127,13 @@ const Index = () => {
 
   const handleOnboardingComplete = () => {
     localStorage.setItem("timetrade_wallet_created", "true");
+    sessionStorage.setItem("timetrade_unlocked", "true");
     setHasWallet(true);
     setIsLocked(false);
   };
 
   const handleUnlock = () => {
+    sessionStorage.setItem("timetrade_unlocked", "true");
     setIsLocked(false);
   };
 
