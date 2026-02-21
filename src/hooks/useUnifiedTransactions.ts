@@ -47,6 +47,8 @@ export function useUnifiedTransactions(enabled: boolean) {
 
   const eth = useTransactions(enabled ? addresses.evm : null, "ethereum");
   const polygon = useTransactions(enabled ? addresses.evm : null, "polygon");
+  const arbitrum = useTransactions(enabled ? addresses.evm : null, "arbitrum");
+  const bsc = useTransactions(enabled ? addresses.evm : null, "bsc");
   const solana = useTransactions(enabled ? addresses.solana : null, "solana");
   const tron = useTransactions(enabled ? addresses.tron : null, "tron");
 
@@ -61,17 +63,21 @@ export function useUnifiedTransactions(enabled: boolean) {
     const list: UnifiedTransaction[] = [];
     push("ethereum", eth.data);
     push("polygon", polygon.data);
+    push("arbitrum", arbitrum.data);
+    push("bsc", bsc.data);
     push("solana", solana.data);
     push("tron", tron.data);
 
     list.sort((a, b) => (b.tx.timestamp || 0) - (a.tx.timestamp || 0));
     return list;
-  }, [eth.data, polygon.data, solana.data, tron.data]);
+  }, [eth.data, polygon.data, arbitrum.data, bsc.data, solana.data, tron.data]);
 
-  const isLoading = eth.isLoading || polygon.isLoading || solana.isLoading || tron.isLoading;
+  const isLoading = eth.isLoading || polygon.isLoading || arbitrum.isLoading || bsc.isLoading || solana.isLoading || tron.isLoading;
   const error =
     (eth.error as Error | null) ||
     (polygon.error as Error | null) ||
+    (arbitrum.error as Error | null) ||
+    (bsc.error as Error | null) ||
     (solana.error as Error | null) ||
     (tron.error as Error | null) ||
     null;
