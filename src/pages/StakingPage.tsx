@@ -324,19 +324,21 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
       const unlockDate = new Date();
       unlockDate.setDate(unlockDate.getDate() + selectedDuration.duration);
 
-      const { error: dbError } = await supabase.from("staking_positions").insert({
-        wallet_address: walletAddress.toLowerCase(),
-        token_symbol: selectedToken.symbol,
-        chain: selectedToken.primaryChain,
-        amount: amount,
-        apy_rate: selectedDuration.rate,
-        unlock_at: unlockDate.toISOString(),
-        tx_hash: transferResult.txHash,
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("staking", {
+        body: {
+          action: "create",
+          wallet_address: walletAddress.toLowerCase(),
+          token_symbol: selectedToken.symbol,
+          chain: selectedToken.primaryChain,
+          amount: amount,
+          apy_rate: selectedDuration.rate,
+          unlock_at: unlockDate.toISOString(),
+          tx_hash: transferResult.txHash,
+        },
       });
 
-      if (dbError) {
-        console.error('[STAKING] DB insert error:', dbError);
-        // Transaction succeeded but DB failed - inform user
+      if (fnError || fnData?.error) {
+        console.error('[STAKING] Create error:', fnError || fnData?.error);
         toast({ 
           title: "Stake recorded with issue", 
           description: `Your funds were transferred (tx: ${transferResult.txHash.slice(0, 10)}...) but there was an issue recording the stake. Please contact support.`,
@@ -390,12 +392,15 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
 
     try {
-      const { error } = await supabase
-        .from("staking_positions")
-        .update({ is_active: false })
-        .eq("id", position.id);
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("staking", {
+        body: {
+          action: "unstake",
+          position_id: position.id,
+          wallet_address: walletAddress?.toLowerCase(),
+        },
+      });
 
-      if (error) throw error;
+      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message);
 
       toast({ title: "Unstaked successfully!", description: `${position.amount} ${position.token_symbol} + rewards returned` });
       fetchPositions();

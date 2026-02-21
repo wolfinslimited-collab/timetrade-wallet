@@ -2,3 +2,6 @@ project_id = "uxjpbjkgyphhbycrldui"
 
 [functions.wallet-blockchain]
 verify_jwt = false
+
+[functions.staking]
+verify_jwt = false
