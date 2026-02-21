@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X, RefreshCw } from "lucide-react";
+import { getNetworkLogoUrl } from "@/config/networks";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { Chain, getChainInfo, formatAddress, Transaction as BlockchainTransaction } from "@/hooks/useBlockchain";
@@ -132,6 +133,12 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       } else {
         symbol = "TRC20";
       }
+    }
+
+    // Detect ERC-20 token transfers from Blockscout/Etherscan-style data (Arbitrum, BSC, etc.)
+    if ((tx as any).tokenSymbol && (tx as any).tokenSymbol !== info.symbol) {
+      symbol = (tx as any).tokenSymbol;
+      decimals = (tx as any).tokenDecimal ?? 18;
     }
 
     // Detect SPL token transactions for Solana
@@ -517,23 +524,43 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                 <div className="space-y-2">
                   {transactions.map((tx) => {
                     const Icon = getIcon(tx.type);
-                    return (
+                    const assetLogoUrl = `https://api.elbstream.com/logos/crypto/${tx.symbol.toLowerCase()}`;
+                    const networkLogoUrl = getNetworkLogoUrl(tx.chain);
+                      return (
                       <button
                         key={tx.id}
                         onClick={() => handleTxClick(tx)}
                         className="w-full flex items-center gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left"
                       >
-                        {/* Icon */}
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center",
-                          tx.type === "send" ? "bg-destructive/10" : 
-                          tx.type === "receive" ? "bg-success/10" : "bg-accent/10"
-                        )}>
-                          <Icon className={cn(
-                            "w-5 h-5",
-                            tx.type === "send" ? "text-destructive" : 
-                            tx.type === "receive" ? "text-success" : "text-accent"
-                          )} />
+                        {/* Token Logo with Network Badge */}
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-card border border-border/30">
+                            <img
+                              src={assetLogoUrl}
+                              alt={tx.symbol}
+                              className="w-full h-full object-contain p-1.5"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                            <div className="hidden w-full h-full rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground">
+                              {tx.symbol.slice(0, 2).toUpperCase()}
+                            </div>
+                          </div>
+                          {/* Send/Receive indicator badge */}
+                          <div className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full border-2 border-background flex items-center justify-center",
+                            tx.type === "send" ? "bg-destructive/20" :
+                            tx.type === "receive" ? "bg-success/20" : "bg-accent/20"
+                          )}>
+                            <Icon className={cn(
+                              "w-2.5 h-2.5",
+                              tx.type === "send" ? "text-destructive" :
+                              tx.type === "receive" ? "text-success" : "text-accent"
+                            )} />
+                          </div>
                         </div>
 
                         {/* Details */}
