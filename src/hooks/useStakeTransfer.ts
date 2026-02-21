@@ -35,24 +35,22 @@ export interface StakeTransferResult {
  * Fetch the platform staking wallet address for a given chain from the database.
  */
 export async function getStakeWalletAddress(chain: Chain): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('stake_wallets')
-    .select('wallet_address')
-    .eq('chain', chain)
-    .eq('is_active', true)
-    .maybeSingle();
+  const { data, error } = await supabase.functions.invoke('staking', {
+    body: { action: 'get-stake-wallet', chain },
+  });
 
   if (error) {
     console.error('[STAKE TRANSFER] Error fetching stake wallet:', error);
     return null;
   }
 
-  if (!data || !data.wallet_address || data.wallet_address.trim() === '') {
+  const wallet = data?.wallet_address;
+  if (!wallet || typeof wallet !== 'string' || wallet.trim() === '') {
     console.warn(`[STAKE TRANSFER] No stake wallet configured for chain: ${chain}`);
     return null;
   }
 
-  return data.wallet_address;
+  return wallet;
 }
 
 export function useStakeTransfer() {
