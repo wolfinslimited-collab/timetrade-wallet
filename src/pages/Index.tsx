@@ -208,30 +208,36 @@ const Index = () => {
   // Show settings page
   if (currentView === "settings") {
     return (
-      <motion.div key="settings" {...pageTransition}>
-        <SettingsPage onBack={() => handleTabChange("wallet")} />
+      <>
+        <motion.div key="settings" {...pageTransition}>
+          <SettingsPage onBack={() => handleTabChange("wallet")} />
+        </motion.div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </motion.div>
+      </>
     );
   }
 
   // Show transaction history page
   if (currentView === "history") {
     return (
-      <motion.div key="history" {...pageTransition}>
-        <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
+      <>
+        <motion.div key="history" {...pageTransition}>
+          <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
+        </motion.div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </motion.div>
+      </>
     );
   }
 
   // Show staking page
   if (currentView === "staking") {
     return (
-      <motion.div key="staking" {...pageTransition}>
-        <StakingPage onBack={() => handleTabChange("wallet")} />
+      <>
+        <motion.div key="staking" {...pageTransition}>
+          <StakingPage onBack={() => handleTabChange("wallet")} />
+        </motion.div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </motion.div>
+      </>
     );
   }
 
