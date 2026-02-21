@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { HomeIcon, TransactionHistoryIcon, UsdtIcon, AccountSettingsIcon } from "./icons/NavIcons";
 
@@ -24,10 +25,10 @@ interface BottomNavProps {
 
 export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
   ({ activeTab = "wallet", onTabChange }, ref) => {
-    return (
+    const nav = (
       <nav 
         ref={ref}
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[398px]"
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-[398px]"
       >
         <div className="bg-muted/40 backdrop-blur-3xl border border-border/20 rounded-full px-3 py-2.5 shadow-2xl shadow-black/40"
           style={{ backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)' }}
@@ -55,6 +56,10 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
         </div>
       </nav>
     );
+
+    // Portal to document.body to escape any parent transform/will-change
+    // that would break fixed positioning
+    return createPortal(nav, document.body);
   }
 );
 
