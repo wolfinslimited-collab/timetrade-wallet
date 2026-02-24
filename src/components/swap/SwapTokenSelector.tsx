@@ -65,8 +65,9 @@ export const SwapTokenSelector = ({
     // Determine active chain from context
     const activeChain = chain || excludeAsset?.chain || selectedAsset?.chain;
     
-    // Only search Jupiter for Solana for now
-    if (activeChain && activeChain !== "solana") {
+    // Support DEX search for all swappable chains
+    const swappableChains: Chain[] = ["solana", "ethereum", "polygon", "arbitrum", "bsc"];
+    if (activeChain && !swappableChains.includes(activeChain)) {
       setDexTokens([]);
       return;
     }
@@ -152,7 +153,7 @@ export const SwapTokenSelector = ({
   };
 
   const handleSelectDexToken = (token: DexToken) => {
-    // Convert DEX token to UnifiedAsset format
+    const activeChain = chain || excludeAsset?.chain || selectedAsset?.chain || "solana";
     const asset: UnifiedAsset = {
       symbol: token.symbol,
       name: token.name,
@@ -161,8 +162,8 @@ export const SwapTokenSelector = ({
       amount: 0,
       price: 0,
       valueUsd: 0,
-      chain: "solana" as Chain,
-      isNative: false,
+      chain: activeChain as Chain,
+      isNative: token.address.toLowerCase() === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       contractAddress: token.address,
     };
     onSelect(asset);
@@ -299,7 +300,9 @@ export const SwapTokenSelector = ({
                       }}
                     />
                     <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-background border border-border flex items-center justify-center">
-                      <span className="text-[8px] font-bold text-muted-foreground">S</span>
+                      <span className="text-[8px] font-bold text-muted-foreground">
+                        {(chain || excludeAsset?.chain || selectedAsset?.chain || "solana") === "solana" ? "S" : (chain || excludeAsset?.chain || selectedAsset?.chain) === "ethereum" ? "E" : (chain || excludeAsset?.chain || selectedAsset?.chain) === "polygon" ? "P" : (chain || excludeAsset?.chain || selectedAsset?.chain) === "arbitrum" ? "A" : (chain || excludeAsset?.chain || selectedAsset?.chain) === "bsc" ? "B" : "?"}
+                      </span>
                     </div>
                   </div>
                   <div className="flex-1 text-left min-w-0">
@@ -312,7 +315,7 @@ export const SwapTokenSelector = ({
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {token.name} • Solana
+                      {token.name} • {getNetworkName((chain || excludeAsset?.chain || selectedAsset?.chain || "solana") as Chain)}
                     </div>
                   </div>
                   <div className="text-right">
