@@ -13,6 +13,7 @@ import {
   deriveEvmAddress,
   deriveSolanaAddress,
   deriveTronAddress,
+  deriveBtcAddress,
   type SolanaDerivationPath,
 } from "@/utils/walletDerivation";
 import { decryptPrivateKey, encryptPrivateKey } from "@/utils/encryption";
@@ -398,11 +399,13 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
             const solAddress = deriveSolanaAddress(phrase, index, solanaPathStyle);
             const tronAddress = deriveTronAddress(phrase, index);
+            const btcAddress = deriveBtcAddress(phrase, index);
 
             console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e; font-weight: bold;', {
               evm: evmAddress,
               solana: solAddress,
               tron: tronAddress,
+              btc: btcAddress,
             });
 
             // Use centralized storage to set ALL addresses atomically
@@ -410,6 +413,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
               evm: evmAddress,
               solana: solAddress,
               tron: tronAddress,
+              btc: btcAddress,
             });
 
             // UPGRADE: Store derived addresses in the account for future fast switching
@@ -575,11 +579,13 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       const solAddress = deriveSolanaAddress(words.join(" "), 0, solanaPathStyle);
       const tronAddress = deriveTronAddress(words.join(" "), 0);
+      const btcAddress = deriveBtcAddress(words.join(" "), 0);
 
       console.log(`%c[ACCOUNT SWITCHER] 📍 Derived addresses`, 'color: #22c55e;', {
         evm: evmAddress,
         solana: solAddress,
         tron: tronAddress,
+        btc: btcAddress,
       });
 
       // Use centralized storage
@@ -587,6 +593,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         evm: evmAddress,
         solana: solAddress,
         tron: tronAddress,
+        btc: btcAddress,
       });
 
       const accountName = accountNameInput.trim() || "Imported Wallet";
