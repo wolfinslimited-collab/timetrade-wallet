@@ -80,13 +80,13 @@ export const SeedWordInput = ({
       <div
         className={cn(
           "flex items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200",
-          "bg-muted/15 border-border/20",
-          isFocused && "ring-1 ring-primary/40 border-primary/40 bg-muted/25",
-          isValid && !isFocused && "border-primary/20 bg-primary/[0.04]",
-          isInvalid && !isFocused && "border-destructive/20 bg-destructive/[0.04]"
+          "bg-muted/20 border-border/30",
+          isFocused && "ring-1 ring-primary/50 border-primary/50 bg-muted/30",
+          isValid && !isFocused && "border-primary/30 bg-primary/[0.06]",
+          isInvalid && !isFocused && "border-destructive/30 bg-destructive/[0.06]"
         )}
       >
-        <span className="text-[10px] font-mono text-muted-foreground/40 w-5 shrink-0 text-right mr-0.5">
+        <span className="text-[10px] font-mono text-muted-foreground w-5 shrink-0 text-right mr-0.5">
           {index + 1}.
         </span>
         <input
@@ -102,7 +102,7 @@ export const SeedWordInput = ({
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="flex-1 bg-transparent text-[13px] font-mono outline-none placeholder:text-muted-foreground/25 min-w-0 text-foreground/90"
+          className="flex-1 bg-transparent text-[13px] font-mono outline-none placeholder:text-muted-foreground/40 min-w-0 text-foreground"
           placeholder="word"
         />
         {isValid && <Check className="w-3 h-3 text-primary/60 shrink-0" />}
