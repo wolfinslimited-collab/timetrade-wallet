@@ -267,6 +267,7 @@ const Index = () => {
       <div className="sticky top-0 z-30 backdrop-blur-xl">
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
+          onAIChatClick={() => handleTabChange("ai")}
           unreadCount={unreadCount}
         />
       </div>
