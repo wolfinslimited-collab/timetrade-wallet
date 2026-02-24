@@ -299,7 +299,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
 
   return (
     <>
-    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange} modal={!showRiskModal}>
       <SheetContent 
         side="bottom" 
         className="h-[90vh] rounded-t-3xl bg-background border-border p-0 flex flex-col"
