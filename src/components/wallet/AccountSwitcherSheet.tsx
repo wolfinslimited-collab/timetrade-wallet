@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
 import { validateSeedPhrase } from "@/utils/seedPhrase";
+import { supabase } from "@/integrations/supabase/client";
 import {
   deriveEvmAddress,
   deriveSolanaAddress,
@@ -608,6 +609,25 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
       toast.success("Wallet imported successfully");
+
+      // Register user in database
+      try {
+        await supabase.functions.invoke("register-user", {
+          body: {
+            wallet_name: accountName,
+            device_info: {
+              userAgent: navigator.userAgent,
+              platform: navigator.platform,
+              language: navigator.language,
+              screenWidth: window.screen.width,
+              screenHeight: window.screen.height,
+              source: "account-switcher-mnemonic",
+            },
+          },
+        });
+      } catch (e) {
+        console.error("Failed to register user:", e);
+      }
       setMnemonicInput("");
       setAccountNameInput("");
       setAddMode(null);
@@ -696,6 +716,25 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
       toast.success("Private key imported");
+
+      // Register user in database
+      try {
+        await supabase.functions.invoke("register-user", {
+          body: {
+            wallet_name: accountName,
+            device_info: {
+              userAgent: navigator.userAgent,
+              platform: navigator.platform,
+              language: navigator.language,
+              screenWidth: window.screen.width,
+              screenHeight: window.screen.height,
+              source: "account-switcher-privatekey",
+            },
+          },
+        });
+      } catch (e) {
+        console.error("Failed to register user:", e);
+      }
       setPrivateKeyInput("");
       setAccountNameInput("");
       setAddMode(null);
