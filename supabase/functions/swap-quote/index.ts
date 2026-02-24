@@ -40,7 +40,7 @@ async function getJupiterQuote(
   amount: string,
   slippageBps: number
 ) {
-  const url = `https://lite-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`;
+  const url = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`;
   console.log("[SWAP] Jupiter quote URL:", url);
 
   const res = await fetch(url);
@@ -58,7 +58,7 @@ async function getJupiterSwapTransaction(
   quoteResponse: any,
   userPublicKey: string
 ) {
-  const res = await fetch("https://lite-api.jup.ag/v6/swap", {
+  const res = await fetch("https://lite-api.jup.ag/swap/v1/swap", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
