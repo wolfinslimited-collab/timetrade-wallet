@@ -1,8 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SendCryptoSheet } from "./send/SendCryptoSheet";
 import { ReceiveCryptoSheet } from "./receive/ReceiveCryptoSheet";
-import { SwapCryptoSheet } from "./swap/SwapCryptoSheet";
 import { ArrowDownToLine, Send, ArrowLeftRight } from "lucide-react";
 
 interface QuickAction {
@@ -20,12 +20,12 @@ const actions: QuickAction[] = [
 export const QuickActions = () => {
   const [sendOpen, setSendOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
-  const [swapOpen, setSwapOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleAction = (action?: string) => {
     if (action === "send") setSendOpen(true);
     else if (action === "receive") setReceiveOpen(true);
-    else if (action === "swap") setSwapOpen(true);
+    else if (action === "swap") navigate("/swap");
   };
 
   return (
@@ -51,7 +51,6 @@ export const QuickActions = () => {
 
       <SendCryptoSheet open={sendOpen} onOpenChange={setSendOpen} />
       <ReceiveCryptoSheet open={receiveOpen} onOpenChange={setReceiveOpen} />
-      <SwapCryptoSheet open={swapOpen} onOpenChange={setSwapOpen} />
     </>
   );
 };
