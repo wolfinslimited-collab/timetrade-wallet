@@ -36,7 +36,7 @@ export const WalletHeader = ({
           onClick={() => navigate("/ai-chat")}
           className="p-2 rounded-full bg-card border border-border hover:border-primary/30 transition-colors"
         >
-          <Sparkles className="w-5 h-5 text-primary" />
+          <Sparkles className="w-5 h-5 text-foreground" />
         </button>
 
         {/* Wallet name pill - center */}
@@ -55,7 +55,7 @@ export const WalletHeader = ({
           onClick={() => navigate("/notifications")}
           className="relative p-2 rounded-full bg-card border border-border hover:border-foreground/30 transition-colors"
         >
-          <Bell className="w-5 h-5 text-muted-foreground" />
+          <Bell className="w-5 h-5 text-foreground" />
           <AnimatePresence>
             {unreadCount > 0 && (
               <motion.div
