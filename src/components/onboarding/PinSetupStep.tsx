@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, Lock, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -88,20 +88,11 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
 
       {/* PIN Display */}
       <div className="flex-1 flex flex-col items-center justify-center">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="w-20 h-20 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-8"
-        >
-          <Lock className="w-10 h-10 text-foreground/70" />
-        </motion.div>
-
         <motion.p
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          className="text-muted-foreground text-center mb-8 max-w-xs"
+          className="text-muted-foreground text-center mb-6 max-w-xs"
         >
           {step === "create" 
             ? "Create a 6-digit PIN to secure your wallet" 
