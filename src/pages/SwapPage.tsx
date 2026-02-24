@@ -105,31 +105,56 @@ const SwapPage = () => {
           parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)
         ).toString();
 
-        const { data, error } = await supabase.functions.invoke("swap-quote", {
-          body: {
-            action: "quote",
-            chain: fromAsset.chain,
-            srcToken: getTokenAddress(fromAsset),
-            destToken: getTokenAddress(toAsset),
-            amount: amountInBaseUnits,
-            srcDecimals: fromAsset.decimals,
-            destDecimals: toAsset.decimals,
-            slippage: Math.round(slippage * 100),
-          },
-        });
+        if (fromAsset.chain === "solana") {
+          // Fetch Jupiter quote directly from client (avoids edge function DNS issues)
+          const slippageBps = Math.round(slippage * 100);
+          const srcMint = getTokenAddress(fromAsset);
+          const destMint = getTokenAddress(toAsset);
+          const jupUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${srcMint}&outputMint=${destMint}&amount=${amountInBaseUnits}&slippageBps=${slippageBps}`;
+          
+          const res = await fetch(jupUrl);
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Jupiter quote failed: ${text}`);
+          }
+          const jupiterQuote = await res.json();
 
-        if (error) throw new Error(error.message);
-        if (!data?.success) throw new Error(data?.error || "Quote failed");
+          setQuote({
+            srcAmount: jupiterQuote.inAmount,
+            destAmount: jupiterQuote.outAmount,
+            priceImpact: Math.abs(parseFloat(jupiterQuote.priceImpactPct || "0")),
+            route: jupiterQuote.routePlan?.map((r: any) => r.swapInfo?.label).filter(Boolean) || [],
+            provider: "jupiter",
+            raw: jupiterQuote,
+          });
+        } else {
+          // EVM chains via edge function (ParaSwap)
+          const { data, error } = await supabase.functions.invoke("swap-quote", {
+            body: {
+              action: "quote",
+              chain: fromAsset.chain,
+              srcToken: getTokenAddress(fromAsset),
+              destToken: getTokenAddress(toAsset),
+              amount: amountInBaseUnits,
+              srcDecimals: fromAsset.decimals,
+              destDecimals: toAsset.decimals,
+              slippage: Math.round(slippage * 100),
+            },
+          });
 
-        setQuote({
-          srcAmount: data.data.srcAmount,
-          destAmount: data.data.destAmount,
-          priceImpact: Math.abs(data.data.priceImpact || 0),
-          route: data.data.route || [],
-          provider: data.provider,
-          gasCostUSD: data.data.gasCostUSD,
-          raw: data.data.raw,
-        });
+          if (error) throw new Error(error.message);
+          if (!data?.success) throw new Error(data?.error || "Quote failed");
+
+          setQuote({
+            srcAmount: data.data.srcAmount,
+            destAmount: data.data.destAmount,
+            priceImpact: Math.abs(data.data.priceImpact || 0),
+            route: data.data.route || [],
+            provider: data.provider,
+            gasCostUSD: data.data.gasCostUSD,
+            raw: data.data.raw,
+          });
+        }
       } catch (err) {
         console.error("[SWAP] Quote error:", err);
         setQuoteError(err instanceof Error ? err.message : "Quote failed");
