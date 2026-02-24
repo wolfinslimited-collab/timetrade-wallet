@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Lock, Delete, Key, Fingerprint } from "lucide-react";
+import { Lock, ArrowLeft, Key, Fingerprint } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 
 interface PinUnlockModalProps {
@@ -120,17 +122,23 @@ export const PinUnlockModal = ({
             </div>
           )}
 
-          {/* PIN Dots */}
+          {/* PIN Dots - matching lock screen */}
           <div className="flex justify-center gap-3 mb-8">
             {[...Array(6)].map((_, i) => (
-              <div
+              <motion.div
                 key={i}
-                className={`w-4 h-4 rounded-full transition-all duration-200 ${
-                  i < pin.length 
-                    ? "bg-primary scale-110" 
-                    : "bg-muted border-2 border-border"
-                }`}
-              />
+                animate={i < pin.length ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.25 }}
+              >
+                <div
+                  className={cn(
+                    "w-6 h-6 rounded-full transition-all duration-200",
+                    i < pin.length
+                      ? "bg-foreground"
+                      : "bg-muted-foreground/30"
+                  )}
+                />
+              </motion.div>
             ))}
           </div>
 
@@ -139,32 +147,50 @@ export const PinUnlockModal = ({
             <p className="text-center text-sm text-destructive mb-4">{error}</p>
           )}
 
-          {/* Number Pad */}
-          <div className="grid grid-cols-3 gap-3 max-w-[260px] mx-auto">
+          {/* Number Pad - matching lock screen embossed style */}
+          <div className="grid grid-cols-3 gap-3 mx-auto w-fit">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-              <button
+              <motion.button
                 key={num}
+                whileTap={{ scale: 0.92 }}
                 onClick={() => handleKeyPress(num.toString())}
                 disabled={isLoading}
-                className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+                className={cn(
+                  "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
+                  "bg-white/[0.06] border border-white/[0.08]",
+                  "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
+                  isLoading && "opacity-25 cursor-not-allowed"
+                )}
               >
                 {num}
-              </button>
+              </motion.button>
             ))}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               onClick={handleBackspace}
               disabled={isLoading}
-              className="w-[76px] h-[76px] rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+              className={cn(
+                "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
+                "bg-white/[0.06] border border-white/[0.08]",
+                "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
+                isLoading && "opacity-25 cursor-not-allowed"
+              )}
             >
-              <Delete className="w-5 h-5" />
-            </button>
-            <button
+              <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               onClick={() => handleKeyPress("0")}
               disabled={isLoading}
-              className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+              className={cn(
+                "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
+                "bg-white/[0.06] border border-white/[0.08]",
+                "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
+                isLoading && "opacity-25 cursor-not-allowed"
+              )}
             >
               0
-            </button>
+            </motion.button>
             <div />
           </div>
         </div>

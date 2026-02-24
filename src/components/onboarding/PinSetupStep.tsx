@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, Lock, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { ChevronLeft, Lock, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -61,13 +61,20 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
     setCurrentPin("");
   };
 
+  const btnStyle = cn(
+    "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
+    "bg-white/[0.06]",
+    "border border-white/[0.08]",
+    "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
+  );
+
   return (
     <div className="flex flex-col min-h-screen p-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button 
           onClick={onBack}
-          className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+          className="p-2 rounded-full bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -81,61 +88,98 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
 
       {/* PIN Display */}
       <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-8">
-          <Lock className="w-10 h-10 text-primary" />
-        </div>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-20 h-20 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-8"
+        >
+          <Lock className="w-10 h-10 text-foreground/70" />
+        </motion.div>
 
-        <p className="text-muted-foreground text-center mb-8 max-w-xs">
+        <motion.p
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="text-muted-foreground text-center mb-8 max-w-xs"
+        >
           {step === "create" 
             ? "Create a 6-digit PIN to secure your wallet" 
             : "Re-enter your PIN to confirm"}
-        </p>
+        </motion.p>
 
-        {/* PIN Dots */}
-        <div className="flex gap-4 mb-12">
+        {/* PIN Dots - same as lock screen */}
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="flex gap-3 mb-10"
+        >
           {[0, 1, 2, 3, 4, 5].map((index) => (
-            <div
+            <motion.div
               key={index}
-              className={cn(
-                "w-4 h-4 rounded-full transition-all duration-200",
+              animate={
                 index < currentPin.length
-                  ? "bg-primary scale-110"
-                  : "bg-muted border border-border"
-              )}
-            />
-          ))}
-        </div>
-
-        {/* Keypad */}
-        <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-            <button
-              key={digit}
-              onClick={() => handleKeyPress(String(digit))}
-              className="h-16 rounded-2xl bg-card border border-border text-2xl font-semibold hover:bg-secondary active:scale-95 transition-all"
+                  ? { scale: [1, 1.2, 1] }
+                  : {}
+              }
+              transition={{ duration: 0.25 }}
             >
-              {digit}
-            </button>
+              <div
+                className={cn(
+                  "w-6 h-6 rounded-full transition-all duration-200",
+                  index < currentPin.length
+                    ? "bg-foreground"
+                    : "bg-muted-foreground/30"
+                )}
+              />
+            </motion.div>
           ))}
-          <button
-            onClick={handleClear}
-            className="h-16 rounded-2xl bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
-          >
-            Clear
-          </button>
-          <button
-            onClick={() => handleKeyPress("0")}
-            className="h-16 rounded-2xl bg-card border border-border text-2xl font-semibold hover:bg-secondary active:scale-95 transition-all"
-          >
-            0
-          </button>
-          <button
-            onClick={handleDelete}
-            className="h-16 rounded-2xl bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
-          >
-            Delete
-          </button>
-        </div>
+        </motion.div>
+
+        {/* Keypad - matching lock screen embossed style */}
+        <motion.div
+          initial={{ y: 40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="grid grid-cols-3 gap-3 mx-auto w-fit">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+              <motion.button
+                key={digit}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => handleKeyPress(String(digit))}
+                className={btnStyle}
+              >
+                {digit}
+              </motion.button>
+            ))}
+
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={handleClear}
+              className={cn(btnStyle, "text-sm text-muted-foreground")}
+            >
+              Clear
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => handleKeyPress("0")}
+              className={btnStyle}
+            >
+              0
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={handleDelete}
+              className={btnStyle}
+            >
+              <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+            </motion.button>
+          </div>
+        </motion.div>
       </div>
 
       {/* Hidden input for keyboard support */}
