@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { NetworkAssetSelector, AvailableAsset } from "@/components/send/NetworkAssetSelector";
+import { NetworkAssetSelector, AvailableAsset, NetworkAssetSelectorHandle } from "@/components/send/NetworkAssetSelector";
 import { AddressInputStep } from "@/components/send/AddressInputStep";
 import { AmountInputStep } from "@/components/send/AmountInputStep";
 import { ConfirmationStep } from "@/components/send/ConfirmationStep";
@@ -26,6 +26,7 @@ const SendPage = () => {
   const [selectedAsset, setSelectedAsset] = useState<AvailableAsset | null>(null);
   const [senderAddress, setSenderAddress] = useState<string>("");
   const [isTestnet] = useState(false);
+  const networkSelectorRef = useRef<NetworkAssetSelectorHandle>(null);
 
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
@@ -117,7 +118,11 @@ const SendPage = () => {
   };
 
   const handleBack = () => {
-    if (step === "select") navigate(-1);
+    if (step === "select") {
+      // Let the selector handle internal back (assets → networks)
+      const handled = networkSelectorRef.current?.handleBack();
+      if (!handled) navigate(-1);
+    }
     else if (step === "address") setStep("select");
     else if (step === "risk") setStep("address");
     else if (step === "amount") setStep("risk");
@@ -160,7 +165,7 @@ const SendPage = () => {
         <AnimatePresence mode="wait">
           {step === "select" && (
             <motion.div key="select" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
-              <NetworkAssetSelector onSubmit={handleNetworkAssetSelect} onClose={handleClose} />
+              <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} />
             </motion.div>
           )}
           {step === "address" && (

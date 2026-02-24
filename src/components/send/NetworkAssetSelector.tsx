@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Wallet, Loader2 } from "lucide-react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import { Wallet, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Chain } from "@/hooks/useBlockchain";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
@@ -21,18 +21,34 @@ export interface AvailableAsset {
   price: number;
 }
 
+export interface NetworkAssetSelectorHandle {
+  /** Returns true if it handled the back internally (went from assets→networks) */
+  handleBack: () => boolean;
+}
+
 interface NetworkAssetSelectorProps {
   onSubmit: (network: Chain, asset: AvailableAsset, senderAddress: string) => void;
   onClose: () => void;
 }
 
-export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelectorProps) => {
+export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, NetworkAssetSelectorProps>(({ onSubmit, onClose }, ref) => {
   const { addresses } = useWalletAddresses(true);
   const { prices } = useBlockchainContext();
 
   const [selectedNetwork, setSelectedNetwork] = useState<Chain | null>(null);
   const [assets, setAssets] = useState<AvailableAsset[]>([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    handleBack: () => {
+      if (selectedNetwork) {
+        setSelectedNetwork(null);
+        setAssets([]);
+        return true;
+      }
+      return false;
+    },
+  }), [selectedNetwork]);
 
   const getSenderAddress = (chain: Chain): string => {
     const network = NETWORK_MAP[chain];
@@ -192,12 +208,8 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
             transition={{ duration: 0.2 }}
             className="mt-3 flex-1 flex flex-col"
           >
-            {/* Selected network header */}
-            <button
-              onClick={handleBackToNetworks}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
-            >
-              <ArrowLeft className="w-4 h-4" />
+            {/* Selected network chip */}
+            <div className="flex items-center gap-2 mb-4">
               <div
                 className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
                 style={{ background: `${NETWORK_MAP[selectedNetwork].color}18` }}
@@ -208,8 +220,8 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
                   className="w-4 h-4 object-contain"
                 />
               </div>
-              <span className="font-medium">{NETWORK_MAP[selectedNetwork].name}</span>
-            </button>
+              <span className="text-sm font-medium">{NETWORK_MAP[selectedNetwork].name}</span>
+            </div>
 
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-3">
               Select Asset to Send
@@ -284,4 +296,6 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
       </AnimatePresence>
     </div>
   );
-};
+});
+
+NetworkAssetSelector.displayName = "NetworkAssetSelector";
