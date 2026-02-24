@@ -298,6 +298,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent 
         side="bottom" 
@@ -405,16 +406,18 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
         </AnimatePresence>
       </SheetContent>
 
-      {/* Transaction Risk Modal */}
-      <TransactionRiskModal
-        open={showRiskModal}
-        address={pendingAddress}
-        chain={selectedChain}
-        amount={transaction.amount}
-        senderAddress={senderAddress}
-        onProceed={handleRiskProceed}
-        onCancel={handleRiskCancel}
-      />
     </Sheet>
+
+    {/* Transaction Risk Modal - rendered OUTSIDE Sheet to avoid z-index issues */}
+    <TransactionRiskModal
+      open={showRiskModal}
+      address={pendingAddress}
+      chain={selectedChain}
+      amount={transaction.amount}
+      senderAddress={senderAddress}
+      onProceed={handleRiskProceed}
+      onCancel={handleRiskCancel}
+    />
+  </>
   );
 };
