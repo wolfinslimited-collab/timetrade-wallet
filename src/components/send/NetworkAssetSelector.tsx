@@ -29,7 +29,7 @@ interface NetworkAssetSelectorProps {
 }
 
 // Sendable networks (exclude bitcoin for now as it requires different signing)
-const SENDABLE_CHAINS: Chain[] = ['ethereum', 'arbitrum', 'polygon', 'solana', 'tron'];
+const SENDABLE_CHAINS: Chain[] = ['ethereum', 'arbitrum', 'polygon', 'bsc', 'solana', 'tron'];
 
 export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelectorProps) => {
   const { addresses } = useWalletAddresses(true);
