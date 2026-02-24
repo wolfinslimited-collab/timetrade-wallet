@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Share2, ChevronDown, Check, QrCode, AlertCircle, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,40 +6,28 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { QRCodeDisplay } from "@/components/receive/QRCodeDisplay";
-import { getNetworkLogoUrl as _getNetworkLogoUrl } from "@/config/networks";
-import type { Chain } from "@/config/networks";
+import { NETWORKS, getNetworkLogoUrl } from "@/config/networks";
+import type { NetworkConfig, AddressKey } from "@/config/networks";
+
+// Derive token list from config
+const tokens = NETWORKS.map((n) => ({
+  symbol: n.symbol,
+  name: n.name,
+  network: `${n.name} Mainnet`,
+  networkId: n.id,
+  addressKey: n.addressKey,
+  logoSymbol: n.logoSymbol,
+}));
 
 const getCryptoLogoUrl = (symbol: string): string =>
   `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
-
-const getNetworkLogoUrl = (networkId: string): string =>
-  _getNetworkLogoUrl(networkId as Chain);
-
-interface TokenOption {
-  symbol: string;
-  name: string;
-  network: string;
-  networkId: string;
-  addressKey: "evm" | "solana" | "tron" | "btc";
-  isNativeToken?: boolean;
-}
-
-const tokens: TokenOption[] = [
-  { symbol: "ETH", name: "Ethereum", network: "Ethereum Mainnet", networkId: "ethereum", addressKey: "evm", isNativeToken: true },
-  { symbol: "POL", name: "Polygon", network: "Polygon Mainnet", networkId: "polygon", addressKey: "evm", isNativeToken: true },
-  { symbol: "ETH", name: "Arbitrum One", network: "Arbitrum Mainnet", networkId: "arbitrum", addressKey: "evm", isNativeToken: true },
-  { symbol: "BNB", name: "BNB Chain", network: "BSC Mainnet", networkId: "bsc", addressKey: "evm", isNativeToken: true },
-  { symbol: "SOL", name: "Solana", network: "Solana Mainnet", networkId: "solana", addressKey: "solana", isNativeToken: true },
-  { symbol: "TRX", name: "Tron", network: "Tron Mainnet", networkId: "tron", addressKey: "tron", isNativeToken: true },
-  { symbol: "BTC", name: "Bitcoin", network: "Bitcoin Network", networkId: "bitcoin", addressKey: "btc", isNativeToken: true },
-];
 
 const ReceivePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showTokens, setShowTokens] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<TokenOption>(tokens[0]);
+  const [selectedToken, setSelectedToken] = useState(tokens[0]);
 
   const { addresses: walletAddresses } = useWalletAddresses(true);
   const currentAddress = walletAddresses[selectedToken.addressKey] || "";
