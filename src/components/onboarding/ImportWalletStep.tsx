@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { ChevronLeft, AlertTriangle, Trash2, QrCode } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { ChevronLeft, AlertTriangle, Trash2, QrCode, Download, ArrowRight, Clipboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { validateSeedPhrase, isValidBip39Word } from "@/utils/seedPhrase";
@@ -40,110 +40,71 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
 
   const handleClearAll = useCallback(() => {
     setWords(Array(wordCount).fill(""));
-    toast({
-      title: "Cleared",
-      description: "All words have been cleared",
-    });
+    toast({ title: "Cleared", description: "All words have been cleared" });
   }, [wordCount, toast]);
 
   const handleQRScan = useCallback((scannedData: string) => {
-    // Try to parse the scanned data as a seed phrase
-    const scannedWords = scannedData
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter(word => word.length > 0);
-
+    const scannedWords = scannedData.toLowerCase().trim().split(/\s+/).filter(word => word.length > 0);
     if (scannedWords.length >= 12) {
       const targetCount = scannedWords.length >= 24 ? 24 : 12;
       setWordCount(targetCount);
-      setWords(scannedWords.slice(0, targetCount).concat(
-        Array(Math.max(0, targetCount - scannedWords.length)).fill("")
-      ));
+      setWords(scannedWords.slice(0, targetCount).concat(Array(Math.max(0, targetCount - scannedWords.length)).fill("")));
       setShowQRScanner(false);
-      toast({
-        title: "Seed phrase scanned",
-        description: `${Math.min(scannedWords.length, targetCount)} words detected`,
-      });
+      toast({ title: "Seed phrase scanned", description: `${Math.min(scannedWords.length, targetCount)} words detected` });
     } else {
-      toast({
-        title: "Invalid QR code",
-        description: "The QR code doesn't contain a valid seed phrase",
-        variant: "destructive",
-      });
+      toast({ title: "Invalid QR code", description: "The QR code doesn't contain a valid seed phrase", variant: "destructive" });
     }
   }, [toast]);
 
   const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
-    // Handle paste of full seed phrase
-    if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
-      return; // Let the paste event handle it
-    }
-
+    if (e.key === "v" && (e.ctrlKey || e.metaKey)) return;
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
-      const nextIndex = index + 1;
-      if (nextIndex < wordCount) {
-        const nextInput = document.querySelector(
-          `[data-word-index="${nextIndex}"]`
-        ) as HTMLInputElement;
-        nextInput?.focus();
-      }
+      const next = index + 1;
+      if (next < wordCount) (document.querySelector(`[data-word-index="${next}"]`) as HTMLInputElement)?.focus();
     }
-
     if (e.key === "Tab" && e.shiftKey) {
       e.preventDefault();
-      const prevIndex = index - 1;
-      if (prevIndex >= 0) {
-        const prevInput = document.querySelector(
-          `[data-word-index="${prevIndex}"]`
-        ) as HTMLInputElement;
-        prevInput?.focus();
-      }
+      const prev = index - 1;
+      if (prev >= 0) (document.querySelector(`[data-word-index="${prev}"]`) as HTMLInputElement)?.focus();
     }
-
     if (e.key === "Backspace" && words[index] === "") {
       e.preventDefault();
-      if (index > 0) {
-        const prevInput = document.querySelector(
-          `[data-word-index="${index - 1}"]`
-        ) as HTMLInputElement;
-        prevInput?.focus();
-      }
+      if (index > 0) (document.querySelector(`[data-word-index="${index - 1}"]`) as HTMLInputElement)?.focus();
     }
-
     if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
-      const nextIndex = index + 1;
-      if (nextIndex < wordCount) {
-        const nextInput = document.querySelector(
-          `[data-word-index="${nextIndex}"]`
-        ) as HTMLInputElement;
-        nextInput?.focus();
-      }
+      const next = index + 1;
+      if (next < wordCount) (document.querySelector(`[data-word-index="${next}"]`) as HTMLInputElement)?.focus();
     }
   }, [wordCount, words]);
 
-  // Handle paste of full seed phrase
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const pastedText = e.clipboardData.getData("text");
-    const pastedWords = pastedText
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter(word => word.length > 0);
-
+    const pastedWords = pastedText.toLowerCase().trim().split(/\s+/).filter(word => word.length > 0);
     if (pastedWords.length >= 12) {
       e.preventDefault();
       const targetCount = pastedWords.length >= 24 ? 24 : 12;
       setWordCount(targetCount);
-      setWords(pastedWords.slice(0, targetCount).concat(
-        Array(Math.max(0, targetCount - pastedWords.length)).fill("")
-      ));
-      toast({
-        title: "Seed phrase pasted",
-        description: `${Math.min(pastedWords.length, targetCount)} words detected`,
-      });
+      setWords(pastedWords.slice(0, targetCount).concat(Array(Math.max(0, targetCount - pastedWords.length)).fill("")));
+      toast({ title: "Seed phrase pasted", description: `${Math.min(pastedWords.length, targetCount)} words detected` });
+    }
+  }, [toast]);
+
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const pastedWords = text.toLowerCase().trim().split(/\s+/).filter(w => w.length > 0);
+      if (pastedWords.length >= 12) {
+        const targetCount = pastedWords.length >= 24 ? 24 : 12;
+        setWordCount(targetCount);
+        setWords(pastedWords.slice(0, targetCount).concat(Array(Math.max(0, targetCount - pastedWords.length)).fill("")));
+        toast({ title: "Seed phrase pasted", description: `${Math.min(pastedWords.length, targetCount)} words detected` });
+      } else {
+        toast({ title: "Invalid clipboard", description: "Clipboard doesn't contain a valid seed phrase", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Cannot access clipboard", description: "Please paste manually into the first word field", variant: "destructive" });
     }
   }, [toast]);
 
@@ -154,115 +115,123 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
 
   const handleImport = () => {
     if (!allFilled) {
-      toast({
-        title: "Incomplete seed phrase",
-        description: `Please enter all ${wordCount} words`,
-        variant: "destructive",
-      });
+      toast({ title: "Incomplete seed phrase", description: `Please enter all ${wordCount} words`, variant: "destructive" });
       return;
     }
-
     if (!allValid) {
-      const invalidIndices = words
-        .map((w, i) => (!isValidBip39Word(w) ? i + 1 : null))
-        .filter(Boolean);
-      toast({
-        title: "Invalid words detected",
-        description: `Words at positions ${invalidIndices.join(", ")} are not valid BIP39 words`,
-        variant: "destructive",
-      });
+      const invalidIndices = words.map((w, i) => (!isValidBip39Word(w) ? i + 1 : null)).filter(Boolean);
+      toast({ title: "Invalid words detected", description: `Words at positions ${invalidIndices.join(", ")} are not valid BIP39 words`, variant: "destructive" });
       return;
     }
-
     if (!validateSeedPhrase(words)) {
-      toast({
-        title: "Invalid seed phrase",
-        description: "The checksum doesn't match. Please verify your words are in the correct order.",
-        variant: "destructive",
-      });
+      toast({ title: "Invalid seed phrase", description: "The checksum doesn't match. Please verify your words are in the correct order.", variant: "destructive" });
       return;
     }
-
-    toast({
-      title: "Wallet imported successfully!",
-      description: "Restoring your wallet...",
-    });
-    
+    toast({ title: "Wallet imported successfully!", description: "Restoring your wallet..." });
     onImport(words);
   };
 
+  const progress = validWords.length / wordCount;
+
   return (
-    <div className="flex flex-col min-h-screen p-6" onPaste={handlePaste}>
+    <div className="flex flex-col min-h-screen max-w-md mx-auto" onPaste={handlePaste}>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <button 
-          onClick={onBack}
-          className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Import Wallet</p>
-          <h2 className="text-xl font-bold">Enter Seed Phrase</h2>
+      <motion.div
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="px-5 pt-6 pb-4"
+      >
+        <div className="flex items-center gap-3 mb-1">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full bg-muted/30 border border-border/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-foreground/80" />
+          </button>
+          <div className="flex-1">
+            <p className="text-[11px] text-muted-foreground/60 uppercase tracking-widest font-medium">Import Wallet</p>
+            <h2 className="text-lg font-bold text-foreground">Enter Seed Phrase</h2>
+          </div>
         </div>
-      </div>
 
-      {/* Word Count Selector */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => handleWordCountChange(12)}
-          className={cn(
-            "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all",
-            wordCount === 12
-              ? "bg-primary text-primary-foreground"
-              : "bg-card border border-border text-muted-foreground hover:border-primary/50"
-          )}
-        >
-          12 Words
-        </button>
-        <button
-          onClick={() => handleWordCountChange(24)}
-          className={cn(
-            "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all",
-            wordCount === 24
-              ? "bg-primary text-primary-foreground"
-              : "bg-card border border-border text-muted-foreground hover:border-primary/50"
-          )}
-        >
-          24 Words
-        </button>
-      </div>
+        {/* Progress bar */}
+        <div className="mt-4 h-1 rounded-full bg-muted/20 overflow-hidden">
+          <motion.div
+            className="h-full rounded-full bg-primary/70"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress * 100}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground/50 mt-1.5 text-right font-mono">
+          {validWords.length}/{wordCount} valid
+        </p>
+      </motion.div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-2 mb-4">
+      {/* Word Count Toggle */}
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.05 }}
+        className="px-5 mb-3"
+      >
+        <div className="flex gap-1.5 p-1 rounded-xl bg-muted/20 border border-border/20">
+          {([12, 24] as const).map(count => (
+            <button
+              key={count}
+              onClick={() => handleWordCountChange(count)}
+              className={cn(
+                "flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200",
+                wordCount === count
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-muted-foreground/60 hover:text-muted-foreground"
+              )}
+            >
+              {count} Words
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Quick Actions Row */}
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        className="px-5 mb-4 flex gap-2"
+      >
+        <button
+          onClick={handlePasteFromClipboard}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/20 border border-border/20 text-[12px] font-medium text-foreground/70 hover:bg-muted/30 transition-colors"
+        >
+          <Clipboard className="w-3.5 h-3.5" />
+          Paste
+        </button>
         <button
           onClick={() => setShowQRScanner(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-secondary transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/20 border border-border/20 text-[12px] font-medium text-foreground/70 hover:bg-muted/30 transition-colors"
         >
-          <QrCode className="w-4 h-4" />
-          Scan QR
+          <QrCode className="w-3.5 h-3.5" />
+          Scan
         </button>
         <button
           onClick={handleClearAll}
           disabled={words.every(w => w === "")}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/20 border border-border/20 text-[12px] font-medium text-foreground/70 hover:bg-muted/30 transition-colors disabled:opacity-30"
         >
-          <Trash2 className="w-4 h-4" />
-          Clear All
+          <Trash2 className="w-3.5 h-3.5" />
+          Clear
         </button>
-      </div>
+      </motion.div>
 
-      {/* Security Warning */}
-      <div className="flex items-start gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20 mb-4">
-        <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-destructive">Security:</span> Never share your seed phrase. Timetrade will never ask for it outside this screen.
-        </p>
-      </div>
-
-      {/* Word Grid */}
-      <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-3 gap-2">
+      {/* Scrollable Word Grid */}
+      <div className="flex-1 overflow-auto px-5">
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-3 gap-1.5"
+        >
           {words.map((word, index) => (
             <div key={index} data-word-index={index}>
               <SeedWordInput
@@ -274,50 +243,66 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
               />
             </div>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Status */}
-        <div className="flex items-center justify-between mt-4 px-1">
-          <span className={cn(
-            "text-sm font-mono",
-            filledWords.length === 0 
-              ? "text-muted-foreground" 
-              : allValid 
-                ? "text-primary" 
-                : "text-foreground"
-          )}>
-            {validWords.length} / {wordCount} valid
-          </span>
-          {filledWords.length > 0 && !allValid && (
-            <span className="text-xs text-destructive">
-              {wordCount - validWords.length} invalid
-            </span>
-          )}
-        </div>
+        {/* Security Notice */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          className="mt-4 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-destructive/[0.06] border border-destructive/10"
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-destructive/70 shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-muted-foreground/70">
+            <span className="font-semibold text-destructive/80">Security:</span> Never share your seed phrase. AI Wallet will never ask for it outside this screen.
+          </p>
+        </motion.div>
 
         {/* Tips */}
-        <div className="mt-4 space-y-1.5">
-          <p className="text-xs text-muted-foreground">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-3 mb-4 space-y-1"
+        >
+          <p className="text-[11px] text-muted-foreground/40">
             💡 Paste your entire phrase to auto-fill all words
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground/40">
             ⌨️ Use Tab or Space to move between words
           </p>
-        </div>
+        </motion.div>
       </div>
 
       {/* Import Button */}
-      <div className="pt-4 pb-6">
-        <Button
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.35 }}
+        className="px-5 pt-3 pb-8"
+      >
+        <motion.button
           onClick={handleImport}
           disabled={!allValid}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base disabled:opacity-50"
+          whileTap={{ scale: 0.97 }}
+          className={cn(
+            "w-full group relative overflow-hidden rounded-2xl transition-all",
+            allValid
+              ? "bg-foreground"
+              : "bg-muted/30 border border-border/20"
+          )}
         >
-          Import Wallet
-        </Button>
-      </div>
+          <div className={cn(
+            "flex items-center justify-center gap-3 px-5 py-4",
+            allValid ? "text-background" : "text-muted-foreground/40"
+          )}>
+            <Download className="w-5 h-5" />
+            <span className="text-[15px] font-semibold">Import Wallet</span>
+            {allValid && <ArrowRight className="w-4 h-4 opacity-50" />}
+          </div>
+        </motion.button>
+      </motion.div>
 
-      {/* QR Scanner Modal */}
       <QRScannerModal
         open={showQRScanner}
         onClose={() => setShowQRScanner(false)}
