@@ -64,6 +64,13 @@ class WalletService extends ChangeNotifier {
 
     if (_hasWallet) {
       await _loadAccounts();
+      
+      // If wallet is marked as created but no accounts exist, auto-reset
+      if (_accounts.isEmpty) {
+        debugPrint('[WALLET] ⚠️ Wallet marked created but no accounts — resetting');
+        await resetWallet();
+        return;
+      }
     }
     notifyListeners();
   }
@@ -153,8 +160,15 @@ class WalletService extends ChangeNotifier {
   }
 
   Future<void> deleteAccount(int index) async {
-    if (_accounts.length <= 1) return;
     _accounts.removeAt(index);
+    
+    // If no accounts remain, trigger full wallet reset
+    if (_accounts.isEmpty) {
+      debugPrint('[WALLET] 🗑️ Last account deleted — triggering full reset');
+      await resetWallet();
+      return;
+    }
+    
     if (_activeAccountIndex >= _accounts.length) {
       _activeAccountIndex = _accounts.length - 1;
     }
