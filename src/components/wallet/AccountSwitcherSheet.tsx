@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Loader2, Plus, Key, FileText, ChevronRight, ChevronLeft, Layers, Edit2, Wallet, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, Key, FileText, ChevronRight, ChevronLeft, Layers, Edit2, Wallet, Trash2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ import {
 import { decryptPrivateKey, encryptPrivateKey } from "@/utils/encryption";
 import { Wallet as EthersWallet } from "ethers";
 import { evmToTronAddress } from "@/utils/tronAddress";
-import { setAllAddresses, clearMnemonicSession, logWalletState, WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
+import { setAllAddresses, clearMnemonicSession, logWalletState, WALLET_STORAGE_KEYS, wipeAllWalletData, wipeIndexedDb, broadcastWalletResetSignal } from "@/utils/walletStorage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -780,8 +780,25 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
     const { switchToId, remainingAccounts } = removeAccount(id);
     setDeleteConfirmId(null);
     
+    // If no accounts remain, trigger full wallet reset
+    if (remainingAccounts.length === 0) {
+      console.log('%c[ACCOUNT SWITCHER] 🗑️ Last account deleted — triggering full wallet reset', 'color: #ef4444; font-weight: bold;');
+      onOpenChange(false);
+      
+      // Broadcast reset to other tabs
+      broadcastWalletResetSignal();
+      
+      // Wipe all data
+      wipeAllWalletData();
+      await wipeIndexedDb();
+      
+      // Force reload to show onboarding
+      window.location.replace(window.location.pathname);
+      return;
+    }
+    
     // If we need to switch to another account, trigger the full switch flow
-    if (switchToId && remainingAccounts.length > 0) {
+    if (switchToId) {
       const newActiveAccount = remainingAccounts.find(a => a.id === switchToId);
       if (newActiveAccount) {
         console.log(`%c[ACCOUNT SWITCHER] 🔄 Deleted active account, switching to first available`, 'color: #f59e0b; font-weight: bold;', {
@@ -1058,19 +1075,16 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                           >
                             <Edit2 className="w-4 h-4 text-muted-foreground" />
                           </button>
-                          {/* Only allow deletion for non-main accounts or if there are multiple accounts */}
-                          {(account.id !== "main" || accounts.length > 1) && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmId(account.id);
-                              }}
-                              className="p-2 rounded-xl hover:bg-destructive/10 transition-colors"
-                              title="Remove"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive/70" />
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmId(account.id);
+                            }}
+                            className="p-2 rounded-xl hover:bg-destructive/10 transition-colors"
+                            title="Remove"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive/70" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1084,13 +1098,30 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Account</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove this account from your wallet? This action cannot be undone.
-              Make sure you have backed up your seed phrase or private key before removing.
-            </AlertDialogDescription>
+            {accounts.length === 1 ? (
+              <>
+                <div className="flex justify-center mb-2">
+                  <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <AlertTriangle className="w-7 h-7 text-destructive" />
+                  </div>
+                </div>
+                <AlertDialogTitle className="text-center">Reset Wallet?</AlertDialogTitle>
+                <AlertDialogDescription className="text-center">
+                  This is your last account. Removing it will{" "}
+                  <span className="font-semibold text-destructive">erase all wallet data</span>{" "}
+                  and return you to the setup screen. Make sure you have your seed phrase backed up.
+                </AlertDialogDescription>
+              </>
+            ) : (
+              <>
+                <AlertDialogTitle>Remove Account</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to remove this account? Make sure you have backed up your seed phrase or private key.
+                </AlertDialogDescription>
+              </>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -1098,7 +1129,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
               onClick={() => deleteConfirmId && handleDeleteAccount(deleteConfirmId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remove
+              {accounts.length === 1 ? "Reset Wallet" : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
