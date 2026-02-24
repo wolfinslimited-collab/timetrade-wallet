@@ -426,16 +426,6 @@ const SwapPage = () => {
                   <span className="text-muted-foreground">Slippage</span>
                   <span className="font-medium">{slippage}%</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Provider</span>
-                  <span className="font-medium capitalize">{quote.provider === "jupiter" ? "Jupiter" : "ParaSwap"}</span>
-                </div>
-                {quote.route.length > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Route</span>
-                    <span className="font-medium text-xs truncate max-w-[180px]">{quote.route.join(" → ")}</span>
-                  </div>
-                )}
                 {quote.gasCostUSD && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Network Fee</span>
