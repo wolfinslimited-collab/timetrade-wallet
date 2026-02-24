@@ -154,7 +154,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto">
       <AnimatePresence mode="wait">
         {step === "welcome" && (
           <motion.div
