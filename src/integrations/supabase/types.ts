@@ -92,6 +92,39 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_users: {
+        Row: {
+          created_at: string
+          device_info: Json | null
+          evm_address: string | null
+          id: string
+          solana_address: string | null
+          tron_address: string | null
+          updated_at: string
+          wallet_name: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json | null
+          evm_address?: string | null
+          id?: string
+          solana_address?: string | null
+          tron_address?: string | null
+          updated_at?: string
+          wallet_name?: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json | null
+          evm_address?: string | null
+          id?: string
+          solana_address?: string | null
+          tron_address?: string | null
+          updated_at?: string
+          wallet_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
