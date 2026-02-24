@@ -91,10 +91,10 @@ const Index = () => {
     setIsLocked(isProduction && walletCreated === "true" && !!hasPin && !alreadyUnlocked);
   }, []);
 
-  // Fetch show_staking setting from database
+  // Fetch show_staking setting from config table
   useEffect(() => {
-    supabase.from("wallet_users").select("show_staking").limit(1).single().then(({ data }) => {
-      if (data) setShowStaking(data.show_staking);
+    supabase.from("config").select("value").eq("key", "show_staking").single().then(({ data }) => {
+      if (data) setShowStaking(data.value === true);
     });
   }, []);
 

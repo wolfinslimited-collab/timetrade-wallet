@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      config: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       stake_wallets: {
         Row: {
           chain: string
@@ -100,7 +124,6 @@ export type Database = {
           device_info: Json | null
           id: string
           ip_address: string | null
-          show_staking: boolean
           updated_at: string
           wallet_name: string
         }
@@ -111,7 +134,6 @@ export type Database = {
           device_info?: Json | null
           id?: string
           ip_address?: string | null
-          show_staking?: boolean
           updated_at?: string
           wallet_name?: string
         }
@@ -122,7 +144,6 @@ export type Database = {
           device_info?: Json | null
           id?: string
           ip_address?: string | null
-          show_staking?: boolean
           updated_at?: string
           wallet_name?: string
         }
