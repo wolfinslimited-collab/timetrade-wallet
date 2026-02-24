@@ -60,6 +60,27 @@ const Index = () => {
   useEffect(() => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
     const hasPin = localStorage.getItem("timetrade_pin");
+    
+    // If wallet is marked as created but no accounts exist, auto-reset to onboarding
+    if (walletCreated === "true") {
+      const accountsStr = localStorage.getItem("timetrade_user_accounts");
+      let hasAccounts = false;
+      if (accountsStr) {
+        try {
+          const parsed = JSON.parse(accountsStr);
+          hasAccounts = Array.isArray(parsed) && parsed.length > 0;
+        } catch { hasAccounts = false; }
+      }
+      if (!hasAccounts) {
+        console.log('%c[INDEX] ⚠️ Wallet marked created but no accounts — resetting to onboarding', 'color: #f59e0b; font-weight: bold;');
+        wipeAllWalletData();
+        wipeIndexedDb();
+        setHasWallet(false);
+        setIsLocked(false);
+        return;
+      }
+    }
+    
     setHasWallet(walletCreated === "true");
     // Only show lock screen in production mode and if not already unlocked this session
     const isProduction = import.meta.env.PROD;
