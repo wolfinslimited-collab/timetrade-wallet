@@ -194,7 +194,7 @@ const SwapPage = () => {
   // ===== SUCCESS SCREEN =====
   if (swapComplete) {
     return (
-      <div className="min-h-screen max-w-md mx-auto flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen flex flex-col w-full items-center justify-center px-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -237,9 +237,9 @@ const SwapPage = () => {
 
   // ===== MAIN SWAP UI =====
   return (
-    <div className="min-h-screen max-w-md mx-auto flex flex-col">
+    <div className="min-h-screen flex flex-col w-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 sticky top-0 z-30 backdrop-blur-xl bg-background/80">
+      <div className="flex items-center justify-between px-4 py-4 sticky top-0 z-30">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-secondary transition-colors">
           <ChevronLeft className="w-6 h-6 text-foreground" />
         </button>
