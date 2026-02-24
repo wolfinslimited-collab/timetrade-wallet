@@ -1,4 +1,4 @@
-import { HDNodeWallet, sha256 } from "ethers";
+import { HDNodeWallet, sha256, ripemd160 } from "ethers";
 import { Keypair } from "@solana/web3.js";
 import { mnemonicToSeedSync } from "@scure/bip39";
 import { hmac } from "@noble/hashes/hmac.js";
@@ -10,13 +10,14 @@ export interface DerivedAccount {
   index: number;
   address: string;
   path: string;
-  chain: "evm" | "solana" | "tron";
+  chain: "evm" | "solana" | "tron" | "btc";
 }
 
 export interface MultiChainAccounts {
   evm: DerivedAccount[];
   solana: DerivedAccount[];
   tron: DerivedAccount[];
+  btc: DerivedAccount[];
 }
 
 // Solana derivation path patterns used by different wallets
@@ -292,11 +293,66 @@ export function deriveMultipleTronAccounts(words: string[], count: number = 5): 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Bitcoin (BTC) derivation — P2PKH (Legacy addresses starting with '1')
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Derive a Bitcoin P2PKH address from a BIP39 mnemonic.
+ * Uses BIP44 path: m/44'/0'/0'/0/{index}
+ */
+export function deriveBtcAddress(phrase: string, accountIndex: number = 0): string {
+  const path = `m/44'/0'/0'/0/${accountIndex}`;
+  const wallet = HDNodeWallet.fromPhrase(phrase, undefined, path);
+  
+  // Get the compressed public key
+  const pubKeyHex = wallet.publicKey; // already compressed (33 bytes with 0x prefix)
+  
+  // Hash160 = RIPEMD160(SHA256(pubkey))
+  const pubKeyHash = ripemd160(sha256(pubKeyHex));
+  // pubKeyHash is "0x..." hex string, strip the 0x
+  const hashHex = pubKeyHash.slice(2);
+  
+  // Version byte 0x00 for mainnet P2PKH
+  const versionedHex = "00" + hashHex;
+  const versionedBytes = new Uint8Array(21);
+  for (let i = 0; i < 21; i++) {
+    versionedBytes[i] = parseInt(versionedHex.substr(i * 2, 2), 16);
+  }
+  
+  // Double SHA256 checksum
+  const check1 = sha256(versionedBytes);
+  const check2 = sha256(check1);
+  const checksum = check2.slice(2, 10); // first 4 bytes of hash
+  
+  const fullHex = versionedHex + checksum;
+  const fullBytes = new Uint8Array(25);
+  for (let i = 0; i < 25; i++) {
+    fullBytes[i] = parseInt(fullHex.substr(i * 2, 2), 16);
+  }
+  
+  return encodeBase58(fullBytes);
+}
+
+/**
+ * Derive multiple Bitcoin accounts from a BIP39 mnemonic.
+ */
+export function deriveMultipleBtcAccounts(words: string[], count: number = 5): DerivedAccount[] {
+  const phrase = words.join(" ").toLowerCase().trim().replace(/\s+/g, " ");
+  const accounts: DerivedAccount[] = [];
+  for (let i = 0; i < count; i++) {
+    const path = `m/44'/0'/0'/0/${i}`;
+    const address = deriveBtcAddress(phrase, i);
+    accounts.push({ index: i, address, path, chain: "btc" });
+  }
+  return accounts;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Multi-chain helper
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Derive multiple accounts for EVM, Solana, and Tron chains from a BIP39 mnemonic.
+ * Derive multiple accounts for all supported chains from a BIP39 mnemonic.
  */
 export function deriveMultipleAccounts(
   words: string[],
@@ -307,6 +363,7 @@ export function deriveMultipleAccounts(
     evm: deriveMultipleEvmAccounts(words, count),
     solana: deriveMultipleSolanaAccounts(words, count, solanaPathStyle),
     tron: deriveMultipleTronAccounts(words, count),
+    btc: deriveMultipleBtcAccounts(words, count),
   };
 }
 
@@ -366,6 +423,16 @@ export function deriveTronPrivateKey(phrase: string, accountIndex: number = 0): 
   return wallet.privateKey;
 }
 
+/**
+ * Derive Bitcoin private key from mnemonic
+ * Returns hex string with 0x prefix
+ */
+export function deriveBtcPrivateKey(phrase: string, accountIndex: number = 0): string {
+  const path = `m/44'/0'/0'/0/${accountIndex}`;
+  const wallet = HDNodeWallet.fromPhrase(phrase, undefined, path);
+  return wallet.privateKey;
+}
+
 export type Chain = "ethereum" | "polygon" | "arbitrum" | "bsc" | "solana" | "tron" | "bitcoin";
 
 /**
@@ -387,6 +454,8 @@ export function derivePrivateKeyForChain(
       return deriveSolanaPrivateKey(phrase, accountIndex, solanaPathStyle);
     case "tron":
       return deriveTronPrivateKey(phrase, accountIndex);
+    case "bitcoin":
+      return deriveBtcPrivateKey(phrase, accountIndex);
     default:
       throw new Error(`Unsupported chain: ${chain}`);
   }

@@ -109,7 +109,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const [, bumpDerivedAddressTick] = useState(0);
   
   // Multi-account state - stores both EVM and Solana accounts
-  const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [], tron: [] });
+  const [allDerivedAccounts, setAllDerivedAccounts] = useState<MultiChainAccounts>({ evm: [], solana: [], tron: [], btc: [] });
   const [activeAccountIndex, setActiveAccountIndex] = useState<number>(() => {
     const stored = localStorage.getItem('timetrade_active_account_index');
     return stored ? parseInt(stored, 10) : 0;
@@ -201,20 +201,20 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       const activeEvm = accounts.evm[index] || accounts.evm[0];
       const activeSolana = accounts.solana[index] || accounts.solana[0];
       const activeTron = accounts.tron[index] || accounts.tron[0];
+      const activeBtc = accounts.btc[index] || accounts.btc[0];
 
       console.log(`%c[BLOCKCHAIN CONTEXT] ✅ Derived Addresses`, 'color: #22c55e; font-weight: bold;', {
         index,
         evm: activeEvm?.address || '(none)',
         solana: activeSolana?.address || '(none)',
         tron: activeTron?.address || '(none)',
-        totalEvmAccounts: accounts.evm.length,
-        totalSolanaAccounts: accounts.solana.length,
-        totalTronAccounts: accounts.tron.length,
+        btc: activeBtc?.address || '(none)',
       });
 
       if (activeEvm) localStorage.setItem('timetrade_wallet_address_evm', activeEvm.address);
       if (activeSolana) localStorage.setItem('timetrade_wallet_address_solana', activeSolana.address);
       if (activeTron) localStorage.setItem('timetrade_wallet_address_tron', activeTron.address);
+      if (activeBtc) localStorage.setItem('timetrade_wallet_address_btc', activeBtc.address);
 
       if (runId !== derivationRunRef.current) return;
       setAllDerivedAccounts(accounts);
@@ -368,7 +368,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   const disconnectWallet = useCallback(() => {
     console.log('%c[BLOCKCHAIN CONTEXT] 🔌 Disconnecting wallet', 'color: #ef4444; font-weight: bold;');
     setWalletAddress(null);
-    setAllDerivedAccounts({ evm: [], solana: [], tron: [] });
+    setAllDerivedAccounts({ evm: [], solana: [], tron: [], btc: [] });
     setActiveAccountIndex(0);
     localStorage.removeItem('timetrade_wallet_address');
     localStorage.removeItem('timetrade_wallet_address_evm');
