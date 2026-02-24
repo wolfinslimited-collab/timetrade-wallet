@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
-import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { cn } from "@/lib/utils";
 
 interface WalletHeaderProps {
   onSettingsClick?: () => void;
+  onAIChatClick?: () => void;
   unreadCount: number;
 }
 
 export const WalletHeader = ({ 
   onSettingsClick,
+  onAIChatClick,
   unreadCount,
 }: WalletHeaderProps) => {
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
@@ -32,7 +33,15 @@ export const WalletHeader = ({
   return (
     <>
       <header className="flex items-center justify-between px-4 py-3">
-        {/* Wallet name pill - moved to left */}
+        {/* AI Assistant button - left */}
+        <button
+          onClick={onAIChatClick}
+          className="p-2 rounded-full bg-card border border-border hover:border-primary/30 transition-colors"
+        >
+          <Sparkles className="w-5 h-5 text-primary" />
+        </button>
+
+        {/* Wallet name pill - center */}
         <button
           onClick={() => setShowAccountSwitcher(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/60 border border-border/50 backdrop-blur-sm"
@@ -43,7 +52,7 @@ export const WalletHeader = ({
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
 
-        {/* Notification bell - navigates to /notifications route */}
+        {/* Notification bell - right */}
         <button
           onClick={() => navigate("/notifications")}
           className="relative p-2 rounded-full bg-card border border-border hover:border-foreground/30 transition-colors"
