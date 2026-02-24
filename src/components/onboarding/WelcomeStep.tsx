@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { Plus, Import, Shield, Fingerprint, Globe, Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Import, Fingerprint, Globe, Lock, ArrowRight, Wallet, Download } from "lucide-react";
 
 interface WelcomeStepProps {
   onCreateWallet: () => void;
@@ -75,29 +74,48 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
         </motion.div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons — rich card style */}
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="px-6 pb-10 space-y-3"
+        className="px-5 pb-10 space-y-3"
       >
-        <Button
+        {/* Create Wallet — primary CTA */}
+        <motion.button
           onClick={onCreateWallet}
-          className="w-full h-[56px] bg-foreground hover:bg-foreground/90 text-background font-semibold text-[15px] rounded-2xl transition-all active:scale-[0.98]"
+          whileTap={{ scale: 0.97 }}
+          className="w-full group relative overflow-hidden rounded-2xl bg-foreground p-[1px]"
         >
-          <Plus className="w-5 h-5 mr-2.5" />
-          Create New Wallet
-        </Button>
+          <div className="relative flex items-center gap-4 rounded-[15px] bg-foreground px-5 py-4">
+            <div className="w-11 h-11 rounded-full bg-background/15 flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5 text-background" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-[15px] font-semibold text-background">Create New Wallet</p>
+              <p className="text-[12px] text-background/50">Generate a fresh seed phrase</p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-background/40 group-hover:text-background/70 transition-colors shrink-0" />
+          </div>
+        </motion.button>
 
-        <Button
+        {/* Import Wallet — secondary CTA */}
+        <motion.button
           onClick={onImportWallet}
-          variant="ghost"
-          className="w-full h-[56px] border border-border/40 hover:bg-card/50 text-foreground/80 font-medium text-[15px] rounded-2xl transition-all active:scale-[0.98]"
+          whileTap={{ scale: 0.97 }}
+          className="w-full group relative overflow-hidden rounded-2xl border border-border/40 hover:border-border/60 transition-colors"
         >
-          <Import className="w-5 h-5 mr-2.5" />
-          Import Existing Wallet
-        </Button>
+          <div className="flex items-center gap-4 px-5 py-4">
+            <div className="w-11 h-11 rounded-full bg-card/60 border border-border/30 flex items-center justify-center shrink-0">
+              <Download className="w-5 h-5 text-foreground/70" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-[15px] font-semibold text-foreground/90">Import Existing Wallet</p>
+              <p className="text-[12px] text-muted-foreground/50">Use seed phrase or private key</p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
+          </div>
+        </motion.button>
 
         <p className="text-[10px] text-muted-foreground/30 text-center pt-4">
           By continuing, you agree to our Terms of Service and Privacy Policy
