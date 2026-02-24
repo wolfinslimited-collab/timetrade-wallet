@@ -8,13 +8,13 @@ import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionSuccessStep } from "./TransactionSuccessStep";
-
+import { RiskCheckStep } from "./RiskCheckStep";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { toast } from "@/hooks/use-toast";
 
-export type SendStep = "select" | "address" | "amount" | "confirm" | "success";
+export type SendStep = "select" | "address" | "risk" | "amount" | "confirm" | "success";
 
 export interface TokenInfo {
   symbol: string;
@@ -172,7 +172,15 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
 
   const handleAddressSubmit = (address: string) => {
     setTransaction((prev) => ({ ...prev, recipient: address }));
+    setStep("risk");
+  };
+
+  const handleRiskProceed = () => {
     setStep("amount");
+  };
+
+  const handleRiskCancel = () => {
+    setStep("address");
   };
 
   const handleAmountSubmit = (amount: string) => {
@@ -255,7 +263,8 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
 
   const handleBack = () => {
     if (step === "address") setStep("select");
-    else if (step === "amount") setStep("address");
+    else if (step === "risk") setStep("address");
+    else if (step === "amount") setStep("risk");
     else if (step === "confirm") setStep("amount");
   };
 
@@ -263,6 +272,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
     switch (step) {
       case "select": return "Send Crypto";
       case "address": return "Recipient Address";
+      case "risk": return "Risk Analysis";
       case "amount": return "Enter Amount";
       case "confirm": return "Confirm Transaction";
       case "success": return "Transaction Sent";
@@ -270,9 +280,9 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   };
 
   // Hide header and close button for confirm and success steps
-  const showHeader = step !== "confirm" && step !== "success";
-  const hideSheetClose = step === "confirm" || step === "success";
-  const canGoBack = step === "address" || step === "amount";
+  const showHeader = step !== "confirm" && step !== "success" && step !== "risk";
+  const hideSheetClose = step === "confirm" || step === "success" || step === "risk";
+  const canGoBack = step === "address" || step === "amount" || step === "risk";
 
   const handleSheetOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -335,6 +345,25 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
               <AddressInputStep
                 selectedChain={selectedChain}
                 onSubmit={handleAddressSubmit}
+              />
+            </motion.div>
+          )}
+
+          {step === "risk" && (
+            <motion.div
+              key="risk"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex-1 flex flex-col"
+            >
+              <RiskCheckStep
+                address={transaction.recipient}
+                chain={selectedChain}
+                amount={transaction.amount}
+                senderAddress={senderAddress}
+                onProceed={handleRiskProceed}
+                onCancel={handleRiskCancel}
               />
             </motion.div>
           )}
