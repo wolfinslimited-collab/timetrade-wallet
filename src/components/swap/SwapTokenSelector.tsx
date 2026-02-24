@@ -75,21 +75,26 @@ export const SwapTokenSelector = ({
 
     searchTimerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `https://tokens.jup.ag/tokens/search?query=${encodeURIComponent(search)}`
-        );
-        if (!res.ok) throw new Error("Search failed");
-        const raw = await res.json();
-        const tokens: any[] = Array.isArray(raw) ? raw : (raw.tokens || raw.data || raw.items || raw.results || []);
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data, error } = await supabase.functions.invoke("swap-quote", {
+          body: {
+            action: "search-tokens",
+            chain: activeChain || "solana",
+            query: search,
+          },
+        });
+
+        if (error) throw error;
+        const tokens = data?.tokens || [];
 
         setDexTokens(
-          tokens.map((t) => ({
-            address: t.mint || t.address,
+          tokens.map((t: any) => ({
+            address: t.address,
             symbol: t.symbol,
             name: t.name,
             decimals: t.decimals,
             logoURI: t.logoURI,
-            isVerified: t.isVerified || t.tags?.includes("verified"),
+            isVerified: t.isVerified,
           }))
         );
       } catch (err) {
