@@ -283,7 +283,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.5 }}
-                className="w-full max-w-xs"
+                className="w-full"
               >
                 <div className="relative rounded-2xl border border-border/50 bg-card/40 backdrop-blur-md p-6">
                   <div className="flex items-center justify-between">
