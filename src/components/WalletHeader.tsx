@@ -7,13 +7,11 @@ import { cn } from "@/lib/utils";
 
 interface WalletHeaderProps {
   onSettingsClick?: () => void;
-  onAIChatClick?: () => void;
   unreadCount: number;
 }
 
 export const WalletHeader = ({ 
   onSettingsClick,
-  onAIChatClick,
   unreadCount,
 }: WalletHeaderProps) => {
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
@@ -35,7 +33,7 @@ export const WalletHeader = ({
       <header className="flex items-center justify-between px-4 py-3">
         {/* AI Assistant button - left */}
         <button
-          onClick={onAIChatClick}
+          onClick={() => navigate("/ai-chat")}
           className="p-2 rounded-full bg-card border border-border hover:border-primary/30 transition-colors"
         >
           <Sparkles className="w-5 h-5 text-primary" />

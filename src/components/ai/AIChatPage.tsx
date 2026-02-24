@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
@@ -147,21 +147,7 @@ export const AIChatPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] max-w-md mx-auto">
-      {/* Header */}
-      <div className="px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">AI Assistant</h1>
-            <p className="text-xs text-muted-foreground">Your crypto knowledge companion</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages */}
+    <div className="flex flex-col flex-1 min-h-0">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 space-y-3 pb-4 scrollbar-hide">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-6 py-12">

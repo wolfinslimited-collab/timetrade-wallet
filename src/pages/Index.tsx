@@ -12,7 +12,7 @@ import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { StakingPage } from "./StakingPage";
 import { NotificationsPage } from "./NotificationsPage";
-import { AIChatPage } from "@/components/ai/AIChatPage";
+
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -236,17 +236,6 @@ const Index = () => {
     );
   }
 
-  // Show AI chat page
-  if (currentView === "ai") {
-    return (
-      <>
-        <motion.div key="ai" {...pageTransition}>
-          <AIChatPage />
-        </motion.div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      </>
-    );
-  }
 
   // Show staking page
   if (currentView === "staking") {
@@ -267,7 +256,6 @@ const Index = () => {
       <div className="sticky top-0 z-30 backdrop-blur-xl">
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
-          onAIChatClick={() => handleTabChange("ai")}
           unreadCount={unreadCount}
         />
       </div>
