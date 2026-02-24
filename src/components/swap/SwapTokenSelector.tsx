@@ -76,10 +76,11 @@ export const SwapTokenSelector = ({
     searchTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://api.jup.ag/tokens/v2/search?query=${encodeURIComponent(search)}&limit=20`
+          `https://tokens.jup.ag/tokens/search?query=${encodeURIComponent(search)}`
         );
         if (!res.ok) throw new Error("Search failed");
-        const tokens: any[] = await res.json();
+        const raw = await res.json();
+        const tokens: any[] = Array.isArray(raw) ? raw : (raw.tokens || raw.data || raw.items || raw.results || []);
 
         setDexTokens(
           tokens.map((t) => ({
