@@ -208,7 +208,7 @@ export const AssetDetailPage = () => {
         <div className="flex items-center gap-3 p-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-card/50 border border-border/40 hover:bg-secondary transition-colors"
+            className="p-2 rounded-full bg-card border border-border hover:border-foreground/30 transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
