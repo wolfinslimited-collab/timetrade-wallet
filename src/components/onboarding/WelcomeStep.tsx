@@ -41,7 +41,7 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
         >
           <h1 className="text-[32px] font-bold tracking-tight leading-tight mb-3">
             Welcome to{" "}
-            <span className="gradient-text">Timetrade</span>
+            <span className="gradient-text">AI Wallet</span>
           </h1>
           <p className="text-muted-foreground/70 text-[15px] leading-relaxed max-w-[260px] mx-auto">
             Your gateway to multi-chain crypto, secured by you.
@@ -103,7 +103,7 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
         <motion.button
           onClick={onImportWallet}
           whileTap={{ scale: 0.97 }}
-          className="w-full group relative overflow-hidden rounded-2xl border border-border/40 hover:border-border/60 transition-colors"
+          className="w-full group relative overflow-hidden rounded-2xl bg-muted/30 border border-border/40 hover:border-border/60 transition-colors"
         >
           <div className="flex items-center gap-4 px-5 py-4">
             <div className="w-11 h-11 rounded-full bg-card/60 border border-border/30 flex items-center justify-center shrink-0">
