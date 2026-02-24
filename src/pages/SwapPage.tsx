@@ -105,30 +105,6 @@ const SwapPage = () => {
           parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)
         ).toString();
 
-        if (fromAsset.chain === "solana") {
-          // Jupiter quotes fetched client-side (Jupiter supports CORS, edge function has DNS issues)
-          const slippageBps = Math.round(slippage * 100);
-          const srcMint = getTokenAddress(fromAsset);
-          const destMint = getTokenAddress(toAsset);
-          const jupUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${srcMint}&outputMint=${destMint}&amount=${amountInBaseUnits}&slippageBps=${slippageBps}`;
-          
-          const res = await fetch(jupUrl);
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(text.includes("Route") ? "No route found for this pair" : `Quote failed: ${text}`);
-          }
-          const jupiterQuote = await res.json();
-
-          setQuote({
-            srcAmount: jupiterQuote.inAmount,
-            destAmount: jupiterQuote.outAmount,
-            priceImpact: Math.abs(parseFloat(jupiterQuote.priceImpactPct || "0")),
-            route: jupiterQuote.routePlan?.map((r: any) => r.swapInfo?.label).filter(Boolean) || [],
-            provider: "jupiter",
-            raw: jupiterQuote,
-          });
-        } else {
-          // EVM chains via edge function (ParaSwap)
           const { data, error } = await supabase.functions.invoke("swap-quote", {
             body: {
               action: "quote",
@@ -154,7 +130,6 @@ const SwapPage = () => {
             gasCostUSD: data.data.gasCostUSD,
             raw: data.data.raw,
           });
-        }
       } catch (err) {
         console.error("[SWAP] Quote error:", err);
         setQuoteError(err instanceof Error ? err.message : "Quote failed");
