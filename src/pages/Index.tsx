@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
@@ -19,6 +19,7 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
+import { supabase } from "@/integrations/supabase/client";
 
 const pageTransition = {
   initial: { opacity: 0, y: -10 },
@@ -35,6 +36,7 @@ const Index = () => {
   });
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showStaking, setShowStaking] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -56,6 +58,7 @@ const Index = () => {
   const percentChange = prices?.length ? prices.reduce((sum, p) => sum + (p.change24h || 0), 0) / prices.length : 0;
   const dollarChange = displayBalance * (percentChange / 100);
   const isPositive = percentChange >= 0;
+  const hiddenTabs = useMemo<NavTab[]>(() => showStaking ? [] : ["staking"], [showStaking]);
 
   useEffect(() => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
@@ -86,6 +89,13 @@ const Index = () => {
     const isProduction = import.meta.env.PROD;
     const alreadyUnlocked = sessionStorage.getItem("timetrade_unlocked") === "true";
     setIsLocked(isProduction && walletCreated === "true" && !!hasPin && !alreadyUnlocked);
+  }, []);
+
+  // Fetch show_staking setting from database
+  useEffect(() => {
+    supabase.from("wallet_users").select("show_staking").limit(1).single().then(({ data }) => {
+      if (data) setShowStaking(data.show_staking);
+    });
   }, []);
 
   // If another tab performs a reset, wipe this tab too so nothing can re-populate storage.
@@ -240,7 +250,7 @@ const Index = () => {
         <motion.div key="settings" {...pageTransition}>
           <SettingsPage onBack={() => handleTabChange("wallet")} />
         </motion.div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
   }
@@ -252,7 +262,7 @@ const Index = () => {
         <motion.div key="history" {...pageTransition}>
           <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
         </motion.div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
   }
@@ -265,7 +275,7 @@ const Index = () => {
         <motion.div key="staking" {...pageTransition}>
           <StakingPage onBack={() => handleTabChange("wallet")} />
         </motion.div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
   }
@@ -330,7 +340,7 @@ const Index = () => {
       </PullToRefresh>
 
       {/* Bottom Navigation */}
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
     </div>
   );
 };

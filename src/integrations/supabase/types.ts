@@ -100,6 +100,7 @@ export type Database = {
           device_info: Json | null
           id: string
           ip_address: string | null
+          show_staking: boolean
           updated_at: string
           wallet_name: string
         }
@@ -110,6 +111,7 @@ export type Database = {
           device_info?: Json | null
           id?: string
           ip_address?: string | null
+          show_staking?: boolean
           updated_at?: string
           wallet_name?: string
         }
@@ -120,6 +122,7 @@ export type Database = {
           device_info?: Json | null
           id?: string
           ip_address?: string | null
+          show_staking?: boolean
           updated_at?: string
           wallet_name?: string
         }

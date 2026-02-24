@@ -1,0 +1,1 @@
+ALTER TABLE public.wallet_users ADD COLUMN show_staking boolean NOT NULL DEFAULT true;
