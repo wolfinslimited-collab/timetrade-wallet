@@ -2,11 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Chain, SUPPORTED_CHAINS, getChainInfo } from "@/hooks/useBlockchain";
+import { Chain } from "@/hooks/useBlockchain";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-
-import { getNetworkLogoUrl } from "@/config/networks";
+import { NETWORKS, getNetworkLogoUrl, NETWORK_MAP } from "@/config/networks";
 
 const getCryptoLogoUrl = (symbol: string) =>
   `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
@@ -28,8 +27,8 @@ interface NetworkAssetSelectorProps {
   onClose: () => void;
 }
 
-// Sendable networks (exclude bitcoin for now as it requires different signing)
-const SENDABLE_CHAINS: Chain[] = ['ethereum', 'arbitrum', 'polygon', 'bsc', 'solana', 'tron'];
+// Read sendable networks from config (exclude bitcoin — requires different signing)
+const SENDABLE_NETWORKS = NETWORKS.filter(n => n.id !== 'bitcoin');
 
 export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelectorProps) => {
   const { addresses } = useWalletAddresses(true);
@@ -40,17 +39,20 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
 
-  // Get sender address for selected network
+  // Get sender address for selected network using config
   const getSenderAddress = (chain: Chain): string => {
-    if (chain === 'solana') return addresses.solana || '';
-    if (chain === 'tron') return addresses.tron || '';
+    const network = NETWORK_MAP[chain];
+    if (!network) return '';
+    if (network.addressKey === 'solana') return addresses.solana || '';
+    if (network.addressKey === 'tron') return addresses.tron || '';
+    if (network.addressKey === 'btc') return addresses.btc || '';
     return addresses.evm || '';
   };
 
   // Check which networks have addresses
   const availableNetworks = useMemo(() => {
-    return SENDABLE_CHAINS.filter((chain) => {
-      const addr = getSenderAddress(chain);
+    return SENDABLE_NETWORKS.filter((n) => {
+      const addr = getSenderAddress(n.id);
       return addr && addr.length > 0;
     });
   }, [addresses]);
@@ -88,7 +90,7 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
         }
 
         const balanceData = data.data;
-        const chainInfo = getChainInfo(selectedNetwork);
+        const chainInfo = NETWORK_MAP[selectedNetwork];
         const fetchedAssets: AvailableAsset[] = [];
 
         // Add native token
@@ -162,7 +164,7 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="font-medium">{getChainInfo(selectedNetwork).name}</span>
+                <span className="font-medium">{NETWORK_MAP[selectedNetwork].name}</span>
               </div>
             ) : (
               <span className="text-muted-foreground">Choose a network</span>
@@ -181,31 +183,30 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
                   No networks available
                 </div>
               ) : (
-                availableNetworks.map((chain) => {
-                  const info = getChainInfo(chain);
+                availableNetworks.map((net) => {
                   return (
                     <button
-                      key={chain}
+                      key={net.id}
                       onClick={() => {
-                        setSelectedNetwork(chain);
+                        setSelectedNetwork(net.id);
                         setShowNetworkDropdown(false);
                       }}
                       className={cn(
                         "w-full flex items-center gap-3 p-4 hover:bg-secondary transition-colors text-left",
-                        selectedNetwork === chain && "bg-secondary"
+                        selectedNetwork === net.id && "bg-secondary"
                       )}
                     >
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
                         <img 
-                          src={getNetworkLogoUrl(chain)} 
-                          alt={chain}
+                          src={getNetworkLogoUrl(net.id)} 
+                          alt={net.name}
                           className="w-full h-full object-contain"
                         />
                       </div>
                       <div>
-                        <p className="font-medium">{info.name}</p>
+                        <p className="font-medium">{net.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {getSenderAddress(chain).slice(0, 8)}...{getSenderAddress(chain).slice(-6)}
+                          {getSenderAddress(net.id).slice(0, 8)}...{getSenderAddress(net.id).slice(-6)}
                         </p>
                       </div>
                     </button>
@@ -238,7 +239,7 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
             </div>
           ) : assets.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No assets found on {getChainInfo(selectedNetwork).name}</p>
+              <p className="text-muted-foreground">No assets found on {NETWORK_MAP[selectedNetwork].name}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Fund your wallet to send tokens
               </p>
