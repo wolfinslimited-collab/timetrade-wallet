@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
@@ -192,7 +193,13 @@ export const AIChatPage = () => {
                   ? "bg-primary text-primary-foreground rounded-br-md"
                   : "bg-card border border-border/50 rounded-bl-md"
               )}>
-                <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-sm prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                )}
               </div>
               {msg.role === "user" && (
                 <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
