@@ -9,6 +9,7 @@ import { SendCryptoSheet } from "@/components/send/SendCryptoSheet";
 import { ReceiveCryptoSheet } from "@/components/receive/ReceiveCryptoSheet";
 import { tronHexToBase58 } from "@/utils/tronAddress";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { AIPortfolioInsights } from "@/components/ai/AIPortfolioInsights";
 
 
 // Sparkline mini-chart component
@@ -80,7 +81,7 @@ export const AssetDetailPage = () => {
   const [showSend, setShowSend] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
 
-  const { unifiedAssets, prices } = useBlockchainContext();
+  const { unifiedAssets, prices, totalBalanceUsd } = useBlockchainContext();
 
   // Parse asset from URL params
   const symbol = searchParams.get("symbol") || "";
@@ -245,6 +246,11 @@ export const AssetDetailPage = () => {
             <span className="text-[11px]">Send</span>
           </Button>
         </div>
+
+        {/* AI Portfolio Insights */}
+        {unifiedAssets && (
+          <AIPortfolioInsights assets={unifiedAssets} totalValue={totalBalanceUsd || 0} />
+        )}
 
         {/* Contract Address */}
         {asset.contractAddress && (

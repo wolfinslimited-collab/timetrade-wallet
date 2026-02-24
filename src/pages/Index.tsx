@@ -12,6 +12,7 @@ import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 import { StakingPage } from "./StakingPage";
 import { NotificationsPage } from "./NotificationsPage";
+import { AIChatPage } from "@/components/ai/AIChatPage";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -115,7 +116,7 @@ const Index = () => {
   // in-app navigation (e.g. after Send success) always open the correct screen.
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
-    const allowedTabs: NavTab[] = ["wallet", "history", "staking", "settings"];
+    const allowedTabs: NavTab[] = ["wallet", "history", "staking", "ai", "settings"];
     if (tab && allowedTabs.includes(tab) && tab !== activeTab) {
       setActiveTab(tab);
     }
@@ -229,6 +230,18 @@ const Index = () => {
       <>
         <motion.div key="history" {...pageTransition}>
           <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
+        </motion.div>
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      </>
+    );
+  }
+
+  // Show AI chat page
+  if (currentView === "ai") {
+    return (
+      <>
+        <motion.div key="ai" {...pageTransition}>
+          <AIChatPage />
         </motion.div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </>
