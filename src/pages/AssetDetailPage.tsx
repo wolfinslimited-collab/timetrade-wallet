@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowUpRight, ArrowDownLeft, Clock, ExternalLink, Loader2, ChevronLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { usePriceChart, TimeRange } from "@/hooks/usePriceChart";
 import { Button } from "@/components/ui/button";
 import { Chain, useTransactions, formatAddress } from "@/hooks/useBlockchain";
 import { cn } from "@/lib/utils";
@@ -12,59 +13,88 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { AIPortfolioInsights } from "@/components/ai/AIPortfolioInsights";
 
 
-// Sparkline mini-chart component
-const PriceChart = ({ change24h, symbol }: { change24h: number; symbol: string }) => {
+// Live price chart using CoinGecko data
+const TIME_RANGES: TimeRange[] = ["1D", "1W", "1M", "3M", "1Y", "ALL"];
+
+const LivePriceChart = ({ symbol, change24h }: { symbol: string; change24h: number }) => {
+  const [range, setRange] = useState<TimeRange>("1D");
+  const { data: chartData, isLoading } = usePriceChart(symbol, range);
+
   const isPositive = change24h >= 0;
-  
-  // Generate synthetic chart data based on the 24h change direction
-  const chartData = useMemo(() => {
-    const points = 24;
-    const data: { time: number; price: number }[] = [];
-    let price = 100;
-    const trend = change24h / points;
-    
-    for (let i = 0; i <= points; i++) {
-      const noise = (Math.random() - 0.5) * Math.abs(change24h) * 0.3;
-      price = 100 + trend * i + noise;
-      data.push({ time: i, price: Math.max(price, 0) });
-    }
-    // Ensure last point reflects actual change
-    data[data.length - 1].price = 100 + change24h;
-    return data;
-  }, [change24h]);
+  const color = isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))";
 
-  const minPrice = Math.min(...chartData.map(d => d.price));
-  const maxPrice = Math.max(...chartData.map(d => d.price));
-  const range = maxPrice - minPrice || 1;
+  // Compute chart change for selected range
+  const rangeChange = useMemo(() => {
+    if (!chartData || chartData.length < 2) return change24h;
+    const first = chartData[0].price;
+    const last = chartData[chartData.length - 1].price;
+    return first > 0 ? ((last - first) / first) * 100 : 0;
+  }, [chartData, change24h]);
 
-  // Build SVG path
+  const rangePositive = rangeChange >= 0;
+  const rangeColor = rangePositive ? "hsl(var(--success))" : "hsl(var(--destructive))";
+
+  if (isLoading || !chartData || chartData.length === 0) {
+    return (
+      <div className="w-full">
+        <div className="h-[140px] flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+        <div className="flex gap-1 px-1 pt-2 pb-1">
+          {TIME_RANGES.map(r => (
+            <button key={r} onClick={() => setRange(r)}
+              className={`flex-1 text-[10px] font-medium py-1.5 rounded-lg transition-colors ${r === range ? "bg-foreground/10 text-foreground" : "text-muted-foreground"}`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const prices = chartData.map(d => d.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const priceRange = maxPrice - minPrice || 1;
+
   const width = 320;
   const height = 120;
   const padding = 4;
   const points = chartData.map((d, i) => {
     const x = padding + (i / (chartData.length - 1)) * (width - padding * 2);
-    const y = padding + (1 - (d.price - minPrice) / range) * (height - padding * 2);
+    const y = padding + (1 - (d.price - minPrice) / priceRange) * (height - padding * 2);
     return `${x},${y}`;
   });
-  const linePath = `M${points.join(' L')}`;
+  const linePath = `M${points.join(" L")}`;
   const areaPath = `${linePath} L${width - padding},${height} L${padding},${height} Z`;
 
-  const color = isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))";
-  const colorFaded = isPositive ? "hsl(var(--success) / 0.15)" : "hsl(var(--destructive) / 0.15)";
-
   return (
-    <div className="w-full h-[140px] relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill={`url(#gradient-${symbol})`} />
-        <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/50">24H</div>
+    <div className="w-full">
+      <div className="h-[140px] relative">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id={`gradient-${symbol}-${range}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={rangeColor} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={rangeColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill={`url(#gradient-${symbol}-${range})`} />
+          <path d={linePath} fill="none" stroke={rangeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <div className="absolute top-2 right-3 text-[10px] font-medium px-1.5 py-0.5 rounded-md"
+          style={{ color: rangeColor, backgroundColor: rangePositive ? "hsl(var(--success) / 0.1)" : "hsl(var(--destructive) / 0.1)" }}>
+          {rangePositive ? "+" : ""}{rangeChange.toFixed(2)}%
+        </div>
+      </div>
+      {/* Time range selector */}
+      <div className="flex gap-1 px-1 pt-2 pb-1">
+        {TIME_RANGES.map(r => (
+          <button key={r} onClick={() => setRange(r)}
+            className={`flex-1 text-[10px] font-medium py-1.5 rounded-lg transition-colors ${r === range ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground/60"}`}>
+            {r}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
@@ -224,8 +254,8 @@ export const AssetDetailPage = () => {
 
         {/* Price Chart */}
         <div className="px-4 mt-2">
-          <div className="bg-card/50 border border-border/30 rounded-2xl overflow-hidden">
-            <PriceChart change24h={change24h} symbol={asset.symbol} />
+          <div className="bg-card/50 border border-border/30 rounded-2xl overflow-hidden px-2 pb-2">
+            <LivePriceChart change24h={change24h} symbol={asset.symbol} />
           </div>
         </div>
 
