@@ -143,43 +143,52 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
     // Detect SPL token transactions for Solana
     if (chain === "solana" && tx.tokenTransfers && tx.tokenTransfers.length > 0) {
-      // --- Swap detection: user sends one token AND receives another in the same tx ---
-      const userSent = tx.tokenTransfers.filter(t => t.source === user);
-      const userReceived = tx.tokenTransfers.filter(t => t.destination === user);
+      // --- Swap detection: support both wallet-level and token-account level transfer models ---
+      const transfers = tx.tokenTransfers;
+      const userSent = user ? transfers.filter((t) => t.source === user) : [];
+      const userReceived = user ? transfers.filter((t) => t.destination === user) : [];
+      const signedByUser = !!user && (tx.signers ?? []).includes(user);
 
-      // Also check if there's a native SOL change (user might swap SOL for a token)
-      const nativeSolSent = isSend && parseFloat(tx.value || "0") > 0;
-      const hasSentSomething = userSent.length > 0 || nativeSolSent;
-      const hasReceivedSomething = userReceived.length > 0;
+      const hasDirectSend = userSent.length > 0;
+      const hasDirectReceive = userReceived.length > 0;
 
-      if (hasSentSomething && hasReceivedSomething) {
-        // This is a swap! User sent one asset and received another.
-        const sentTransfer = userSent[0];
-        const receivedTransfer = userReceived[userReceived.length - 1]; // last received is usually the final output
+      // Some providers expose token-account addresses instead of wallet address for SPL transfers.
+      // In those cases, signer + multi-asset movement is a strong swap signal.
+      const nativeSolSent = (isSend || signedByUser) && parseFloat(tx.value || "0") > 0;
+      const uniqueAssets = new Set(
+        transfers.map((t) => t.mint || t.symbol || "UNKNOWN")
+      );
+      const hasAssetChange = uniqueAssets.size > 1 || (nativeSolSent && transfers.length > 0);
+      const fallbackSwapCandidate = signedByUser && transfers.length >= 2 && hasAssetChange;
+
+      const hasSentSomething = hasDirectSend || nativeSolSent || fallbackSwapCandidate;
+      const hasReceivedSomething = hasDirectReceive || fallbackSwapCandidate;
+
+      if (hasSentSomething && hasReceivedSomething && hasAssetChange) {
+        // This is a swap: pick best direct user transfers, with safe fallbacks.
+        const sentTransfer = userSent[0] ?? transfers[0];
+        const receivedTransfer = userReceived[userReceived.length - 1] ?? transfers[transfers.length - 1] ?? sentTransfer;
 
         // Resolve sent token info
         let sentSymbol = info.symbol;
-        let sentDecimals = info.decimals;
-        let sentAmount: number;
+        let sentAmount = 0;
         if (sentTransfer) {
           const sentMint = sentTransfer.mint;
           const sentKnown = sentMint ? KNOWN_SPL[sentMint] : null;
+          const sentDecimals = sentKnown?.decimals || sentTransfer.decimals || 6;
           sentSymbol = sentKnown?.symbol || sentTransfer.symbol || 'SPL';
-          sentDecimals = sentKnown?.decimals || sentTransfer.decimals || 6;
           sentAmount = parseFloat(sentTransfer.amount || "0") / Math.pow(10, sentDecimals);
         } else {
-          // Native SOL was sent
           sentSymbol = 'SOL';
-          sentDecimals = 9;
           sentAmount = parseFloat(tx.value || "0") / Math.pow(10, 9);
         }
 
         // Resolve received token info
-        const recvMint = receivedTransfer.mint;
+        const recvMint = receivedTransfer?.mint;
         const recvKnown = recvMint ? KNOWN_SPL[recvMint] : null;
-        const recvSymbol = recvKnown?.symbol || receivedTransfer.symbol || 'SPL';
-        const recvDecimals = recvKnown?.decimals || receivedTransfer.decimals || 6;
-        const recvAmount = parseFloat(receivedTransfer.amount || "0") / Math.pow(10, recvDecimals);
+        const recvSymbol = recvKnown?.symbol || receivedTransfer?.symbol || 'SPL';
+        const recvDecimals = recvKnown?.decimals || receivedTransfer?.decimals || 6;
+        const recvAmount = parseFloat(receivedTransfer?.amount || "0") / Math.pow(10, recvDecimals);
 
         return {
           id: `${chain}:${tx.hash}`,
