@@ -143,7 +143,62 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
     // Detect SPL token transactions for Solana
     if (chain === "solana" && tx.tokenTransfers && tx.tokenTransfers.length > 0) {
-      // Find the most relevant token transfer (user is source or destination)
+      // --- Swap detection: user sends one token AND receives another in the same tx ---
+      const userSent = tx.tokenTransfers.filter(t => t.source === user);
+      const userReceived = tx.tokenTransfers.filter(t => t.destination === user);
+
+      // Also check if there's a native SOL change (user might swap SOL for a token)
+      const nativeSolSent = isSend && parseFloat(tx.value || "0") > 0;
+      const hasSentSomething = userSent.length > 0 || nativeSolSent;
+      const hasReceivedSomething = userReceived.length > 0;
+
+      if (hasSentSomething && hasReceivedSomething) {
+        // This is a swap! User sent one asset and received another.
+        const sentTransfer = userSent[0];
+        const receivedTransfer = userReceived[userReceived.length - 1]; // last received is usually the final output
+
+        // Resolve sent token info
+        let sentSymbol = info.symbol;
+        let sentDecimals = info.decimals;
+        let sentAmount: number;
+        if (sentTransfer) {
+          const sentMint = sentTransfer.mint;
+          const sentKnown = sentMint ? KNOWN_SPL[sentMint] : null;
+          sentSymbol = sentKnown?.symbol || sentTransfer.symbol || 'SPL';
+          sentDecimals = sentKnown?.decimals || sentTransfer.decimals || 6;
+          sentAmount = parseFloat(sentTransfer.amount || "0") / Math.pow(10, sentDecimals);
+        } else {
+          // Native SOL was sent
+          sentSymbol = 'SOL';
+          sentDecimals = 9;
+          sentAmount = parseFloat(tx.value || "0") / Math.pow(10, 9);
+        }
+
+        // Resolve received token info
+        const recvMint = receivedTransfer.mint;
+        const recvKnown = recvMint ? KNOWN_SPL[recvMint] : null;
+        const recvSymbol = recvKnown?.symbol || receivedTransfer.symbol || 'SPL';
+        const recvDecimals = recvKnown?.decimals || receivedTransfer.decimals || 6;
+        const recvAmount = parseFloat(receivedTransfer.amount || "0") / Math.pow(10, recvDecimals);
+
+        return {
+          id: `${chain}:${tx.hash}`,
+          chain,
+          type: "swap" as const,
+          status: tx.status === "confirmed" ? "completed" as const : tx.status === "pending" ? "pending" as const : "failed" as const,
+          amount: sentAmount,
+          symbol: sentSymbol,
+          icon: info.icon,
+          usdValue: 0,
+          swapTo: { amount: recvAmount, symbol: recvSymbol, icon: info.icon },
+          timestamp: new Date((tx.timestamp || 0) * 1000),
+          txHash: tx.hash,
+          networkFee: 0,
+          explorerUrl,
+        };
+      }
+
+      // Not a swap — regular SPL token transfer
       const relevantTransfer = tx.tokenTransfers.find(t => 
         t.source === user || t.destination === user
       ) || tx.tokenTransfers[0];
@@ -156,12 +211,10 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
           symbol = knownToken.symbol;
           decimals = knownToken.decimals;
         } else if (relevantTransfer.symbol && relevantTransfer.symbol !== 'SOL') {
-          // Use symbol from transfer if available
           symbol = relevantTransfer.symbol;
           decimals = relevantTransfer.decimals || 6;
         }
         
-        // Use the token transfer amount if it's a token transaction (not native SOL)
         if (symbol !== 'SOL' && relevantTransfer.amount) {
           const tokenAmount = parseFloat(relevantTransfer.amount) / Math.pow(10, decimals);
           return {
