@@ -100,7 +100,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       return;
     }
     
-    setStep("biometric");
+    setStep("success");
   };
 
   const handleBiometricComplete = (enabled: boolean) => {
@@ -250,20 +250,6 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
           </motion.div>
         )}
 
-        {step === "biometric" && (
-          <motion.div
-            key="biometric"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <BiometricSetupStep 
-              onComplete={handleBiometricComplete}
-              onSkip={() => handleBiometricComplete(false)}
-            />
-          </motion.div>
-        )}
 
         {step === "success" && (
           <motion.div
