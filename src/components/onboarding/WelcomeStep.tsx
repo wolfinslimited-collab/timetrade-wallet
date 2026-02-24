@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Plus, Import, Shield, Sparkles } from "lucide-react";
+import { Plus, Import, Shield, Fingerprint, Globe, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface WelcomeStepProps {
@@ -11,93 +11,95 @@ interface WelcomeStepProps {
 
 export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps) => {
   return (
-    <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+    <div className="h-screen flex flex-col max-w-md mx-auto overflow-hidden relative">
+      {/* Subtle ambient glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-primary/[0.03] blur-[100px] pointer-events-none" />
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 min-h-0">
         {/* App Logo */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative mb-10"
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="relative mb-12"
         >
-          <div className="w-28 h-28 overflow-hidden">
+          <div className="w-24 h-24 overflow-hidden">
             <img 
               src="/app-logo.png" 
               alt="Timetrade" 
               className="w-full h-full object-contain"
             />
           </div>
-          <motion.div 
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.3, ease: "backOut" }}
-            className="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-lg ring-2 ring-background"
-          >
-            <Shield className="w-4.5 h-4.5 text-primary-foreground" />
-          </motion.div>
         </motion.div>
 
         {/* Title & Description */}
         <motion.div
-          initial={{ y: 15, opacity: 0 }}
+          initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.15, duration: 0.5 }}
-          className="text-center mb-10"
+          transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-12"
         >
-          <h1 className="text-3xl font-bold tracking-tight mb-3">
-            Welcome to <span className="gradient-text">Timetrade</span>
+          <h1 className="text-[32px] font-bold tracking-tight leading-tight mb-3">
+            Welcome to{" "}
+            <span className="gradient-text">Timetrade</span>
           </h1>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-[280px] mx-auto">
-            Your secure, non-custodial crypto wallet with multi-chain support
+          <p className="text-muted-foreground/70 text-[15px] leading-relaxed max-w-[260px] mx-auto">
+            Your gateway to multi-chain crypto, secured by you.
           </p>
         </motion.div>
 
-        {/* Features */}
+        {/* Feature Pills */}
         <motion.div
-          initial={{ y: 15, opacity: 0 }}
+          initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.25, duration: 0.5 }}
-          className="flex items-center gap-6 mb-10"
+          transition={{ delay: 0.25, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="flex items-center gap-2.5"
         >
           {[
-            { label: "Multi-Chain" },
-            { label: "Self-Custody" },
-            { label: "Secure" },
+            { icon: Globe, label: "Multi-Chain" },
+            { icon: Lock, label: "Self-Custody" },
+            { icon: Fingerprint, label: "Biometric" },
           ].map((feature, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Sparkles className="w-3 h-3 text-primary/70" />
-              <span>{feature.label}</span>
-            </div>
+            <motion.div
+              key={i}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.35 + i * 0.08, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/40 bg-card/30"
+            >
+              <feature.icon className="w-3 h-3 text-muted-foreground/60" />
+              <span className="text-[11px] font-medium text-muted-foreground/80">{feature.label}</span>
+            </motion.div>
           ))}
         </motion.div>
       </div>
 
       {/* Action Buttons */}
       <motion.div
-        initial={{ y: 30, opacity: 0 }}
+        initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.35, duration: 0.5 }}
+        transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="px-6 pb-10 space-y-3"
       >
         <Button
           onClick={onCreateWallet}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base rounded-2xl transition-all active:scale-[0.98] shadow-lg"
+          className="w-full h-[56px] bg-foreground hover:bg-foreground/90 text-background font-semibold text-[15px] rounded-2xl transition-all active:scale-[0.98]"
         >
-          <Plus className="w-5 h-5 mr-2" />
+          <Plus className="w-5 h-5 mr-2.5" />
           Create New Wallet
         </Button>
 
         <Button
           onClick={onImportWallet}
           variant="ghost"
-          className="w-full h-14 bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-secondary text-foreground font-medium text-base rounded-2xl transition-all active:scale-[0.98]"
+          className="w-full h-[56px] border border-border/40 hover:bg-card/50 text-foreground/80 font-medium text-[15px] rounded-2xl transition-all active:scale-[0.98]"
         >
-          <Import className="w-5 h-5 mr-2" />
+          <Import className="w-5 h-5 mr-2.5" />
           Import Existing Wallet
         </Button>
 
-        <p className="text-[10px] text-muted-foreground/40 text-center pt-6">
+        <p className="text-[10px] text-muted-foreground/30 text-center pt-4">
           By continuing, you agree to our Terms of Service and Privacy Policy
         </p>
       </motion.div>
