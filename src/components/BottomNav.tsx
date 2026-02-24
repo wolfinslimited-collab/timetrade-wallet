@@ -1,9 +1,9 @@
 import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { HomeIcon, TransactionHistoryIcon, UsdtIcon, AccountSettingsIcon } from "./icons/NavIcons";
+import { HomeIcon, TransactionHistoryIcon, UsdtIcon, AccountSettingsIcon, AIAssistantIcon } from "./icons/NavIcons";
 
-export type NavTab = "wallet" | "history" | "staking" | "settings";
+export type NavTab = "wallet" | "history" | "staking" | "ai" | "settings";
 
 interface NavItem {
   icon: (color: string) => React.ReactNode;
@@ -15,6 +15,7 @@ const navItems: NavItem[] = [
   { icon: (c) => <HomeIcon className="w-[27px] h-[27px]" color={c} />, label: "Wallet", tab: "wallet" },
   { icon: (c) => <TransactionHistoryIcon className="w-[27px] h-[27px]" color={c} />, label: "History", tab: "history" },
   { icon: (c) => <UsdtIcon className="w-[30px] h-[30px]" color={c} />, label: "Staking", tab: "staking" },
+  { icon: (c) => <AIAssistantIcon className="w-[27px] h-[27px]" color={c} />, label: "AI", tab: "ai" },
   { icon: (c) => <AccountSettingsIcon className="w-[27px] h-[27px]" color={c} />, label: "Settings", tab: "settings" },
 ];
 

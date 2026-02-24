@@ -8,6 +8,7 @@ import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionSuccessStep } from "./TransactionSuccessStep";
+import { TransactionRiskModal } from "./TransactionRiskModal";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
@@ -62,6 +63,8 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   const [selectedAsset, setSelectedAsset] = useState<AvailableAsset | null>(null);
   const [senderAddress, setSenderAddress] = useState<string>("");
   const [isTestnet] = useState(false);
+  const [showRiskModal, setShowRiskModal] = useState(false);
+  const [pendingAddress, setPendingAddress] = useState("");
   
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
@@ -170,8 +173,20 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   };
 
   const handleAddressSubmit = (address: string) => {
-    setTransaction((prev) => ({ ...prev, recipient: address }));
+    // Show risk analysis modal before proceeding
+    setPendingAddress(address);
+    setShowRiskModal(true);
+  };
+
+  const handleRiskProceed = () => {
+    setShowRiskModal(false);
+    setTransaction((prev) => ({ ...prev, recipient: pendingAddress }));
     setStep("amount");
+  };
+
+  const handleRiskCancel = () => {
+    setShowRiskModal(false);
+    setPendingAddress("");
   };
 
   const handleAmountSubmit = (amount: string) => {
@@ -389,6 +404,17 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
           )}
         </AnimatePresence>
       </SheetContent>
+
+      {/* Transaction Risk Modal */}
+      <TransactionRiskModal
+        open={showRiskModal}
+        address={pendingAddress}
+        chain={selectedChain}
+        amount={transaction.amount}
+        senderAddress={senderAddress}
+        onProceed={handleRiskProceed}
+        onCancel={handleRiskCancel}
+      />
     </Sheet>
   );
 };

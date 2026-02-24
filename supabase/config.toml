@@ -5,3 +5,15 @@ verify_jwt = false
 
 [functions.staking]
 verify_jwt = false
+
+[functions.register-user]
+verify_jwt = false
+
+[functions.transaction-risk]
+verify_jwt = false
+
+[functions.portfolio-insights]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
