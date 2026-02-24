@@ -144,26 +144,26 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         <div className="flex items-center gap-3 mb-1">
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-muted/30 border border-border/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
+            className="w-10 h-10 rounded-full bg-muted/40 border border-border/40 flex items-center justify-center hover:bg-muted/60 transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-foreground/80" />
+            <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex-1">
-            <p className="text-[11px] text-muted-foreground/60 uppercase tracking-widest font-medium">Import Wallet</p>
-            <h2 className="text-lg font-bold text-foreground">Enter Seed Phrase</h2>
+            <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">Import Wallet</p>
+            <h2 className="text-xl font-bold text-foreground">Enter Seed Phrase</h2>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="mt-4 h-1 rounded-full bg-muted/20 overflow-hidden">
+        <div className="mt-4 h-1.5 rounded-full bg-muted/30 overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-primary/70"
+            className="h-full rounded-full bg-primary"
             initial={{ width: 0 }}
             animate={{ width: `${progress * 100}%` }}
             transition={{ duration: 0.3 }}
           />
         </div>
-        <p className="text-[11px] text-muted-foreground/50 mt-1.5 text-right font-mono">
+        <p className="text-[11px] text-muted-foreground mt-1.5 text-right font-mono font-medium">
           {validWords.length}/{wordCount} valid
         </p>
       </motion.div>
@@ -175,16 +175,16 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         transition={{ delay: 0.05 }}
         className="px-5 mb-3"
       >
-        <div className="flex gap-1.5 p-1 rounded-xl bg-muted/20 border border-border/20">
+        <div className="flex gap-1.5 p-1 rounded-xl bg-muted/25 border border-border/30">
           {([12, 24] as const).map(count => (
             <button
               key={count}
               onClick={() => handleWordCountChange(count)}
               className={cn(
-                "flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200",
+                "flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-200",
                 wordCount === count
                   ? "bg-foreground text-background shadow-sm"
-                  : "text-muted-foreground/60 hover:text-muted-foreground"
+                  : "text-foreground/60 hover:text-foreground/80"
               )}
             >
               {count} Words
@@ -202,14 +202,14 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       >
         <button
           onClick={handlePasteFromClipboard}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/20 border border-border/20 text-[12px] font-medium text-foreground/70 hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-muted/25 border border-border/30 text-[12px] font-semibold text-foreground/80 hover:bg-muted/40 transition-colors"
         >
           <Clipboard className="w-3.5 h-3.5" />
           Paste
         </button>
         <button
           onClick={() => setShowQRScanner(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/20 border border-border/20 text-[12px] font-medium text-foreground/70 hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-muted/25 border border-border/30 text-[12px] font-semibold text-foreground/80 hover:bg-muted/40 transition-colors"
         >
           <QrCode className="w-3.5 h-3.5" />
           Scan
@@ -217,7 +217,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         <button
           onClick={handleClearAll}
           disabled={words.every(w => w === "")}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/20 border border-border/20 text-[12px] font-medium text-foreground/70 hover:bg-muted/30 transition-colors disabled:opacity-30"
+          className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-muted/25 border border-border/30 text-[12px] font-semibold text-foreground/80 hover:bg-muted/40 transition-colors disabled:opacity-30"
         >
           <Trash2 className="w-3.5 h-3.5" />
           Clear
@@ -250,11 +250,11 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
-          className="mt-4 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-destructive/[0.06] border border-destructive/10"
+          className="mt-4 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-destructive/[0.08] border border-destructive/15"
         >
-          <AlertTriangle className="w-3.5 h-3.5 text-destructive/70 shrink-0 mt-0.5" />
-          <p className="text-[11px] leading-relaxed text-muted-foreground/70">
-            <span className="font-semibold text-destructive/80">Security:</span> Never share your seed phrase. AI Wallet will never ask for it outside this screen.
+          <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-foreground/60">
+            <span className="font-semibold text-destructive">Security:</span> Never share your seed phrase. AI Wallet will never ask for it outside this screen.
           </p>
         </motion.div>
 
@@ -265,10 +265,10 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
           transition={{ delay: 0.3 }}
           className="mt-3 mb-4 space-y-1"
         >
-          <p className="text-[11px] text-muted-foreground/40">
+          <p className="text-[11px] text-muted-foreground">
             💡 Paste your entire phrase to auto-fill all words
           </p>
-          <p className="text-[11px] text-muted-foreground/40">
+          <p className="text-[11px] text-muted-foreground">
             ⌨️ Use Tab or Space to move between words
           </p>
         </motion.div>
@@ -289,12 +289,12 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
             "w-full group relative overflow-hidden rounded-2xl transition-all",
             allValid
               ? "bg-foreground"
-              : "bg-muted/30 border border-border/20"
+              : "bg-muted/40 border border-border/30"
           )}
         >
           <div className={cn(
             "flex items-center justify-center gap-3 px-5 py-4",
-            allValid ? "text-background" : "text-muted-foreground/40"
+            allValid ? "text-background" : "text-muted-foreground/50"
           )}>
             <Download className="w-5 h-5" />
             <span className="text-[15px] font-semibold">Import Wallet</span>
