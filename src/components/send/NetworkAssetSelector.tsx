@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,13 +48,8 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
     return addresses.evm || '';
   };
 
-  // Check which networks have addresses
-  const availableNetworks = useMemo(() => {
-    return ALL_NETWORKS.filter((n) => {
-      const addr = getSenderAddress(n.id);
-      return addr && addr.length > 0;
-    });
-  }, [addresses]);
+  // Show all networks from config — no filtering
+  const availableNetworks = ALL_NETWORKS;
 
   // Fetch assets when network is selected
   useEffect(() => {
@@ -172,7 +167,9 @@ export const NetworkAssetSelector = ({ onSubmit, onClose }: NetworkAssetSelector
                   <div>
                     <p className="font-medium">{net.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {getSenderAddress(net.id).slice(0, 8)}...{getSenderAddress(net.id).slice(-6)}
+                      {getSenderAddress(net.id)
+                        ? `${getSenderAddress(net.id).slice(0, 8)}...${getSenderAddress(net.id).slice(-6)}`
+                        : net.symbol}
                     </p>
                   </div>
                 </button>
