@@ -229,55 +229,91 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
   if (swapComplete) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl bg-background border-border">
+        <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl bg-background border-border">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center h-full gap-6 text-center"
+            className="flex flex-col items-center justify-between h-full pt-8 pb-6 px-4"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", delay: 0.2 }}
-              className="w-20 h-20 rounded-full bg-success/15 flex items-center justify-center"
-            >
-              <Zap className="w-10 h-10 text-success" />
-            </motion.div>
-            <div>
-              <h3 className="text-2xl font-bold mb-2">Swap Complete!</h3>
-              <p className="text-muted-foreground">
-                Swapped {fromAmount} {fromAsset?.symbol} for {toAmount}{" "}
-                {toAsset?.symbol}
-              </p>
-            </div>
-            <div className="flex items-center gap-6 bg-card rounded-2xl p-5 border border-border">
-              <div className="text-center">
-                <img
-                  src={getLogoUrl(fromAsset?.symbol || "")}
-                  alt=""
-                  className="w-10 h-10 rounded-full mx-auto mb-1"
-                />
-                <div className="font-medium">-{fromAmount}</div>
-                <div className="text-sm text-muted-foreground">
-                  {fromAsset?.symbol}
-                </div>
-              </div>
-              <ArrowDownUp className="w-5 h-5 text-muted-foreground" />
-              <div className="text-center">
-                <img
-                  src={getLogoUrl(toAsset?.symbol || "")}
-                  alt=""
-                  className="w-10 h-10 rounded-full mx-auto mb-1"
-                />
-                <div className="font-medium text-success">+{toAmount}</div>
-                <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-5 flex-1 justify-center">
+              {/* Success icon */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="w-24 h-24 rounded-full bg-success/15 flex items-center justify-center"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.4, type: "spring" }}
+                >
+                  <Zap className="w-12 h-12 text-success" />
+                </motion.div>
+              </motion.div>
+
+              {/* Title & subtitle */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-center"
+              >
+                <h3 className="text-2xl font-bold mb-1">Swap Complete!</h3>
+                <p className="text-muted-foreground text-sm">
+                  Swapped {fromAmount} {fromAsset?.symbol} for {toAmount}{" "}
                   {toAsset?.symbol}
+                </p>
+              </motion.div>
+
+              {/* Token pair card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+                className="flex items-center gap-4 bg-card/60 backdrop-blur-sm rounded-2xl px-8 py-5 border border-border/60"
+              >
+                <div className="flex flex-col items-center gap-1.5">
+                  <img
+                    src={getLogoUrl(fromAsset?.symbol || "")}
+                    alt={fromAsset?.symbol}
+                    className="w-14 h-14 rounded-full ring-2 ring-border/40"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <span className="font-semibold text-base">-{fromAmount}</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                    {fromAsset?.symbol}
+                  </span>
                 </div>
-              </div>
+
+                <ArrowDownUp className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+
+                <div className="flex flex-col items-center gap-1.5">
+                  <img
+                    src={getLogoUrl(toAsset?.symbol || "")}
+                    alt={toAsset?.symbol}
+                    className="w-14 h-14 rounded-full ring-2 ring-border/40"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <span className="font-semibold text-base text-success">+{toAmount}</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                    {toAsset?.symbol}
+                  </span>
+                </div>
+              </motion.div>
             </div>
-            <Button onClick={handleClose} className="w-full max-w-xs h-14 text-base">
-              Done
-            </Button>
+
+            {/* Done button */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="w-full"
+            >
+              <Button onClick={handleClose} className="w-full h-14 text-base font-semibold rounded-2xl">
+                Done
+              </Button>
+            </motion.div>
           </motion.div>
         </SheetContent>
       </Sheet>
