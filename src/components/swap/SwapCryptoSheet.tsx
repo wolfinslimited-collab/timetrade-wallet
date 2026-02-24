@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownUp, Settings2, ChevronDown, Info, Zap, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowDownUp, Settings2, ChevronDown, Info, Zap, Loader2, AlertTriangle, ExternalLink } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +21,14 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
 import { supabase } from "@/integrations/supabase/client";
 import { Chain } from "@/hooks/useBlockchain";
+import { PinUnlockModal } from "@/components/send/PinUnlockModal";
+import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
+import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
+import { deriveSolanaKeypair } from "@/hooks/useSolanaTransactionSigning";
+import { SolanaDerivationPath } from "@/utils/walletDerivation";
+import { invokeBlockchain } from "@/lib/blockchain";
+import { VersionedTransaction } from "@solana/web3.js";
+import { Buffer } from "buffer";
 
 // Well-known token mints/addresses for swap routing
 const SOLANA_TOKEN_MINTS: Record<string, string> = {
@@ -49,7 +57,6 @@ interface SwapCryptoSheetProps {
 export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) => {
   const { unifiedAssets } = useBlockchainContext();
 
-  // Swap state
   const [fromAsset, setFromAsset] = useState<UnifiedAsset | null>(null);
   const [toAsset, setToAsset] = useState<UnifiedAsset | null>(null);
   const [fromAmount, setFromAmount] = useState("");
@@ -61,6 +68,10 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
   const [quote, setQuote] = useState<QuoteData | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [swapError, setSwapError] = useState<string | null>(null);
 
   // Only show assets on swappable chains
   const swappableAssets = useMemo(() => {
@@ -68,50 +79,39 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
     return (unifiedAssets || []).filter((a) => swappable.includes(a.chain) && a.amount > 0);
   }, [unifiedAssets]);
 
-  // Auto-select first two assets on open
   useEffect(() => {
     if (open && swappableAssets.length >= 2 && !fromAsset) {
       setFromAsset(swappableAssets[0]);
-      // Try to pick a different token on same chain
       const other = swappableAssets.find(
-        (a) =>
-          a.chain === swappableAssets[0].chain &&
-          a.symbol !== swappableAssets[0].symbol
+        (a) => a.chain === swappableAssets[0].chain && a.symbol !== swappableAssets[0].symbol
       );
       setToAsset(other || swappableAssets[1]);
     }
   }, [open, swappableAssets]);
 
-  // When from asset changes, ensure to asset is on same chain
   useEffect(() => {
     if (fromAsset && toAsset && fromAsset.chain !== toAsset.chain) {
       const sameChain = swappableAssets.find(
-        (a) =>
-          a.chain === fromAsset.chain &&
-          a.symbol !== fromAsset.symbol
+        (a) => a.chain === fromAsset.chain && a.symbol !== fromAsset.symbol
       );
       setToAsset(sameChain || null);
     }
   }, [fromAsset]);
 
-  // Filter "to" assets to same chain as "from"
   const toAssets = useMemo(() => {
     if (!fromAsset) return swappableAssets;
     return swappableAssets.filter((a) => a.chain === fromAsset.chain);
   }, [fromAsset, swappableAssets]);
 
-  // Get token address for swap API
   const getTokenAddress = (asset: UnifiedAsset): string => {
     if (asset.chain === "solana") {
       if (asset.isNative) return SOLANA_TOKEN_MINTS.SOL;
       return asset.contractAddress || SOLANA_TOKEN_MINTS[asset.symbol] || "";
     }
-    // EVM
     if (asset.isNative) return EVM_NATIVE_TOKEN;
     return asset.contractAddress || "";
   };
 
-  // Fetch quote with debounce
   useEffect(() => {
     if (!fromAsset || !toAsset || !fromAmount || parseFloat(fromAmount) <= 0) {
       setQuote(null);
@@ -137,7 +137,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
             amount: amountInBaseUnits,
             srcDecimals: fromAsset.decimals,
             destDecimals: toAsset.decimals,
-            slippage: Math.round(slippage * 100), // bps
+            slippage: Math.round(slippage * 100),
           },
         });
 
@@ -165,7 +165,6 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
     return () => clearTimeout(timer);
   }, [fromAsset, toAsset, fromAmount, slippage]);
 
-  // Calculated values
   const toAmount = useMemo(() => {
     if (!quote || !toAsset) return "0";
     const raw = parseFloat(quote.destAmount) / Math.pow(10, toAsset.decimals);
@@ -180,8 +179,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
   const exchangeRate = useMemo(() => {
     if (!fromAsset || !toAsset || !quote) return null;
     const fromAmt = parseFloat(fromAmount) || 1;
-    const rate = toAmountNum / fromAmt;
-    return rate;
+    return toAmountNum / fromAmt;
   }, [fromAmount, toAmountNum, fromAsset, toAsset, quote]);
 
   const fromValueUsd = (parseFloat(fromAmount) || 0) * (fromAsset?.price || 0);
@@ -206,12 +204,103 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
     if (fromAsset) setFromAmount(fromAsset.amount.toString());
   };
 
-  const handleSwap = async () => {
+  const handleSwap = () => {
+    setSwapError(null);
+    setPinError(null);
+    setShowPinModal(true);
+  };
+
+  const handlePinSubmit = async (pin: string) => {
     setIsSwapping(true);
-    // For now simulate — real signing will be added next
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsSwapping(false);
-    setSwapComplete(true);
+    setPinError(null);
+    setSwapError(null);
+
+    try {
+      if (!fromAsset || !toAsset || !quote?.raw) {
+        throw new Error("Missing swap data");
+      }
+
+      const encryptedSeedJson = getActiveAccountEncryptedSeed();
+      if (!encryptedSeedJson) {
+        setPinError("No wallet found. Please re-import your wallet.");
+        setIsSwapping(false);
+        return;
+      }
+
+      const encryptedData: EncryptedData = JSON.parse(encryptedSeedJson);
+      let mnemonic: string;
+      try {
+        mnemonic = await decryptPrivateKey(encryptedData, pin);
+      } catch {
+        setPinError("Incorrect PIN. Please try again.");
+        setIsSwapping(false);
+        return;
+      }
+
+      setShowPinModal(false);
+
+      if (fromAsset.chain === "solana") {
+        const storedPath = (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) || "phantom";
+        const storedIndex = parseInt(localStorage.getItem('timetrade_solana_balance_account_index') || '0', 10);
+        const keypair = deriveSolanaKeypair(mnemonic.trim(), storedIndex, storedPath);
+        const userPublicKey = keypair.publicKey.toBase58();
+
+        console.log("[SWAP] Getting Jupiter swap transaction for:", userPublicKey);
+
+        const { data: swapData, error: swapErr } = await supabase.functions.invoke("swap-quote", {
+          body: {
+            action: "swap",
+            chain: "solana",
+            srcToken: getTokenAddress(fromAsset),
+            destToken: getTokenAddress(toAsset),
+            amount: quote.srcAmount,
+            userAddress: userPublicKey,
+            quoteResponse: quote.raw,
+          },
+        });
+
+        if (swapErr) throw new Error(swapErr.message);
+        if (!swapData?.success) throw new Error(swapData?.error || "Failed to build swap transaction");
+
+        const swapTransactionBase64 = swapData.data.swapTransaction;
+        if (!swapTransactionBase64) throw new Error("No swap transaction returned");
+
+        const transactionBuf = Buffer.from(swapTransactionBase64, "base64");
+        const transaction = VersionedTransaction.deserialize(transactionBuf);
+        transaction.sign([keypair]);
+
+        const signedTxBytes = transaction.serialize();
+        const signedTxHex = Buffer.from(signedTxBytes).toString("hex");
+
+        console.log("[SWAP] Transaction signed, broadcasting...");
+
+        const { data: broadcastData, error: broadcastErr } = await invokeBlockchain({
+          action: "broadcastTransaction",
+          chain: "solana",
+          address: userPublicKey,
+          signedTransaction: signedTxHex,
+          testnet: false,
+        });
+
+        if (broadcastErr) throw new Error(broadcastErr.message);
+
+        const broadcastResult = broadcastData as { success: boolean; data?: { txHash: string }; error?: string };
+        if (!broadcastResult?.success) throw new Error(broadcastResult?.error || "Broadcast failed");
+
+        const hash = broadcastResult.data?.txHash;
+        console.log("[SWAP] ✅ Transaction broadcast successfully:", hash);
+
+        setTxHash(hash || null);
+        setIsSwapping(false);
+        setSwapComplete(true);
+      } else {
+        throw new Error("Real swap execution is only available for Solana currently. EVM swap coming soon.");
+      }
+    } catch (err) {
+      console.error("[SWAP] Swap execution error:", err);
+      setSwapError(err instanceof Error ? err.message : "Swap failed");
+      setIsSwapping(false);
+    }
   };
 
   const handleClose = () => {
@@ -219,11 +308,15 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
     setFromAmount("");
     setQuote(null);
     setQuoteError(null);
+    setSwapError(null);
+    setTxHash(null);
     onOpenChange(false);
   };
 
   const getLogoUrl = (symbol: string) =>
     `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
+
+  const getSolscanUrl = (hash: string) => `https://solscan.io/tx/${hash}`;
 
   // ===== SUCCESS SCREEN =====
   if (swapComplete) {
@@ -231,7 +324,6 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
       <Sheet open={open} onOpenChange={handleClose}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl bg-background border-border p-0">
           <div className="flex flex-col h-full">
-            {/* Top area with success content */}
             <div className="flex-1 flex flex-col items-center justify-center px-6 gap-8">
               {/* Animated success icon with ripple */}
               <motion.div
@@ -250,7 +342,6 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                     <Zap className="w-10 h-10 text-success" />
                   </motion.div>
                 </div>
-                {/* Ripple rings */}
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0.6 }}
                   animate={{ scale: 1.8, opacity: 0 }}
@@ -287,7 +378,6 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
               >
                 <div className="relative rounded-2xl border border-border/50 bg-card/40 backdrop-blur-md p-6">
                   <div className="flex items-center justify-between">
-                    {/* From token */}
                     <div className="flex flex-col items-center gap-2 flex-1">
                       <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden ring-2 ring-border/30">
                         <img
@@ -305,15 +395,11 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                         <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">{fromAsset?.symbol}</p>
                       </div>
                     </div>
-
-                    {/* Arrow */}
                     <div className="flex items-center justify-center px-2">
                       <div className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center">
                         <ArrowDownUp className="w-3.5 h-3.5 text-muted-foreground" />
                       </div>
                     </div>
-
-                    {/* To token */}
                     <div className="flex flex-col items-center gap-2 flex-1">
                       <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden ring-2 ring-success/20">
                         <img
@@ -334,6 +420,31 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                   </div>
                 </div>
               </motion.div>
+
+              {/* Transaction Hash Link */}
+              {txHash && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.65 }}
+                  className="w-full"
+                >
+                  <a
+                    href={getSolscanUrl(txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/20 transition-colors"
+                  >
+                    <span className="text-sm font-medium text-primary">
+                      View on Solscan
+                    </span>
+                    <ExternalLink className="w-4 h-4 text-primary" />
+                  </a>
+                  <p className="text-xs text-muted-foreground text-center mt-2 font-mono truncate px-4">
+                    {txHash}
+                  </p>
+                </motion.div>
+              )}
             </div>
 
             {/* Bottom CTA */}
@@ -372,19 +483,12 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent
-                className="w-72 bg-card border-border"
-                align="end"
-              >
+              <PopoverContent className="w-72 bg-card border-border" align="end">
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        Slippage Tolerance
-                      </span>
-                      <span className="text-sm text-foreground font-semibold">
-                        {slippage}%
-                      </span>
+                      <span className="text-sm font-medium">Slippage Tolerance</span>
+                      <span className="text-sm text-foreground font-semibold">{slippage}%</span>
                     </div>
                     <div className="flex gap-2 mb-3">
                       {[0.1, 0.5, 1.0].map((val) => (
@@ -408,8 +512,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                     />
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Your transaction will revert if the price changes
-                    unfavorably by more than this percentage.
+                    Your transaction will revert if the price changes unfavorably by more than this percentage.
                   </div>
                 </div>
               </PopoverContent>
@@ -420,9 +523,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
             {/* ===== FROM ===== */}
             <div className="bg-card rounded-2xl p-4 border border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                  You Pay
-                </span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">You Pay</span>
                 <span className="text-xs text-muted-foreground">
                   Balance: {fromAsset?.amount.toLocaleString(undefined, { maximumFractionDigits: 6 }) || "0"}
                 </span>
@@ -434,19 +535,11 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                 >
                   {fromAsset ? (
                     <>
-                      <img
-                        src={getLogoUrl(fromAsset.symbol)}
-                        alt=""
-                        className="w-6 h-6 rounded-full"
-                      />
-                      <span className="font-semibold text-sm">
-                        {fromAsset.symbol}
-                      </span>
+                      <img src={getLogoUrl(fromAsset.symbol)} alt="" className="w-6 h-6 rounded-full" />
+                      <span className="font-semibold text-sm">{fromAsset.symbol}</span>
                     </>
                   ) : (
-                    <span className="text-sm text-muted-foreground">
-                      Select
-                    </span>
+                    <span className="text-sm text-muted-foreground">Select</span>
                   )}
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -489,9 +582,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
             {/* ===== TO ===== */}
             <div className="bg-card rounded-2xl p-4 border border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                  You Receive
-                </span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">You Receive</span>
                 <span className="text-xs text-muted-foreground">
                   Balance: {toAsset?.amount.toLocaleString(undefined, { maximumFractionDigits: 6 }) || "0"}
                 </span>
@@ -503,19 +594,11 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                 >
                   {toAsset ? (
                     <>
-                      <img
-                        src={getLogoUrl(toAsset.symbol)}
-                        alt=""
-                        className="w-6 h-6 rounded-full"
-                      />
-                      <span className="font-semibold text-sm">
-                        {toAsset.symbol}
-                      </span>
+                      <img src={getLogoUrl(toAsset.symbol)} alt="" className="w-6 h-6 rounded-full" />
+                      <span className="font-semibold text-sm">{toAsset.symbol}</span>
                     </>
                   ) : (
-                    <span className="text-sm text-muted-foreground">
-                      Select
-                    </span>
+                    <span className="text-sm text-muted-foreground">Select</span>
                   )}
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -542,6 +625,14 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
               </div>
             )}
 
+            {/* ===== SWAP ERROR ===== */}
+            {swapError && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 rounded-xl border border-destructive/20">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                <span className="text-xs text-destructive">{swapError}</span>
+              </div>
+            )}
+
             {/* ===== SWAP DETAILS ===== */}
             <AnimatePresence>
               {quote && parseFloat(fromAmount) > 0 && (
@@ -552,66 +643,34 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                   className="overflow-hidden"
                 >
                   <div className="bg-card/50 rounded-xl p-4 space-y-2.5 mt-2 border border-border/50">
-                    {/* Rate */}
                     {exchangeRate && (
                       <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <span>Rate</span>
-                        </div>
+                        <span className="text-muted-foreground">Rate</span>
                         <span className="font-medium">
-                          1 {fromAsset?.symbol} ≈{" "}
-                          {exchangeRate.toLocaleString(undefined, {
-                            maximumFractionDigits: 6,
-                          })}{" "}
-                          {toAsset?.symbol}
+                          1 {fromAsset?.symbol} ≈ {exchangeRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} {toAsset?.symbol}
                         </span>
                       </div>
                     )}
-                    {/* Price Impact */}
                     <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span>Price Impact</span>
-                      </div>
-                      <span
-                        className={cn(
-                          "font-medium",
-                          quote.priceImpact < 1
-                            ? "text-success"
-                            : quote.priceImpact < 3
-                            ? "text-amber-500"
-                            : "text-destructive"
-                        )}
-                      >
+                      <span className="text-muted-foreground">Price Impact</span>
+                      <span className={cn("font-medium", quote.priceImpact < 1 ? "text-success" : quote.priceImpact < 3 ? "text-amber-500" : "text-destructive")}>
                         {quote.priceImpact.toFixed(2)}%
                       </span>
                     </div>
-                    {/* Minimum Received */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Min. Received
-                      </span>
+                      <span className="text-muted-foreground">Min. Received</span>
                       <span className="font-medium">
-                        {(toAmountNum * (1 - slippage / 100)).toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 6 }
-                        )}{" "}
-                        {toAsset?.symbol}
+                        {(toAmountNum * (1 - slippage / 100)).toLocaleString(undefined, { maximumFractionDigits: 6 })} {toAsset?.symbol}
                       </span>
                     </div>
-                    {/* Slippage */}
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Slippage</span>
                       <span className="font-medium">{slippage}%</span>
                     </div>
-                    {/* Gas */}
                     {quote.gasCostUSD && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Network Fee
-                        </span>
-                        <span className="font-medium">
-                          ~${parseFloat(quote.gasCostUSD).toFixed(2)}
-                        </span>
+                        <span className="text-muted-foreground">Network Fee</span>
+                        <span className="font-medium">~${parseFloat(quote.gasCostUSD).toFixed(2)}</span>
                       </div>
                     )}
                   </div>
@@ -632,7 +691,10 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                 className="w-full h-14 text-base font-semibold rounded-2xl"
               >
                 {isSwapping ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Swapping...
+                  </span>
                 ) : !fromAsset || !toAsset ? (
                   "Select tokens"
                 ) : !fromAmount || parseFloat(fromAmount) <= 0 ? (
@@ -677,6 +739,15 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
           setQuote(null);
         }}
         title="Swap To"
+      />
+
+      {/* PIN Modal */}
+      <PinUnlockModal
+        open={showPinModal}
+        onOpenChange={setShowPinModal}
+        onSubmit={handlePinSubmit}
+        isLoading={isSwapping}
+        error={pinError || undefined}
       />
     </>
   );
