@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { AllAssetsPage } from "./pages/AllAssetsPage";
 import AIChatPageRoute from "./pages/AIChatPage";
+import SwapPage from "./pages/SwapPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -50,6 +51,7 @@ const PAGE_DEPTH: Record<string, number> = {
   "/assets": 1,
   "/asset": 2,
   "/ai-chat": 1,
+  "/swap": 1,
 };
 
 const AnimatedRoutes = () => {
@@ -74,6 +76,7 @@ const AnimatedRoutes = () => {
           <Route path="/ai-chat" element={<AIChatPageRoute />} />
           <Route path="/asset" element={<AssetDetailPage />} />
           <Route path="/assets" element={<AllAssetsPage />} />
+          <Route path="/swap" element={<SwapPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>
