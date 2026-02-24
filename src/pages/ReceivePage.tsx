@@ -32,7 +32,7 @@ const ReceivePage = () => {
   const { addresses: walletAddresses } = useWalletAddresses(true);
   const currentAddress = walletAddresses[selectedToken.addressKey] || "";
 
-  const tokenLogoUrl = getCryptoLogoUrl(selectedToken.symbol);
+  const tokenLogoUrl = getCryptoLogoUrl(selectedToken.logoSymbol);
 
   const handleCopy = async () => {
     if (!currentAddress) return;
@@ -79,10 +79,10 @@ const ReceivePage = () => {
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
-                <img src={tokenLogoUrl} alt={selectedToken.symbol} className="w-full h-full object-contain p-1" />
+                <img src={tokenLogoUrl} alt={selectedToken.name} className="w-full h-full object-contain p-1" />
               </div>
               <div className="text-left">
-                <p className="font-semibold">{selectedToken.symbol}</p>
+                <p className="font-semibold">{selectedToken.name}</p>
                 <p className="text-xs text-muted-foreground">{selectedToken.network}</p>
               </div>
             </div>
@@ -93,21 +93,21 @@ const ReceivePage = () => {
             <div className="absolute left-0 right-0 mt-2 bg-card border border-border rounded-xl p-2 space-y-1 max-h-72 overflow-y-auto z-50 shadow-lg">
               {tokens.map((token) => (
                 <button
-                  key={`${token.symbol}-${token.networkId}`}
+                  key={token.networkId}
                   onClick={() => { setSelectedToken(token); setShowTokens(false); }}
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-lg transition-colors",
-                    token.symbol === selectedToken.symbol && token.networkId === selectedToken.networkId ? "bg-primary/10" : "hover:bg-secondary"
+                    token.networkId === selectedToken.networkId ? "bg-primary/10" : "hover:bg-secondary"
                   )}
                 >
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary">
-                    <img src={getCryptoLogoUrl(token.symbol)} alt={token.symbol} className="w-full h-full object-contain p-0.5" />
+                    <img src={getCryptoLogoUrl(token.logoSymbol)} alt={token.name} className="w-full h-full object-contain p-0.5" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-medium text-sm">{token.symbol}</p>
+                    <p className="font-medium text-sm">{token.name}</p>
                     <p className="text-xs text-muted-foreground">{token.network}</p>
                   </div>
-                  {token.symbol === selectedToken.symbol && token.networkId === selectedToken.networkId && (
+                  {token.networkId === selectedToken.networkId && (
                     <Check className="w-4 h-4 text-primary" />
                   )}
                 </button>
