@@ -94,32 +94,32 @@ export type Database = {
       }
       wallet_users: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
           device_info: Json | null
-          evm_address: string | null
           id: string
-          solana_address: string | null
-          tron_address: string | null
+          ip_address: string | null
           updated_at: string
           wallet_name: string
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           device_info?: Json | null
-          evm_address?: string | null
           id?: string
-          solana_address?: string | null
-          tron_address?: string | null
+          ip_address?: string | null
           updated_at?: string
           wallet_name?: string
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           device_info?: Json | null
-          evm_address?: string | null
           id?: string
-          solana_address?: string | null
-          tron_address?: string | null
+          ip_address?: string | null
           updated_at?: string
           wallet_name?: string
         }

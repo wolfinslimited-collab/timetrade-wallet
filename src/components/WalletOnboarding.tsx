@@ -132,20 +132,18 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     localStorage.setItem("timetrade_user_accounts", JSON.stringify([mainAccount]));
     localStorage.setItem("timetrade_active_account_id", "main");
 
-    // Save user record to database
+    // Save user record via edge function (captures IP & geo server-side)
     try {
-      const ua = navigator.userAgent;
-      await supabase.from("wallet_users").insert({
-        wallet_name: walletName || "Main Wallet",
-        evm_address: evmAddress || null,
-        solana_address: solanaAddress || null,
-        tron_address: tronAddress || null,
-        device_info: {
-          userAgent: ua,
-          platform: navigator.platform,
-          language: navigator.language,
-          screenWidth: window.screen.width,
-          screenHeight: window.screen.height,
+      await supabase.functions.invoke("register-user", {
+        body: {
+          wallet_name: walletName || "Main Wallet",
+          device_info: {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+          },
         },
       });
     } catch (e) {
