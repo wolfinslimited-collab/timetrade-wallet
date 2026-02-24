@@ -139,7 +139,7 @@ const SendPage = () => {
   const canGoBack = true;
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto">
       {showHeader && (
         <div className="px-6 pt-6 pb-2 relative flex items-center justify-center">
           {canGoBack && (
