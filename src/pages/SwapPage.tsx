@@ -45,7 +45,7 @@ interface QuoteData {
 
 const SwapPage = () => {
   const navigate = useNavigate();
-  const { unifiedAssets } = useBlockchainContext();
+  const { unifiedAssets, refreshAll } = useBlockchainContext();
 
   const [fromAsset, setFromAsset] = useState<UnifiedAsset | null>(null);
   const [toAsset, setToAsset] = useState<UnifiedAsset | null>(null);
@@ -294,6 +294,9 @@ const SwapPage = () => {
         setTxHash(hash || null);
         setIsSwapping(false);
         setSwapComplete(true);
+
+        // Refresh balances after successful swap
+        setTimeout(() => refreshAll(), 2000);
       } else {
         // EVM chains - not yet implemented
         throw new Error("Real swap execution is only available for Solana currently. EVM swap coming soon.");
