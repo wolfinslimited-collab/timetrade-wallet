@@ -194,40 +194,107 @@ const SwapPage = () => {
   // ===== SUCCESS SCREEN =====
   if (swapComplete) {
     return (
-      <div className="min-h-screen flex flex-col max-w-md mx-auto items-center justify-center px-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-6 text-center w-full"
-        >
+      <div className="min-h-screen flex flex-col max-w-md mx-auto px-6">
+        <div className="flex-1 flex flex-col items-center justify-center gap-8">
+          {/* Animated success icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className="w-20 h-20 rounded-full bg-success/15 flex items-center justify-center"
+            transition={{ type: "spring", stiffness: 180, damping: 14, delay: 0.1 }}
+            className="relative"
           >
-            <Zap className="w-10 h-10 text-success" />
+            <div className="w-28 h-28 rounded-full bg-success/10 flex items-center justify-center">
+              <motion.div
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.35, type: "spring", stiffness: 200 }}
+                className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center"
+              >
+                <Zap className="w-10 h-10 text-success" />
+              </motion.div>
+            </div>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0.6 }}
+              animate={{ scale: 1.8, opacity: 0 }}
+              transition={{ duration: 1.2, repeat: 2, ease: "easeOut" }}
+              className="absolute inset-0 rounded-full border border-success/30"
+            />
           </motion.div>
-          <div>
-            <h3 className="text-2xl font-bold mb-2">Swap Complete!</h3>
-            <p className="text-muted-foreground">
+
+          {/* Title */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-center"
+          >
+            <h3 className="text-3xl font-bold tracking-tight mb-2">Swap Complete!</h3>
+            <p className="text-muted-foreground text-base">
               Swapped {fromAmount} {fromAsset?.symbol} for {toAmount} {toAsset?.symbol}
             </p>
-          </div>
-          <div className="flex items-center gap-6 bg-card rounded-2xl p-5 border border-border">
-            <div className="text-center">
-              <img src={getLogoUrl(fromAsset?.symbol || "")} alt="" className="w-10 h-10 rounded-full mx-auto mb-1" />
-              <div className="font-medium">-{fromAmount}</div>
-              <div className="text-sm text-muted-foreground">{fromAsset?.symbol}</div>
+          </motion.div>
+
+          {/* Full-width token pair card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="w-full"
+          >
+            <div className="rounded-2xl border border-border/50 bg-card/40 backdrop-blur-md p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col items-center gap-2 flex-1">
+                  <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden ring-2 ring-border/30">
+                    <img
+                      src={getLogoUrl(fromAsset?.symbol || "")}
+                      alt={fromAsset?.symbol}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = `<span class="text-lg font-bold text-foreground">${fromAsset?.symbol?.[0] || '?'}</span>`;
+                      }}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold">-{fromAmount}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">{fromAsset?.symbol}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center px-2">
+                  <div className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center">
+                    <ArrowDownUp className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-2 flex-1">
+                  <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden ring-2 ring-success/20">
+                    <img
+                      src={getLogoUrl(toAsset?.symbol || "")}
+                      alt={toAsset?.symbol}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = `<span class="text-lg font-bold text-success">${toAsset?.symbol?.[0] || '?'}</span>`;
+                      }}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-success">+{toAmount}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">{toAsset?.symbol}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <ArrowDownUp className="w-5 h-5 text-muted-foreground" />
-            <div className="text-center">
-              <img src={getLogoUrl(toAsset?.symbol || "")} alt="" className="w-10 h-10 rounded-full mx-auto mb-1" />
-              <div className="font-medium text-success">+{toAmount}</div>
-              <div className="text-sm text-muted-foreground">{toAsset?.symbol}</div>
-            </div>
-          </div>
-          <Button onClick={() => navigate("/")} className="w-full max-w-xs h-14 text-base">
+          </motion.div>
+        </div>
+
+        {/* Bottom CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="pb-8 pt-4"
+        >
+          <Button onClick={() => navigate("/")} className="w-full h-14 text-base rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-semibold text-lg">
             Done
           </Button>
         </motion.div>
