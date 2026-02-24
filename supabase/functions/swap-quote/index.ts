@@ -40,24 +40,25 @@ async function getJupiterQuote(
   amount: string,
   slippageBps: number
 ) {
-  const url = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`;
+  const url = `https://lite-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`;
   console.log("[SWAP] Jupiter quote URL:", url);
 
   const res = await fetch(url);
+  const text = await res.text();
+
   if (!res.ok) {
-    const text = await res.text();
     console.error("[SWAP] Jupiter quote error:", text);
     throw new Error(`Jupiter quote failed: ${text}`);
   }
-  const data = await res.json();
-  return data;
+
+  return JSON.parse(text);
 }
 
 async function getJupiterSwapTransaction(
   quoteResponse: any,
   userPublicKey: string
 ) {
-  const res = await fetch("https://quote-api.jup.ag/v6/swap", {
+  const res = await fetch("https://lite-api.jup.ag/v6/swap", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -68,12 +69,12 @@ async function getJupiterSwapTransaction(
       prioritizationFeeLamports: "auto",
     }),
   });
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     console.error("[SWAP] Jupiter swap error:", text);
     throw new Error(`Jupiter swap transaction failed: ${text}`);
   }
-  return await res.json();
+  return JSON.parse(text);
 }
 
 // ========== PARASWAP (EVM) ==========
