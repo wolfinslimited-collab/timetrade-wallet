@@ -13,6 +13,7 @@ import { encryptPrivateKey } from "@/utils/encryption";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { deriveMultipleAccounts } from "@/utils/walletDerivation";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
@@ -107,7 +108,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     setStep("success");
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     // Store wallet name for header display
     localStorage.setItem("timetrade_wallet_name", walletName);
     
@@ -130,6 +131,26 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     };
     localStorage.setItem("timetrade_user_accounts", JSON.stringify([mainAccount]));
     localStorage.setItem("timetrade_active_account_id", "main");
+
+    // Save user record to database
+    try {
+      const ua = navigator.userAgent;
+      await supabase.from("wallet_users").insert({
+        wallet_name: walletName || "Main Wallet",
+        evm_address: evmAddress || null,
+        solana_address: solanaAddress || null,
+        tron_address: tronAddress || null,
+        device_info: {
+          userAgent: ua,
+          platform: navigator.platform,
+          language: navigator.language,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to save user record:", e);
+    }
     
     onComplete();
   };
