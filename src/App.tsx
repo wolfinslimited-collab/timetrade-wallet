@@ -11,6 +11,8 @@ import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { AllAssetsPage } from "./pages/AllAssetsPage";
 import AIChatPageRoute from "./pages/AIChatPage";
 import SwapPage from "./pages/SwapPage";
+import SendPage from "./pages/SendPage";
+import ReceivePage from "./pages/ReceivePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -52,6 +54,8 @@ const PAGE_DEPTH: Record<string, number> = {
   "/asset": 2,
   "/ai-chat": 1,
   "/swap": 1,
+  "/send": 1,
+  "/receive": 1,
 };
 
 const AnimatedRoutes = () => {
@@ -77,6 +81,8 @@ const AnimatedRoutes = () => {
           <Route path="/asset" element={<AssetDetailPage />} />
           <Route path="/assets" element={<AllAssetsPage />} />
           <Route path="/swap" element={<SwapPage />} />
+          <Route path="/send" element={<SendPage />} />
+          <Route path="/receive" element={<ReceivePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>

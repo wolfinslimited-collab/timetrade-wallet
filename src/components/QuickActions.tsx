@@ -1,8 +1,5 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { SendCryptoSheet } from "./send/SendCryptoSheet";
-import { ReceiveCryptoSheet } from "./receive/ReceiveCryptoSheet";
 import { ArrowDownToLine, Send, ArrowLeftRight } from "lucide-react";
 
 interface QuickAction {
@@ -18,39 +15,32 @@ const actions: QuickAction[] = [
 ];
 
 export const QuickActions = () => {
-  const [sendOpen, setSendOpen] = useState(false);
-  const [receiveOpen, setReceiveOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleAction = (action?: string) => {
-    if (action === "send") setSendOpen(true);
-    else if (action === "receive") setReceiveOpen(true);
+    if (action === "send") navigate("/send");
+    else if (action === "receive") navigate("/receive");
     else if (action === "swap") navigate("/swap");
   };
 
   return (
-    <>
-      <div className="flex items-center justify-center gap-10 px-6 py-4">
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            onClick={() => handleAction(action.action)}
-            className="flex flex-col items-center gap-2.5"
-          >
-            <div className={cn(
-              "w-14 h-14 rounded-full flex items-center justify-center",
-              "bg-card border border-border/50",
-              "hover:bg-secondary transition-all text-foreground"
-            )}>
-              {action.icon}
-            </div>
-            <span className="text-xs text-muted-foreground font-medium">{action.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <SendCryptoSheet open={sendOpen} onOpenChange={setSendOpen} />
-      <ReceiveCryptoSheet open={receiveOpen} onOpenChange={setReceiveOpen} />
-    </>
+    <div className="flex items-center justify-center gap-10 px-6 py-4">
+      {actions.map((action) => (
+        <button
+          key={action.label}
+          onClick={() => handleAction(action.action)}
+          className="flex flex-col items-center gap-2.5"
+        >
+          <div className={cn(
+            "w-14 h-14 rounded-full flex items-center justify-center",
+            "bg-card border border-border/50",
+            "hover:bg-secondary transition-all text-foreground"
+          )}>
+            {action.icon}
+          </div>
+          <span className="text-xs text-muted-foreground font-medium">{action.label}</span>
+        </button>
+      ))}
+    </div>
   );
 };
