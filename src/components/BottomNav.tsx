@@ -21,10 +21,11 @@ const navItems: NavItem[] = [
 interface BottomNavProps {
   activeTab?: NavTab;
   onTabChange?: (tab: NavTab) => void;
+  hiddenTabs?: NavTab[];
 }
 
 export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
-  ({ activeTab = "wallet", onTabChange }, ref) => {
+  ({ activeTab = "wallet", onTabChange, hiddenTabs = [] }, ref) => {
     const nav = (
       <nav 
         ref={ref}
@@ -34,7 +35,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
           style={{ backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)' }}
         >
           <div className="flex items-center justify-around">
-            {navItems.map((item) => {
+            {navItems.filter(item => !hiddenTabs.includes(item.tab)).map((item) => {
               const isActive = activeTab === item.tab;
               
               return (
