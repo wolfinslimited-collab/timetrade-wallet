@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownUp, Settings2, ChevronDown, Info, Zap } from "lucide-react";
+import { ArrowDownUp, Settings2, ChevronDown, Info, Zap, Loader2, AlertTriangle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -16,25 +16,30 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { TokenSelector } from "./TokenSelector";
+import { SwapTokenSelector } from "./SwapTokenSelector";
+import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
+import { supabase } from "@/integrations/supabase/client";
+import { Chain } from "@/hooks/useBlockchain";
 
-interface Token {
-  symbol: string;
-  name: string;
-  icon: string;
-  balance: number;
-  price: number;
-  color: string;
+// Well-known token mints/addresses for swap routing
+const SOLANA_TOKEN_MINTS: Record<string, string> = {
+  SOL: "So11111111111111111111111111111111111111112",
+  USDC: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  USDT: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+};
+
+const EVM_NATIVE_TOKEN = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+interface QuoteData {
+  srcAmount: string;
+  destAmount: string;
+  priceImpact: number;
+  route: string[];
+  provider: string;
+  gasCostUSD?: string;
+  raw?: any;
 }
-
-const tokens: Token[] = [
-  { symbol: "ETH", name: "Ethereum", icon: "⟠", balance: 2.5, price: 3200, color: "#627EEA" },
-  { symbol: "BTC", name: "Bitcoin", icon: "₿", balance: 0.15, price: 65000, color: "#F7931A" },
-  { symbol: "SOL", name: "Solana", icon: "◎", balance: 45, price: 150, color: "#9945FF" },
-  { symbol: "USDC", name: "USD Coin", icon: "◈", balance: 1500, price: 1, color: "#2775CA" },
-  { symbol: "USDT", name: "Tether", icon: "₮", balance: 800, price: 1, color: "#26A17B" },
-  { symbol: "AVAX", name: "Avalanche", icon: "▲", balance: 25, price: 35, color: "#E84142" },
-];
 
 interface SwapCryptoSheetProps {
   open: boolean;
@@ -42,59 +47,169 @@ interface SwapCryptoSheetProps {
 }
 
 export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) => {
-  const [fromToken, setFromToken] = useState<Token>(tokens[0]);
-  const [toToken, setToToken] = useState<Token>(tokens[3]);
+  const { unifiedAssets } = useBlockchainContext();
+
+  // Swap state
+  const [fromAsset, setFromAsset] = useState<UnifiedAsset | null>(null);
+  const [toAsset, setToAsset] = useState<UnifiedAsset | null>(null);
   const [fromAmount, setFromAmount] = useState("");
   const [slippage, setSlippage] = useState(0.5);
   const [showFromSelector, setShowFromSelector] = useState(false);
   const [showToSelector, setShowToSelector] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapComplete, setSwapComplete] = useState(false);
+  const [quote, setQuote] = useState<QuoteData | null>(null);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
 
-  // Calculate exchange rate with slight spread
-  const exchangeRate = useMemo(() => {
-    return fromToken.price / toToken.price;
-  }, [fromToken.price, toToken.price]);
+  // Only show assets on swappable chains
+  const swappableAssets = useMemo(() => {
+    const swappable: Chain[] = ["solana", "ethereum", "polygon", "arbitrum", "bsc"];
+    return (unifiedAssets || []).filter((a) => swappable.includes(a.chain) && a.amount > 0);
+  }, [unifiedAssets]);
 
-  // Calculate to amount based on from amount
+  // Auto-select first two assets on open
+  useEffect(() => {
+    if (open && swappableAssets.length >= 2 && !fromAsset) {
+      setFromAsset(swappableAssets[0]);
+      // Try to pick a different token on same chain
+      const other = swappableAssets.find(
+        (a) =>
+          a.chain === swappableAssets[0].chain &&
+          a.symbol !== swappableAssets[0].symbol
+      );
+      setToAsset(other || swappableAssets[1]);
+    }
+  }, [open, swappableAssets]);
+
+  // When from asset changes, ensure to asset is on same chain
+  useEffect(() => {
+    if (fromAsset && toAsset && fromAsset.chain !== toAsset.chain) {
+      const sameChain = swappableAssets.find(
+        (a) =>
+          a.chain === fromAsset.chain &&
+          a.symbol !== fromAsset.symbol
+      );
+      setToAsset(sameChain || null);
+    }
+  }, [fromAsset]);
+
+  // Filter "to" assets to same chain as "from"
+  const toAssets = useMemo(() => {
+    if (!fromAsset) return swappableAssets;
+    return swappableAssets.filter((a) => a.chain === fromAsset.chain);
+  }, [fromAsset, swappableAssets]);
+
+  // Get token address for swap API
+  const getTokenAddress = (asset: UnifiedAsset): string => {
+    if (asset.chain === "solana") {
+      if (asset.isNative) return SOLANA_TOKEN_MINTS.SOL;
+      return asset.contractAddress || SOLANA_TOKEN_MINTS[asset.symbol] || "";
+    }
+    // EVM
+    if (asset.isNative) return EVM_NATIVE_TOKEN;
+    return asset.contractAddress || "";
+  };
+
+  // Fetch quote with debounce
+  useEffect(() => {
+    if (!fromAsset || !toAsset || !fromAmount || parseFloat(fromAmount) <= 0) {
+      setQuote(null);
+      setQuoteError(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsLoadingQuote(true);
+      setQuoteError(null);
+
+      try {
+        const amountInBaseUnits = Math.floor(
+          parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)
+        ).toString();
+
+        const { data, error } = await supabase.functions.invoke("swap-quote", {
+          body: {
+            action: "quote",
+            chain: fromAsset.chain,
+            srcToken: getTokenAddress(fromAsset),
+            destToken: getTokenAddress(toAsset),
+            amount: amountInBaseUnits,
+            srcDecimals: fromAsset.decimals,
+            destDecimals: toAsset.decimals,
+            slippage: Math.round(slippage * 100), // bps
+          },
+        });
+
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error(data?.error || "Quote failed");
+
+        setQuote({
+          srcAmount: data.data.srcAmount,
+          destAmount: data.data.destAmount,
+          priceImpact: Math.abs(data.data.priceImpact || 0),
+          route: data.data.route || [],
+          provider: data.provider,
+          gasCostUSD: data.data.gasCostUSD,
+          raw: data.data.raw,
+        });
+      } catch (err) {
+        console.error("[SWAP] Quote error:", err);
+        setQuoteError(err instanceof Error ? err.message : "Quote failed");
+        setQuote(null);
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [fromAsset, toAsset, fromAmount, slippage]);
+
+  // Calculated values
   const toAmount = useMemo(() => {
-    const amount = parseFloat(fromAmount) || 0;
-    return (amount * exchangeRate).toFixed(toToken.symbol === "USDC" || toToken.symbol === "USDT" ? 2 : 6);
-  }, [fromAmount, exchangeRate, toToken.symbol]);
+    if (!quote || !toAsset) return "0";
+    const raw = parseFloat(quote.destAmount) / Math.pow(10, toAsset.decimals);
+    return raw.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }, [quote, toAsset]);
 
-  // Calculate price impact based on trade size
-  const priceImpact = useMemo(() => {
-    const amount = parseFloat(fromAmount) || 0;
-    const valueUsd = amount * fromToken.price;
-    // Simulate larger trades having more impact
-    if (valueUsd < 100) return 0.01;
-    if (valueUsd < 1000) return 0.05;
-    if (valueUsd < 10000) return 0.15;
-    if (valueUsd < 50000) return 0.5;
-    return 1.2;
-  }, [fromAmount, fromToken.price]);
+  const toAmountNum = useMemo(() => {
+    if (!quote || !toAsset) return 0;
+    return parseFloat(quote.destAmount) / Math.pow(10, toAsset.decimals);
+  }, [quote, toAsset]);
 
-  // Calculate minimum received with slippage
-  const minimumReceived = useMemo(() => {
-    const amount = parseFloat(toAmount) || 0;
-    return (amount * (1 - slippage / 100)).toFixed(6);
-  }, [toAmount, slippage]);
+  const exchangeRate = useMemo(() => {
+    if (!fromAsset || !toAsset || !quote) return null;
+    const fromAmt = parseFloat(fromAmount) || 1;
+    const rate = toAmountNum / fromAmt;
+    return rate;
+  }, [fromAmount, toAmountNum, fromAsset, toAsset, quote]);
+
+  const fromValueUsd = (parseFloat(fromAmount) || 0) * (fromAsset?.price || 0);
+  const toValueUsd = toAmountNum * (toAsset?.price || 0);
+  const isValidSwap =
+    parseFloat(fromAmount) > 0 &&
+    fromAsset &&
+    toAsset &&
+    parseFloat(fromAmount) <= fromAsset.amount &&
+    quote &&
+    !isLoadingQuote;
 
   const handleSwapTokens = () => {
-    const temp = fromToken;
-    setFromToken(toToken);
-    setToToken(temp);
+    const temp = fromAsset;
+    setFromAsset(toAsset);
+    setToAsset(temp);
     setFromAmount("");
+    setQuote(null);
   };
 
   const handleMaxClick = () => {
-    setFromAmount(fromToken.balance.toString());
+    if (fromAsset) setFromAmount(fromAsset.amount.toString());
   };
 
   const handleSwap = async () => {
     setIsSwapping(true);
-    // Simulate swap transaction
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // For now simulate — real signing will be added next
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsSwapping(false);
     setSwapComplete(true);
   };
@@ -102,17 +217,19 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
   const handleClose = () => {
     setSwapComplete(false);
     setFromAmount("");
+    setQuote(null);
+    setQuoteError(null);
     onOpenChange(false);
   };
 
-  const fromValueUsd = (parseFloat(fromAmount) || 0) * fromToken.price;
-  const toValueUsd = parseFloat(toAmount) * toToken.price;
-  const isValidSwap = parseFloat(fromAmount) > 0 && parseFloat(fromAmount) <= fromToken.balance;
+  const getLogoUrl = (symbol: string) =>
+    `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
 
+  // ===== SUCCESS SCREEN =====
   if (swapComplete) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl bg-background border-border">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -122,30 +239,43 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.2 }}
-              className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center"
+              className="w-20 h-20 rounded-full bg-success/15 flex items-center justify-center"
             >
-              <Zap className="w-10 h-10 text-primary" />
+              <Zap className="w-10 h-10 text-success" />
             </motion.div>
             <div>
               <h3 className="text-2xl font-bold mb-2">Swap Complete!</h3>
               <p className="text-muted-foreground">
-                Swapped {fromAmount} {fromToken.symbol} for {toAmount} {toToken.symbol}
+                Swapped {fromAmount} {fromAsset?.symbol} for {toAmount}{" "}
+                {toAsset?.symbol}
               </p>
             </div>
-            <div className="flex items-center gap-4 bg-card rounded-xl p-4">
+            <div className="flex items-center gap-6 bg-card rounded-2xl p-5 border border-border">
               <div className="text-center">
-                <div className="text-2xl mb-1">{fromToken.icon}</div>
+                <img
+                  src={getLogoUrl(fromAsset?.symbol || "")}
+                  alt=""
+                  className="w-10 h-10 rounded-full mx-auto mb-1"
+                />
                 <div className="font-medium">-{fromAmount}</div>
-                <div className="text-sm text-muted-foreground">{fromToken.symbol}</div>
+                <div className="text-sm text-muted-foreground">
+                  {fromAsset?.symbol}
+                </div>
               </div>
               <ArrowDownUp className="w-5 h-5 text-muted-foreground" />
               <div className="text-center">
-                <div className="text-2xl mb-1">{toToken.icon}</div>
-                <div className="font-medium text-primary">+{toAmount}</div>
-                <div className="text-sm text-muted-foreground">{toToken.symbol}</div>
+                <img
+                  src={getLogoUrl(toAsset?.symbol || "")}
+                  alt=""
+                  className="w-10 h-10 rounded-full mx-auto mb-1"
+                />
+                <div className="font-medium text-success">+{toAmount}</div>
+                <div className="text-sm text-muted-foreground">
+                  {toAsset?.symbol}
+                </div>
               </div>
             </div>
-            <Button onClick={handleClose} className="w-full max-w-xs">
+            <Button onClick={handleClose} className="w-full max-w-xs h-14 text-base">
               Done
             </Button>
           </motion.div>
@@ -154,24 +284,35 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
     );
   }
 
+  // ===== MAIN SWAP UI =====
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+        <SheetContent
+          side="bottom"
+          className="h-[90vh] rounded-t-3xl bg-background border-border"
+        >
           <SheetHeader className="flex flex-row items-center justify-between">
-            <SheetTitle>Swap</SheetTitle>
+            <SheetTitle className="text-xl font-bold">Swap</SheetTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 bg-card border-border" align="end">
+              <PopoverContent
+                className="w-72 bg-card border-border"
+                align="end"
+              >
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Slippage Tolerance</span>
-                      <span className="text-sm text-primary">{slippage}%</span>
+                      <span className="text-sm font-medium">
+                        Slippage Tolerance
+                      </span>
+                      <span className="text-sm text-foreground font-semibold">
+                        {slippage}%
+                      </span>
                     </div>
                     <div className="flex gap-2 mb-3">
                       {[0.1, 0.5, 1.0].map((val) => (
@@ -195,7 +336,8 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                     />
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Your transaction will revert if the price changes unfavorably by more than this percentage.
+                    Your transaction will revert if the price changes
+                    unfavorably by more than this percentage.
                   </div>
                 </div>
               </PopoverContent>
@@ -203,24 +345,37 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
           </SheetHeader>
 
           <div className="mt-6 space-y-2">
-            {/* From Token */}
-            <motion.div
-              className="bg-card rounded-2xl p-4 border border-border"
-              whileTap={{ scale: 0.995 }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">From</span>
-                <span className="text-sm text-muted-foreground">
-                  Balance: {fromToken.balance.toLocaleString()}
+            {/* ===== FROM ===== */}
+            <div className="bg-card rounded-2xl p-4 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                  You Pay
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Balance: {fromAsset?.amount.toLocaleString(undefined, { maximumFractionDigits: 6 }) || "0"}
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowFromSelector(true)}
-                  className="flex items-center gap-2 bg-secondary/50 hover:bg-secondary rounded-xl px-3 py-2 transition-colors"
+                  className="flex items-center gap-2 bg-secondary/60 hover:bg-secondary rounded-xl px-3 py-2.5 transition-colors shrink-0"
                 >
-                  <span className="text-xl">{fromToken.icon}</span>
-                  <span className="font-medium">{fromToken.symbol}</span>
+                  {fromAsset ? (
+                    <>
+                      <img
+                        src={getLogoUrl(fromAsset.symbol)}
+                        alt=""
+                        className="w-6 h-6 rounded-full"
+                      />
+                      <span className="font-semibold text-sm">
+                        {fromAsset.symbol}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      Select
+                    </span>
+                  )}
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
                 <div className="flex-1 text-right">
@@ -229,30 +384,28 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                     placeholder="0.00"
                     value={fromAmount}
                     onChange={(e) => setFromAmount(e.target.value)}
-                    className="border-0 bg-transparent text-right text-2xl font-semibold p-0 h-auto focus-visible:ring-0"
+                    className="border-0 bg-transparent text-right text-2xl font-bold p-0 h-auto focus-visible:ring-0"
                   />
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs text-muted-foreground mt-0.5">
                     ${fromValueUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end mt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-primary h-6 px-2"
+              <div className="flex justify-end mt-1">
+                <button
                   onClick={handleMaxClick}
+                  className="text-xs text-foreground/70 hover:text-foreground font-medium px-2 py-0.5 rounded bg-secondary/40 hover:bg-secondary transition-colors"
                 >
                   MAX
-                </Button>
+                </button>
               </div>
-            </motion.div>
+            </div>
 
-            {/* Swap Button */}
+            {/* ===== SWAP DIRECTION ===== */}
             <div className="flex justify-center -my-4 relative z-10">
               <motion.button
                 onClick={handleSwapTokens}
-                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg"
+                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg border-4 border-background"
                 whileHover={{ scale: 1.1, rotate: 180 }}
                 whileTap={{ scale: 0.9 }}
                 transition={{ type: "spring", stiffness: 400 }}
@@ -261,89 +414,158 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
               </motion.button>
             </div>
 
-            {/* To Token */}
-            <motion.div
-              className="bg-card rounded-2xl p-4 border border-border"
-              whileTap={{ scale: 0.995 }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">To</span>
-                <span className="text-sm text-muted-foreground">
-                  Balance: {toToken.balance.toLocaleString()}
+            {/* ===== TO ===== */}
+            <div className="bg-card rounded-2xl p-4 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                  You Receive
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Balance: {toAsset?.amount.toLocaleString(undefined, { maximumFractionDigits: 6 }) || "0"}
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowToSelector(true)}
-                  className="flex items-center gap-2 bg-secondary/50 hover:bg-secondary rounded-xl px-3 py-2 transition-colors"
+                  className="flex items-center gap-2 bg-secondary/60 hover:bg-secondary rounded-xl px-3 py-2.5 transition-colors shrink-0"
                 >
-                  <span className="text-xl">{toToken.icon}</span>
-                  <span className="font-medium">{toToken.symbol}</span>
+                  {toAsset ? (
+                    <>
+                      <img
+                        src={getLogoUrl(toAsset.symbol)}
+                        alt=""
+                        className="w-6 h-6 rounded-full"
+                      />
+                      <span className="font-semibold text-sm">
+                        {toAsset.symbol}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      Select
+                    </span>
+                  )}
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
                 <div className="flex-1 text-right">
-                  <div className="text-2xl font-semibold">
-                    {parseFloat(toAmount) > 0 ? toAmount : "0.00"}
+                  <div className="text-2xl font-bold">
+                    {isLoadingQuote ? (
+                      <Loader2 className="w-5 h-5 animate-spin inline text-muted-foreground" />
+                    ) : (
+                      toAmount
+                    )}
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs text-muted-foreground mt-0.5">
                     ${toValueUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
-            {/* Swap Details */}
+            {/* ===== QUOTE ERROR ===== */}
+            {quoteError && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 rounded-xl border border-destructive/20">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                <span className="text-xs text-destructive">{quoteError}</span>
+              </div>
+            )}
+
+            {/* ===== SWAP DETAILS ===== */}
             <AnimatePresence>
-              {parseFloat(fromAmount) > 0 && (
+              {quote && parseFloat(fromAmount) > 0 && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="bg-secondary/30 rounded-xl p-4 space-y-3 mt-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span>Exchange Rate</span>
-                        <Info className="w-3.5 h-3.5" />
+                  <div className="bg-card/50 rounded-xl p-4 space-y-2.5 mt-2 border border-border/50">
+                    {/* Rate */}
+                    {exchangeRate && (
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <span>Rate</span>
+                        </div>
+                        <span className="font-medium">
+                          1 {fromAsset?.symbol} ≈{" "}
+                          {exchangeRate.toLocaleString(undefined, {
+                            maximumFractionDigits: 6,
+                          })}{" "}
+                          {toAsset?.symbol}
+                        </span>
                       </div>
-                      <span>
-                        1 {fromToken.symbol} = {exchangeRate.toFixed(6)} {toToken.symbol}
-                      </span>
-                    </div>
+                    )}
+                    {/* Price Impact */}
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <span>Price Impact</span>
-                        <Info className="w-3.5 h-3.5" />
                       </div>
-                      <span className={cn(
-                        priceImpact < 0.1 ? "text-green-500" :
-                        priceImpact < 0.5 ? "text-yellow-500" : "text-red-500"
-                      )}>
-                        {priceImpact.toFixed(2)}%
+                      <span
+                        className={cn(
+                          "font-medium",
+                          quote.priceImpact < 1
+                            ? "text-success"
+                            : quote.priceImpact < 3
+                            ? "text-amber-500"
+                            : "text-destructive"
+                        )}
+                      >
+                        {quote.priceImpact.toFixed(2)}%
                       </span>
                     </div>
+                    {/* Minimum Received */}
                     <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span>Minimum Received</span>
-                        <Info className="w-3.5 h-3.5" />
+                      <span className="text-muted-foreground">
+                        Min. Received
+                      </span>
+                      <span className="font-medium">
+                        {(toAmountNum * (1 - slippage / 100)).toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 6 }
+                        )}{" "}
+                        {toAsset?.symbol}
+                      </span>
+                    </div>
+                    {/* Slippage */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Slippage</span>
+                      <span className="font-medium">{slippage}%</span>
+                    </div>
+                    {/* Provider */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Provider</span>
+                      <span className="font-medium capitalize">
+                        {quote.provider === "jupiter"
+                          ? "Jupiter"
+                          : "ParaSwap"}
+                      </span>
+                    </div>
+                    {/* Route */}
+                    {quote.route.length > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Route</span>
+                        <span className="font-medium text-xs truncate max-w-[180px]">
+                          {quote.route.join(" → ")}
+                        </span>
                       </div>
-                      <span>{minimumReceived} {toToken.symbol}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Slippage Tolerance</span>
-                      <span>{slippage}%</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Network Fee</span>
-                      <span>~$2.50</span>
-                    </div>
+                    )}
+                    {/* Gas */}
+                    {quote.gasCostUSD && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Network Fee
+                        </span>
+                        <span className="font-medium">
+                          ~${parseFloat(quote.gasCostUSD).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Swap Button */}
+            {/* ===== SWAP BUTTON ===== */}
             <motion.div
               className="pt-4"
               initial={{ opacity: 0, y: 20 }}
@@ -353,18 +575,20 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
               <Button
                 onClick={handleSwap}
                 disabled={!isValidSwap || isSwapping}
-                className="w-full h-14 text-lg font-semibold rounded-2xl"
+                className="w-full h-14 text-base font-semibold rounded-2xl"
               >
                 {isSwapping ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full"
-                  />
-                ) : !fromAmount ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : !fromAsset || !toAsset ? (
+                  "Select tokens"
+                ) : !fromAmount || parseFloat(fromAmount) <= 0 ? (
                   "Enter an amount"
-                ) : parseFloat(fromAmount) > fromToken.balance ? (
+                ) : fromAsset && parseFloat(fromAmount) > fromAsset.amount ? (
                   "Insufficient balance"
+                ) : isLoadingQuote ? (
+                  "Fetching quote..."
+                ) : quoteError ? (
+                  "No route available"
                 ) : (
                   "Swap"
                 )}
@@ -375,27 +599,30 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
       </Sheet>
 
       {/* Token Selectors */}
-      <TokenSelector
+      <SwapTokenSelector
         open={showFromSelector}
         onOpenChange={setShowFromSelector}
-        tokens={tokens}
-        selectedToken={fromToken}
-        excludeToken={toToken}
-        onSelect={(token) => {
-          setFromToken(token);
-          setShowFromSelector(false);
+        assets={swappableAssets}
+        selectedAsset={fromAsset}
+        excludeAsset={toAsset}
+        onSelect={(asset) => {
+          setFromAsset(asset);
+          setFromAmount("");
+          setQuote(null);
         }}
+        title="Swap From"
       />
-      <TokenSelector
+      <SwapTokenSelector
         open={showToSelector}
         onOpenChange={setShowToSelector}
-        tokens={tokens}
-        selectedToken={toToken}
-        excludeToken={fromToken}
-        onSelect={(token) => {
-          setToToken(token);
-          setShowToSelector(false);
+        assets={toAssets}
+        selectedAsset={toAsset}
+        excludeAsset={fromAsset}
+        onSelect={(asset) => {
+          setToAsset(asset);
+          setQuote(null);
         }}
+        title="Swap To"
       />
     </>
   );
