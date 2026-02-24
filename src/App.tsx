@@ -9,6 +9,7 @@ import { WalletConnectProvider } from "@/contexts/WalletConnectContext";
 import Index from "./pages/Index";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { AllAssetsPage } from "./pages/AllAssetsPage";
+import AIChatPageRoute from "./pages/AIChatPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -48,6 +49,7 @@ const PAGE_DEPTH: Record<string, number> = {
   "/notifications": 0,
   "/assets": 1,
   "/asset": 2,
+  "/ai-chat": 1,
 };
 
 const AnimatedRoutes = () => {
@@ -69,6 +71,7 @@ const AnimatedRoutes = () => {
         <Routes location={location}>
           <Route path="/" element={<Index />} />
           <Route path="/notifications" element={<Index />} />
+          <Route path="/ai-chat" element={<AIChatPageRoute />} />
           <Route path="/asset" element={<AssetDetailPage />} />
           <Route path="/assets" element={<AllAssetsPage />} />
           <Route path="*" element={<NotFound />} />
