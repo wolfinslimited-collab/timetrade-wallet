@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GITHUB_REPO = "wolfinslimited-collab/relayon";
+const GITHUB_REPO = "wolfinslimited-collab/timetrade-wallet";
 
 const WORKFLOW_MAP: Record<string, string> = {
   android: "build-android.yml",
