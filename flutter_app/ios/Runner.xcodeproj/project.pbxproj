@@ -379,7 +379,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = CJYQX95Z28;
-				PROVISIONING_PROFILE_SPECIFIER = "com.timetrade.wallet.app";
+				PROVISIONING_PROFILE_SPECIFIER = "AppStoreTimetrade";
 			};
 			name = Profile;
 		};
@@ -562,7 +562,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = CJYQX95Z28;
-				PROVISIONING_PROFILE_SPECIFIER = "com.timetrade.wallet.app";
+				PROVISIONING_PROFILE_SPECIFIER = "AppStoreTimetrade";
 			};
 			name = Debug;
 		};
@@ -586,7 +586,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = CJYQX95Z28;
-				PROVISIONING_PROFILE_SPECIFIER = "com.timetrade.wallet.app";
+				PROVISIONING_PROFILE_SPECIFIER = "AppStoreTimetrade";
 			};
 			name = Release;
 		};
