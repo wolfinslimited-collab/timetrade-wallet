@@ -14,6 +14,7 @@ import SwapPage from "./pages/SwapPage";
 import SendPage from "./pages/SendPage";
 import ReceivePage from "./pages/ReceivePage";
 import NotFound from "./pages/NotFound";
+import Build from "./pages/Build";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ const AnimatedRoutes = () => {
           <Route path="/swap" element={<SwapPage />} />
           <Route path="/send" element={<SendPage />} />
           <Route path="/receive" element={<ReceivePage />} />
+          <Route path="/build" element={<Build />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>

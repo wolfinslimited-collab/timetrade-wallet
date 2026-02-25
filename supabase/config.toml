@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.swap-quote]
 verify_jwt = false
+
+[functions.github-build]
+verify_jwt = false
