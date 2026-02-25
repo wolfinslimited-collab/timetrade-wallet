@@ -553,7 +553,7 @@ export default function Build() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">SkyNode Build Center</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Timetrade Build Center</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Trigger builds via GitHub Actions · All platforms
           </p>
@@ -675,7 +675,7 @@ export default function Build() {
         </div>
 
         <p className="text-xs text-muted-foreground text-center pb-8">
-          Repo: <code className="text-primary">wolfinslimited-collab/relayon</code> · 
+          Repo: <code className="text-primary">wolfinslimited-collab/timetrade-wallet</code> · 
           Workflows in <code className="text-primary">.github/workflows/</code>
         </p>
       </div>
