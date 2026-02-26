@@ -14,8 +14,8 @@
 	<string>manual</string>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.timetrade.wallet.app</key>
-		<string>com.timetrade.wallet.app</string>
+		<key>com.wallet.ai</key>
+		<string>com.wallet.ai</string>
 	</dict>
 </dict>
 </plist>
