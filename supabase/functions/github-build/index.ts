@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GITHUB_REPO = "wolfinslimited-collab/timetrade-wallet";
+const DEFAULT_GITHUB_REPO = "wolfinslimited-collab/timetrade-wallet";
 
 const WORKFLOW_MAP: Record<string, string> = {
   android: "build-android.yml",
@@ -62,10 +62,10 @@ async function githubAPI(path: string, token: string, method = "GET", body?: unk
   throw new Error("GitHub API: max retries exceeded");
 }
 
-async function fetchJobLogText(jobId: number, token: string): Promise<string | null> {
+async function fetchJobLogText(jobId: number, token: string, githubRepo: string): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/actions/jobs/${jobId}/logs`,
+      `https://api.github.com/repos/${githubRepo}/actions/jobs/${jobId}/logs`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -112,6 +112,18 @@ function extractFailedStepLogs(fullLog: string, failedStepName: string): string 
   return lines.slice(-150).join("\n");
 }
 
+function sanitizeRepo(repo: string): string {
+  return repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/^\/+|\/+$/g, "");
+}
+
+function toErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return "Unknown error";
+  if (error.message.includes("GitHub API error [404]")) {
+    return `${error.message} — verify the repo slug and that GITHUB_PAT has repo + workflow permissions.`;
+  }
+  return error.message;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -120,6 +132,7 @@ Deno.serve(async (req) => {
   try {
     const GITHUB_PAT = Deno.env.get("GITHUB_PAT");
     if (!GITHUB_PAT) throw new Error("GITHUB_PAT is not configured");
+    const githubRepo = sanitizeRepo(Deno.env.get("GITHUB_REPO") || DEFAULT_GITHUB_REPO);
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -144,8 +157,22 @@ Deno.serve(async (req) => {
 
         const workflow = WORKFLOW_MAP[platform];
         try {
+          const workflows = await githubAPI(
+            `/repos/${githubRepo}/actions/workflows?per_page=100`,
+            GITHUB_PAT
+          ) as { workflows?: Array<{ id: number; name: string; path: string }> };
+
+          const workflowMatch = (workflows.workflows || []).find((w) =>
+            w.path === `.github/workflows/${workflow}` || w.path.endsWith(`/${workflow}`)
+          );
+
+          if (!workflowMatch) {
+            const available = (workflows.workflows || []).map((w) => w.path || w.name).join(", ") || "none";
+            throw new Error(`Workflow ${workflow} not found in ${githubRepo}. Available: ${available}`);
+          }
+
           await githubAPI(
-            `/repos/${GITHUB_REPO}/actions/workflows/${workflow}/dispatches`,
+            `/repos/${githubRepo}/actions/workflows/${workflowMatch.id}/dispatches`,
             GITHUB_PAT,
             "POST",
             {
@@ -198,12 +225,12 @@ Deno.serve(async (req) => {
         const { platform } = body;
         const workflow = platform ? WORKFLOW_MAP[platform] : undefined;
 
-        let path = `/repos/${GITHUB_REPO}/actions/runs?per_page=10`;
+        let path = `/repos/${githubRepo}/actions/runs?per_page=10`;
         if (workflow) {
-          const workflows = await githubAPI(`/repos/${GITHUB_REPO}/actions/workflows`, GITHUB_PAT);
+          const workflows = await githubAPI(`/repos/${githubRepo}/actions/workflows`, GITHUB_PAT);
           const wf = workflows.workflows?.find((w: { path: string }) => w.path === `.github/workflows/${workflow}`);
           if (wf) {
-            path = `/repos/${GITHUB_REPO}/actions/workflows/${wf.id}/runs?per_page=10`;
+            path = `/repos/${githubRepo}/actions/workflows/${wf.id}/runs?per_page=10`;
           }
         }
 
@@ -222,7 +249,7 @@ Deno.serve(async (req) => {
         let artifacts: any[] = [];
         for (let attempt = 0; attempt < 3; attempt++) {
           const artifactsRes = await githubAPI(
-            `/repos/${GITHUB_REPO}/actions/runs/${runId}/artifacts`,
+            `/repos/${githubRepo}/actions/runs/${runId}/artifacts`,
             GITHUB_PAT
           );
           artifacts = artifactsRes.artifacts || [];
@@ -246,7 +273,7 @@ Deno.serve(async (req) => {
 
         const artifact = artifacts.find((a: { name?: string }) => /ipa|ios/i.test(a.name || "")) || artifacts[0];
         const downloadRes = await fetch(
-          `https://api.github.com/repos/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip`,
+          `https://api.github.com/repos/${githubRepo}/actions/artifacts/${artifact.id}/zip`,
           {
             headers: {
               Authorization: `Bearer ${GITHUB_PAT}`,
@@ -299,11 +326,11 @@ Deno.serve(async (req) => {
         if (!runId) {
           const workflow = WORKFLOW_MAP[buildRecord.platform];
           if (workflow) {
-            const workflows = await githubAPI(`/repos/${GITHUB_REPO}/actions/workflows`, GITHUB_PAT);
+            const workflows = await githubAPI(`/repos/${githubRepo}/actions/workflows`, GITHUB_PAT);
             const wf = workflows.workflows?.find((w: { path: string }) => w.path === `.github/workflows/${workflow}`);
             if (wf) {
               const runsRes = await githubAPI(
-                `/repos/${GITHUB_REPO}/actions/workflows/${wf.id}/runs?per_page=5`,
+                `/repos/${githubRepo}/actions/workflows/${wf.id}/runs?per_page=5`,
                 GITHUB_PAT
               );
               const runs = runsRes.workflow_runs || [];
@@ -325,12 +352,12 @@ Deno.serve(async (req) => {
         // If we found a run ID, fetch job details
         if (runId) {
           const jobsRes = await githubAPI(
-            `/repos/${GITHUB_REPO}/actions/runs/${runId}/jobs`,
+            `/repos/${githubRepo}/actions/runs/${runId}/jobs`,
             GITHUB_PAT
           );
 
           const runRes = await githubAPI(
-            `/repos/${GITHUB_REPO}/actions/runs/${runId}`,
+            `/repos/${githubRepo}/actions/runs/${runId}`,
             GITHUB_PAT
           );
 
@@ -363,7 +390,7 @@ Deno.serve(async (req) => {
                   s.conclusion === "failure" && !NON_CRITICAL.some(nc => s.name.includes(nc))
               );
               if (failedStep) {
-                const fullLog = await fetchJobLogText(job.id, GITHUB_PAT);
+                const fullLog = await fetchJobLogText(job.id, GITHUB_PAT, githubRepo);
                 if (fullLog) {
                   jobEntry.failed_step_log = extractFailedStepLogs(fullLog, failedStep.name);
                 }
@@ -446,7 +473,7 @@ Deno.serve(async (req) => {
 
         // Still no run found
         const runsRes = await githubAPI(
-          `/repos/${GITHUB_REPO}/actions/runs?per_page=5`,
+          `/repos/${githubRepo}/actions/runs?per_page=5`,
           GITHUB_PAT
         );
         const recentRuns = runsRes.workflow_runs || [];
@@ -486,7 +513,7 @@ Deno.serve(async (req) => {
           if (runMatch) {
             try {
               await githubAPI(
-                `/repos/${GITHUB_REPO}/actions/runs/${runMatch[1]}/cancel`,
+                `/repos/${githubRepo}/actions/runs/${runMatch[1]}/cancel`,
                 GITHUB_PAT,
                 "POST"
               );
@@ -513,7 +540,7 @@ Deno.serve(async (req) => {
     }
   } catch (error: unknown) {
     console.error("GitHub build error:", error);
-    const msg = error instanceof Error ? error.message : "Unknown error";
+    const msg = toErrorMessage(error);
     return new Response(
       JSON.stringify({ success: false, error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
