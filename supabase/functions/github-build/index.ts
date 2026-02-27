@@ -230,6 +230,65 @@ Deno.serve(async (req) => {
             dispatchMessage.includes("GitHub API error [422]") &&
             dispatchMessage.includes("workflow_dispatch");
 
+          if (isWorkflowDispatch422) {
+            try {
+              // Fallback strategy: rerun the latest completed workflow run for this platform.
+              // This avoids hard dependency on workflow_dispatch when GitHub workflow config is out of sync.
+              const workflows = await githubAPI(
+                `/repos/${githubRepo}/actions/workflows?per_page=100`,
+                GITHUB_PAT
+              ) as { workflows?: Array<{ id: number; name: string; path: string }> };
+
+              const targetWorkflow = WORKFLOW_MAP[platform];
+              const allWorkflows = workflows.workflows || [];
+              const candidates = allWorkflows.filter((w) =>
+                w.path === `.github/workflows/${targetWorkflow}` ||
+                w.path.endsWith(`/${targetWorkflow}`) ||
+                (`${w.name} ${w.path}`).toLowerCase().includes(platform.toLowerCase())
+              );
+
+              for (const candidate of candidates) {
+                const runsRes = await githubAPI(
+                  `/repos/${githubRepo}/actions/workflows/${candidate.id}/runs?per_page=10`,
+                  GITHUB_PAT
+                ) as { workflow_runs?: Array<{ id: number; status: string; html_url: string }> };
+
+                const rerunnable = (runsRes.workflow_runs || []).find((r) => r.status === "completed");
+                if (!rerunnable) continue;
+
+                await githubAPI(
+                  `/repos/${githubRepo}/actions/runs/${rerunnable.id}/rerun`,
+                  GITHUB_PAT,
+                  "POST"
+                );
+
+                await supabase.from("builds").update({
+                  status: "building",
+                  artifact_url: rerunnable.html_url,
+                  error_message: null,
+                }).eq("id", build.id);
+
+                return new Response(
+                  JSON.stringify({
+                    success: true,
+                    fallback: "rerun",
+                    message: "workflow_dispatch unavailable; triggered rerun of latest workflow run instead.",
+                    run_id: rerunnable.id,
+                    run_url: rerunnable.html_url,
+                    build: {
+                      ...build,
+                      status: "building",
+                      artifact_url: rerunnable.html_url,
+                    },
+                  }),
+                  { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+            } catch (fallbackErr) {
+              console.error("Fallback rerun failed:", fallbackErr);
+            }
+          }
+
           await supabase.from("builds").update({
             status: "failed",
             error_message: dispatchMessage,
@@ -242,7 +301,7 @@ Deno.serve(async (req) => {
                 success: false,
                 retryable: false,
                 error: dispatchMessage,
-                hint: "The workflow file in GitHub does not currently expose workflow_dispatch on the default branch. Sync or update .github/workflows/build-ios.yml in the connected GitHub repo, then retry.",
+                hint: "GitHub rejected workflow_dispatch and fallback rerun could not be started. Ensure at least one completed iOS run exists, or sync/update .github/workflows/build-ios.yml in the connected GitHub repo.",
                 build,
               }),
               { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
