@@ -544,15 +544,44 @@ Deno.serve(async (req) => {
             await upsertWorkflowFile(githubRepo, workflow, dispatchRef, workflowContent, GITHUB_PAT);
           }
 
-          // Retry dispatch with increasing delays to allow GitHub to index the workflow
-          const delays = [5000, 8000, 12000];
-          let lastErr: unknown;
+          // Robust dispatch strategy:
+          // 1) Resolve workflow by path and dispatch by numeric ID when possible
+          // 2) Auto-enable workflow when GitHub reports disabled state
+          // 3) On 422 workflow_dispatch errors, re-patch trigger and retry with backoff
+          const delays = [3000, 6000, 10000, 15000, 20000];
+          const workflowPath = `.github/workflows/${workflow}`;
+          let lastErr: unknown = null;
+
+          // Give GitHub a short moment to index a freshly updated workflow file
+          await new Promise((r) => setTimeout(r, 2000));
+
           for (let i = 0; i < delays.length; i++) {
-            await new Promise(r => setTimeout(r, delays[i]));
             try {
-              console.log(`Dispatch attempt ${i + 1} for ${workflow}...`);
+              const workflowsRes = await githubAPI(
+                `/repos/${githubRepo}/actions/workflows`,
+                GITHUB_PAT
+              ) as {
+                workflows?: Array<{ id: number; path?: string; state?: string }>;
+              };
+
+              const wf = (workflowsRes.workflows || []).find((w) => w.path === workflowPath);
+              const workflowRef = wf?.id ? String(wf.id) : workflow;
+
+              if (wf?.state && wf.state.startsWith("disabled")) {
+                console.log(`Workflow ${workflowPath} is ${wf.state}; enabling...`);
+                await githubAPI(
+                  `/repos/${githubRepo}/actions/workflows/${workflowRef}/enable`,
+                  GITHUB_PAT,
+                  "PUT"
+                );
+              }
+
+              console.log(
+                `Dispatch attempt ${i + 1} for ${workflow} via ${wf?.id ? `id ${wf.id}` : "filename"}...`
+              );
+
               await githubAPI(
-                `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
+                `/repos/${githubRepo}/actions/workflows/${workflowRef}/dispatches`,
                 GITHUB_PAT,
                 "POST",
                 {
@@ -561,15 +590,44 @@ Deno.serve(async (req) => {
                 },
                 0 // no internal retries for dispatch
               );
+
               lastErr = null;
               break;
             } catch (err) {
               lastErr = err;
-              const msg = err instanceof Error ? err.message : "";
-              if (!msg.includes("422")) throw err; // only retry 422s
-              console.log(`Dispatch attempt ${i + 1} got 422, retrying...`);
+              const msg = err instanceof Error ? err.message : String(err);
+              const isDispatch422 = msg.includes("GitHub API error [422]") && msg.includes("workflow_dispatch");
+
+              if (isDispatch422) {
+                console.log(`Dispatch attempt ${i + 1} got workflow_dispatch 422; re-validating workflow trigger...`);
+                try {
+                  const patchResult = await ensureWorkflowDispatchTrigger(
+                    githubRepo,
+                    workflow,
+                    dispatchRef,
+                    GITHUB_PAT
+                  );
+                  console.log(patchResult.note);
+                } catch (patchErr) {
+                  console.log(
+                    `Trigger validation failed: ${patchErr instanceof Error ? patchErr.message : String(patchErr)}`
+                  );
+                }
+              } else if (
+                msg.includes("GitHub API error [404]") ||
+                msg.includes("GitHub API error [410]")
+              ) {
+                console.log(`Dispatch attempt ${i + 1} got ${msg.includes("[410]") ? "410" : "404"}; retrying...`);
+              } else {
+                throw err;
+              }
+
+              if (i < delays.length - 1) {
+                await new Promise((r) => setTimeout(r, delays[i]));
+              }
             }
           }
+
           if (lastErr) throw lastErr;
         } catch (dispatchErr) {
           const dispatchMessage = dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed";
