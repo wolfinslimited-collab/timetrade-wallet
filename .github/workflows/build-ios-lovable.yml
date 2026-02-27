@@ -63,4 +63,5 @@ jobs:
 
       - name: Notify build complete
         if: always()
-        run: echo "Build ID: ${{ inputs.build_id }} finished with status ${{ job.status }}"
+        run: |
+          echo "Build ID: ${{ inputs.build_id }} finished with status ${{ job.status }}"

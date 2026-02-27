@@ -86,7 +86,8 @@ jobs:
 
       - name: Notify build complete
         if: always()
-        run: echo "Build ID: ${GH_EXPR} inputs.build_id }} finished with status ${GH_EXPR} job.status }}"
+        run: |
+          echo "Build ID: ${GH_EXPR} inputs.build_id }} finished with status ${GH_EXPR} job.status }}"
 `;
 
 interface BuildRequest {
