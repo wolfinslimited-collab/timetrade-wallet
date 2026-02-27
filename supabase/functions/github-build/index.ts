@@ -202,12 +202,30 @@ Deno.serve(async (req) => {
             );
           }
         } catch (dispatchErr) {
-          // Clean up the orphaned build record
+          const dispatchMessage = dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed";
+          const isWorkflowDispatch422 =
+            dispatchMessage.includes("GitHub API error [422]") &&
+            dispatchMessage.includes("workflow_dispatch");
+
           await supabase.from("builds").update({
             status: "failed",
-            error_message: dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed",
+            error_message: dispatchMessage,
             completed_at: new Date().toISOString(),
           }).eq("id", build.id);
+
+          if (isWorkflowDispatch422) {
+            return new Response(
+              JSON.stringify({
+                success: false,
+                retryable: false,
+                error: dispatchMessage,
+                hint: "The workflow file in GitHub does not currently expose workflow_dispatch on the default branch. Sync or update .github/workflows/build-ios.yml in the connected GitHub repo, then retry.",
+                build,
+              }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
           throw dispatchErr;
         }
 
