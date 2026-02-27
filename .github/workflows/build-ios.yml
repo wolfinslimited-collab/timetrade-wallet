@@ -35,6 +35,23 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
+      - name: Set iOS build number
+        run: |
+          BUILD_NUMBER="${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          INFO_PLIST="ios/App/App/Info.plist"
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFO_PLIST" || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" "$INFO_PLIST"
+
+          if [ -f "$PBXPROJ" ]; then
+            sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBXPROJ"
+          fi
+
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "Configured BUILD_NUMBER=$BUILD_NUMBER"
+          echo "Info.plist CFBundleVersion=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")"
+
       - name: Setup signing assets
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -108,8 +125,11 @@ jobs:
           EXPORTEOF
 
       - name: Build Xcode archive
+        env:
+          BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
         run: |
           cd ios/App
+          BUILD_NUMBER="${BUILD_NUMBER:-$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT}"
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
@@ -119,7 +139,9 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            INFOPLIST_KEY_CFBundleVersion="$BUILD_NUMBER"
 
       - name: Export IPA
         run: |
@@ -144,6 +166,17 @@ jobs:
           mkdir -p ~/private_keys
           echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
           IPA_PATH=$(find $RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
+
+          TMP_UNZIP_DIR=$(mktemp -d)
+          unzip -q "$IPA_PATH" -d "$TMP_UNZIP_DIR"
+          IPA_BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$TMP_UNZIP_DIR/Payload/App.app/Info.plist")
+          echo "IPA CFBundleVersion: $IPA_BUNDLE_VERSION"
+
+          if [ -z "$IPA_BUNDLE_VERSION" ] || [ "$IPA_BUNDLE_VERSION" = "1" ]; then
+            echo "ERROR: IPA has invalid CFBundleVersion ($IPA_BUNDLE_VERSION)."
+            exit 1
+          fi
+
           echo "Uploading IPA: $IPA_PATH"
           xcrun altool --upload-app \
             --type ios \
