@@ -91,14 +91,14 @@ jobs:
           APP_STORE_CONNECT_API_KEY_BASE64: ${GH_EXPR} secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           mkdir -p ~/private_keys
-          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
-          IPA_PATH=$(find flutter_app/build/ios/ipa -name "*.ipa" | head -1)
-          echo "Uploading IPA: $IPA_PATH"
+          echo -n "\$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_\${APP_STORE_CONNECT_API_KEY_ID}.p8
+          IPA_PATH=\$(find flutter_app/build/ios/ipa -name "*.ipa" | head -1)
+          echo "Uploading IPA: \$IPA_PATH"
           xcrun altool --upload-app \\
             --type ios \\
-            --file "$IPA_PATH" \\
-            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \\
-            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+            --file "\$IPA_PATH" \\
+            --apiKey "\$APP_STORE_CONNECT_API_KEY_ID" \\
+            --apiIssuer "\$APP_STORE_CONNECT_ISSUER_ID"
 
       - name: Notify build complete
         if: always()
