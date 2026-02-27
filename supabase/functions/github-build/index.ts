@@ -321,7 +321,15 @@ async function githubAPI(path: string, token: string, method = "GET", body?: unk
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`GitHub API error [${res.status}]: ${text}`);
+        const isServerError = res.status >= 500;
+        if (isServerError && attempt < retries) {
+          console.log(`GitHub API returned ${res.status}, retrying in ${(attempt + 1) * 2}s...`);
+          await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+          continue;
+        }
+        // Truncate HTML responses to avoid massive error messages
+        const truncated = text.length > 300 ? text.substring(0, 300) + '...[truncated]' : text;
+        throw new Error(`GitHub API error [${res.status}]: ${truncated}`);
       }
 
       // 204 No Content for dispatch
