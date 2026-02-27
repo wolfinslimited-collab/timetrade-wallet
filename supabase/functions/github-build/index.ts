@@ -13,6 +13,262 @@ const WORKFLOW_MAP: Record<string, string> = {
   ios: "build-ios.yml",
 };
 
+const WORKFLOW_TEMPLATES: Record<string, string> = {
+  ios: `name: Build iOS (Capacitor)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Add iOS platform
+        run: npx cap add ios || true
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Setup signing assets
+        env:
+          BUILD_CERTIFICATE_BASE64: \${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: \${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: \${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        run: |
+          CERT_PATH=\$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=\$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=\$RUNNER_TEMP/app-signing.keychain-db
+          PROFILE_PLIST=\$RUNNER_TEMP/profile.plist
+
+          echo -n "\$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "\$CERT_PATH"
+          echo -n "\$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "\$PP_PATH"
+
+          security cms -D -i "\$PP_PATH" > "\$PROFILE_PLIST"
+          PROFILE_NAME=\$(/usr/libexec/PlistBuddy -c "Print :Name" "\$PROFILE_PLIST")
+          PROFILE_UUID=\$(/usr/libexec/PlistBuddy -c "Print :UUID" "\$PROFILE_PLIST")
+          TEAM_ID=\$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "\$PROFILE_PLIST")
+          BUNDLE_ID=\$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "\$PROFILE_PLIST" | sed "s/^\${TEAM_ID}\\\\.//" )
+
+          echo "Profile Name: \$PROFILE_NAME"
+          echo "Profile UUID: \$PROFILE_UUID"
+          echo "Team ID: \$TEAM_ID"
+          echo "Bundle ID: \$BUNDLE_ID"
+
+          security create-keychain -p "\$P12_PASSWORD" "\$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "\$KEYCHAIN_PATH"
+          security unlock-keychain -p "\$P12_PASSWORD" "\$KEYCHAIN_PATH"
+          security import "\$CERT_PATH" -P "\$P12_PASSWORD" -A -t cert -f pkcs12 -k "\$KEYCHAIN_PATH"
+          security list-keychain -d user -s "\$KEYCHAIN_PATH"
+
+          mkdir -p "\$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "\$PP_PATH" "\$HOME/Library/MobileDevice/Provisioning Profiles/\$PROFILE_UUID.mobileprovision"
+
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          if [ -f "\$PBXPROJ" ]; then
+            sed -i '' "s/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g" "\$PBXPROJ"
+            sed -i '' "s/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = \$TEAM_ID;/g" "\$PBXPROJ"
+            sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = \\"\$PROFILE_NAME\\";/g" "\$PBXPROJ"
+            if ! grep -q "PROVISIONING_PROFILE_SPECIFIER" "\$PBXPROJ"; then
+              sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\\n\\t\\t\\t\\tPROVISIONING_PROFILE_SPECIFIER = \\"\$PROFILE_NAME\\";/g" "\$PBXPROJ"
+            fi
+          fi
+
+          cat > ios/App/ExportOptions.plist << EXPORTEOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>\$TEAM_ID</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>\$BUNDLE_ID</key>
+              <string>\$PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EXPORTEOF
+
+      - name: Build Xcode archive
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \\
+            -scheme App \\
+            -sdk iphoneos \\
+            -configuration Release \\
+            -archivePath \$RUNNER_TEMP/App.xcarchive \\
+            archive \\
+            CODE_SIGN_STYLE=Manual \\
+            DEVELOPMENT_TEAM=\$(security cms -D -i \$RUNNER_TEMP/build_pp.mobileprovision | /usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /dev/stdin)
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \\
+            -archivePath \$RUNNER_TEMP/App.xcarchive \\
+            -exportOptionsPlist ios/App/ExportOptions.plist \\
+            -exportPath \$RUNNER_TEMP/ipa-output
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-\${{ github.run_id }}
+          path: \${{ runner.temp }}/ipa-output/*.ipa
+          if-no-files-found: error
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: \${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: \${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: \${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo -n "\$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_\${APP_STORE_CONNECT_API_KEY_ID}.p8
+          IPA_PATH=\$(find \$RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
+          echo "Uploading IPA: \$IPA_PATH"
+          xcrun altool --upload-app \\
+            --type ios \\
+            --file "\$IPA_PATH" \\
+            --apiKey "\$APP_STORE_CONNECT_API_KEY_ID" \\
+            --apiIssuer "\$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Notify build complete
+        if: always()
+        run: echo "Build ID: \${{ inputs.build_id }} finished with status \${{ job.status }}"
+`,
+  android: `name: Build Android (Capacitor)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Add Android platform
+        run: npx cap add android || true
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Setup signing
+        env:
+          ANDROID_KEYSTORE_BASE64: \${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "\$ANDROID_KEYSTORE_BASE64" ]; then
+            echo -n "\$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            cat > android/key.properties << KEYEOF
+          storeFile=release.keystore
+          storePassword=\$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=\$ANDROID_KEY_ALIAS
+          keyPassword=\$ANDROID_KEY_PASSWORD
+          KEYEOF
+            GRADLE_FILE="android/app/build.gradle"
+            if [ -f "\$GRADLE_FILE" ] && ! grep -q "signingConfigs" "\$GRADLE_FILE"; then
+              sed -i '/android {/a\\
+          \\n    signingConfigs {\\n        release {\\n            def keystorePropertiesFile = rootProject.file("key.properties")\\n            def keystoreProperties = new Properties()\\n            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\\n            storeFile file(keystoreProperties["storeFile"])\\n            storePassword keystoreProperties["storePassword"]\\n            keyAlias keystoreProperties["keyAlias"]\\n            keyPassword keystoreProperties["keyPassword"]\\n        }\\n    }' "\$GRADLE_FILE"
+              sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' "\$GRADLE_FILE"
+            fi
+          else
+            echo "No signing keystore provided, building debug APK"
+          fi
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          if [ -f "key.properties" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
+
+      - name: Build AAB (for Play Store)
+        run: |
+          cd android
+          if [ -f "key.properties" ]; then
+            ./gradlew bundleRelease
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-\${{ github.run_id }}
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        if: \${{ hashFiles('android/app/build/outputs/bundle/release/*.aab') != '' }}
+        with:
+          name: android-aab-\${{ github.run_id }}
+          path: android/app/build/outputs/bundle/release/*.aab
+
+      - name: Notify build complete
+        if: always()
+        run: echo "Build ID: \${{ inputs.build_id }} finished with status \${{ job.status }}"
+`,
+};
+
 function getWorkflowForPlatform(platform: string): string {
   return WORKFLOW_MAP[platform];
 }
@@ -281,11 +537,13 @@ Deno.serve(async (req) => {
         const dispatchRef = repoInfo.default_branch || "main";
 
         try {
-          // Try to ensure workflow_dispatch trigger exists
-          try {
-            await ensureWorkflowDispatchTrigger(githubRepo, workflow, dispatchRef, GITHUB_PAT);
-          } catch (repairErr) {
-            console.warn(`Could not auto-repair ${workflow}:`, repairErr);
+          // Force-push the correct Capacitor workflow YAML to ensure it's up to date
+          const workflowContent = WORKFLOW_TEMPLATES[platform];
+          if (workflowContent) {
+            console.log(`Ensuring ${workflow} is up-to-date on ${dispatchRef}...`);
+            await upsertWorkflowFile(githubRepo, workflow, dispatchRef, workflowContent, GITHUB_PAT);
+            // Wait for GitHub to index the updated workflow
+            await new Promise(r => setTimeout(r, 3000));
           }
 
           // Dispatch the workflow
