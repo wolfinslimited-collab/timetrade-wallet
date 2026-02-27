@@ -50,10 +50,6 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/AppStoreTimetrade.mobileprovision"
 
-          # Force manual signing so Xcode uses our installed profile
-          sed -i '' "s/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g" flutter_app/ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = \"AppStoreTimetrade\";/g" flutter_app/ios/Runner.xcodeproj/project.pbxproj
-
       - name: Build IPA
         working-directory: flutter_app
         run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
