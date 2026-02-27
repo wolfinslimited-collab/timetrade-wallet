@@ -541,6 +541,7 @@ export default function Build() {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Failed to trigger build");
       toast.success(`${PLATFORM_META[platform].label} build triggered on GitHub Actions!`);
+      loadBuilds();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to trigger build";
       toast.error(msg);
