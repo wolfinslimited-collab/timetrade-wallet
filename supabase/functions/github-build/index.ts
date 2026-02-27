@@ -156,6 +156,8 @@ Deno.serve(async (req) => {
         if (insertError) throw new Error(`Failed to create build: ${insertError.message}`);
 
         const workflow = WORKFLOW_MAP[platform];
+        const repoInfo = await githubAPI(`/repos/${githubRepo}`, GITHUB_PAT) as { default_branch?: string };
+        const dispatchRef = repoInfo.default_branch || "main";
         try {
           const workflows = await githubAPI(
             `/repos/${githubRepo}/actions/workflows?per_page=100`,
@@ -177,7 +179,7 @@ Deno.serve(async (req) => {
               GITHUB_PAT,
               "POST",
               {
-                ref: "main",
+                ref: dispatchRef,
                 inputs: { build_id: build.id },
               }
             );
@@ -196,7 +198,7 @@ Deno.serve(async (req) => {
               GITHUB_PAT,
               "POST",
               {
-                ref: "main",
+                ref: dispatchRef,
                 inputs: { build_id: build.id },
               }
             );
