@@ -171,15 +171,36 @@ Deno.serve(async (req) => {
             throw new Error(`Workflow ${workflow} not found in ${githubRepo}. Available: ${available}`);
           }
 
-          await githubAPI(
-            `/repos/${githubRepo}/actions/workflows/${workflowMatch.id}/dispatches`,
-            GITHUB_PAT,
-            "POST",
-            {
-              ref: "main",
-              inputs: { build_id: build.id },
-            }
-          );
+          try {
+            await githubAPI(
+              `/repos/${githubRepo}/actions/workflows/${workflowMatch.id}/dispatches`,
+              GITHUB_PAT,
+              "POST",
+              {
+                ref: "main",
+                inputs: { build_id: build.id },
+              }
+            );
+          } catch (dispatchError) {
+            const message = dispatchError instanceof Error ? dispatchError.message : String(dispatchError);
+            const isWorkflowDispatch422 =
+              message.includes("GitHub API error [422]") &&
+              message.includes("workflow_dispatch");
+
+            if (!isWorkflowDispatch422) throw dispatchError;
+
+            // Fallback: dispatch by workflow filename to avoid stale/incorrect workflow IDs.
+            // GitHub API accepts a workflow file name here (e.g. build-ios.yml).
+            await githubAPI(
+              `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
+              GITHUB_PAT,
+              "POST",
+              {
+                ref: "main",
+                inputs: { build_id: build.id },
+              }
+            );
+          }
         } catch (dispatchErr) {
           // Clean up the orphaned build record
           await supabase.from("builds").update({
