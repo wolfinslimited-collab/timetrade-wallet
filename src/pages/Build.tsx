@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type Platform = "android" | "ios";
+type Platform = "android" | "ios" | "flutter_android" | "flutter_ios";
 type BuildStatus = "pending" | "provisioning" | "building" | "uploading" | "completed" | "failed";
 
 interface Build {
@@ -33,6 +33,8 @@ interface BuildStep {
 const PLATFORM_META: Record<Platform, { label: string; icon: typeof Monitor; color: string; desc: string }> = {
   android: { label: "Android APK/AAB", icon: Smartphone, color: "text-green-400", desc: "Capacitor · GitHub Actions · ubuntu-latest" },
   ios: { label: "iOS IPA", icon: Apple, color: "text-gray-300", desc: "Capacitor · GitHub Actions · macos-latest" },
+  flutter_android: { label: "Flutter Android", icon: Smartphone, color: "text-emerald-400", desc: "Flutter · GitHub Actions · ubuntu-latest" },
+  flutter_ios: { label: "Flutter iOS", icon: Apple, color: "text-blue-300", desc: "Flutter · GitHub Actions · macos-latest" },
 };
 
 const STATUS_META: Record<BuildStatus, { label: string; color: string; spinning: boolean }> = {
@@ -58,6 +60,18 @@ const MANUAL_STEPS: Record<Platform, BuildStep[]> = {
     { title: "Add iOS platform", command: "npx cap add ios" },
     { title: "Sync Capacitor", command: "npx cap sync ios" },
     { title: "Run on device/simulator", command: "npx cap run ios", note: "Requires Mac with Xcode" },
+  ],
+  flutter_android: [
+    { title: "Navigate to Flutter app", command: "cd flutter_app" },
+    { title: "Install dependencies", command: "flutter pub get" },
+    { title: "Build debug APK", command: "flutter build apk --debug" },
+    { title: "Build release APK", command: "flutter build apk --release", note: "Requires signing keystore for release" },
+    { title: "Build AAB (Play Store)", command: "flutter build appbundle --release", note: "Requires signing keystore" },
+  ],
+  flutter_ios: [
+    { title: "Navigate to Flutter app", command: "cd flutter_app" },
+    { title: "Install dependencies", command: "flutter pub get" },
+    { title: "Build iOS", command: "flutter build ipa --release", note: "Requires Mac with Xcode and signing certificates" },
   ],
 };
 
@@ -554,11 +568,12 @@ export default function Build() {
         <Separator className="bg-border/30" />
 
         {/* Build Triggers */}
+        {/* Capacitor Builds */}
         <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Github className="w-4 h-4" />
-              Cloud Builds
+              Capacitor Builds
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -592,7 +607,51 @@ export default function Build() {
 
             <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <Info className="w-3 h-3 mt-0.5 shrink-0" />
-              Builds use Capacitor to wrap the React app as native iOS/Android. iOS requires signing secrets configured in GitHub.
+              Wraps the React web app as native iOS/Android via Capacitor. iOS requires signing secrets in GitHub.
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Flutter Builds */}
+        <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Github className="w-4 h-4" />
+              Flutter Builds
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(["flutter_ios", "flutter_android"] as Platform[]).map((p) => {
+                const meta = PLATFORM_META[p];
+                const Icon = meta.icon;
+                const isTriggering = triggering === p;
+
+                return (
+                  <Button
+                    key={p}
+                    variant="outline"
+                    className="h-auto py-4 flex-col gap-1.5"
+                    onClick={() => triggerBuild(p)}
+                    disabled={isTriggering}
+                  >
+                    {isTriggering ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Icon className={`w-5 h-5 ${meta.color}`} />
+                    )}
+                    <span className="text-xs font-medium">
+                      {isTriggering ? "Triggering..." : `Build ${meta.label}`}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{meta.desc}</span>
+                  </Button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Info className="w-3 h-3 mt-0.5 shrink-0" />
+              Native Flutter app builds from <code className="text-primary">flutter_app/</code>. iOS requires signing secrets + TestFlight credentials in GitHub.
             </div>
           </CardContent>
         </Card>
@@ -631,7 +690,7 @@ export default function Build() {
         <div>
           <h2 className="text-lg font-semibold mb-3">Manual Build Commands</h2>
           <div className="space-y-3">
-            {(["ios", "android"] as Platform[]).map((p) => {
+            {(["ios", "android", "flutter_ios", "flutter_android"] as Platform[]).map((p) => {
               const meta = PLATFORM_META[p];
               const Icon = meta.icon;
               const isOpen = showManual === p;
@@ -668,7 +727,7 @@ export default function Build() {
 
         <p className="text-xs text-muted-foreground text-center pb-8">
           Repo: <code className="text-primary">wolfinslimited-collab/timetrade-wallet</code> · 
-          Capacitor · <code className="text-primary">.github/workflows/</code>
+          Capacitor + Flutter · <code className="text-primary">.github/workflows/</code>
         </p>
       </div>
     </div>
