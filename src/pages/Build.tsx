@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type Platform = "macos" | "android" | "ios";
+type Platform = "android" | "ios";
 type BuildStatus = "pending" | "provisioning" | "building" | "uploading" | "completed" | "failed";
 
 interface Build {
@@ -31,9 +31,8 @@ interface BuildStep {
 }
 
 const PLATFORM_META: Record<Platform, { label: string; icon: typeof Monitor; color: string; desc: string }> = {
-  macos: { label: "macOS DMG", icon: Monitor, color: "text-blue-400", desc: "GitHub Actions · macos-latest" },
-  android: { label: "Android APK", icon: Smartphone, color: "text-green-400", desc: "GitHub Actions · ubuntu-latest" },
-  ios: { label: "iOS Build", icon: Apple, color: "text-gray-300", desc: "GitHub Actions · macos-latest" },
+  android: { label: "Android APK/AAB", icon: Smartphone, color: "text-green-400", desc: "Capacitor · GitHub Actions · ubuntu-latest" },
+  ios: { label: "iOS IPA", icon: Apple, color: "text-gray-300", desc: "Capacitor · GitHub Actions · macos-latest" },
 };
 
 const STATUS_META: Record<BuildStatus, { label: string; color: string; spinning: boolean }> = {
@@ -46,24 +45,19 @@ const STATUS_META: Record<BuildStatus, { label: string; color: string; spinning:
 };
 
 const MANUAL_STEPS: Record<Platform, BuildStep[]> = {
-  macos: [
-    { title: "Navigate to project", command: "cd flutter_app" },
-    { title: "Install dependencies", command: "flutter pub get" },
-    { title: "Build Rust core", command: "./scripts/build_rust.sh macos", note: "Only if Rust source changed" },
-    { title: "Build release", command: "flutter build macos --release" },
-    { title: "Generate DMG", command: "./scripts/build_macos_dmg.sh" },
-  ],
   android: [
-    { title: "Navigate to project", command: "cd flutter_app" },
-    { title: "Install dependencies", command: "flutter pub get" },
-    { title: "Build release APK", command: "flutter build apk --release" },
-    { title: "Build App Bundle", command: "flutter build appbundle --release", note: "For Play Store" },
+    { title: "Install dependencies", command: "npm install" },
+    { title: "Build web app", command: "npm run build" },
+    { title: "Add Android platform", command: "npx cap add android" },
+    { title: "Sync Capacitor", command: "npx cap sync android" },
+    { title: "Run on device/emulator", command: "npx cap run android", note: "Requires Android Studio" },
   ],
   ios: [
-    { title: "Navigate to project", command: "cd flutter_app" },
-    { title: "Install dependencies", command: "flutter pub get" },
-    { title: "Install CocoaPods", command: "cd ios && pod install && cd .." },
-    { title: "Archive IPA", command: "flutter build ipa --export-options-plist=ios/ExportOptions.plist" },
+    { title: "Install dependencies", command: "npm install" },
+    { title: "Build web app", command: "npm run build" },
+    { title: "Add iOS platform", command: "npx cap add ios" },
+    { title: "Sync Capacitor", command: "npx cap sync ios" },
+    { title: "Run on device/simulator", command: "npx cap run ios", note: "Requires Mac with Xcode" },
   ],
 };
 
@@ -119,7 +113,7 @@ interface JobLog {
 }
 
 function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFixTriggered?: () => void; onCancelled?: () => void }) {
-  const meta = PLATFORM_META[build.platform];
+  const meta = PLATFORM_META[build.platform] || { label: build.platform, icon: Monitor, color: "text-muted-foreground", desc: "" };
   const statusMeta = STATUS_META[build.status];
   const Icon = meta.icon;
   const [downloading, setDownloading] = useState(false);
@@ -185,14 +179,12 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
     if (next && !logs) fetchLogs();
   }
 
-  // Auto-poll when logs are visible and build is active
   useEffect(() => {
     if (!showLogs || !isActive) return;
     const interval = setInterval(fetchLogs, 8000);
     return () => clearInterval(interval);
   }, [showLogs, isActive, build.id]);
 
-  // Auto-expand logs for active builds
   useEffect(() => {
     if (isActive && !showLogs) {
       setShowLogs(true);
@@ -200,7 +192,6 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
     }
   }, []);
 
-  // Auto-fix polling: monitor fix-spawned builds and re-trigger if they fail
   useEffect(() => {
     if (!autoFixState) return;
     const { newBuildId, iteration, maxIterations } = autoFixState;
@@ -556,7 +547,7 @@ export default function Build() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Timetrade Build Center</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Trigger builds via GitHub Actions · All platforms
+            Capacitor builds via GitHub Actions · iOS & Android
           </p>
         </div>
 
@@ -571,8 +562,8 @@ export default function Build() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(["android", "macos", "ios"] as Platform[]).map((p) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(["ios", "android"] as Platform[]).map((p) => {
                 const meta = PLATFORM_META[p];
                 const Icon = meta.icon;
                 const isTriggering = triggering === p;
@@ -601,7 +592,7 @@ export default function Build() {
 
             <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <Info className="w-3 h-3 mt-0.5 shrink-0" />
-              Builds run on GitHub Actions. macOS/iOS use macos-latest runners. Artifacts available for 30 days.
+              Builds use Capacitor to wrap the React app as native iOS/Android. iOS requires signing secrets configured in GitHub.
             </div>
           </CardContent>
         </Card>
@@ -640,7 +631,7 @@ export default function Build() {
         <div>
           <h2 className="text-lg font-semibold mb-3">Manual Build Commands</h2>
           <div className="space-y-3">
-            {(["android", "macos", "ios"] as Platform[]).map((p) => {
+            {(["ios", "android"] as Platform[]).map((p) => {
               const meta = PLATFORM_META[p];
               const Icon = meta.icon;
               const isOpen = showManual === p;
@@ -677,7 +668,7 @@ export default function Build() {
 
         <p className="text-xs text-muted-foreground text-center pb-8">
           Repo: <code className="text-primary">wolfinslimited-collab/timetrade-wallet</code> · 
-          Workflows in <code className="text-primary">.github/workflows/</code>
+          Capacitor · <code className="text-primary">.github/workflows/</code>
         </p>
       </div>
     </div>

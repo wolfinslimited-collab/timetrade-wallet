@@ -1,0 +1,103 @@
+name: Build Android (Capacitor)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Add Android platform
+        run: npx cap add android || true
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Setup signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            cat > android/key.properties << EOF
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+            # Inject signing config into build.gradle
+            GRADLE_FILE="android/app/build.gradle"
+            if [ -f "$GRADLE_FILE" ] && ! grep -q "signingConfigs" "$GRADLE_FILE"; then
+              sed -i '/android {/a\
+          \n    signingConfigs {\n        release {\n            def keystorePropertiesFile = rootProject.file("key.properties")\n            def keystoreProperties = new Properties()\n            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n        }\n    }' "$GRADLE_FILE"
+              sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' "$GRADLE_FILE"
+            fi
+          else
+            echo "No signing keystore provided, building debug APK"
+          fi
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          if [ -f "key.properties" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
+
+      - name: Build AAB (for Play Store)
+        run: |
+          cd android
+          if [ -f "key.properties" ]; then
+            ./gradlew bundleRelease
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ github.run_id }}
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('android/app/build/outputs/bundle/release/*.aab') != '' }}
+        with:
+          name: android-aab-${{ github.run_id }}
+          path: android/app/build/outputs/bundle/release/*.aab
+
+      - name: Notify build complete
+        if: always()
+        run: echo "Build ID: ${{ inputs.build_id }} finished with status ${{ job.status }}"
