@@ -9,6 +9,8 @@ on:
         type: string
   repository_dispatch:
     types: [build_ios]
+  repository_dispatch:
+    types: [build_ios]
 
 jobs:
   build-ios:
