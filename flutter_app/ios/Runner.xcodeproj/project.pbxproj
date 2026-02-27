@@ -380,7 +380,7 @@
 			CODE_SIGN_STYLE = Manual;
 				CODE_SIGN_IDENTITY = "iPhone Distribution";
 				DEVELOPMENT_TEAM = CJYQX95Z28;
-				PROVISIONING_PROFILE_SPECIFIER = "AppStoreTimetrade";
+				PROVISIONING_PROFILE_SPECIFIER = "com.wallet.ai";
 			};
 			name = Profile;
 		};
@@ -564,7 +564,7 @@
 			CODE_SIGN_STYLE = Manual;
 				CODE_SIGN_IDENTITY = "iPhone Distribution";
 				DEVELOPMENT_TEAM = CJYQX95Z28;
-				PROVISIONING_PROFILE_SPECIFIER = "AppStoreTimetrade";
+				PROVISIONING_PROFILE_SPECIFIER = "com.wallet.ai";
 			};
 			name = Debug;
 		};
@@ -589,7 +589,7 @@
 			CODE_SIGN_STYLE = Manual;
 				CODE_SIGN_IDENTITY = "iPhone Distribution";
 				DEVELOPMENT_TEAM = CJYQX95Z28;
-				PROVISIONING_PROFILE_SPECIFIER = "AppStoreTimetrade";
+				PROVISIONING_PROFILE_SPECIFIER = "com.wallet.ai";
 			};
 			name = Release;
 		};
