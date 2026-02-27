@@ -33,20 +33,7 @@ jobs:
         run: npx cap add ios || true
 
       - name: Sync Capacitor
-        run: |
-          npx cap sync ios
-          BUILD_NUMBER=${{ github.run_number }}
-          INFO_PLIST="ios/App/App/Info.plist"
-          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
-
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFO_PLIST" \
-            || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" "$INFO_PLIST"
-
-          if [ -f "$PBXPROJ" ]; then
-            sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBXPROJ"
-          fi
-
-          echo "Set CFBundleVersion/CURRENT_PROJECT_VERSION to $BUILD_NUMBER"
+        run: npx cap sync ios
 
       - name: Setup signing assets
         env:
