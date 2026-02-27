@@ -169,7 +169,9 @@ jobs:
 
       - name: Notify build complete
         if: always()
-        run: echo "Build ID: \${{ inputs.build_id }} finished with status \${{ job.status }}"
+        run: |
+          BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
+          echo "Build ID \$BUILD_ID finished with status \${{ job.status }}"
 `,
   android: `name: Build Android (Capacitor)
 
@@ -274,7 +276,9 @@ jobs:
 
       - name: Notify build complete
         if: always()
-        run: echo "Build ID: \${{ inputs.build_id }} finished with status \${{ job.status }}"
+        run: |
+          BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
+          echo "Build ID \$BUILD_ID finished with status \${{ job.status }}"
 `,
 };
 
