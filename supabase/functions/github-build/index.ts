@@ -57,21 +57,34 @@ jobs:
           P12_PASSWORD: ${GH_EXPR} secrets.P12_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${GH_EXPR} secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
-          CERT_PATH=$RUNNER_TEMP/build_certificate.p12
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          CERT_PATH=\\$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=\\$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=\\$RUNNER_TEMP/app-signing.keychain-db
+          PROFILE_PLIST=\\$RUNNER_TEMP/profile.plist
 
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+          echo -n "\\$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "\\$CERT_PATH"
+          echo -n "\\$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "\\$PP_PATH"
 
-          security create-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security cms -D -i "\\$PP_PATH" > "\\$PROFILE_PLIST"
+          PROFILE_NAME=\\$(/usr/libexec/PlistBuddy -c "Print :Name" "\\$PROFILE_PLIST")
+          PROFILE_UUID=\\$(/usr/libexec/PlistBuddy -c "Print :UUID" "\\$PROFILE_PLIST")
 
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/AppStoreTimetrade.mobileprovision"
+          echo "Provisioning profile name: \\$PROFILE_NAME"
+          echo "Provisioning profile UUID: \\$PROFILE_UUID"
+
+          security create-keychain -p "\\$P12_PASSWORD" "\\$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "\\$KEYCHAIN_PATH"
+          security unlock-keychain -p "\\$P12_PASSWORD" "\\$KEYCHAIN_PATH"
+          security import "\\$CERT_PATH" -P "\\$P12_PASSWORD" -A -t cert -f pkcs12 -k "\\$KEYCHAIN_PATH"
+          security list-keychain -d user -s "\\$KEYCHAIN_PATH"
+
+          mkdir -p "\\$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "\\$PP_PATH" "\\$HOME/Library/MobileDevice/Provisioning Profiles/\\$PROFILE_UUID.mobileprovision"
+
+          /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.wallet.ai \\$PROFILE_NAME" flutter_app/ios/ExportOptions.plist
+
+          sed -i '' "s/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g" flutter_app/ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = \\"\\$PROFILE_NAME\\";/g" flutter_app/ios/Runner.xcodeproj/project.pbxproj
 
       - name: Build IPA
         working-directory: flutter_app
@@ -91,14 +104,14 @@ jobs:
           APP_STORE_CONNECT_API_KEY_BASE64: ${GH_EXPR} secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           mkdir -p ~/private_keys
-          echo -n "\$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_\${APP_STORE_CONNECT_API_KEY_ID}.p8
-          IPA_PATH=\$(find flutter_app/build/ios/ipa -name "*.ipa" | head -1)
-          echo "Uploading IPA: \$IPA_PATH"
+          echo -n "\\$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_\\${APP_STORE_CONNECT_API_KEY_ID}.p8
+          IPA_PATH=\\$(find flutter_app/build/ios/ipa -name "*.ipa" | head -1)
+          echo "Uploading IPA: \\$IPA_PATH"
           xcrun altool --upload-app \\
             --type ios \\
-            --file "\$IPA_PATH" \\
-            --apiKey "\$APP_STORE_CONNECT_API_KEY_ID" \\
-            --apiIssuer "\$APP_STORE_CONNECT_ISSUER_ID"
+            --file "\\$IPA_PATH" \\
+            --apiKey "\\$APP_STORE_CONNECT_API_KEY_ID" \\
+            --apiIssuer "\\$APP_STORE_CONNECT_ISSUER_ID"
 
       - name: Notify build complete
         if: always()
