@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.f490c70078524355b9ac697a3479cf03',
+  appId: 'com.wallet.ai',
   appName: 'timetrade-wallet',
   webDir: 'dist',
   server: {
