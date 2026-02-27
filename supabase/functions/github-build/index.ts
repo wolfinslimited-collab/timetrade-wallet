@@ -13,6 +13,11 @@ const WORKFLOW_MAP: Record<string, string> = {
   ios: "build-ios.yml",
 };
 
+const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
+  android: "build_android",
+  ios: "build_ios",
+};
+
 const WORKFLOW_TEMPLATES: Record<string, string> = {
   ios: `name: Build iOS (Capacitor)
 
@@ -23,6 +28,8 @@ on:
         description: "Build record ID from Build Center"
         required: true
         type: string
+  repository_dispatch:
+    types: [build_ios]
 
 jobs:
   build-ios:
@@ -173,6 +180,8 @@ on:
         description: "Build record ID from Build Center"
         required: true
         type: string
+  repository_dispatch:
+    types: [build_android]
 
 jobs:
   build-android:
@@ -271,6 +280,10 @@ jobs:
 
 function getWorkflowForPlatform(platform: string): string {
   return WORKFLOW_MAP[platform];
+}
+
+function getRepositoryDispatchEventForPlatform(platform: string): string {
+  return REPOSITORY_DISPATCH_EVENT_MAP[platform];
 }
 
 const GH_EXPR = "${{";
@@ -548,12 +561,12 @@ Deno.serve(async (req) => {
           // 1) Resolve workflow by path and dispatch by numeric ID when possible
           // 2) Auto-enable workflow when GitHub reports disabled state
           // 3) On 422 workflow_dispatch errors, re-patch trigger and retry with backoff
-          const delays = [3000, 6000, 10000, 15000, 20000];
+          const delays = [1500, 3000];
           const workflowPath = `.github/workflows/${workflow}`;
           let lastErr: unknown = null;
 
-          // Give GitHub a short moment to index a freshly updated workflow file
-          await new Promise((r) => setTimeout(r, 2000));
+          // Small indexing grace period
+          await new Promise((r) => setTimeout(r, 1000));
 
           for (let i = 0; i < delays.length; i++) {
             try {
@@ -625,6 +638,35 @@ Deno.serve(async (req) => {
               if (i < delays.length - 1) {
                 await new Promise((r) => setTimeout(r, delays[i]));
               }
+            }
+          }
+
+          if (lastErr) {
+            const lastMessage = lastErr instanceof Error ? lastErr.message : String(lastErr);
+            const isDispatch422 =
+              lastMessage.includes("GitHub API error [422]") &&
+              lastMessage.includes("workflow_dispatch");
+
+            if (isDispatch422) {
+              const eventType = getRepositoryDispatchEventForPlatform(platform);
+              console.log(`workflow_dispatch kept failing; falling back to repository_dispatch (${eventType})...`);
+
+              await githubAPI(
+                `/repos/${githubRepo}/dispatches`,
+                GITHUB_PAT,
+                "POST",
+                {
+                  event_type: eventType,
+                  client_payload: {
+                    build_id: build.id,
+                    platform,
+                    ref: dispatchRef,
+                  },
+                },
+                0
+              );
+
+              lastErr = null;
             }
           }
 
