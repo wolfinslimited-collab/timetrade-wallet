@@ -15,7 +15,7 @@
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>com.wallet.ai</key>
-		<string>com.wallet.ai</string>
+		<string>AppStoreTimetrade</string>
 	</dict>
 </dict>
 </plist>
