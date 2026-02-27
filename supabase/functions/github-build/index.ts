@@ -432,7 +432,7 @@ Deno.serve(async (req) => {
 
             // First fallback: auto-repair workflow file in GitHub and retry dispatch.
             try {
-              const targetWorkflow = WORKFLOW_MAP[platform];
+              const targetWorkflow = workflow;
               const repair = await ensureWorkflowDispatchTrigger(
                 githubRepo,
                 targetWorkflow,
@@ -441,15 +441,30 @@ Deno.serve(async (req) => {
               );
               repairNote = repair.note;
 
-              await githubAPI(
-                `/repos/${githubRepo}/actions/workflows/${targetWorkflow}/dispatches`,
-                GITHUB_PAT,
-                "POST",
-                {
-                  ref: dispatchRef,
-                  inputs: { build_id: build.id },
+              // Give GitHub a moment to register workflow updates, then retry dispatch a few times.
+              let repairedDispatchSucceeded = false;
+              let repairedDispatchError: unknown = null;
+
+              for (let attempt = 0; attempt < 4; attempt++) {
+                try {
+                  await githubAPI(
+                    `/repos/${githubRepo}/actions/workflows/${targetWorkflow}/dispatches`,
+                    GITHUB_PAT,
+                    "POST",
+                    {
+                      ref: dispatchRef,
+                      inputs: { build_id: build.id },
+                    }
+                  );
+                  repairedDispatchSucceeded = true;
+                  break;
+                } catch (err) {
+                  repairedDispatchError = err;
+                  await new Promise((r) => setTimeout(r, 1500));
                 }
-              );
+              }
+
+              if (!repairedDispatchSucceeded) throw (repairedDispatchError ?? new Error("Dispatch retry failed after workflow repair"));
 
               await supabase.from("builds").update({
                 status: "building",
@@ -516,6 +531,52 @@ Deno.serve(async (req) => {
                     success: true,
                     fallback: "rerun",
                     message: "workflow_dispatch unavailable; triggered rerun of latest workflow run instead.",
+                    note: repairNote,
+                    run_id: rerunnable.id,
+                    run_url: rerunnable.html_url,
+                    build: {
+                      ...build,
+                      status: "building",
+                      artifact_url: rerunnable.html_url,
+                    },
+                  }),
+                  { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+
+              // Third fallback: repo-wide recent runs (handles mismatched workflow IDs/names).
+              const recentRunsRes = await githubAPI(
+                `/repos/${githubRepo}/actions/runs?per_page=30`,
+                GITHUB_PAT
+              ) as {
+                workflow_runs?: Array<{ id: number; status: string; html_url: string; name?: string; path?: string }>
+              };
+
+              const rerunnable =
+                (recentRunsRes.workflow_runs || []).find((r) => {
+                  const haystack = `${r.name || ""} ${r.path || ""}`.toLowerCase();
+                  return r.status === "completed" && (haystack.includes("ios") || haystack.includes("build-ios"));
+                }) ||
+                (recentRunsRes.workflow_runs || []).find((r) => r.status === "completed");
+
+              if (rerunnable) {
+                await githubAPI(
+                  `/repos/${githubRepo}/actions/runs/${rerunnable.id}/rerun`,
+                  GITHUB_PAT,
+                  "POST"
+                );
+
+                await supabase.from("builds").update({
+                  status: "building",
+                  artifact_url: rerunnable.html_url,
+                  error_message: null,
+                }).eq("id", build.id);
+
+                return new Response(
+                  JSON.stringify({
+                    success: true,
+                    fallback: "rerun-recent",
+                    message: "workflow_dispatch unavailable; triggered rerun from recent iOS workflow history.",
                     note: repairNote,
                     run_id: rerunnable.id,
                     run_url: rerunnable.html_url,
