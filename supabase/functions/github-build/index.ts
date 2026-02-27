@@ -164,35 +164,54 @@ Deno.serve(async (req) => {
             GITHUB_PAT
           ) as { workflows?: Array<{ id: number; name: string; path: string }> };
 
-          const workflowMatch = (workflows.workflows || []).find((w) =>
+          const allWorkflows = workflows.workflows || [];
+          const exactMatch = allWorkflows.find((w) =>
             w.path === `.github/workflows/${workflow}` || w.path.endsWith(`/${workflow}`)
           );
 
-          if (!workflowMatch) {
-            const available = (workflows.workflows || []).map((w) => w.path || w.name).join(", ") || "none";
+          const platformKeyword = platform.toLowerCase();
+          const candidateWorkflows = [
+            ...(exactMatch ? [exactMatch] : []),
+            ...allWorkflows.filter((w) =>
+              w !== exactMatch &&
+              (`${w.name} ${w.path}`).toLowerCase().includes(platformKeyword)
+            ),
+          ];
+
+          if (candidateWorkflows.length === 0) {
+            const available = allWorkflows.map((w) => w.path || w.name).join(", ") || "none";
             throw new Error(`Workflow ${workflow} not found in ${githubRepo}. Available: ${available}`);
           }
 
-          try {
-            await githubAPI(
-              `/repos/${githubRepo}/actions/workflows/${workflowMatch.id}/dispatches`,
-              GITHUB_PAT,
-              "POST",
-              {
-                ref: dispatchRef,
-                inputs: { build_id: build.id },
-              }
-            );
-          } catch (dispatchError) {
-            const message = dispatchError instanceof Error ? dispatchError.message : String(dispatchError);
-            const isWorkflowDispatch422 =
-              message.includes("GitHub API error [422]") &&
-              message.includes("workflow_dispatch");
+          let dispatched = false;
+          let lastDispatchError: unknown = null;
 
-            if (!isWorkflowDispatch422) throw dispatchError;
+          for (const candidate of candidateWorkflows) {
+            try {
+              await githubAPI(
+                `/repos/${githubRepo}/actions/workflows/${candidate.id}/dispatches`,
+                GITHUB_PAT,
+                "POST",
+                {
+                  ref: dispatchRef,
+                  inputs: { build_id: build.id },
+                }
+              );
+              dispatched = true;
+              break;
+            } catch (dispatchError) {
+              const message = dispatchError instanceof Error ? dispatchError.message : String(dispatchError);
+              const isWorkflowDispatch422 =
+                message.includes("GitHub API error [422]") &&
+                message.includes("workflow_dispatch");
 
-            // Fallback: dispatch by workflow filename to avoid stale/incorrect workflow IDs.
-            // GitHub API accepts a workflow file name here (e.g. build-ios.yml).
+              if (!isWorkflowDispatch422) throw dispatchError;
+              lastDispatchError = dispatchError;
+            }
+          }
+
+          if (!dispatched) {
+            // Final fallback: dispatch by configured workflow file name.
             await githubAPI(
               `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
               GITHUB_PAT,
@@ -201,7 +220,9 @@ Deno.serve(async (req) => {
                 ref: dispatchRef,
                 inputs: { build_id: build.id },
               }
-            );
+            ).catch((e) => {
+              throw (lastDispatchError ?? e);
+            });
           }
         } catch (dispatchErr) {
           const dispatchMessage = dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed";
