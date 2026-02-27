@@ -542,20 +542,35 @@ Deno.serve(async (req) => {
           if (workflowContent) {
             console.log(`Ensuring ${workflow} is up-to-date on ${dispatchRef}...`);
             await upsertWorkflowFile(githubRepo, workflow, dispatchRef, workflowContent, GITHUB_PAT);
-            // Wait for GitHub to index the updated workflow
-            await new Promise(r => setTimeout(r, 3000));
           }
 
-          // Dispatch the workflow
-          await githubAPI(
-            `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
-            GITHUB_PAT,
-            "POST",
-            {
-              ref: dispatchRef,
-              inputs: { build_id: build.id },
+          // Retry dispatch with increasing delays to allow GitHub to index the workflow
+          const delays = [5000, 8000, 12000];
+          let lastErr: unknown;
+          for (let i = 0; i < delays.length; i++) {
+            await new Promise(r => setTimeout(r, delays[i]));
+            try {
+              console.log(`Dispatch attempt ${i + 1} for ${workflow}...`);
+              await githubAPI(
+                `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
+                GITHUB_PAT,
+                "POST",
+                {
+                  ref: dispatchRef,
+                  inputs: { build_id: build.id },
+                },
+                0 // no internal retries for dispatch
+              );
+              lastErr = null;
+              break;
+            } catch (err) {
+              lastErr = err;
+              const msg = err instanceof Error ? err.message : "";
+              if (!msg.includes("422")) throw err; // only retry 422s
+              console.log(`Dispatch attempt ${i + 1} got 422, retrying...`);
             }
-          );
+          }
+          if (lastErr) throw lastErr;
         } catch (dispatchErr) {
           const dispatchMessage = dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed";
 
