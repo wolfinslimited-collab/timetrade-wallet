@@ -1,0 +1,94 @@
+name: Build Flutter Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+  repository_dispatch:
+    types: [build_flutter_android]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.0"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd flutter_app
+          flutter pub get
+
+      - name: Setup signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd flutter_app
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            cat > android/key.properties << EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=release.keystore
+          EOF
+            echo "Signing configured for release build"
+          else
+            echo "No signing keystore provided, building debug APK"
+          fi
+
+      - name: Build APK
+        run: |
+          cd flutter_app
+          if [ -f "android/key.properties" ]; then
+            flutter build apk --release
+          else
+            flutter build apk --debug
+          fi
+
+      - name: Build AAB (for Play Store)
+        run: |
+          cd flutter_app
+          if [ -f "android/key.properties" ]; then
+            flutter build appbundle --release
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-android-apk-${{ github.run_id }}
+          path: flutter_app/build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: warn
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('flutter_app/build/app/outputs/bundle/release/*.aab') != '' }}
+        with:
+          name: flutter-android-aab-${{ github.run_id }}
+          path: flutter_app/build/app/outputs/bundle/release/*.aab
+
+      - name: Notify build complete
+        if: always()
+        run: |
+          BUILD_ID="${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
+          echo "Flutter Android Build ID ${BUILD_ID} finished with status ${{ job.status }}"
