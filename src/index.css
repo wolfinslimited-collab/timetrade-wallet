@@ -75,6 +75,13 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -82,6 +89,17 @@
     font-family: 'Inter', system-ui, sans-serif;
     background-image: radial-gradient(ellipse at 50% 0%, hsl(120 15% 12%) 0%, hsl(120 8% 5%) 60%);
     background-attachment: fixed;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+
+  /* Allow text selection only in input fields */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
   }
 
   /* Monospace numbers for financial data */

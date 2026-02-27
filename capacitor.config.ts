@@ -5,10 +5,17 @@ const config: CapacitorConfig = {
   appName: 'NextGen AI Wallet',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic'
+    contentInset: 'automatic',
+    scrollEnabled: false
   },
   android: {
     allowMixedContent: true
+  },
+  plugins: {
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true
+    }
   }
 };
 
