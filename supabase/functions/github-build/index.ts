@@ -85,7 +85,7 @@ jobs:
 `;
 
 interface BuildRequest {
-  action: "trigger" | "status" | "list-runs" | "download-artifact" | "fetch-logs" | "cancel";
+  action: "trigger" | "status" | "list-runs" | "download-artifact" | "fetch-logs" | "cancel" | "push-workflow";
   platform?: string;
   buildId?: string;
   runId?: number;
@@ -346,13 +346,8 @@ Deno.serve(async (req) => {
         const dispatchRef = repoInfo.default_branch || "main";
 
         if (platform === "ios") {
-          await upsertWorkflowFile(
-            githubRepo,
-            IOS_FALLBACK_WORKFLOW,
-            dispatchRef,
-            IOS_FALLBACK_WORKFLOW_CONTENT,
-            GITHUB_PAT
-          );
+          // Don't re-push if already exists (avoids triggering push-based runs).
+          // Use push-workflow action separately if the file doesn't exist yet.
           workflow = IOS_FALLBACK_WORKFLOW;
         }
         try {
@@ -362,53 +357,25 @@ Deno.serve(async (req) => {
           ) as { workflows?: Array<{ id: number; name: string; path: string }> };
 
           const allWorkflows = workflows.workflows || [];
+
+          // For iOS, ONLY match the fallback workflow to avoid dispatching build-ios.yml which lacks workflow_dispatch.
           const exactMatch = allWorkflows.find((w) =>
             w.path === `.github/workflows/${workflow}` || w.path.endsWith(`/${workflow}`)
           );
 
-          const platformKeyword = platform.toLowerCase();
-          const candidateWorkflows = [
-            ...(exactMatch ? [exactMatch] : []),
-            ...allWorkflows.filter((w) =>
-              w !== exactMatch &&
-              (`${w.name} ${w.path}`).toLowerCase().includes(platformKeyword)
-            ),
-          ];
-
-          if (candidateWorkflows.length === 0) {
-            const available = allWorkflows.map((w) => w.path || w.name).join(", ") || "none";
-            throw new Error(`Workflow ${workflow} not found in ${githubRepo}. Available: ${available}`);
-          }
-
-          let dispatched = false;
-          let lastDispatchError: unknown = null;
-
-          for (const candidate of candidateWorkflows) {
-            try {
-              await githubAPI(
-                `/repos/${githubRepo}/actions/workflows/${candidate.id}/dispatches`,
-                GITHUB_PAT,
-                "POST",
-                {
-                  ref: dispatchRef,
-                  inputs: { build_id: build.id },
-                }
-              );
-              dispatched = true;
-              break;
-            } catch (dispatchError) {
-              const message = dispatchError instanceof Error ? dispatchError.message : String(dispatchError);
-              const isWorkflowDispatch422 =
-                message.includes("GitHub API error [422]") &&
-                message.includes("workflow_dispatch");
-
-              if (!isWorkflowDispatch422) throw dispatchError;
-              lastDispatchError = dispatchError;
-            }
-          }
-
-          if (!dispatched) {
-            // Final fallback: dispatch by configured workflow file name.
+          if (exactMatch) {
+            // Dispatch directly by ID
+            await githubAPI(
+              `/repos/${githubRepo}/actions/workflows/${exactMatch.id}/dispatches`,
+              GITHUB_PAT,
+              "POST",
+              {
+                ref: dispatchRef,
+                inputs: { build_id: build.id },
+              }
+            );
+          } else {
+            // Workflow file not found — try dispatch by filename
             await githubAPI(
               `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
               GITHUB_PAT,
@@ -417,9 +384,7 @@ Deno.serve(async (req) => {
                 ref: dispatchRef,
                 inputs: { build_id: build.id },
               }
-            ).catch((e) => {
-              throw (lastDispatchError ?? e);
-            });
+            );
           }
         } catch (dispatchErr) {
           const dispatchMessage = dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed";
@@ -445,7 +410,9 @@ Deno.serve(async (req) => {
               let repairedDispatchSucceeded = false;
               let repairedDispatchError: unknown = null;
 
-              for (let attempt = 0; attempt < 4; attempt++) {
+              for (let attempt = 0; attempt < 5; attempt++) {
+                // Wait progressively longer for GitHub to register changes
+                await new Promise((r) => setTimeout(r, (attempt + 1) * 5000));
                 try {
                   await githubAPI(
                     `/repos/${githubRepo}/actions/workflows/${targetWorkflow}/dispatches`,
@@ -460,7 +427,6 @@ Deno.serve(async (req) => {
                   break;
                 } catch (err) {
                   repairedDispatchError = err;
-                  await new Promise((r) => setTimeout(r, 1500));
                 }
               }
 
@@ -957,6 +923,29 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "push-workflow": {
+        const { platform } = body;
+        if (!platform) throw new Error("platform is required for push-workflow");
+        const repoInfo = await githubAPI(`/repos/${githubRepo}`, GITHUB_PAT) as { default_branch?: string };
+        const ref = repoInfo.default_branch || "main";
+
+        const workflowFile = platform === "ios" ? IOS_FALLBACK_WORKFLOW : WORKFLOW_MAP[platform];
+        const content = platform === "ios" ? IOS_FALLBACK_WORKFLOW_CONTENT : null;
+        if (!content) throw new Error(`No fallback workflow content for platform: ${platform}`);
+
+        await upsertWorkflowFile(githubRepo, workflowFile, ref, content, GITHUB_PAT);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Pushed ${workflowFile} to ${githubRepo}@${ref}. Wait ~30s then trigger the build.`,
+            workflow: workflowFile,
+            ref,
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
