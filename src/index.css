@@ -98,6 +98,12 @@
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     padding-top: env(safe-area-inset-top, 0px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
   }
 
   @media (max-width: 768px) {
