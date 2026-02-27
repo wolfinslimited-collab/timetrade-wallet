@@ -74,6 +74,11 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
 
+      - name: Generate iOS project
+        run: |
+          cd flutter_app
+          flutter create --platforms=ios .
+
       - name: Create ExportOptions.plist
         run: |
           cat > flutter_app/ios/ExportOptions.plist << EXPORTEOF
