@@ -73,7 +73,8 @@ export const PullToRefresh = ({ children, onRefresh }: PullToRefreshProps) => {
   return (
     <div 
       ref={containerRef}
-      className="relative overflow-hidden h-full"
+      className="relative flex-1 overflow-y-auto -webkit-overflow-scrolling-touch"
+      style={{ WebkitOverflowScrolling: 'touch' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -102,21 +103,8 @@ export const PullToRefresh = ({ children, onRefresh }: PullToRefreshProps) => {
         </motion.div>
       </motion.div>
 
-      {/* Refreshing text */}
-      <motion.div
-        className="absolute left-1/2 -translate-x-1/2 top-14 z-20"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isRefreshing ? 1 : 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        <span className="text-xs text-primary font-medium">Updating prices...</span>
-      </motion.div>
-
       {/* Content */}
-      <motion.div
-        animate={controls}
-        className="h-full"
-      >
+      <motion.div animate={controls}>
         {children}
       </motion.div>
     </div>
