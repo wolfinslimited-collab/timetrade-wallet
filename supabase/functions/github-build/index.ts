@@ -131,7 +131,7 @@ jobs:
       - name: Build Xcode archive
         run: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace \\
+          xcodebuild -project App.xcodeproj \\
             -scheme App \\
             -sdk iphoneos \\
             -configuration Release \\
