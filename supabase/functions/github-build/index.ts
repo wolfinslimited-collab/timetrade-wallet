@@ -14,6 +14,76 @@ const WORKFLOW_MAP: Record<string, string> = {
   ios: "build-ios.yml",
 };
 
+const IOS_FALLBACK_WORKFLOW = "build-ios-lovable.yml";
+const GH_EXPR = "${{";
+const IOS_FALLBACK_WORKFLOW_CONTENT = `name: Build iOS (Lovable)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    env:
+      FLUTTER_VERSION: "3.24.5"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+
+      - name: Flutter pub get
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Setup signing assets
+        env:
+          BUILD_CERTIFICATE_BASE64: ${GH_EXPR} secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${GH_EXPR} secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${GH_EXPR} secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          security create-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/AppStoreTimetrade.mobileprovision
+
+      - name: Build IPA
+        working-directory: flutter_app
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-${GH_EXPR} github.run_id }}
+          path: flutter_app/build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+      - name: Notify build complete
+        if: always()
+        run: echo "Build ID: ${GH_EXPR} inputs.build_id }} finished with status ${GH_EXPR} job.status }}"
+`;
+
 interface BuildRequest {
   action: "trigger" | "status" | "list-runs" | "download-artifact" | "fetch-logs" | "cancel";
   platform?: string;
@@ -124,6 +194,122 @@ function toErrorMessage(error: unknown): string {
   return error.message;
 }
 
+function addWorkflowDispatchTrigger(content: string): string | null {
+  if (/\bworkflow_dispatch\s*:/m.test(content)) return content;
+
+  const onBlock = /^on:\s*\n/m;
+  if (onBlock.test(content)) {
+    return content.replace(onBlock, "on:\n  workflow_dispatch:\n");
+  }
+
+  const onArray = /^on:\s*\[([^\]]+)\]\s*$/m;
+  if (onArray.test(content)) {
+    return content.replace(onArray, (_match, eventsRaw: string) => {
+      const events = eventsRaw.split(",").map((e) => e.trim()).filter(Boolean);
+      const eventLines = events.map((e) => `  ${e}:`).join("\n");
+      return `on:\n  workflow_dispatch:\n${eventLines}`;
+    });
+  }
+
+  const onSingle = /^on:\s*([a-zA-Z_][\w-]*)\s*$/m;
+  if (onSingle.test(content)) {
+    return content.replace(onSingle, (_match, eventName: string) => {
+      return `on:\n  workflow_dispatch:\n  ${eventName}:`;
+    });
+  }
+
+  return null;
+}
+
+async function ensureWorkflowDispatchTrigger(
+  githubRepo: string,
+  workflowFile: string,
+  ref: string,
+  token: string
+): Promise<{ updated: boolean; note: string }> {
+  const workflowPath = `.github/workflows/${workflowFile}`;
+  const encodedPath = encodeURIComponent(workflowPath);
+
+  const file = await githubAPI(
+    `/repos/${githubRepo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`,
+    token
+  ) as { content?: string; sha?: string; encoding?: string };
+
+  if (!file.content || !file.sha) {
+    throw new Error(`Unable to read workflow file ${workflowPath} on branch ${ref}`);
+  }
+
+  const decoded = atob(file.content.replace(/\n/g, ""));
+  const patched = addWorkflowDispatchTrigger(decoded);
+
+  if (!patched) {
+    throw new Error(`Could not auto-patch workflow ${workflowPath}; unsupported 'on:' format`);
+  }
+
+  if (patched === decoded) {
+    return { updated: false, note: `${workflowPath} already has workflow_dispatch` };
+  }
+
+  await githubAPI(
+    `/repos/${githubRepo}/contents/${encodedPath}`,
+    token,
+    "PUT",
+    {
+      message: `fix(ci): add workflow_dispatch to ${workflowFile}`,
+      content: btoa(patched),
+      sha: file.sha,
+      branch: ref,
+    }
+  );
+
+  return { updated: true, note: `Added workflow_dispatch to ${workflowPath} on ${ref}` };
+}
+
+async function upsertWorkflowFile(
+  githubRepo: string,
+  workflowFile: string,
+  ref: string,
+  content: string,
+  token: string
+): Promise<void> {
+  const workflowPath = `.github/workflows/${workflowFile}`;
+  const encodedPath = encodeURIComponent(workflowPath);
+
+  let existingSha: string | undefined;
+  let existingContent = "";
+
+  try {
+    const file = await githubAPI(
+      `/repos/${githubRepo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`,
+      token
+    ) as { content?: string; sha?: string };
+
+    existingSha = file.sha;
+    if (file.content) {
+      existingContent = atob(file.content.replace(/\n/g, ""));
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("GitHub API error [404]")) {
+      throw error;
+    }
+  }
+
+  if (existingContent === content) return;
+
+  await githubAPI(
+    `/repos/${githubRepo}/contents/${encodedPath}`,
+    token,
+    "PUT",
+    {
+      message: `chore(ci): ensure ${workflowFile} for Build Center`,
+      content: btoa(content),
+      ...(existingSha ? { sha: existingSha } : {}),
+      branch: ref,
+    }
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -155,9 +341,20 @@ Deno.serve(async (req) => {
           .single();
         if (insertError) throw new Error(`Failed to create build: ${insertError.message}`);
 
-        const workflow = WORKFLOW_MAP[platform];
+        let workflow = WORKFLOW_MAP[platform];
         const repoInfo = await githubAPI(`/repos/${githubRepo}`, GITHUB_PAT) as { default_branch?: string };
         const dispatchRef = repoInfo.default_branch || "main";
+
+        if (platform === "ios") {
+          await upsertWorkflowFile(
+            githubRepo,
+            IOS_FALLBACK_WORKFLOW,
+            dispatchRef,
+            IOS_FALLBACK_WORKFLOW_CONTENT,
+            GITHUB_PAT
+          );
+          workflow = IOS_FALLBACK_WORKFLOW;
+        }
         try {
           const workflows = await githubAPI(
             `/repos/${githubRepo}/actions/workflows?per_page=100`,
@@ -231,9 +428,55 @@ Deno.serve(async (req) => {
             dispatchMessage.includes("workflow_dispatch");
 
           if (isWorkflowDispatch422) {
+            let repairNote: string | null = null;
+
+            // First fallback: auto-repair workflow file in GitHub and retry dispatch.
             try {
-              // Fallback strategy: rerun the latest completed workflow run for this platform.
-              // This avoids hard dependency on workflow_dispatch when GitHub workflow config is out of sync.
+              const targetWorkflow = WORKFLOW_MAP[platform];
+              const repair = await ensureWorkflowDispatchTrigger(
+                githubRepo,
+                targetWorkflow,
+                dispatchRef,
+                GITHUB_PAT
+              );
+              repairNote = repair.note;
+
+              await githubAPI(
+                `/repos/${githubRepo}/actions/workflows/${targetWorkflow}/dispatches`,
+                GITHUB_PAT,
+                "POST",
+                {
+                  ref: dispatchRef,
+                  inputs: { build_id: build.id },
+                }
+              );
+
+              await supabase.from("builds").update({
+                status: "building",
+                error_message: null,
+              }).eq("id", build.id);
+
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  fallback: "auto-repair-dispatch",
+                  message: "I auto-fixed the GitHub workflow by adding workflow_dispatch and retried the build trigger.",
+                  note: repairNote,
+                  build: {
+                    ...build,
+                    status: "building",
+                  },
+                }),
+                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            } catch (repairErr) {
+              const repairErrorMessage = repairErr instanceof Error ? repairErr.message : String(repairErr);
+              repairNote = repairNote ? `${repairNote}; ${repairErrorMessage}` : repairErrorMessage;
+              console.error("Auto-repair workflow fallback failed:", repairErr);
+            }
+
+            // Second fallback: rerun latest completed workflow run for this platform.
+            try {
               const workflows = await githubAPI(
                 `/repos/${githubRepo}/actions/workflows?per_page=100`,
                 GITHUB_PAT
@@ -273,6 +516,7 @@ Deno.serve(async (req) => {
                     success: true,
                     fallback: "rerun",
                     message: "workflow_dispatch unavailable; triggered rerun of latest workflow run instead.",
+                    note: repairNote,
                     run_id: rerunnable.id,
                     run_url: rerunnable.html_url,
                     build: {
