@@ -11,11 +11,15 @@ const DEFAULT_GITHUB_REPO = "wolfinslimited-collab/timetrade-wallet";
 const WORKFLOW_MAP: Record<string, string> = {
   android: "build-android.yml",
   ios: "build-ios.yml",
+  flutter_android: "build-flutter-android.yml",
+  flutter_ios: "build-flutter-ios.yml",
 };
 
 const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
   android: "build_android",
   ios: "build_ios",
+  flutter_android: "build_flutter_android",
+  flutter_ios: "build_flutter_ios",
 };
 
 const WORKFLOW_TEMPLATES: Record<string, string> = {
@@ -299,6 +303,240 @@ jobs:
         run: |
           BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
           echo "Build ID \$BUILD_ID finished with status \${{ job.status }}"
+`,
+  flutter_android: `name: Build Flutter Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+  repository_dispatch:
+    types: [build_flutter_android]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.0"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd flutter_app
+          flutter pub get
+
+      - name: Setup signing
+        env:
+          ANDROID_KEYSTORE_BASE64: \${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd flutter_app
+          if [ -n "\$ANDROID_KEYSTORE_BASE64" ]; then
+            echo -n "\$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            cat > android/key.properties << EOF
+          storePassword=\$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=\$ANDROID_KEY_PASSWORD
+          keyAlias=\$ANDROID_KEY_ALIAS
+          storeFile=release.keystore
+          EOF
+            echo "Signing configured for release build"
+          else
+            echo "No signing keystore provided, building debug APK"
+          fi
+
+      - name: Build APK
+        run: |
+          cd flutter_app
+          if [ -f "android/key.properties" ]; then
+            flutter build apk --release
+          else
+            flutter build apk --debug
+          fi
+
+      - name: Build AAB (for Play Store)
+        run: |
+          cd flutter_app
+          if [ -f "android/key.properties" ]; then
+            flutter build appbundle --release
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-android-apk-\${{ github.run_id }}
+          path: flutter_app/build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: warn
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        if: \${{ hashFiles('flutter_app/build/app/outputs/bundle/release/*.aab') != '' }}
+        with:
+          name: flutter-android-aab-\${{ github.run_id }}
+          path: flutter_app/build/app/outputs/bundle/release/*.aab
+
+      - name: Notify build complete
+        if: always()
+        run: |
+          BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
+          echo "Flutter Android Build ID \$BUILD_ID finished with status \${{ job.status }}"
+`,
+  flutter_ios: `name: Build Flutter iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+  repository_dispatch:
+    types: [build_flutter_ios]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.0"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd flutter_app
+          flutter pub get
+
+      - name: Set build number
+        run: |
+          BUILD_NUMBER="\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
+          echo "BUILD_NUMBER=\$BUILD_NUMBER" >> "\$GITHUB_ENV"
+          echo "Setting build number to \$BUILD_NUMBER"
+
+      - name: Setup signing assets
+        env:
+          BUILD_CERTIFICATE_BASE64: \${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: \${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: \${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        run: |
+          CERT_PATH=\$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=\$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=\$RUNNER_TEMP/app-signing.keychain-db
+          PROFILE_PLIST=\$RUNNER_TEMP/profile.plist
+
+          echo -n "\$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "\$CERT_PATH"
+          echo -n "\$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "\$PP_PATH"
+
+          security cms -D -i "\$PP_PATH" > "\$PROFILE_PLIST"
+          PROFILE_NAME=\$(/usr/libexec/PlistBuddy -c "Print :Name" "\$PROFILE_PLIST")
+          PROFILE_UUID=\$(/usr/libexec/PlistBuddy -c "Print :UUID" "\$PROFILE_PLIST")
+          TEAM_ID=\$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "\$PROFILE_PLIST")
+          BUNDLE_ID=\$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "\$PROFILE_PLIST" | sed "s/^\${TEAM_ID}\\\\.//" )
+
+          echo "Profile Name: \$PROFILE_NAME"
+          echo "Profile UUID: \$PROFILE_UUID"
+          echo "Team ID: \$TEAM_ID"
+          echo "Bundle ID: \$BUNDLE_ID"
+
+          echo "TEAM_ID=\$TEAM_ID" >> "\$GITHUB_ENV"
+          echo "PROFILE_NAME=\$PROFILE_NAME" >> "\$GITHUB_ENV"
+          echo "BUNDLE_ID=\$BUNDLE_ID" >> "\$GITHUB_ENV"
+
+          security create-keychain -p "\$P12_PASSWORD" "\$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "\$KEYCHAIN_PATH"
+          security unlock-keychain -p "\$P12_PASSWORD" "\$KEYCHAIN_PATH"
+          security import "\$CERT_PATH" -P "\$P12_PASSWORD" -A -t cert -f pkcs12 -k "\$KEYCHAIN_PATH"
+          security list-keychain -d user -s "\$KEYCHAIN_PATH"
+
+          mkdir -p "\$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "\$PP_PATH" "\$HOME/Library/MobileDevice/Provisioning Profiles/\$PROFILE_UUID.mobileprovision"
+
+      - name: Create ExportOptions.plist
+        run: |
+          cat > flutter_app/ios/ExportOptions.plist << EXPORTEOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>\$TEAM_ID</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>\$BUNDLE_ID</key>
+              <string>\$PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EXPORTEOF
+
+      - name: Build iOS archive
+        run: |
+          cd flutter_app
+          flutter build ipa \\
+            --release \\
+            --build-number="\$BUILD_NUMBER" \\
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-ios-ipa-\${{ github.run_id }}
+          path: flutter_app/build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: \${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: \${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: \${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo -n "\$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_\${APP_STORE_CONNECT_API_KEY_ID}.p8
+          IPA_PATH=\$(find flutter_app/build/ios/ipa -name "*.ipa" | head -1)
+          echo "Uploading IPA: \$IPA_PATH"
+          xcrun altool --upload-app \\
+            --type ios \\
+            --file "\$IPA_PATH" \\
+            --apiKey "\$APP_STORE_CONNECT_API_KEY_ID" \\
+            --apiIssuer "\$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Notify build complete
+        if: always()
+        run: |
+          BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
+          echo "Flutter iOS Build ID \$BUILD_ID finished with status \${{ job.status }}"
 `,
 };
 
