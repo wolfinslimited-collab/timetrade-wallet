@@ -97,10 +97,13 @@
     height: 100%;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    padding-top: max(env(safe-area-inset-top, 0px), 20px);
   }
 
   #root {
     min-height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Allow text selection only in input fields */
@@ -115,9 +118,9 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Safe area inset for iPhone notch/dynamic island */
+  /* Legacy safe-area-top kept as no-op — padding now on body */
   .safe-area-top {
-    padding-top: max(env(safe-area-inset-top, 0px), 20px);
+    /* padding applied globally via body */
   }
 }
 

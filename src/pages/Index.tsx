@@ -282,9 +282,9 @@ const Index = () => {
 
   // Main wallet view
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto relative pb-24">
+    <div className="flex flex-col max-w-md mx-auto relative pb-24 min-h-0 h-full">
       {/* Sticky Header with safe area */}
-      <div className="sticky top-0 z-30 backdrop-blur-xl safe-area-top">
+      <div className="sticky top-0 z-30 backdrop-blur-xl">
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
           unreadCount={unreadCount}

@@ -73,8 +73,8 @@ export const PullToRefresh = ({ children, onRefresh }: PullToRefreshProps) => {
   return (
     <div 
       ref={containerRef}
-      className="relative flex-1 overflow-y-auto -webkit-overflow-scrolling-touch"
-      style={{ WebkitOverflowScrolling: 'touch' }}
+      className="relative flex-1 overflow-y-auto scrollbar-hide"
+      style={{ WebkitOverflowScrolling: 'touch', minHeight: 0 }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
