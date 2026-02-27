@@ -60,6 +60,10 @@ jobs:
           echo "Team ID: $TEAM_ID"
           echo "Bundle ID: $BUNDLE_ID"
 
+          echo "TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "BUNDLE_ID=$BUNDLE_ID" >> "$GITHUB_ENV"
+
           security create-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
@@ -113,7 +117,7 @@ jobs:
             -archivePath $RUNNER_TEMP/App.xcarchive \
             archive \
             CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=$(security cms -D -i $RUNNER_TEMP/build_pp.mobileprovision | /usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /dev/stdin)
+            DEVELOPMENT_TEAM="$TEAM_ID"
 
       - name: Export IPA
         run: |
