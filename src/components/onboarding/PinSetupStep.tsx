@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,14 +14,11 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
   const [step, setStep] = useState<"create" | "confirm">("create");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  
 
   const currentPin = step === "create" ? pin : confirmPin;
   const setCurrentPin = step === "create" ? setPin : setConfirmPin;
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [step]);
 
   const handleKeyPress = (digit: string) => {
     if (currentPin.length >= 6) return;
@@ -173,18 +170,6 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
         </motion.div>
       </div>
 
-      {/* Hidden input for keyboard support */}
-      <input
-        ref={inputRef}
-        type="tel"
-        className="sr-only"
-        value={currentPin}
-        onChange={(e) => {
-          const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-          setCurrentPin(value);
-        }}
-        maxLength={6}
-      />
     </div>
   );
 };

@@ -82,6 +82,7 @@
     touch-action: manipulation;
     overscroll-behavior: none;
     -webkit-text-size-adjust: 100%;
+    height: 100%;
   }
 
   body {
@@ -93,6 +94,13 @@
     user-select: none;
     -webkit-touch-callout: none;
     overscroll-behavior: none;
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    min-height: 100%;
   }
 
   /* Allow text selection only in input fields */
@@ -105,6 +113,11 @@
   /* Monospace numbers for financial data */
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Safe area inset for iPhone notch/dynamic island */
+  .safe-area-top {
+    padding-top: max(env(safe-area-inset-top, 0px), 20px);
   }
 }
 
