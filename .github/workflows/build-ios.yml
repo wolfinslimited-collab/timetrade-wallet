@@ -52,7 +52,7 @@ jobs:
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PROFILE_PLIST")
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PROFILE_PLIST")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "$PROFILE_PLIST")
-          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$PROFILE_PLIST" | sed "s/^${TEAM_ID}\\.//")
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$PROFILE_PLIST" | sed "s/^${TEAM_ID}\\.//" )
 
           echo "Profile Name: $PROFILE_NAME"
           echo "Profile UUID: $PROFILE_UUID"
@@ -68,20 +68,17 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
 
-          # Patch Xcode project for manual signing
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "$PBXPROJ" ]; then
             sed -i '' "s/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g" "$PBXPROJ"
             sed -i '' "s/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = $TEAM_ID;/g" "$PBXPROJ"
             sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\";/g" "$PBXPROJ"
-            # Add PROVISIONING_PROFILE_SPECIFIER if not present
             if ! grep -q "PROVISIONING_PROFILE_SPECIFIER" "$PBXPROJ"; then
               sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\";/g" "$PBXPROJ"
             fi
           fi
 
-          # Create ExportOptions.plist
-          cat > ios/App/ExportOptions.plist << EOF
+          cat > ios/App/ExportOptions.plist << EXPORTEOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -103,7 +100,7 @@ jobs:
             </dict>
           </dict>
           </plist>
-          EOF
+          EXPORTEOF
 
       - name: Build Xcode archive
         run: |
