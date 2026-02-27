@@ -150,4 +150,4 @@ jobs:
         if: always()
         run: |
           BUILD_ID="${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
-          echo "Build ID ${BUILD_ID} finished with status ${{ job.status }}"
+          echo "Build ID $BUILD_ID finished with status ${{ job.status }}"
