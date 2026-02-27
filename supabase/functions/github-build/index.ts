@@ -16,6 +16,11 @@ const WORKFLOW_MAP: Record<string, string> = {
 
 const IOS_FALLBACK_WORKFLOW = "build-ios-lovable.yml";
 const GH_EXPR = "${{";
+
+function getWorkflowForPlatform(platform: string): string {
+  return platform === "ios" ? IOS_FALLBACK_WORKFLOW : WORKFLOW_MAP[platform];
+}
+
 const IOS_FALLBACK_WORKFLOW_CONTENT = `name: Build iOS (Lovable)
 
 on:
@@ -341,15 +346,29 @@ Deno.serve(async (req) => {
           .single();
         if (insertError) throw new Error(`Failed to create build: ${insertError.message}`);
 
-        let workflow = WORKFLOW_MAP[platform];
+        let workflow = getWorkflowForPlatform(platform);
         const repoInfo = await githubAPI(`/repos/${githubRepo}`, GITHUB_PAT) as { default_branch?: string };
         const dispatchRef = repoInfo.default_branch || "main";
+        let workflowCandidates = [workflow];
 
         if (platform === "ios") {
-          // Don't re-push if already exists (avoids triggering push-based runs).
-          // Use push-workflow action separately if the file doesn't exist yet.
+          // Ensure fallback workflow exists and is up-to-date before dispatching.
+          await upsertWorkflowFile(githubRepo, IOS_FALLBACK_WORKFLOW, dispatchRef, IOS_FALLBACK_WORKFLOW_CONTENT, GITHUB_PAT);
+
+          // Proactively repair both iOS workflows so dispatch can succeed regardless of which one GitHub resolves.
+          const iosCandidates = [IOS_FALLBACK_WORKFLOW, WORKFLOW_MAP.ios];
+          for (const candidate of iosCandidates) {
+            try {
+              await ensureWorkflowDispatchTrigger(githubRepo, candidate, dispatchRef, GITHUB_PAT);
+            } catch (repairErr) {
+              console.warn(`Could not auto-repair ${candidate}:`, repairErr);
+            }
+          }
+
+          workflowCandidates = iosCandidates;
           workflow = IOS_FALLBACK_WORKFLOW;
         }
+
         try {
           const workflows = await githubAPI(
             `/repos/${githubRepo}/actions/workflows?per_page=100`,
@@ -358,10 +377,17 @@ Deno.serve(async (req) => {
 
           const allWorkflows = workflows.workflows || [];
 
-          // For iOS, ONLY match the fallback workflow to avoid dispatching build-ios.yml which lacks workflow_dispatch.
-          const exactMatch = allWorkflows.find((w) =>
-            w.path === `.github/workflows/${workflow}` || w.path.endsWith(`/${workflow}`)
-          );
+          let exactMatch: { id: number; name: string; path: string } | undefined;
+          for (const candidate of workflowCandidates) {
+            const match = allWorkflows.find((w) =>
+              w.path === `.github/workflows/${candidate}` || w.path.endsWith(`/${candidate}`)
+            );
+            if (match) {
+              workflow = candidate;
+              exactMatch = match;
+              break;
+            }
+          }
 
           if (exactMatch) {
             // Dispatch directly by ID
@@ -375,16 +401,30 @@ Deno.serve(async (req) => {
               }
             );
           } else {
-            // Workflow file not found — try dispatch by filename
-            await githubAPI(
-              `/repos/${githubRepo}/actions/workflows/${workflow}/dispatches`,
-              GITHUB_PAT,
-              "POST",
-              {
-                ref: dispatchRef,
-                inputs: { build_id: build.id },
+            // Workflow file not found by ID lookup — try each candidate by filename.
+            let dispatched = false;
+            let lastDispatchError: unknown = null;
+
+            for (const candidate of workflowCandidates) {
+              try {
+                await githubAPI(
+                  `/repos/${githubRepo}/actions/workflows/${candidate}/dispatches`,
+                  GITHUB_PAT,
+                  "POST",
+                  {
+                    ref: dispatchRef,
+                    inputs: { build_id: build.id },
+                  }
+                );
+                workflow = candidate;
+                dispatched = true;
+                break;
+              } catch (err) {
+                lastDispatchError = err;
               }
-            );
+            }
+
+            if (!dispatched) throw (lastDispatchError ?? new Error("No dispatchable workflow found"));
           }
         } catch (dispatchErr) {
           const dispatchMessage = dispatchErr instanceof Error ? dispatchErr.message : "Dispatch failed";
@@ -463,7 +503,7 @@ Deno.serve(async (req) => {
                 GITHUB_PAT
               ) as { workflows?: Array<{ id: number; name: string; path: string }> };
 
-              const targetWorkflow = WORKFLOW_MAP[platform];
+              const targetWorkflow = getWorkflowForPlatform(platform);
               const allWorkflows = workflows.workflows || [];
               const candidates = allWorkflows.filter((w) =>
                 w.path === `.github/workflows/${targetWorkflow}` ||
@@ -615,7 +655,7 @@ Deno.serve(async (req) => {
 
       case "list-runs": {
         const { platform } = body;
-        const workflow = platform ? WORKFLOW_MAP[platform] : undefined;
+        const workflow = platform ? getWorkflowForPlatform(platform) : undefined;
 
         let path = `/repos/${githubRepo}/actions/runs?per_page=10`;
         if (workflow) {
@@ -716,7 +756,7 @@ Deno.serve(async (req) => {
 
         // If no run ID yet, try to find matching run by platform and timing
         if (!runId) {
-          const workflow = WORKFLOW_MAP[buildRecord.platform];
+          const workflow = getWorkflowForPlatform(buildRecord.platform);
           if (workflow) {
             const workflows = await githubAPI(`/repos/${githubRepo}/actions/workflows`, GITHUB_PAT);
             const wf = workflows.workflows?.find((w: { path: string }) => w.path === `.github/workflows/${workflow}`);
