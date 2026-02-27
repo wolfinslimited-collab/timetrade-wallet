@@ -29,22 +29,11 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Bump build number
-        run: |
-          BUILD_NUMBER=${{ github.run_number }}
-          echo "Using build number: $BUILD_NUMBER"
-          # Update Info.plist after cap sync creates it
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
-
       - name: Add iOS platform
         run: npx cap add ios || true
 
       - name: Sync Capacitor
-        run: |
-          npx cap sync ios
-          # Set build number in Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
-          echo "Set CFBundleVersion to $BUILD_NUMBER"
+        run: npx cap sync ios
 
       - name: Setup signing assets
         env:
