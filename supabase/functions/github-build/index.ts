@@ -70,8 +70,8 @@ jobs:
           security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/AppStoreTimetrade.mobileprovision
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/AppStoreTimetrade.mobileprovision"
 
       - name: Build IPA
         working-directory: flutter_app
@@ -83,6 +83,22 @@ jobs:
           name: ios-ipa-${GH_EXPR} github.run_id }}
           path: flutter_app/build/ios/ipa/*.ipa
           if-no-files-found: error
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${GH_EXPR} secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${GH_EXPR} secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${GH_EXPR} secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+          IPA_PATH=$(find flutter_app/build/ios/ipa -name "*.ipa" | head -1)
+          echo "Uploading IPA: $IPA_PATH"
+          xcrun altool --upload-app \\
+            --type ios \\
+            --file "$IPA_PATH" \\
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \\
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 
       - name: Notify build complete
         if: always()
