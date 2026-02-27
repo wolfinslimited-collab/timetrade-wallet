@@ -42,11 +42,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: "22"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build web app
         run: npm run build
@@ -196,8 +195,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: "22"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -206,7 +204,7 @@ jobs:
           java-version: "17"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build web app
         run: npm run build
