@@ -37,9 +37,14 @@ jobs:
           CERT_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          PROFILE_PLIST=$RUNNER_TEMP/profile.plist
 
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PROFILE_PLIST")
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PROFILE_PLIST")
 
           security create-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -48,7 +53,11 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/AppStoreTimetrade.mobileprovision"
+          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.wallet.ai $PROFILE_NAME" flutter_app/ios/ExportOptions.plist
+          sed -i '' "s/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g" flutter_app/ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\";/g" flutter_app/ios/Runner.xcodeproj/project.pbxproj
 
       - name: Build IPA
         working-directory: flutter_app
