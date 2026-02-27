@@ -35,6 +35,34 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
+      - name: Set iOS build number
+        run: |
+          BUILD_NUMBER="${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "=== Setting CFBundleVersion to $BUILD_NUMBER ==="
+
+          cd ios/App
+
+          # Method 1: agvtool - Xcode's own versioning tool
+          xcrun agvtool new-version -all "$BUILD_NUMBER" 2>&1 || echo "agvtool failed, continuing with fallback methods"
+
+          # Method 2: Direct Info.plist patch
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" App/Info.plist 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" App/Info.plist
+
+          # Method 3: Force CURRENT_PROJECT_VERSION in pbxproj
+          PBXPROJ="App.xcodeproj/project.pbxproj"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBXPROJ"
+
+          # Method 4: Also set MARKETING_VERSION to avoid confusion
+          sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = 1.0;/g" "$PBXPROJ"
+
+          # Debug: verify all changes took effect
+          echo "--- Info.plist after patching ---"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" App/Info.plist
+          echo "--- pbxproj CURRENT_PROJECT_VERSION ---"
+          grep "CURRENT_PROJECT_VERSION" "$PBXPROJ"
+
       - name: Setup signing assets
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -110,6 +138,10 @@ jobs:
       - name: Build Xcode archive
         run: |
           cd ios/App
+          BUILD_NUMBER="${BUILD_NUMBER:-$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT}"
+          echo "Building with CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
+          echo "Pre-build CFBundleVersion: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' App/Info.plist)"
+
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
@@ -119,7 +151,37 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            INFOPLIST_KEY_CFBundleVersion="$BUILD_NUMBER"
+
+      - name: Verify and patch archive version
+        run: |
+          BUILD_NUMBER="${BUILD_NUMBER:-$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT}"
+          ARCHIVE_PLIST="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app/Info.plist"
+          ARCHIVE_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$ARCHIVE_PLIST")
+          echo "Archive CFBundleVersion: $ARCHIVE_VERSION"
+
+          if [ "$ARCHIVE_VERSION" = "1" ] || [ "$ARCHIVE_VERSION" = "$(CURRENT_PROJECT_VERSION)" ] || [ -z "$ARCHIVE_VERSION" ]; then
+            echo "::warning::Archive has incorrect CFBundleVersion=$ARCHIVE_VERSION, patching to $BUILD_NUMBER"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$ARCHIVE_PLIST"
+            echo "Patched CFBundleVersion: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$ARCHIVE_PLIST")"
+
+            # Find the signing identity hash from keychain
+            SIGN_IDENTITY=$(security find-identity -v -p codesigning "$RUNNER_TEMP/app-signing.keychain-db" | grep "Apple Distribution" | head -1 | awk -F'"' '{print $2}')
+            echo "Re-signing with: $SIGN_IDENTITY"
+
+            # Re-sign the patched app
+            ENTITLEMENTS="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app/archived-expanded-entitlements.xcent"
+            if [ -f "$ENTITLEMENTS" ]; then
+              codesign --force --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+            else
+              codesign --force --sign "$SIGN_IDENTITY" --preserve-metadata=entitlements "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+            fi
+            echo "Re-sign completed"
+          else
+            echo "Archive version OK: $ARCHIVE_VERSION"
+          fi
 
       - name: Export IPA
         run: |
@@ -144,6 +206,18 @@ jobs:
           mkdir -p ~/private_keys
           echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
           IPA_PATH=$(find $RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
+
+          # Final IPA verification
+          TMP_UNZIP_DIR=$(mktemp -d)
+          unzip -q "$IPA_PATH" -d "$TMP_UNZIP_DIR"
+          IPA_BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$TMP_UNZIP_DIR/Payload/App.app/Info.plist")
+          echo "IPA CFBundleVersion: $IPA_BUNDLE_VERSION"
+
+          if [ -z "$IPA_BUNDLE_VERSION" ] || [ "$IPA_BUNDLE_VERSION" = "1" ]; then
+            echo "::error::IPA still has CFBundleVersion=$IPA_BUNDLE_VERSION - all version patching failed!"
+            exit 1
+          fi
+
           echo "Uploading IPA: $IPA_PATH"
           xcrun altool --upload-app \
             --type ios \
