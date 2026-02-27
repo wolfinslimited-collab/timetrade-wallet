@@ -97,7 +97,13 @@
     height: 100%;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
-    padding-top: max(env(safe-area-inset-top, 0px), 20px);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  @media (max-width: 768px) {
+    body {
+      padding-top: max(env(safe-area-inset-top, 0px), 20px);
+    }
   }
 
   #root {
