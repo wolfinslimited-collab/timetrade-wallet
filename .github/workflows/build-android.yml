@@ -7,6 +7,8 @@ on:
         description: "Build record ID from Build Center"
         required: true
         type: string
+  repository_dispatch:
+    types: [build_android]
 
 jobs:
   build-android:
