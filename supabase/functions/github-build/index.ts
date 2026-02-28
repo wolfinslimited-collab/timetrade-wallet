@@ -11,16 +11,25 @@ const DEFAULT_GITHUB_REPO = "wolfinslimited-collab/timetrade-wallet";
 const WORKFLOW_MAP: Record<string, string> = {
   android: "build-android.yml",
   ios: "build-ios.yml",
-  flutter_android: "build-flutter-android.yml",
-  flutter_ios: "build-flutter-ios.yml",
+  flutter_android: "build-android.yml",
+  flutter_ios: "build-ios.yml",
 };
 
 const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
   android: "build_android",
   ios: "build_ios",
-  flutter_android: "build_flutter_android",
-  flutter_ios: "build_flutter_ios",
+  flutter_android: "build_android",
+  flutter_ios: "build_ios",
 };
+
+const CAPACITOR_PLATFORM_ALIASES: Record<string, string> = {
+  flutter_android: "android",
+  flutter_ios: "ios",
+};
+
+function normalizePlatform(platform: string): string {
+  return CAPACITOR_PLATFORM_ALIASES[platform] ?? platform;
+}
 
 const WORKFLOW_TEMPLATES: Record<string, string> = {
   ios: `name: Build iOS (Capacitor)
@@ -803,9 +812,10 @@ Deno.serve(async (req) => {
 
     switch (body.action) {
       case "trigger": {
-        const { platform } = body;
+        const requestedPlatform = body.platform;
+        const platform = requestedPlatform ? normalizePlatform(requestedPlatform) : undefined;
         if (!platform || !WORKFLOW_MAP[platform]) {
-          throw new Error(`Invalid platform: ${platform}. Must be: ${Object.keys(WORKFLOW_MAP).join(", ")}`);
+          throw new Error(`Invalid platform: ${requestedPlatform}. Must be: ios, android`);
         }
 
         const { data: build, error: insertError } = await supabase
