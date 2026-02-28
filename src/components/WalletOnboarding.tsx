@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
 import { SecurityWarningStep } from "./onboarding/SecurityWarningStep";
 import { SeedPhraseStep } from "./onboarding/SeedPhraseStep";
@@ -59,15 +58,12 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const handlePinComplete = async (pin: string) => {
     localStorage.setItem("timetrade_pin", pin);
     
-    // Encrypt and store the seed phrase
     try {
       const phraseString = seedPhrase.join(" ");
       const encryptedData = await encryptPrivateKey(phraseString, pin);
       const encStr = JSON.stringify(encryptedData);
       setEncryptedSeedStr(encStr);
 
-      // Derive accounts for all chains and persist addresses immediately.
-      // (BlockchainContext auto-connect runs on initial mount only; without this, SOL/TRX may stay empty until refresh.)
       const storedSolPath = localStorage.getItem("timetrade_solana_derivation_path") as any;
       const accounts = deriveMultipleAccounts(seedPhrase, 5, storedSolPath || "legacy");
 
@@ -75,7 +71,6 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
         connectWallet(accounts.evm[0].address);
         localStorage.setItem("timetrade_active_account_index", "0");
 
-        // Ensure chain-specific keys exist right away for Receive / unified views.
         if (!localStorage.getItem("timetrade_wallet_address_evm")) {
           localStorage.setItem("timetrade_wallet_address_evm", accounts.evm[0].address);
         }
@@ -109,15 +104,12 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   const handleFinish = async () => {
-    // Store wallet name for header display
     localStorage.setItem("timetrade_wallet_name", walletName);
     
-    // Grab derived addresses from storage
     const evmAddress = localStorage.getItem("timetrade_wallet_address_evm") || undefined;
     const solanaAddress = localStorage.getItem("timetrade_wallet_address_solana") || undefined;
     const tronAddress = localStorage.getItem("timetrade_wallet_address_tron") || undefined;
     
-    // Register the main account with encrypted seed stored IN the account
     const mainAccount = {
       id: "main",
       name: walletName || "Main Wallet",
@@ -132,7 +124,6 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     localStorage.setItem("timetrade_user_accounts", JSON.stringify([mainAccount]));
     localStorage.setItem("timetrade_active_account_id", "main");
 
-    // Save user record via edge function (captures IP & geo server-side)
     try {
       await supabase.functions.invoke("register-user", {
         body: {
@@ -153,119 +144,71 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     onComplete();
   };
 
+  const renderStep = () => {
+    switch (step) {
+      case "welcome":
+        return (
+          <WelcomeStep
+            onCreateWallet={handleCreateWallet}
+            onImportWallet={handleImportWallet}
+            walletName={walletName}
+            setWalletName={setWalletName}
+          />
+        );
+      case "security":
+        return (
+          <SecurityWarningStep
+            onContinue={handleSecurityAcknowledged}
+            onBack={() => setStep("welcome")}
+          />
+        );
+      case "seedphrase":
+        return (
+          <SeedPhraseStep
+            seedPhrase={seedPhrase}
+            onContinue={handleSeedPhraseConfirmed}
+            onBack={() => setStep("security")}
+          />
+        );
+      case "verify":
+        return (
+          <VerifySeedStep
+            seedPhrase={seedPhrase}
+            onComplete={handleVerificationComplete}
+            onBack={() => setStep("seedphrase")}
+          />
+        );
+      case "import":
+        return (
+          <ImportWalletStep
+            onImport={handleImportComplete}
+            onBack={() => setStep("welcome")}
+          />
+        );
+      case "pin":
+        return (
+          <PinSetupStep
+            onComplete={handlePinComplete}
+            onBack={() => setStep("verify")}
+          />
+        );
+      case "success":
+        return (
+          <SuccessStep
+            walletName={walletName}
+            onFinish={handleFinish}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto">
-      <AnimatePresence mode="wait">
-        {step === "welcome" && (
-          <motion.div
-            key="welcome"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <WelcomeStep 
-              onCreateWallet={handleCreateWallet}
-              onImportWallet={handleImportWallet}
-              walletName={walletName}
-              setWalletName={setWalletName}
-            />
-          </motion.div>
-        )}
-
-        {step === "security" && (
-          <motion.div
-            key="security"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <SecurityWarningStep 
-              onContinue={handleSecurityAcknowledged}
-              onBack={() => setStep("welcome")}
-            />
-          </motion.div>
-        )}
-
-        {step === "seedphrase" && (
-          <motion.div
-            key="seedphrase"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <SeedPhraseStep 
-              seedPhrase={seedPhrase}
-              onContinue={handleSeedPhraseConfirmed}
-              onBack={() => setStep("security")}
-            />
-          </motion.div>
-        )}
-
-        {step === "verify" && (
-          <motion.div
-            key="verify"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <VerifySeedStep 
-              seedPhrase={seedPhrase}
-              onComplete={handleVerificationComplete}
-              onBack={() => setStep("seedphrase")}
-            />
-          </motion.div>
-        )}
-
-        {step === "import" && (
-          <motion.div
-            key="import"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <ImportWalletStep 
-              onImport={handleImportComplete}
-              onBack={() => setStep("welcome")}
-            />
-          </motion.div>
-        )}
-
-        {step === "pin" && (
-          <motion.div
-            key="pin"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1"
-          >
-            <PinSetupStep 
-              onComplete={handlePinComplete}
-              onBack={() => setStep("verify")}
-            />
-          </motion.div>
-        )}
-
-
-        {step === "success" && (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1"
-          >
-            <SuccessStep 
-              walletName={walletName}
-              onFinish={handleFinish}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="min-h-[100dvh] flex flex-col max-w-md mx-auto">
+      <div className="flex-1">
+        {renderStep()}
+      </div>
     </div>
   );
 };
