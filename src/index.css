@@ -1,54 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Timetrade - Dark Crypto Wallet Design System */
+/* Timetrade - Native iOS Wallet Design System */
 
 @layer base {
   :root {
-    /* Core backgrounds - Dark olive/green */
-    --background: 120 8% 5%;
-    --foreground: 0 0% 95%;
+    /* Core backgrounds - Deep dark */
+    --background: 140 8% 4%;
+    --foreground: 0 0% 97%;
 
     /* Card surfaces */
-    --card: 120 6% 10%;
-    --card-foreground: 0 0% 95%;
-    --card-elevated: 120 6% 14%;
+    --card: 140 5% 9%;
+    --card-foreground: 0 0% 97%;
+    --card-elevated: 140 5% 13%;
 
     /* Popover */
-    --popover: 120 6% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 140 5% 9%;
+    --popover-foreground: 0 0% 97%;
 
-    /* Primary - White */
+    /* Primary - Clean white */
     --primary: 0 0% 98%;
-    --primary-foreground: 120 8% 5%;
+    --primary-foreground: 140 8% 4%;
     --primary-glow: 0 0% 100%;
 
-    /* Secondary - Muted dark surface */
-    --secondary: 120 5% 15%;
-    --secondary-foreground: 0 0% 65%;
+    /* Secondary */
+    --secondary: 140 4% 13%;
+    --secondary-foreground: 0 0% 60%;
 
     /* Muted */
-    --muted: 120 5% 15%;
-    --muted-foreground: 120 5% 45%;
+    --muted: 140 4% 14%;
+    --muted-foreground: 140 3% 48%;
 
-    /* Accent - matches primary (white) */
+    /* Accent */
     --accent: 0 0% 98%;
-    --accent-foreground: 120 8% 5%;
+    --accent-foreground: 140 8% 4%;
 
     /* Destructive */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
     /* Success */
-    --success: 142 70% 50%;
+    --success: 152 70% 48%;
     --success-foreground: 0 0% 2%;
 
     /* Borders */
-    --border: 120 4% 18%;
-    --input: 120 4% 18%;
+    --border: 140 3% 16%;
+    --input: 140 3% 16%;
     --ring: 0 0% 98%;
 
     --radius: 1rem;
@@ -61,13 +61,13 @@
     --chart-5: 340 75% 55%;
 
     /* Sidebar */
-    --sidebar-background: 120 8% 5%;
-    --sidebar-foreground: 0 0% 95%;
+    --sidebar-background: 140 8% 4%;
+    --sidebar-foreground: 0 0% 97%;
     --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 120 8% 5%;
-    --sidebar-accent: 120 5% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 120 4% 18%;
+    --sidebar-primary-foreground: 140 8% 4%;
+    --sidebar-accent: 140 4% 13%;
+    --sidebar-accent-foreground: 0 0% 97%;
+    --sidebar-border: 140 3% 16%;
     --sidebar-ring: 0 0% 98%;
   }
 }
@@ -93,8 +93,9 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    background-image: radial-gradient(ellipse at 50% 0%, hsl(120 15% 12%) 0%, hsl(120 8% 5%) 60%);
+    font-family: -apple-system, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    background-color: hsl(140 8% 4%);
+    background-image: radial-gradient(ellipse at 50% 0%, hsl(140 12% 10%) 0%, hsl(140 8% 4%) 50%);
     background-attachment: fixed;
     -webkit-user-select: none;
     user-select: none;
@@ -148,25 +149,12 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Legacy safe-area-top kept as no-op — padding now on body */
   .safe-area-top {
     /* padding applied globally via body */
   }
 }
 
 @layer components {
-
-  /* Glow effects */
-  .glow-green {
-    box-shadow: 0 0 20px hsl(0 0% 98% / 0.2),
-                0 0 40px hsl(0 0% 98% / 0.1);
-  }
-
-  .glow-text-green {
-    text-shadow: 0 0 10px hsl(0 0% 98% / 0.5),
-                 0 0 20px hsl(0 0% 98% / 0.3);
-  }
-
   /* Glass card effect */
   .glass-card {
     @apply bg-card/80 backdrop-blur-xl border border-border/50;
@@ -196,36 +184,9 @@
     content: '';
     @apply absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary;
   }
-
-  /* Sparkline container */
-  .sparkline-container {
-    @apply flex items-end gap-0.5 h-8;
-  }
-
-  .sparkline-bar {
-    @apply w-1 bg-primary/60 rounded-t-sm transition-all duration-300;
-  }
-
-  .sparkline-bar:hover {
-    @apply bg-primary;
-  }
-
-  /* Insurance badge */
-  .insurance-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full 
-           bg-gradient-to-r from-primary/20 to-accent/20 
-           border border-primary/30 text-xs font-medium;
-  }
-
-  /* Transaction count badge */
-  .tx-badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-           bg-accent/20 text-accent border border-accent/30;
-  }
 }
 
 @layer utilities {
-  /* Hide scrollbar but allow scrolling */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -235,7 +196,6 @@
     display: none;
   }
 
-  /* Safe area padding for mobile */
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 1rem);
   }
