@@ -475,10 +475,42 @@ jobs:
           security set-keychain-settings -lut 21600 "\$KEYCHAIN_PATH"
           security unlock-keychain -p "\$P12_PASSWORD" "\$KEYCHAIN_PATH"
           security import "\$CERT_PATH" -P "\$P12_PASSWORD" -A -t cert -f pkcs12 -k "\$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "\$P12_PASSWORD" "\$KEYCHAIN_PATH"
           security list-keychain -d user -s "\$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "\$KEYCHAIN_PATH"
 
           mkdir -p "\$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "\$PP_PATH" "\$HOME/Library/MobileDevice/Provisioning Profiles/\$PROFILE_UUID.mobileprovision"
+
+      - name: Apply signing to generated Runner project
+        run: |
+          PBXPROJ="flutter_app/ios/Runner.xcodeproj/project.pbxproj"
+          if [ ! -f "\$PBXPROJ" ]; then
+            echo "Runner project not found at \$PBXPROJ"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          pbxproj_path = Path("flutter_app/ios/Runner.xcodeproj/project.pbxproj")
+          text = pbxproj_path.read_text()
+
+          bundle_id = os.environ["BUNDLE_ID"]
+          team_id = os.environ["TEAM_ID"]
+          profile_name = os.environ["PROFILE_NAME"]
+
+          text = text.replace("PRODUCT_BUNDLE_IDENTIFIER = com.example.flutterApp;", f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};")
+          text = re.sub(r"DEVELOPMENT_TEAM = [A-Z0-9]*;", f"DEVELOPMENT_TEAM = {team_id};", text)
+          text = text.replace("CODE_SIGN_STYLE = Automatic;", "CODE_SIGN_STYLE = Manual;")
+          text = re.sub(r'CODE_SIGN_IDENTITY = "Apple Development";', 'CODE_SIGN_IDENTITY = "Apple Distribution";', text)
+          text = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = "";', f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";', text)
+
+          pbxproj_path.write_text(text)
+          print("Applied Runner signing patch for bundle/team/profile")
+          PY
 
       - name: Create ExportOptions.plist
         run: |
