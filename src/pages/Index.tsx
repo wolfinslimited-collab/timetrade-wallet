@@ -211,8 +211,9 @@ const Index = () => {
     return <WalletOnboarding onComplete={handleOnboardingComplete} />;
   }
 
-  // Show lock screen if locked
-  if (isLocked) {
+  // Show lock screen if locked (disabled in dev mode)
+  const isDev = import.meta.env.DEV;
+  if (isLocked && !isDev) {
     return <LockScreen onUnlock={handleUnlock} />;
   }
 
