@@ -431,6 +431,11 @@ jobs:
           cd flutter_app
           flutter pub get
 
+      - name: Generate iOS project
+        run: |
+          cd flutter_app
+          flutter create --platforms=ios .
+
       - name: Set build number
         run: |
           BUILD_NUMBER="\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
@@ -477,6 +482,7 @@ jobs:
 
       - name: Create ExportOptions.plist
         run: |
+          mkdir -p flutter_app/ios
           cat > flutter_app/ios/ExportOptions.plist << EXPORTEOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
