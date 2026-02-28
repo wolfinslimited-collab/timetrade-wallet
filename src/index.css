@@ -155,12 +155,6 @@
 }
 
 @layer components {
-  /* GPU-accelerated animations only */
-  * {
-    will-change: auto;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-  }
 
   /* Glow effects */
   .glow-green {
