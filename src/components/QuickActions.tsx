@@ -34,7 +34,7 @@ export const QuickActions = () => {
           <div className={cn(
             "w-14 h-14 rounded-full flex items-center justify-center",
             "bg-card border border-border/50",
-            "hover:bg-secondary transition-all text-foreground"
+            "active:bg-secondary text-foreground"
           )}>
             {action.icon}
           </div>

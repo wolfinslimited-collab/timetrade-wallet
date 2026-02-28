@@ -5,7 +5,6 @@ import { Chain } from "@/hooks/useBlockchain";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { NETWORKS, getNetworkLogoUrl, NETWORK_MAP } from "@/config/networks";
-import { motion, AnimatePresence } from "framer-motion";
 
 const getCryptoLogoUrl = (symbol: string) =>
   `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
@@ -22,7 +21,6 @@ export interface AvailableAsset {
 }
 
 export interface NetworkAssetSelectorHandle {
-  /** Returns true if it handled the back internally (went from assets→networks) */
   handleBack: () => boolean;
 }
 
@@ -142,158 +140,127 @@ export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, Netwo
     onSubmit(asset.chain, asset, senderAddress);
   };
 
-  const handleBackToNetworks = () => {
-    setSelectedNetwork(null);
-    setAssets([]);
-  };
-
   return (
     <div className="flex flex-col h-full px-5 pb-6 overflow-y-auto">
-      <AnimatePresence mode="wait">
-        {/* ── Network Selection ── */}
-        {!selectedNetwork && (
-          <motion.div
-            key="networks"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="mt-3"
-          >
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-4">
-              Choose Network
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              {NETWORKS.map((net, i) => {
-                const addr = getSenderAddress(net.id);
+      {/* ── Network Selection ── */}
+      {!selectedNetwork && (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-4">
+            Choose Network
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {NETWORKS.map((net) => (
+              <button
+                key={net.id}
+                onClick={() => setSelectedNetwork(net.id)}
+                className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-card/60 border border-border/60 active:bg-card active:border-primary/40"
+              >
+                <div
+                  className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ background: `${net.color}18` }}
+                >
+                  <img
+                    src={getNetworkLogoUrl(net.id)}
+                    alt={net.name}
+                    className="w-8 h-8 object-contain"
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold leading-tight">{net.symbol}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight truncate max-w-[80px]">
+                    {net.name}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Assets List ── */}
+      {selectedNetwork && (
+        <div className="mt-3 flex-1 flex flex-col">
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
+              style={{ background: `${NETWORK_MAP[selectedNetwork].color}18` }}
+            >
+              <img
+                src={getNetworkLogoUrl(selectedNetwork)}
+                alt=""
+                className="w-4 h-4 object-contain"
+              />
+            </div>
+            <span className="text-sm font-medium">{NETWORK_MAP[selectedNetwork].name}</span>
+          </div>
+
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-3">
+            Select Asset to Send
+          </p>
+
+          {isLoadingAssets ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading assets…</p>
+            </div>
+          ) : assets.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                <Wallet className="w-7 h-7 text-muted-foreground/60" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  No assets on {NETWORK_MAP[selectedNetwork].name}
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Fund your wallet to start sending
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {assets.map((asset, idx) => {
+                const usdValue = asset.balance * asset.price;
                 return (
-                  <motion.button
-                    key={net.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.04 }}
-                    onClick={() => setSelectedNetwork(net.id)}
-                    className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/40 hover:bg-card transition-all active:scale-95"
+                  <button
+                    key={`${asset.symbol}-${asset.contractAddress || 'native'}-${idx}`}
+                    onClick={() => handleAssetSelect(asset)}
+                    className="w-full flex items-center justify-between p-4 rounded-2xl bg-card/60 border border-border/60 active:bg-card active:border-primary/40 text-left"
                   >
-                    <div
-                      className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center"
-                      style={{ background: `${net.color}18` }}
-                    >
-                      <img
-                        src={getNetworkLogoUrl(net.id)}
-                        alt={net.name}
-                        className="w-8 h-8 object-contain"
-                      />
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center">
+                        <img
+                          src={getCryptoLogoUrl(asset.symbol)}
+                          alt={asset.symbol}
+                          className="w-7 h-7 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{asset.symbol}</p>
+                        <p className="text-xs text-muted-foreground">{asset.name}</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm font-semibold leading-tight">{net.symbol}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight truncate max-w-[80px]">
-                        {net.name}
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">
+                        {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                       </p>
+                      {usdValue > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      )}
                     </div>
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>
-          </motion.div>
-        )}
-
-        {/* ── Assets List ── */}
-        {selectedNetwork && (
-          <motion.div
-            key="assets"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="mt-3 flex-1 flex flex-col"
-          >
-            {/* Selected network chip */}
-            <div className="flex items-center gap-2 mb-4">
-              <div
-                className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
-                style={{ background: `${NETWORK_MAP[selectedNetwork].color}18` }}
-              >
-                <img
-                  src={getNetworkLogoUrl(selectedNetwork)}
-                  alt=""
-                  className="w-4 h-4 object-contain"
-                />
-              </div>
-              <span className="text-sm font-medium">{NETWORK_MAP[selectedNetwork].name}</span>
-            </div>
-
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-3">
-              Select Asset to Send
-            </p>
-
-            {isLoadingAssets ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-sm text-muted-foreground">Loading assets…</p>
-              </div>
-            ) : assets.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                  <Wallet className="w-7 h-7 text-muted-foreground/60" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    No assets on {NETWORK_MAP[selectedNetwork].name}
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Fund your wallet to start sending
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {assets.map((asset, idx) => {
-                  const usdValue = asset.balance * asset.price;
-                  return (
-                    <motion.button
-                      key={`${asset.symbol}-${asset.contractAddress || 'native'}-${idx}`}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      onClick={() => handleAssetSelect(asset)}
-                      className="w-full flex items-center justify-between p-4 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/40 hover:bg-card transition-all active:scale-[0.98] text-left"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center">
-                          <img
-                            src={getCryptoLogoUrl(asset.symbol)}
-                            alt={asset.symbol}
-                            className="w-7 h-7 object-contain"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">{asset.symbol}</p>
-                          <p className="text-xs text-muted-foreground">{asset.name}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">
-                          {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                        </p>
-                        {usdValue > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        )}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </div>
+      )}
     </div>
   );
 });

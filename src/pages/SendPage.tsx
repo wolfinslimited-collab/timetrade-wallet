@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { NetworkAssetSelector, AvailableAsset, NetworkAssetSelectorHandle } from "@/components/send/NetworkAssetSelector";
@@ -43,14 +42,12 @@ const SendPage = () => {
   });
 
   const getSenderAddress = (chain: Chain): string => {
+    if (chain === "ethereum") return addresses.evm || "";
     if (chain === "solana") return addresses.solana || "";
     if (chain === "tron") return addresses.tron || "";
-    return addresses.evm || "";
+    return "";
   };
-
-  const handleClose = () => {
-    navigate(-1);
-  };
+  const handleClose = () => navigate(-1);
 
   const handleNetworkAssetSelect = (network: Chain, asset: AvailableAsset, sender: string) => {
     setSelectedChain(network);
@@ -119,7 +116,6 @@ const SendPage = () => {
 
   const handleBack = () => {
     if (step === "select") {
-      // Let the selector handle internal back (assets → networks)
       const handled = networkSelectorRef.current?.handleBack();
       if (!handled) navigate(-1);
     }
@@ -141,59 +137,54 @@ const SendPage = () => {
   };
 
   const showHeader = step !== "confirm" && step !== "success" && step !== "risk";
-  const canGoBack = true;
 
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto">
       {showHeader && (
         <div className="px-6 pt-6 pb-2 relative flex items-center justify-center">
-          {canGoBack && (
-            <button
-              type="button"
-              onClick={handleBack}
-              className="absolute left-6 top-1/2 -translate-y-1/2 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-              aria-label="Back"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleBack}
+            className="absolute left-6 top-1/2 -translate-y-1/2 p-2 rounded-full bg-card border border-border active:bg-secondary"
+            aria-label="Back"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
           <h1 className="text-xl font-bold text-center">{getStepTitle()}</h1>
         </div>
       )}
 
       <div className="flex-1 flex flex-col">
-        <AnimatePresence mode="wait">
-          {step === "select" && (
-            <motion.div key="select" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
-              <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} />
-            </motion.div>
-          )}
-          {step === "address" && (
-            <motion.div key="address" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
-              <AddressInputStep selectedChain={selectedChain} onSubmit={handleAddressSubmit} />
-            </motion.div>
-          )}
-          {step === "risk" && (
-            <motion.div key="risk" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
-              <RiskCheckStep address={transaction.recipient} chain={selectedChain} amount={transaction.amount} senderAddress={senderAddress} onProceed={handleRiskProceed} onCancel={handleRiskCancel} />
-            </motion.div>
-          )}
-          {step === "amount" && selectedAsset && (
-            <motion.div key="amount" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
-              <AmountInputStep recipient={transaction.recipient} selectedAsset={selectedAsset} selectedChain={selectedChain} onSubmit={handleAmountSubmit} />
-            </motion.div>
-          )}
-          {step === "confirm" && (
-            <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 h-full overflow-hidden">
-              <ConfirmationStep transaction={transaction} selectedChain={selectedChain} isTestnet={isTestnet} onConfirm={handleConfirm} onBack={handleBack} />
-            </motion.div>
-          )}
-          {step === "success" && (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex-1">
-              <TransactionSuccessStep transaction={transaction} onClose={handleClose} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {step === "select" && (
+          <div className="flex-1">
+            <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} />
+          </div>
+        )}
+        {step === "address" && (
+          <div className="flex-1">
+            <AddressInputStep selectedChain={selectedChain} onSubmit={handleAddressSubmit} />
+          </div>
+        )}
+        {step === "risk" && (
+          <div className="flex-1 flex flex-col">
+            <RiskCheckStep address={transaction.recipient} chain={selectedChain} amount={transaction.amount} senderAddress={senderAddress} onProceed={handleRiskProceed} onCancel={handleRiskCancel} />
+          </div>
+        )}
+        {step === "amount" && selectedAsset && (
+          <div className="flex-1">
+            <AmountInputStep recipient={transaction.recipient} selectedAsset={selectedAsset} selectedChain={selectedChain} onSubmit={handleAmountSubmit} />
+          </div>
+        )}
+        {step === "confirm" && (
+          <div className="flex-1 h-full overflow-hidden">
+            <ConfirmationStep transaction={transaction} selectedChain={selectedChain} isTestnet={isTestnet} onConfirm={handleConfirm} onBack={handleBack} />
+          </div>
+        )}
+        {step === "success" && (
+          <div className="flex-1">
+            <TransactionSuccessStep transaction={transaction} onClose={handleClose} />
+          </div>
+        )}
       </div>
     </div>
   );
