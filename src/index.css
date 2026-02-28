@@ -1,74 +1,60 @@
-@import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Timetrade - Native iOS Wallet Design System */
-
 @layer base {
   :root {
-    /* Core backgrounds - Deep dark */
-    --background: 140 8% 4%;
+    --background: 220 16% 6%;
     --foreground: 0 0% 97%;
 
-    /* Card surfaces */
-    --card: 140 5% 9%;
+    --card: 220 14% 10%;
     --card-foreground: 0 0% 97%;
-    --card-elevated: 140 5% 13%;
+    --card-elevated: 220 12% 14%;
 
-    /* Popover */
-    --popover: 140 5% 9%;
+    --popover: 220 14% 10%;
     --popover-foreground: 0 0% 97%;
 
-    /* Primary - Clean white */
-    --primary: 0 0% 98%;
-    --primary-foreground: 140 8% 4%;
-    --primary-glow: 0 0% 100%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 91% 70%;
 
-    /* Secondary */
-    --secondary: 140 4% 13%;
-    --secondary-foreground: 0 0% 60%;
+    --secondary: 220 12% 14%;
+    --secondary-foreground: 0 0% 65%;
 
-    /* Muted */
-    --muted: 140 4% 14%;
-    --muted-foreground: 140 3% 48%;
+    --muted: 220 10% 16%;
+    --muted-foreground: 220 8% 50%;
 
-    /* Accent */
-    --accent: 0 0% 98%;
-    --accent-foreground: 140 8% 4%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    /* Destructive */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    /* Success */
     --success: 152 70% 48%;
     --success-foreground: 0 0% 2%;
 
-    /* Borders */
-    --border: 140 3% 16%;
-    --input: 140 3% 16%;
-    --ring: 0 0% 98%;
+    --border: 220 10% 15%;
+    --input: 220 10% 15%;
+    --ring: 217 91% 60%;
 
     --radius: 1rem;
 
-    /* Chart colors */
-    --chart-1: 0 0% 98%;
+    --chart-1: 217 91% 60%;
     --chart-2: 280 65% 60%;
     --chart-3: 200 80% 55%;
     --chart-4: 24 95% 53%;
     --chart-5: 340 75% 55%;
 
-    /* Sidebar */
-    --sidebar-background: 140 8% 4%;
+    --sidebar-background: 220 16% 6%;
     --sidebar-foreground: 0 0% 97%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 140 8% 4%;
-    --sidebar-accent: 140 4% 13%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 14%;
     --sidebar-accent-foreground: 0 0% 97%;
-    --sidebar-border: 140 3% 16%;
-    --sidebar-ring: 0 0% 98%;
+    --sidebar-border: 220 10% 15%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -93,10 +79,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, 'SF Pro Display', 'Inter', system-ui, sans-serif;
-    background-color: hsl(140 8% 4%);
-    background-image: radial-gradient(ellipse at 50% 0%, hsl(140 12% 10%) 0%, hsl(140 8% 4%) 50%);
-    background-attachment: fixed;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background-color: hsl(220 16% 6%);
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
@@ -137,35 +121,27 @@
     overflow-x: hidden;
   }
 
-  /* Allow text selection only in input fields */
   input, textarea, [contenteditable="true"] {
     -webkit-user-select: text;
     user-select: text;
     -webkit-touch-callout: default;
   }
 
-  /* Monospace numbers for financial data */
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
-  }
-
-  .safe-area-top {
-    /* padding applied globally via body */
   }
 }
 
 @layer components {
-  /* Glass card effect */
   .glass-card {
     @apply bg-card/80 backdrop-blur-xl border border-border/50;
   }
 
-  /* Gradient text - Blue accent */
   .gradient-text {
-    @apply bg-gradient-to-r from-[hsl(210,100%,60%)] to-[hsl(220,100%,70%)] bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 75%));
   }
 
-  /* Status indicator animations */
   .pulse-dot {
     @apply relative;
   }
@@ -175,7 +151,6 @@
     @apply absolute inset-0 rounded-full bg-primary animate-ping opacity-75;
   }
 
-  /* Bottom nav active indicator */
   .nav-active {
     @apply text-primary relative;
   }

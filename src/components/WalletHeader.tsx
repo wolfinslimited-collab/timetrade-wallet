@@ -28,35 +28,36 @@ export const WalletHeader = ({
 
   return (
     <>
-      <header className="flex items-center justify-between px-5 py-3">
+      <header className="flex items-center justify-between px-5 py-4">
         {/* AI button */}
         <button
           onClick={() => navigate("/ai-chat")}
-          className="w-10 h-10 rounded-full bg-card/80 border border-border/40 flex items-center justify-center active:scale-95"
+          className="w-10 h-10 rounded-xl bg-card border border-border/50 flex items-center justify-center active:scale-95 active:opacity-80"
         >
-          <Sparkles className="w-[18px] h-[18px] text-foreground" />
+          <Sparkles className="w-[17px] h-[17px] text-primary" />
         </button>
 
         {/* Wallet pill */}
         <button
           onClick={() => setShowAccountSwitcher(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-card/60 border border-border/40"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-card border border-border/50 active:opacity-80"
         >
-          <span className="text-[13px] text-foreground/80 font-semibold tracking-wide">
+          <div className="w-2 h-2 rounded-full bg-success" />
+          <span className="text-[13px] text-foreground font-semibold">
             {walletName}
           </span>
-          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
 
         {/* Bell */}
         <button
           onClick={() => navigate("/notifications")}
-          className="relative w-10 h-10 rounded-full bg-card/80 border border-border/40 flex items-center justify-center active:scale-95"
+          className="relative w-10 h-10 rounded-xl bg-card border border-border/50 flex items-center justify-center active:scale-95 active:opacity-80"
         >
-          <Bell className="w-[18px] h-[18px] text-foreground" />
+          <Bell className="w-[17px] h-[17px] text-foreground/70" />
           {unreadCount > 0 && (
-            <div className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-destructive rounded-full flex items-center justify-center">
-              <span className="text-[9px] font-bold text-destructive-foreground">
+            <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary rounded-full flex items-center justify-center px-1">
+              <span className="text-[10px] font-bold text-primary-foreground">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             </div>

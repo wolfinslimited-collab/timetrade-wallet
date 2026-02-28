@@ -31,7 +31,7 @@ interface TokenWithValue extends UnifiedToken {
 }
 
 const FallbackIcon = ({ symbol }: { symbol: string }) => (
-  <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground">
+  <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-[11px] font-bold text-muted-foreground">
     {symbol.slice(0, 2).toUpperCase()}
   </div>
 );
@@ -85,20 +85,20 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   if (isLoading && tokensWithValue.length === 0) {
     return (
-      <div className={cn("px-4", className)}>
-        <div className="space-y-0">
+      <div className={cn("px-5", className)}>
+        <div className="space-y-1">
           {[1, 2, 3].map(i => (
             <div key={i} className="flex items-center justify-between py-4 animate-pulse">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-muted" />
+                <div className="w-11 h-11 rounded-full bg-muted" />
                 <div className="space-y-2">
-                  <div className="w-20 h-4 bg-muted rounded" />
-                  <div className="w-16 h-3 bg-muted rounded" />
+                  <div className="w-20 h-4 bg-muted rounded-lg" />
+                  <div className="w-16 h-3 bg-muted rounded-lg" />
                 </div>
               </div>
               <div className="space-y-2 text-right">
-                <div className="w-14 h-4 bg-muted rounded ml-auto" />
-                <div className="w-10 h-3 bg-muted rounded ml-auto" />
+                <div className="w-16 h-4 bg-muted rounded-lg ml-auto" />
+                <div className="w-10 h-3 bg-muted rounded-lg ml-auto" />
               </div>
             </div>
           ))}
@@ -109,7 +109,7 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   if (tokensWithValue.length === 0) {
     return (
-      <div className={cn("px-4 py-8 text-center", className)}>
+      <div className={cn("px-5 py-10 text-center", className)}>
         <p className="text-sm text-muted-foreground">No tokens found</p>
       </div>
     );
@@ -125,8 +125,8 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
   };
 
   return (
-    <div className={cn("px-4", className)}>
-      <div>
+    <div className={cn("px-3", className)}>
+      <div className="space-y-0.5">
         {tokensWithValue.map((token, index) => {
           const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
             minimumFractionDigits: 0, maximumFractionDigits: 6 
@@ -138,15 +138,15 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
           return (
             <button
               key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-              className="w-full flex items-center justify-between py-3 active:bg-card/60 rounded-xl px-1"
+              className="w-full flex items-center justify-between py-3.5 px-2 rounded-2xl active:bg-secondary/50"
               onClick={() => handleAssetClick(token)}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3.5">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-card border border-border/30">
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/50 flex items-center justify-center">
                     <img 
                       src={assetLogoUrl} alt={token.symbol}
-                      className="w-full h-full object-contain p-1.5"
+                      className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -155,27 +155,24 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
                     />
                     <div className="hidden w-full h-full"><FallbackIcon symbol={token.symbol} /></div>
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background overflow-hidden bg-card">
+                  <div className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full border-2 border-card overflow-hidden bg-muted/80">
                     <img src={networkLogoUrl} alt={token.chain} className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="text-[14px] font-semibold text-foreground">{token.name || token.symbol}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-[14px] font-semibold text-foreground leading-tight">{token.name || token.symbol}</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">
                     {formattedBalance} {token.symbol}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="text-right">
-                  <p className="text-[14px] font-semibold text-foreground">
-                    ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className={cn("text-[11px] mt-0.5", isPositive ? "text-success" : "text-destructive")}>
-                    {isPositive ? "+" : ""}{token.change24h.toFixed(2)}%
-                  </p>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30" />
+              <div className="text-right">
+                <p className="text-[14px] font-semibold text-foreground leading-tight">
+                  ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className={cn("text-[12px] font-medium mt-1", isPositive ? "text-success" : "text-destructive")}>
+                  {isPositive ? "+" : ""}{token.change24h.toFixed(2)}%
+                </p>
               </div>
             </button>
           );
