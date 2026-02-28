@@ -5,12 +5,28 @@ interface QuickAction {
   icon: React.ReactNode;
   label: string;
   action?: string;
+  color: string;
 }
 
 const actions: QuickAction[] = [
-  { icon: <ArrowDownToLine className="w-[18px] h-[18px]" />, label: "Receive", action: "receive" },
-  { icon: <Send className="w-[18px] h-[18px]" />, label: "Send", action: "send" },
-  { icon: <ArrowLeftRight className="w-[18px] h-[18px]" />, label: "Swap", action: "swap" },
+  { 
+    icon: <ArrowDownToLine className="w-5 h-5" />, 
+    label: "Receive", 
+    action: "receive",
+    color: "bg-primary/15 text-primary"
+  },
+  { 
+    icon: <Send className="w-5 h-5" />, 
+    label: "Send", 
+    action: "send",
+    color: "bg-primary/15 text-primary"
+  },
+  { 
+    icon: <ArrowLeftRight className="w-5 h-5" />, 
+    label: "Swap", 
+    action: "swap",
+    color: "bg-primary/15 text-primary"
+  },
 ];
 
 export const QuickActions = () => {
@@ -23,17 +39,17 @@ export const QuickActions = () => {
   };
 
   return (
-    <div className="flex items-center justify-center gap-5 px-6 py-3">
+    <div className="flex items-center justify-center gap-6 px-8 py-4">
       {actions.map((action) => (
         <button
           key={action.label}
           onClick={() => handleAction(action.action)}
-          className="flex flex-col items-center gap-2 active:scale-95"
+          className="flex flex-col items-center gap-2.5 active:scale-95 active:opacity-80"
         >
-          <div className="w-12 h-12 rounded-full bg-card border border-border/40 flex items-center justify-center text-foreground">
+          <div className={`w-14 h-14 rounded-2xl ${action.color} flex items-center justify-center`}>
             {action.icon}
           </div>
-          <span className="text-[11px] text-muted-foreground font-medium">{action.label}</span>
+          <span className="text-[12px] text-foreground/70 font-semibold">{action.label}</span>
         </button>
       ))}
     </div>

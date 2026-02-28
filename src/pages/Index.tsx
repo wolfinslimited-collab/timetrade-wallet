@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
@@ -16,16 +15,14 @@ import { NotificationsPage } from "./NotificationsPage";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
-import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 import { supabase } from "@/integrations/supabase/client";
 
-
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
   const [isLocked, setIsLocked] = useState(() => {
-    // If already unlocked this session, don't show lock screen again
     return sessionStorage.getItem("timetrade_unlocked") !== "true";
   });
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
@@ -36,19 +33,12 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    clearAll,
+    notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, clearAll,
   } = useNotifications();
   
   const { isConnected, totalBalanceUsd, isLoadingBalance, isLoadingAccounts, prices, refreshAll } = useBlockchainContext();
 
-  // Calculate display values - compute 24h change from prices
   const displayBalance = totalBalanceUsd || 0;
-  // Use a reasonable estimate for portfolio change since we don't track per-asset breakdown
   const percentChange = prices?.length ? prices.reduce((sum, p) => sum + (p.change24h || 0), 0) / prices.length : 0;
   const dollarChange = displayBalance * (percentChange / 100);
   const isPositive = percentChange >= 0;
@@ -58,7 +48,6 @@ const Index = () => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
     const hasPin = localStorage.getItem("timetrade_pin");
     
-    // If wallet is marked as created but no accounts exist, auto-reset to onboarding
     if (walletCreated === "true") {
       const accountsStr = localStorage.getItem("timetrade_user_accounts");
       let hasAccounts = false;
@@ -69,7 +58,6 @@ const Index = () => {
         } catch { hasAccounts = false; }
       }
       if (!hasAccounts) {
-        console.log('%c[INDEX] ⚠️ Wallet marked created but no accounts — resetting to onboarding', 'color: #f59e0b; font-weight: bold;');
         wipeAllWalletData();
         wipeIndexedDb();
         setHasWallet(false);
@@ -79,76 +67,42 @@ const Index = () => {
     }
     
     setHasWallet(walletCreated === "true");
-    // Only show lock screen in production mode and if not already unlocked this session
     const isProduction = import.meta.env.PROD;
     const alreadyUnlocked = sessionStorage.getItem("timetrade_unlocked") === "true";
     setIsLocked(isProduction && walletCreated === "true" && !!hasPin && !alreadyUnlocked);
   }, []);
 
-  // Fetch show_staking setting from config table
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "show_staking").single().then(({ data }) => {
       if (data) setShowStaking(data.value === true);
     });
   }, []);
 
-  // If another tab performs a reset, wipe this tab too so nothing can re-populate storage.
   useEffect(() => {
     let didReset = false;
     const resetKey = getResetSignalKey();
-
     const doReset = async () => {
       if (didReset) return;
       didReset = true;
-      try {
-        wipeAllWalletData();
-        await wipeIndexedDb();
-      } finally {
-        window.location.replace(window.location.pathname);
-      }
+      try { wipeAllWalletData(); await wipeIndexedDb(); } finally { window.location.replace(window.location.pathname); }
     };
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === resetKey) {
-        void doReset();
-      }
-    };
+    const onStorage = (e: StorageEvent) => { if (e.key === resetKey) void doReset(); };
     window.addEventListener("storage", onStorage);
-
     let bc: BroadcastChannel | null = null;
     try {
       if ("BroadcastChannel" in window) {
         bc = new BroadcastChannel("timetrade_wallet");
-        bc.onmessage = (ev) => {
-          if (ev?.data?.type === "wallet_reset") void doReset();
-        };
+        bc.onmessage = (ev) => { if (ev?.data?.type === "wallet_reset") void doReset(); };
       }
-    } catch {
-      // ignore
-    }
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      try {
-        bc?.close();
-      } catch {
-        // ignore
-      }
-    };
+    } catch {}
+    return () => { window.removeEventListener("storage", onStorage); try { bc?.close(); } catch {} };
   }, []);
 
-  // Sync bottom-nav tab state with URL query (?tab=history), so deep links and
-  // in-app navigation (e.g. after Send success) always open the correct screen.
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
     const allowedTabs: NavTab[] = ["wallet", "history", "staking", "ai", "settings"];
-    if (tab && allowedTabs.includes(tab) && tab !== activeTab) {
-      setActiveTab(tab);
-    }
-    // If URL has no tab param, default to wallet.
-    if (!tab && activeTab !== "wallet") {
-      setActiveTab("wallet");
-    }
+    if (tab && allowedTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
+    if (!tab && activeTab !== "wallet") setActiveTab("wallet");
   }, [searchParams, activeTab]);
 
   const handleOnboardingComplete = () => {
@@ -165,39 +119,21 @@ const Index = () => {
 
   const handleTabChange = (tab: NavTab) => {
     setActiveTab(tab);
-
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (tab === "wallet") next.delete("tab");
-        else next.set("tab", tab);
-        return next;
-      },
-      { replace: true }
-    );
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === "wallet") next.delete("tab");
+      else next.set("tab", tab);
+      return next;
+    }, { replace: true });
   };
 
   const handleRefresh = useCallback(async () => {
-    // Actually refetch blockchain data
     refreshAll();
     await new Promise(resolve => setTimeout(resolve, 1200));
     setRefreshKey(prev => prev + 1);
-    toast({
-      title: "Prices updated",
-      description: "Portfolio data refreshed successfully",
-    });
+    toast({ title: "Portfolio updated", description: "All balances refreshed" });
   }, [toast, refreshAll]);
 
-  const formatBalance = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
-  // Loading state
   if (hasWallet === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -206,105 +142,76 @@ const Index = () => {
     );
   }
 
-  // Show onboarding if no wallet
-  if (!hasWallet) {
-    return <WalletOnboarding onComplete={handleOnboardingComplete} />;
-  }
+  if (!hasWallet) return <WalletOnboarding onComplete={handleOnboardingComplete} />;
 
-  // Show lock screen if locked (disabled in dev mode)
   const isDev = import.meta.env.DEV;
-  if (isLocked && !isDev) {
-    return <LockScreen onUnlock={handleUnlock} />;
-  }
+  if (isLocked && !isDev) return <LockScreen onUnlock={handleUnlock} />;
 
-  // Determine which view to show
-  const currentView = location.pathname === "/notifications" 
-    ? "notifications" 
-    : activeTab;
+  const currentView = location.pathname === "/notifications" ? "notifications" : activeTab;
 
-  // Show notifications page
   if (currentView === "notifications") {
     return (
-      <div key="notifications">
-        <NotificationsPage
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAsRead={markAsRead}
-          onMarkAllAsRead={markAllAsRead}
-          onDelete={deleteNotification}
-          onClearAll={clearAll}
-        />
-      </div>
+      <NotificationsPage notifications={notifications} unreadCount={unreadCount}
+        onMarkAsRead={markAsRead} onMarkAllAsRead={markAllAsRead}
+        onDelete={deleteNotification} onClearAll={clearAll} />
     );
   }
 
-  // Show settings page
   if (currentView === "settings") {
     return (
       <>
-        <div key="settings">
-          <SettingsPage onBack={() => handleTabChange("wallet")} />
-        </div>
+        <SettingsPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
   }
 
-  // Show transaction history page
   if (currentView === "history") {
     return (
       <>
-        <div key="history">
-          <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
-        </div>
+        <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
   }
 
-
-  // Show staking page
   if (currentView === "staking") {
     return (
       <>
-        <div key="staking">
-          <StakingPage onBack={() => handleTabChange("wallet")} />
-        </div>
+        <StakingPage onBack={() => handleTabChange("wallet")} />
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
   }
 
-  // Main wallet view
   return (
-    <div className="flex flex-col max-w-md mx-auto relative pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-30">
-        <WalletHeader 
-          onSettingsClick={() => handleTabChange("settings")}
-          unreadCount={unreadCount}
-        />
-      </div>
+    <div className="flex flex-col max-w-md mx-auto relative pb-24">
+      <WalletHeader 
+        onSettingsClick={() => handleTabChange("settings")}
+        unreadCount={unreadCount}
+      />
 
       <PullToRefresh onRefresh={handleRefresh}>
-        {/* Balance */}
-        <div className="px-5 pt-6 pb-1 text-center">
+        {/* Balance Section */}
+        <div className="px-6 pt-8 pb-6 text-center">
           {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
-            <div className="flex items-center justify-center gap-2 py-6">
+            <div className="flex items-center justify-center gap-2 py-10">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground text-sm">Syncing…</span>
+              <span className="text-muted-foreground text-sm">Loading portfolio…</span>
             </div>
           ) : (
             <>
-              <p className="text-muted-foreground text-xs mb-1.5 tracking-wide uppercase">Total Balance</p>
-              <h1 className="text-[38px] font-bold tracking-tight leading-none">
+              <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
+              <h1 className="text-[42px] font-extrabold tracking-tight leading-none">
                 <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
-                <span className="text-foreground/40">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
+                <span className="text-foreground/30 font-bold">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
               </h1>
               {displayBalance > 0 && percentChange !== 0 && (
                 <div className={cn(
-                  "text-xs font-medium mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full",
-                  isPositive ? "text-success bg-success/10" : "text-destructive bg-destructive/10"
+                  "text-[13px] font-semibold mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                  isPositive 
+                    ? "text-success bg-success/10 border border-success/20" 
+                    : "text-destructive bg-destructive/10 border border-destructive/20"
                 )}>
                   <span>{isPositive ? "↑" : "↓"}</span>
                   <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
@@ -317,15 +224,15 @@ const Index = () => {
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* Assets */}
-        <div className="mt-4 bg-card/50 rounded-t-3xl border-t border-border/20 pt-4 pb-6 min-h-[40vh]">
-          <div className="px-5 flex items-center justify-between mb-2">
-            <h2 className="text-base font-semibold text-foreground">My Assets</h2>
+        {/* Token List */}
+        <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3 min-h-[40vh]">
+          <div className="px-5 flex items-center justify-between mb-3">
+            <h2 className="text-[15px] font-bold text-foreground">Assets</h2>
             <button 
               onClick={() => navigate("/assets")}
-              className="text-[11px] text-muted-foreground font-medium active:scale-95"
+              className="text-[12px] text-primary font-semibold active:opacity-70"
             >
-              See All
+              View All
             </button>
           </div>
           <UnifiedTokenList key={`tokens-${refreshKey}`} />
