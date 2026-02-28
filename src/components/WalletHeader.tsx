@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { AccountSwitcherSheet } from "./wallet/AccountSwitcherSheet";
-import { cn } from "@/lib/utils";
 
 interface WalletHeaderProps {
   onSettingsClick?: () => void;
@@ -30,46 +28,39 @@ export const WalletHeader = ({
 
   return (
     <>
-      <header className="flex items-center justify-between px-4 py-3">
-        {/* AI Assistant button - left */}
+      <header className="flex items-center justify-between px-5 py-3">
+        {/* AI button */}
         <button
           onClick={() => navigate("/ai-chat")}
-          className="p-2 rounded-full bg-card border border-border active:bg-secondary"
+          className="w-10 h-10 rounded-full bg-card/80 border border-border/40 flex items-center justify-center active:scale-95"
         >
-          <Sparkles className="w-5 h-5 text-foreground" />
+          <Sparkles className="w-[18px] h-[18px] text-foreground" />
         </button>
 
-        {/* Wallet name pill - center */}
+        {/* Wallet pill */}
         <button
           onClick={() => setShowAccountSwitcher(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/60 border border-border/50 backdrop-blur-sm"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-card/60 border border-border/40"
         >
-          <span className="text-sm text-foreground/80 font-medium">
+          <span className="text-[13px] text-foreground/80 font-semibold tracking-wide">
             {walletName}
           </span>
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+          <ChevronDown className="w-3 h-3 text-muted-foreground" />
         </button>
 
-        {/* Notification bell - right */}
+        {/* Bell */}
         <button
           onClick={() => navigate("/notifications")}
-          className="relative p-2 rounded-full bg-card border border-border active:bg-secondary"
+          className="relative w-10 h-10 rounded-full bg-card/80 border border-border/40 flex items-center justify-center active:scale-95"
         >
-          <Bell className="w-5 h-5 text-foreground" />
-          <AnimatePresence>
-            {unreadCount > 0 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center"
-              >
-                <span className="text-xs font-bold text-destructive-foreground">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <Bell className="w-[18px] h-[18px] text-foreground" />
+          {unreadCount > 0 && (
+            <div className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-destructive rounded-full flex items-center justify-center">
+              <span className="text-[9px] font-bold text-destructive-foreground">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            </div>
+          )}
         </button>
       </header>
 

@@ -277,9 +277,9 @@ const Index = () => {
 
   // Main wallet view
   return (
-    <div className="flex flex-col max-w-md mx-auto relative pb-24">
-      {/* Sticky Header with safe area */}
-      <div className="sticky top-0 z-30 backdrop-blur-xl">
+    <div className="flex flex-col max-w-md mx-auto relative pb-20">
+      {/* Header */}
+      <div className="sticky top-0 z-30">
         <WalletHeader 
           onSettingsClick={() => handleTabChange("settings")}
           unreadCount={unreadCount}
@@ -287,26 +287,26 @@ const Index = () => {
       </div>
 
       <PullToRefresh onRefresh={handleRefresh}>
-        {/* Total Balance */}
-        <div className="px-4 pt-8 pb-2 text-center">
+        {/* Balance */}
+        <div className="px-5 pt-6 pb-1 text-center">
           {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
-            <div className="flex items-center justify-center gap-2 py-8">
+            <div className="flex items-center justify-center gap-2 py-6">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground text-sm">Syncing wallet…</span>
+              <span className="text-muted-foreground text-sm">Syncing…</span>
             </div>
           ) : (
             <>
-              <p className="text-muted-foreground text-sm mb-2">Current balance</p>
-              <h1 className="text-[42px] font-bold tracking-tight leading-none">
+              <p className="text-muted-foreground text-xs mb-1.5 tracking-wide uppercase">Total Balance</p>
+              <h1 className="text-[38px] font-bold tracking-tight leading-none">
                 <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
-                <span className="text-muted-foreground">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
+                <span className="text-foreground/40">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
               </h1>
               {displayBalance > 0 && percentChange !== 0 && (
                 <div className={cn(
-                  "text-sm font-medium mt-3 flex items-center justify-center gap-1",
-                  isPositive ? "text-success" : "text-destructive"
+                  "text-xs font-medium mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full",
+                  isPositive ? "text-success bg-success/10" : "text-destructive bg-destructive/10"
                 )}>
-                  <span>{isPositive ? "▲" : "▼"}</span>
+                  <span>{isPositive ? "↑" : "↓"}</span>
                   <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
                 </div>
               )}
@@ -317,24 +317,21 @@ const Index = () => {
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* My Assets Section - separated background with full border-radius */}
-        <div className="mt-6 bg-card/60 backdrop-blur-sm rounded-3xl border-t border-border/30 pt-5 pb-4 min-h-[40vh]">
-          <div className="px-5 flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-foreground">My assets</h2>
+        {/* Assets */}
+        <div className="mt-4 bg-card/50 rounded-t-3xl border-t border-border/20 pt-4 pb-6 min-h-[40vh]">
+          <div className="px-5 flex items-center justify-between mb-2">
+            <h2 className="text-base font-semibold text-foreground">My Assets</h2>
             <button 
               onClick={() => navigate("/assets")}
-              className="text-xs text-muted-foreground px-3 py-1 rounded-full border border-border hover:bg-secondary transition-colors"
+              className="text-[11px] text-muted-foreground font-medium active:scale-95"
             >
-              see all
+              See All
             </button>
           </div>
-          
-          {/* Token List */}
           <UnifiedTokenList key={`tokens-${refreshKey}`} />
         </div>
       </PullToRefresh>
 
-      {/* Bottom Navigation */}
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
     </div>
   );

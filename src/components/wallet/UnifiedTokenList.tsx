@@ -4,6 +4,7 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 
 const getCryptoLogoUrl = (symbol: string): string => {
   return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
@@ -85,7 +86,7 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
   if (isLoading && tokensWithValue.length === 0) {
     return (
       <div className={cn("px-4", className)}>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {[1, 2, 3].map(i => (
             <div key={i} className="flex items-center justify-between py-4 animate-pulse">
               <div className="flex items-center gap-3">
@@ -125,10 +126,10 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   return (
     <div className={cn("px-4", className)}>
-      <div className="space-y-1">
+      <div>
         {tokensWithValue.map((token, index) => {
           const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
-            minimumFractionDigits: 0, maximumFractionDigits: 8 
+            minimumFractionDigits: 0, maximumFractionDigits: 6 
           });
           const isPositive = token.change24h >= 0;
           const assetLogoUrl = getCryptoLogoUrl(token.symbol);
@@ -137,12 +138,12 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
           return (
             <button
               key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-              className="w-full flex items-center justify-between py-3.5 active:bg-card/50 rounded-xl px-2 -mx-2"
+              className="w-full flex items-center justify-between py-3 active:bg-card/60 rounded-xl px-1"
               onClick={() => handleAssetClick(token)}
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-11 h-11 rounded-full overflow-hidden bg-card border border-border/30">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-card border border-border/30">
                     <img 
                       src={assetLogoUrl} alt={token.symbol}
                       className="w-full h-full object-contain p-1.5"
@@ -159,17 +160,22 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-foreground">{token.name || token.symbol}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {token.symbol} • {getChainInfo(token.chain).name} • ${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="text-[14px] font-semibold text-foreground">{token.name || token.symbol}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {formattedBalance} {token.symbol}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-semibold text-foreground">{formattedBalance}</p>
-                <p className={cn("text-xs mt-0.5", isPositive ? "text-success" : "text-destructive")}>
-                  {isPositive ? "▲" : "▼"} {Math.abs(token.change24h).toFixed(2)}%
-                </p>
+              <div className="flex items-center gap-1.5">
+                <div className="text-right">
+                  <p className="text-[14px] font-semibold text-foreground">
+                    ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className={cn("text-[11px] mt-0.5", isPositive ? "text-success" : "text-destructive")}>
+                    {isPositive ? "+" : ""}{token.change24h.toFixed(2)}%
+                  </p>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30" />
               </div>
             </button>
           );
