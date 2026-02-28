@@ -612,6 +612,49 @@ export default function Build() {
           </CardContent>
         </Card>
 
+        {/* Flutter Builds */}
+        <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Github className="w-4 h-4" />
+              Flutter Builds
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(["flutter_ios", "flutter_android"] as Platform[]).map((p) => {
+                const meta = PLATFORM_META[p];
+                const Icon = meta.icon;
+                const isTriggering = triggering === p;
+
+                return (
+                  <Button
+                    key={p}
+                    variant="outline"
+                    className="h-auto py-4 flex-col gap-1.5"
+                    onClick={() => triggerBuild(p)}
+                    disabled={isTriggering}
+                  >
+                    {isTriggering ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Icon className={`w-5 h-5 ${meta.color}`} />
+                    )}
+                    <span className="text-xs font-medium">
+                      {isTriggering ? "Triggering..." : `Build ${meta.label}`}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{meta.desc}</span>
+                  </Button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Info className="w-3 h-3 mt-0.5 shrink-0" />
+              Native Flutter app builds from <code className="text-primary">flutter_app/</code>. iOS requires signing secrets + TestFlight credentials in GitHub.
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Build History */}
         <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
@@ -647,7 +690,7 @@ export default function Build() {
         <div>
           <h2 className="text-lg font-semibold mb-3">Manual Build Commands</h2>
           <div className="space-y-3">
-            {(["ios", "android"] as Platform[]).map((p) => {
+            {(["ios", "android", "flutter_ios", "flutter_android"] as Platform[]).map((p) => {
               const meta = PLATFORM_META[p];
               const Icon = meta.icon;
               const isOpen = showManual === p;
@@ -684,7 +727,7 @@ export default function Build() {
 
         <p className="text-xs text-muted-foreground text-center pb-8">
           Repo: <code className="text-primary">wolfinslimited-collab/timetrade-wallet</code> · 
-          Capacitor · <code className="text-primary">.github/workflows/</code>
+          Capacitor + Flutter · <code className="text-primary">.github/workflows/</code>
         </p>
       </div>
     </div>
