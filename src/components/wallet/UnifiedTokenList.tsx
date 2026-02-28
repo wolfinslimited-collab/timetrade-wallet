@@ -1,28 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { cn } from "@/lib/utils";
 
-// Get crypto logo URL from external API
 const getCryptoLogoUrl = (symbol: string): string => {
   return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
 };
 
-// Get network logo URL
 import { getNetworkLogoUrl } from "@/config/networks";
-
-const listVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
-};
 
 interface UnifiedToken {
   symbol: string;
@@ -138,12 +125,7 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   return (
     <div className={cn("px-4", className)}>
-      <motion.div
-        className="space-y-1"
-        variants={listVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <div className="space-y-1">
         {tokensWithValue.map((token, index) => {
           const formattedBalance = token.numericBalance.toLocaleString(undefined, { 
             minimumFractionDigits: 0, maximumFractionDigits: 8 
@@ -153,12 +135,10 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
           const networkLogoUrl = getNetworkLogoUrl(token.chain);
           
           return (
-            <motion.button
+            <button
               key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-              variants={itemVariants}
-              className="w-full flex items-center justify-between py-3.5 hover:bg-card/50 transition-colors rounded-xl px-2 -mx-2"
+              className="w-full flex items-center justify-between py-3.5 active:bg-card/50 rounded-xl px-2 -mx-2"
               onClick={() => handleAssetClick(token)}
-              whileTap={{ scale: 0.97 }}
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -191,10 +171,10 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
                   {isPositive ? "▲" : "▼"} {Math.abs(token.change24h).toFixed(2)}%
                 </p>
               </div>
-            </motion.button>
+            </button>
           );
         })}
-      </motion.div>
+      </div>
     </div>
   );
 };

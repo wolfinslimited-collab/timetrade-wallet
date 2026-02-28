@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
 import { BottomNav, NavTab } from "@/components/BottomNav";
@@ -21,12 +21,6 @@ import { cn } from "@/lib/utils";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 import { supabase } from "@/integrations/supabase/client";
 
-const pageTransition = {
-  initial: { opacity: 0, y: -10 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 10 },
-  transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
-};
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -230,7 +224,7 @@ const Index = () => {
   // Show notifications page
   if (currentView === "notifications") {
     return (
-      <motion.div key="notifications" {...pageTransition}>
+      <div key="notifications">
         <NotificationsPage
           notifications={notifications}
           unreadCount={unreadCount}
@@ -239,7 +233,7 @@ const Index = () => {
           onDelete={deleteNotification}
           onClearAll={clearAll}
         />
-      </motion.div>
+      </div>
     );
   }
 
@@ -247,9 +241,9 @@ const Index = () => {
   if (currentView === "settings") {
     return (
       <>
-        <motion.div key="settings" {...pageTransition}>
+        <div key="settings">
           <SettingsPage onBack={() => handleTabChange("wallet")} />
-        </motion.div>
+        </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
@@ -259,9 +253,9 @@ const Index = () => {
   if (currentView === "history") {
     return (
       <>
-        <motion.div key="history" {...pageTransition}>
+        <div key="history">
           <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
-        </motion.div>
+        </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );
@@ -272,9 +266,9 @@ const Index = () => {
   if (currentView === "staking") {
     return (
       <>
-        <motion.div key="staking" {...pageTransition}>
+        <div key="staking">
           <StakingPage onBack={() => handleTabChange("wallet")} />
-        </motion.div>
+        </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </>
     );

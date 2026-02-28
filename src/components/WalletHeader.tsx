@@ -34,7 +34,7 @@ export const WalletHeader = ({
         {/* AI Assistant button - left */}
         <button
           onClick={() => navigate("/ai-chat")}
-          className="p-2 rounded-full bg-card border border-border hover:border-primary/30 transition-colors"
+          className="p-2 rounded-full bg-card border border-border active:bg-secondary"
         >
           <Sparkles className="w-5 h-5 text-foreground" />
         </button>
@@ -53,7 +53,7 @@ export const WalletHeader = ({
         {/* Notification bell - right */}
         <button
           onClick={() => navigate("/notifications")}
-          className="relative p-2 rounded-full bg-card border border-border hover:border-foreground/30 transition-colors"
+          className="relative p-2 rounded-full bg-card border border-border active:bg-secondary"
         >
           <Bell className="w-5 h-5 text-foreground" />
           <AnimatePresence>
