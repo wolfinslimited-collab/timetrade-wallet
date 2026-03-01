@@ -131,8 +131,7 @@ const Index = () => {
     refreshAll();
     await new Promise(resolve => setTimeout(resolve, 1200));
     setRefreshKey(prev => prev + 1);
-    toast({ title: "Portfolio updated", description: "All balances refreshed" });
-  }, [toast, refreshAll]);
+  }, [refreshAll]);
 
   if (hasWallet === null) {
     return (
