@@ -556,8 +556,8 @@ export default function Build() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div className="h-full bg-background text-foreground overflow-hidden">
+      <div className="max-w-3xl mx-auto h-full overflow-y-auto px-4 pt-4 pb-8 space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Timetrade Build Center</h1>
           <p className="text-sm text-muted-foreground mt-1">
