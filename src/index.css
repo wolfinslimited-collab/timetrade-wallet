@@ -72,9 +72,10 @@
 
   html {
     -webkit-text-size-adjust: 100%;
-    height: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
     overflow: hidden;
-    background-color: hsl(220 16% 6%);
+    background-color: hsl(var(--background));
   }
 
   body {
@@ -84,9 +85,11 @@
     user-select: none;
     -webkit-touch-callout: none;
     overscroll-behavior-y: none;
-    height: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
     overflow: hidden;
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: 0;
+    background-color: hsl(var(--background));
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
@@ -96,11 +99,14 @@
   }
 
   #root {
-    height: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    padding-top: env(safe-area-inset-top, 0px);
+    background-color: hsl(var(--background));
   }
 
   input, textarea, [contenteditable="true"] {
