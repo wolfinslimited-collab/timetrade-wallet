@@ -72,20 +72,19 @@
 
   html {
     -webkit-text-size-adjust: 100%;
-    min-height: 100%;
-    height: auto;
-    overflow-x: hidden;
+    height: 100%;
+    overflow: hidden;
+    background-color: hsl(220 16% 6%);
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', -apple-system, system-ui, sans-serif;
-    background-color: hsl(220 16% 6%);
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
     overscroll-behavior-y: none;
-    height: 100dvh;
+    height: 100%;
     overflow: hidden;
     padding-top: env(safe-area-inset-top, 0px);
     scrollbar-width: none;
@@ -94,12 +93,6 @@
 
   body::-webkit-scrollbar {
     display: none;
-  }
-
-  @media (max-width: 768px) {
-    body {
-      padding-top: max(env(safe-area-inset-top, 0px), 20px);
-    }
   }
 
   #root {
