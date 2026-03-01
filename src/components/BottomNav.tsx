@@ -29,13 +29,14 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
     const nav = (
       <nav 
         ref={ref}
-        className="fixed bottom-0 left-0 right-0 z-[9999]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="fixed bottom-0 left-0 right-0 z-[9999] bg-background"
       >
-        <div className="max-w-md mx-auto px-4 pb-2">
+        <div
+          className="max-w-md mx-auto px-4 pt-2"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+        >
           <div 
             className="bg-card/90 border border-border/30 rounded-2xl px-1 py-1.5"
-            style={{ backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)' }}
           >
             <div className="flex items-center justify-around">
               {navItems.filter(item => !hiddenTabs.includes(item.tab)).map((item) => {
