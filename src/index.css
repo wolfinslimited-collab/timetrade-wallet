@@ -84,13 +84,9 @@
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
-    overscroll-behavior-y: auto;
-    min-height: 100dvh;
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
+    overscroll-behavior-y: none;
+    height: 100dvh;
+    overflow: hidden;
     padding-top: env(safe-area-inset-top, 0px);
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -101,24 +97,17 @@
   }
 
   @media (max-width: 768px) {
-    html, body, #root {
-      min-height: 100dvh;
-      height: auto;
-    }
-
     body {
       padding-top: max(env(safe-area-inset-top, 0px), 20px);
-      overflow-y: auto !important;
-      -webkit-overflow-scrolling: touch;
-      touch-action: pan-y;
     }
   }
 
   #root {
-    min-height: 100dvh;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
+    overflow: hidden;
+    position: relative;
   }
 
   input, textarea, [contenteditable="true"] {
