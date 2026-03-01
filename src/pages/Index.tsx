@@ -159,85 +159,93 @@ const Index = () => {
 
   if (currentView === "settings") {
     return (
-      <>
-        <SettingsPage onBack={() => handleTabChange("wallet")} />
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <SettingsPage onBack={() => handleTabChange("wallet")} />
+        </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </>
+      </div>
     );
   }
 
   if (currentView === "history") {
     return (
-      <>
-        <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
+        </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </>
+      </div>
     );
   }
 
   if (currentView === "staking") {
     return (
-      <>
-        <StakingPage onBack={() => handleTabChange("wallet")} />
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <StakingPage onBack={() => handleTabChange("wallet")} />
+        </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col max-w-md mx-auto relative pb-24">
+    <div className="flex flex-col flex-1 max-w-md mx-auto w-full relative overflow-hidden">
       <WalletHeader 
         onSettingsClick={() => handleTabChange("settings")}
         unreadCount={unreadCount}
       />
 
-      <PullToRefresh onRefresh={handleRefresh}>
-        {/* Balance Section */}
-        <div className="px-6 pt-8 pb-6 text-center">
-          {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
-            <div className="flex items-center justify-center gap-2 py-10">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground text-sm">Loading portfolio…</span>
-            </div>
-          ) : (
-            <>
-              <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
-              <h1 className="text-[42px] font-extrabold tracking-tight leading-none">
-                <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
-                <span className="text-foreground/30 font-bold">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
-              </h1>
-              {displayBalance > 0 && percentChange !== 0 && (
-                <div className={cn(
-                  "text-[13px] font-semibold mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  isPositive 
-                    ? "text-success bg-success/10 border border-success/20" 
-                    : "text-destructive bg-destructive/10 border border-destructive/20"
-                )}>
-                  <span>{isPositive ? "↑" : "↓"}</span>
-                  <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <QuickActions />
-
-        {/* Token List */}
-        <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3 min-h-[40vh]">
-          <div className="px-5 flex items-center justify-between mb-3">
-            <h2 className="text-[15px] font-bold text-foreground">Assets</h2>
-            <button 
-              onClick={() => navigate("/assets")}
-              className="text-[12px] text-primary font-semibold active:opacity-70"
-            >
-              View All
-            </button>
+      <div className="flex-1 overflow-y-auto pb-24 -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <PullToRefresh onRefresh={handleRefresh}>
+          {/* Balance Section */}
+          <div className="px-6 pt-8 pb-6 text-center">
+            {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
+              <div className="flex items-center justify-center gap-2 py-10">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground text-sm">Loading portfolio…</span>
+              </div>
+            ) : (
+              <>
+                <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
+                <h1 className="text-[42px] font-extrabold tracking-tight leading-none">
+                  <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
+                  <span className="text-foreground/30 font-bold">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
+                </h1>
+                {displayBalance > 0 && percentChange !== 0 && (
+                  <div className={cn(
+                    "text-[13px] font-semibold mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                    isPositive 
+                      ? "text-success bg-success/10 border border-success/20" 
+                      : "text-destructive bg-destructive/10 border border-destructive/20"
+                  )}>
+                    <span>{isPositive ? "↑" : "↓"}</span>
+                    <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          <UnifiedTokenList key={`tokens-${refreshKey}`} />
-        </div>
-      </PullToRefresh>
+
+          {/* Quick Actions */}
+          <QuickActions />
+
+          {/* Token List */}
+          <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3 min-h-[40vh]">
+            <div className="px-5 flex items-center justify-between mb-3">
+              <h2 className="text-[15px] font-bold text-foreground">Assets</h2>
+              <button 
+                onClick={() => navigate("/assets")}
+                className="text-[12px] text-primary font-semibold active:opacity-70"
+              >
+                View All
+              </button>
+            </div>
+            <UnifiedTokenList key={`tokens-${refreshKey}`} />
+          </div>
+        </PullToRefresh>
+      </div>
 
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
     </div>
