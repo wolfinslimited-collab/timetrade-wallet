@@ -254,7 +254,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         >
           <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
           <p className="text-[11px] leading-relaxed text-foreground/60">
-            <span className="font-semibold text-destructive">Security:</span> Never share your seed phrase. AI Wallet will never ask for it outside this screen.
+            <span className="font-semibold text-destructive">Security:</span> Never share your seed phrase. Timetrade Wallet will never ask for it outside this screen.
           </p>
         </motion.div>
 

@@ -34,7 +34,7 @@ class WelcomeStep extends StatelessWidget {
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: AppColors.textPrimary, height: 1.2),
                 children: [
                   TextSpan(text: 'Welcome to '),
-                  TextSpan(text: 'AI Wallet', style: TextStyle(color: AppColors.primary)),
+                  TextSpan(text: 'Timetrade Wallet', style: TextStyle(color: AppColors.primary)),
                 ],
               ),
             ),
