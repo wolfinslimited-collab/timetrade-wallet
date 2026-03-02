@@ -71,6 +71,44 @@ jobs:
           npx --yes @capacitor/assets generate --ios
           test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json
 
+      - name: Ensure 1024x1024 App Store icon
+        run: |
+          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          ICON_1024="\$ICON_DIR/AppIcon-1024x1024@1x.png"
+          
+          # If the 1024x1024 icon wasn't generated, create it from the source
+          if [ ! -f "\$ICON_1024" ]; then
+            echo "1024x1024 icon missing, generating from source..."
+            sips -z 1024 1024 assets/icon.png --out "\$ICON_1024"
+          fi
+          
+          # Ensure Contents.json includes the 1024pt App Store entry
+          CONTENTS="\$ICON_DIR/Contents.json"
+          if ! grep -q '"size" : "1024x1024"' "\$CONTENTS"; then
+            echo "Adding 1024x1024 entry to Contents.json..."
+            python3 -c "
+import json, sys
+with open('\$CONTENTS', 'r') as f:
+    data = json.load(f)
+entry = {
+    'filename': 'AppIcon-1024x1024@1x.png',
+    'idiom': 'ios-marketing',
+    'scale': '1x',
+    'size': '1024x1024'
+}
+# Remove any existing ios-marketing entry
+data['images'] = [img for img in data['images'] if img.get('idiom') != 'ios-marketing']
+data['images'].append(entry)
+with open('\$CONTENTS', 'w') as f:
+    json.dump(data, f, indent=2)
+print('Added 1024x1024 ios-marketing entry')
+"
+          fi
+          
+          # Verify
+          test -f "\$ICON_1024" && echo "✅ 1024x1024 App Store icon ready"
+          grep -q "1024x1024" "\$CONTENTS" && echo "✅ Contents.json has 1024pt entry"
+
       - name: Set iOS build number
         run: |
           BUILD_NUMBER="\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
