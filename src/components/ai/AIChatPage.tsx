@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Sparkles, Zap, Shield, TrendingUp, MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -10,10 +10,10 @@ type Message = { role: "user" | "assistant"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
 const SUGGESTIONS = [
-  "What is gas fee?",
-  "Explain staking",
-  "How to stay safe in crypto?",
-  "What are stablecoins?",
+  { icon: Zap, label: "What is gas fee?", color: "from-amber-500/20 to-orange-500/20 border-amber-500/20" },
+  { icon: TrendingUp, label: "Explain staking", color: "from-emerald-500/20 to-green-500/20 border-emerald-500/20" },
+  { icon: Shield, label: "How to stay safe?", color: "from-blue-500/20 to-cyan-500/20 border-blue-500/20" },
+  { icon: MessageCircle, label: "What are stablecoins?", color: "from-purple-500/20 to-pink-500/20 border-purple-500/20" },
 ];
 
 export const AIChatPage = () => {
@@ -21,7 +21,7 @@ export const AIChatPage = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { unifiedAssets, totalBalanceUsd } = useBlockchainContext();
 
   const scrollToBottom = () => {
@@ -31,6 +31,14 @@ export const AIChatPage = () => {
   };
 
   useEffect(scrollToBottom, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + "px";
+    }
+  }, [input]);
 
   const getPortfolioContext = () => {
     if (!unifiedAssets?.length) return undefined;
@@ -147,54 +155,90 @@ export const AIChatPage = () => {
     sendMessage(input);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 space-y-3 pb-4 scrollbar-hide">
+      {/* Messages area */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+        {/* Empty state */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-6 py-12">
-            <div className="w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center">
-              <Bot className="w-8 h-8 text-primary/50" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="flex flex-col items-center justify-center h-full gap-5 py-8"
+          >
+            {/* Animated orb */}
+            <div className="relative">
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center border border-primary/10">
+                <Sparkles className="w-9 h-9 text-primary" />
+              </div>
+              <div className="absolute inset-0 rounded-3xl bg-primary/5 animate-pulse" />
             </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Ask me anything about crypto</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">I can help with transactions, tokens, and more</p>
+
+            <div className="text-center space-y-1.5">
+              <h2 className="text-lg font-semibold text-foreground">How can I help?</h2>
+              <p className="text-sm text-muted-foreground max-w-[240px]">
+                Ask me anything about crypto, blockchain, or your portfolio
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => sendMessage(s)}
-                  className="text-xs p-3 rounded-xl bg-card border border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors text-left"
+
+            {/* Suggestion cards */}
+            <div className="grid grid-cols-2 gap-2.5 w-full max-w-sm mt-2">
+              {SUGGESTIONS.map((s, i) => (
+                <motion.button
+                  key={s.label}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 + i * 0.08, duration: 0.3 }}
+                  onClick={() => sendMessage(s.label)}
+                  className={cn(
+                    "flex items-start gap-2.5 p-3.5 rounded-2xl border text-left",
+                    "bg-gradient-to-br backdrop-blur-sm",
+                    "hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+                    s.color
+                  )}
                 >
-                  {s}
-                </button>
+                  <s.icon className="w-4 h-4 text-foreground/70 mt-0.5 shrink-0" />
+                  <span className="text-xs font-medium text-foreground/80 leading-snug">{s.label}</span>
+                </motion.button>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
+        {/* Messages */}
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className={cn(
+                "flex gap-2.5 mb-4",
+                msg.role === "user" ? "justify-end" : "justify-start"
+              )}
             >
               {msg.role === "assistant" && (
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 mt-1 border border-primary/10">
                   <Bot className="w-4 h-4 text-primary" />
                 </div>
               )}
               <div className={cn(
-                "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                "max-w-[78%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed",
                 msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-br-md"
-                  : "bg-card border border-border/50 rounded-bl-md"
+                  ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-br-lg shadow-lg shadow-primary/10"
+                  : "bg-card/80 border border-border/50 rounded-bl-lg backdrop-blur-sm"
               )}>
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                  <div className="prose prose-sm prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_code]:bg-secondary/60 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs [&_pre]:bg-secondary/40 [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border/30">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 ) : (
@@ -202,7 +246,7 @@ export const AIChatPage = () => {
                 )}
               </div>
               {msg.role === "user" && (
-                <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+                <div className="w-8 h-8 rounded-xl bg-secondary/80 flex items-center justify-center shrink-0 mt-1 border border-border/30">
                   <User className="w-4 h-4 text-muted-foreground" />
                 </div>
               )}
@@ -210,42 +254,59 @@ export const AIChatPage = () => {
           ))}
         </AnimatePresence>
 
+        {/* Typing indicator */}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
-          <div className="flex gap-2">
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-2.5 mb-4"
+          >
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
               <Bot className="w-4 h-4 text-primary" />
             </div>
-            <div className="bg-card border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="bg-card/80 border border-border/50 rounded-2xl rounded-bl-lg px-4 py-3.5 backdrop-blur-sm">
+              <div className="flex gap-1.5 items-center">
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="px-4 pb-4 pt-2">
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about crypto..."
-            disabled={isLoading}
-            className="flex-1 h-12 rounded-2xl bg-card border border-border/50 px-4 text-sm focus:outline-none focus:border-primary/50 disabled:opacity-50 placeholder:text-muted-foreground/50"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50 hover:bg-primary/90 transition-colors"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-      </form>
+      {/* Input area */}
+      <div className="relative px-4 pb-4 pt-2">
+        {/* Top fade gradient */}
+        <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+
+        <form onSubmit={handleSubmit} className="relative">
+          <div className="flex items-end gap-2 bg-card/80 border border-border/50 rounded-2xl p-1.5 backdrop-blur-xl focus-within:border-primary/30 transition-colors duration-200">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about crypto..."
+              disabled={isLoading}
+              rows={1}
+              className="flex-1 bg-transparent px-3 py-2.5 text-sm resize-none focus:outline-none disabled:opacity-50 placeholder:text-muted-foreground/40 max-h-[120px] leading-relaxed"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
+                input.trim() && !isLoading
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-105 active:scale-95"
+                  : "bg-secondary/50 text-muted-foreground/30"
+              )}
+            >
+              <Send className="w-4.5 h-4.5" />
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
