@@ -168,10 +168,10 @@
   }
 
   .nav-safe-inset {
-    padding-bottom: clamp(4px, env(safe-area-inset-bottom, 0px), 10px);
+    padding-bottom: min(env(safe-area-inset-bottom, 0px), 4px);
   }
 
   .pb-nav-safe {
-    padding-bottom: calc(5rem + min(env(safe-area-inset-bottom, 0px), 10px));
+    padding-bottom: calc(5rem + min(env(safe-area-inset-bottom, 0px), 4px));
   }
 }
