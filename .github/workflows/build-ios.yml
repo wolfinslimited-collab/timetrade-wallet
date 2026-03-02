@@ -69,6 +69,18 @@ jobs:
           test -f "$ICON_1024" && echo "1024x1024 App Store icon ready"
           grep -q "1024x1024" "$CONTENTS" && echo "Contents.json has 1024pt entry"
 
+      - name: Remove alpha channel from all icons
+        run: |
+          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          for IMG in "$ICON_DIR"/*.png; do
+            if [ -f "$IMG" ]; then
+              sips -s format png -s formatOptions 100 "$IMG" --out "$IMG.tmp"
+              sips -s hasAlpha false "$IMG.tmp" --out "$IMG"
+              rm -f "$IMG.tmp"
+              echo "Removed alpha from $(basename "$IMG")"
+            fi
+          done
+
       - name: Set iOS build number
         run: |
           BUILD_NUMBER="${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
