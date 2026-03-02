@@ -266,9 +266,19 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
   const displayTransactions = useMemo(() => {
     if (!isConnected) return [];
-    return unifiedTx.combined.map((u) =>
-      convertBlockchainTx(u.chain, u.tx, getUserAddressForChain(u.chain), u.explorerUrl)
-    );
+    const minDisplayAmount = 0.000001;
+
+    return unifiedTx.combined
+      .map((u) =>
+        convertBlockchainTx(u.chain, u.tx, getUserAddressForChain(u.chain), u.explorerUrl)
+      )
+      .filter((tx) => {
+        if (tx.type === "swap") {
+          const recvAmount = tx.swapTo?.amount ?? 0;
+          return tx.amount >= minDisplayAmount || recvAmount >= minDisplayAmount;
+        }
+        return tx.amount >= minDisplayAmount;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, unifiedTx.combined, unifiedTx.addresses]);
 
