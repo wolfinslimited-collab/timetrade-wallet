@@ -358,6 +358,10 @@ export const AssetDetailPage = () => {
                   ? (typeof solanaTransfer.decimals === 'number' ? solanaTransfer.decimals : asset.decimals)
                   : asset.decimals;
                 const formattedValue = parseFloat(displayBaseUnits || '0') / Math.pow(10, displayDecimals);
+
+                // Skip dust/spam transactions (< 0.0001 of the asset)
+                if (formattedValue < 0.0001) return null;
+
                 const dateLabel = Number.isFinite(tx.timestamp) ? new Date(tx.timestamp * 1000).toLocaleDateString() : "—";
                 const txHref = tx.hash ? getTxExplorerUrl(chain, txData?.explorerUrl || explorerUrl, tx.hash) : undefined;
 
@@ -389,7 +393,7 @@ export const AssetDetailPage = () => {
                     </div>
                   </motion.a>
                 );
-              })}
+              }).filter(Boolean)}
             </motion.div>
           )}
         </motion.div>
