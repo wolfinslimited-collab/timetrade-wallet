@@ -60,6 +60,17 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
+      - name: Prepare app icon source
+        run: |
+          test -f public/app-logo.png
+          mkdir -p assets
+          cp public/app-logo.png assets/icon.png
+
+      - name: Generate iOS app icons
+        run: |
+          npx --yes @capacitor/assets generate --ios
+          test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json
+
       - name: Set iOS build number
         run: |
           BUILD_NUMBER="\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
@@ -240,6 +251,15 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Prepare app icon source
+        run: |
+          test -f public/app-logo.png
+          mkdir -p assets
+          cp public/app-logo.png assets/icon.png
+
+      - name: Generate Android app icons
+        run: npx --yes @capacitor/assets generate --android
 
       - name: Setup signing
         env:
