@@ -93,7 +93,7 @@ export function wipeAllWalletData(): void {
   // Historically we only removed keys with the timetrade_ prefix, but other
   // libraries (wallet-connectors, caches, etc.) may store data under other keys.
   // On a dedicated app domain it's safe (and expected) to clear all storage.
-  console.log('%c[WALLET STORAGE] 🗑️ Wiping ALL client storage', 'color: #ef4444; font-weight: bold;');
+  // Wiping ALL client storage
 
   try {
     const allKeys: string[] = [];
@@ -101,7 +101,7 @@ export function wipeAllWalletData(): void {
       const k = localStorage.key(i);
       if (k) allKeys.push(k);
     }
-    console.log('%c[WALLET STORAGE] localStorage keys before clear:', 'color: #f97316;', allKeys);
+    // Keys logged before clear
   } catch {
     // ignore
   }
@@ -136,7 +136,7 @@ export function wipeAllWalletData(): void {
     // ignore
   }
 
-  console.log('%c[WALLET STORAGE] ✅ Wipe complete', 'color: #22c55e; font-weight: bold;');
+  // Wipe complete
 }
 
 /**
@@ -150,7 +150,7 @@ export async function wipeIndexedDb(): Promise<void> {
     const names = databases.map((d) => d.name).filter(Boolean) as string[];
     if (names.length === 0) return;
 
-    console.log('%c[WALLET STORAGE] 🧨 Deleting IndexedDB databases', 'color: #ef4444; font-weight: bold;', names);
+    // Deleting IndexedDB databases
 
     await Promise.all(
       names.map(
@@ -172,7 +172,7 @@ export async function wipeIndexedDb(): Promise<void> {
  * Clear all address-related keys (used when switching account types)
  */
 export function clearAllAddresses(): void {
-  console.log('%c[WALLET STORAGE] 🧹 Clearing all addresses', 'color: #f59e0b;');
+  // Clearing all addresses
   
   localStorage.removeItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS);
   localStorage.removeItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_EVM);
@@ -190,7 +190,7 @@ export function setAllAddresses(addresses: {
   tron?: string;
   btc?: string;
 }): void {
-  console.log('%c[WALLET STORAGE] 💾 Setting addresses', 'color: #22c55e; font-weight: bold;', addresses);
+  // Setting addresses
   
   if (addresses.evm) {
     localStorage.setItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS, addresses.evm);
@@ -297,7 +297,7 @@ export function reEncryptAllAccountSeeds(oldEncrypted: string, newEncrypted: str
  * Clear session-specific mnemonic data (used when switching to private key account)
  */
 export function clearMnemonicSession(): void {
-  console.log('%c[WALLET STORAGE] 🔐 Clearing mnemonic session', 'color: #a855f7;');
+  // Clearing mnemonic session
   localStorage.removeItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH);
   localStorage.removeItem(WALLET_STORAGE_KEYS.SOLANA_ACCOUNT_INDEX);
 }
@@ -312,11 +312,5 @@ export function logWalletState(): void {
   const walletName = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_NAME);
   const hasSeedPhrase = !!getActiveAccountEncryptedSeed();
   
-  console.log('%c[WALLET STORAGE] 📊 Current State', 'color: #3b82f6; font-weight: bold;', {
-    walletName,
-    activeIndex,
-    hasSeedPhrase,
-    addresses,
-    accountsCount: accounts ? JSON.parse(accounts).length : 0,
-  });
+  // Wallet state logged for debugging (disabled in production)
 }

@@ -101,7 +101,7 @@ export const SuccessStep = ({ walletName, onFinish }: SuccessStepProps) => {
         style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <Button
-          onClick={() => { console.log('Go to Wallet clicked'); onFinish(); }}
+          onClick={() => onFinish()}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
         >
           Go to Wallet

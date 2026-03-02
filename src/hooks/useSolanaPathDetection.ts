@@ -28,7 +28,6 @@ export function useSolanaPathDetection() {
     setError(null);
 
     try {
-      // Derive addresses for all three paths at account index 0
       const pathStyles: SolanaDerivationPath[] = ['phantom', 'solflare', 'legacy'];
       const addresses: { path: SolanaDerivationPath; address: string; fullPath: string }[] = [];
 
@@ -42,9 +41,6 @@ export function useSolanaPathDetection() {
         });
       }
 
-      console.log('Checking Solana balances for derivation paths:', addresses);
-
-      // Check balances for all addresses in parallel
       const balancePromises = addresses.map(async ({ path, address }) => {
         try {
           const { data, error } = await invokeBlockchain({ 
@@ -62,12 +58,9 @@ export function useSolanaPathDetection() {
           const nativeBalance = data?.data?.native?.balance || '0';
           const tokens = data?.data?.tokens || [];
           
-          // Check if there's any native balance or tokens
           const hasNativeBalance = nativeBalance !== '0' && parseFloat(nativeBalance) > 0;
           const hasTokens = tokens.length > 0;
           const hasBalance = hasNativeBalance || hasTokens;
-
-          console.log(`Path ${path} (${address}): native=${nativeBalance}, tokens=${tokens.length}, hasBalance=${hasBalance}`);
 
           return { 
             path, 
@@ -83,14 +76,10 @@ export function useSolanaPathDetection() {
 
       const results = await Promise.all(balancePromises);
 
-      // Find the first path with a balance
       const pathWithBalance = results.find(r => r.hasBalance);
 
-      // If we found a path with balance, use it; otherwise default to legacy (Trust Wallet compatible)
       const detectedPath = pathWithBalance?.path || 'legacy';
       const detectedAddress = pathWithBalance?.address || addresses.find(a => a.path === 'legacy')!.address;
-
-      console.log(`Detected Solana derivation path: ${detectedPath} (${detectedAddress})`);
 
       return {
         detectedPath,
@@ -109,7 +98,6 @@ export function useSolanaPathDetection() {
 
   const savePathPreference = useCallback((path: SolanaDerivationPath) => {
     localStorage.setItem('timetrade_solana_derivation_path', path);
-    console.log(`Saved Solana derivation path preference: ${path}`);
   }, []);
 
   return {

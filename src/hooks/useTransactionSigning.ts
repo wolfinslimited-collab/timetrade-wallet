@@ -113,31 +113,20 @@ export function useTransactionSigning(chain: Chain, isTestnet: boolean = true): 
       
       // Use EIP-1559 if provided, otherwise fall back to legacy
       if (params.maxFeePerGas && params.maxPriorityFeePerGas) {
-        // Use provided EIP-1559 fees
         tx.maxFeePerGas = ethers.parseUnits(params.maxFeePerGas, 'gwei');
         tx.maxPriorityFeePerGas = ethers.parseUnits(params.maxPriorityFeePerGas, 'gwei');
-        console.log('Using provided EIP-1559 fees:', { 
-          maxFeePerGas: params.maxFeePerGas, 
-          maxPriorityFeePerGas: params.maxPriorityFeePerGas 
-        });
       } else if (params.gasPrice) {
-        // Use legacy gas price converted to EIP-1559 format
         const gasPriceWei = ethers.parseUnits(params.gasPrice, 'gwei');
         tx.maxFeePerGas = gasPriceWei;
         tx.maxPriorityFeePerGas = gasPriceWei / BigInt(2);
-        console.log('Using legacy gas price as EIP-1559:', { gasPrice: params.gasPrice });
       } else if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
-        // Use network fee data
         tx.maxFeePerGas = feeData.maxFeePerGas;
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
-        console.log('Using network fee data');
       } else {
-        // Fallback to legacy gas price
         tx.gasPrice = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
         delete tx.maxFeePerGas;
         delete tx.maxPriorityFeePerGas;
         tx.type = 0;
-        console.log('Using legacy transaction type');
       }
 
       // Add data if provided (for contract interactions)
@@ -150,8 +139,6 @@ export function useTransactionSigning(chain: Chain, isTestnet: boolean = true): 
       
       // Compute transaction hash
       const txHash = ethers.keccak256(signedTx);
-
-      console.log('Transaction signed successfully:', { txHash, chainId, nonce });
 
       return {
         signedTx,

@@ -249,7 +249,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
       setStep("success");
       
       // Refresh blockchain data after successful transaction
-      console.log('%c[SEND CRYPTO] 🔄 Refreshing blockchain data after successful transaction', 'color: #10b981; font-weight: bold;');
+      // Refresh blockchain data after successful transaction
       refreshAll();
     } catch (error) {
       console.error("Transaction broadcast failed:", error);

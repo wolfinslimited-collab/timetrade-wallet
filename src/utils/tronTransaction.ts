@@ -265,21 +265,8 @@ export async function signTrxTransaction(
   params: TronTransactionParams,
   isTestnet: boolean = true
 ): Promise<SignedTronTransaction> {
-  console.log('Creating TRX transfer transaction:', { 
-    to: params.to, 
-    amount: params.amount, 
-    isTestnet 
-  });
-  
-  // Create the unsigned transaction via TronGrid
   const { transaction, txID } = await createTrxTransferTransaction(params, isTestnet);
-  
-  console.log('Transaction created with ID:', txID);
-  
-  // Sign the transaction
   const { signedTx } = signTronTransaction(transaction, privateKey);
-  
-  console.log('Transaction signed successfully');
   
   return {
     signedTx,
@@ -295,26 +282,13 @@ export async function signTrc20Transaction(
   params: TronTRC20TransactionParams,
   isTestnet: boolean = true
 ): Promise<SignedTronTransaction> {
-  console.log('Creating TRC-20 transfer transaction:', { 
-    to: params.to, 
-    amount: params.amount,
-    contractAddress: params.contractAddress,
-    isTestnet 
-  });
-  
-  // Create the unsigned transaction via TronGrid
   const { transaction, txID } = await createTrc20TransferTransaction(params, isTestnet);
   
   if (!txID) {
     throw new Error('Failed to create TRC-20 transaction');
   }
   
-  console.log('TRC-20 transaction created with ID:', txID);
-  
-  // Sign the transaction
   const { signedTx } = signTronTransaction(transaction, privateKey);
-  
-  console.log('TRC-20 transaction signed successfully');
   
   return {
     signedTx,

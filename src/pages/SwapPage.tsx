@@ -238,7 +238,7 @@ const SwapPage = () => {
         const keypair = deriveSolanaKeypair(mnemonic.trim(), storedIndex, storedPath);
         const userPublicKey = keypair.publicKey.toBase58();
 
-        console.log("[SWAP] Getting Jupiter swap transaction for:", userPublicKey);
+        // Getting Jupiter swap transaction
 
         // 3. Get Jupiter swap transaction via edge function
         const { data: swapData, error: swapErr } = await supabase.functions.invoke("swap-quote", {
@@ -259,7 +259,7 @@ const SwapPage = () => {
         const swapTransactionBase64 = swapData.data.swapTransaction;
         if (!swapTransactionBase64) throw new Error("No swap transaction returned");
 
-        console.log("[SWAP] Got swap transaction, signing...");
+        // Got swap transaction, signing...
 
         // 4. Deserialize the versioned transaction
         const transactionBuf = Buffer.from(swapTransactionBase64, "base64");
@@ -272,7 +272,7 @@ const SwapPage = () => {
         const signedTxBytes = transaction.serialize();
         const signedTxHex = Buffer.from(signedTxBytes).toString("hex");
 
-        console.log("[SWAP] Transaction signed, broadcasting...");
+        // Transaction signed, broadcasting...
 
         // 7. Broadcast via wallet-blockchain edge function (Helius)
         const { data: broadcastData, error: broadcastErr } = await invokeBlockchain({
@@ -289,7 +289,7 @@ const SwapPage = () => {
         if (!broadcastResult?.success) throw new Error(broadcastResult?.error || "Broadcast failed");
 
         const hash = broadcastResult.data?.txHash;
-        console.log("[SWAP] ✅ Transaction broadcast successfully:", hash);
+        // Transaction broadcast successfully
 
         setTxHash(hash || null);
         setIsSwapping(false);
