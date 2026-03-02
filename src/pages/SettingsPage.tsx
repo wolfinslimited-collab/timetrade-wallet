@@ -130,7 +130,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
         <h1 className="text-xl font-bold">Settings</h1>
       </div>
 
-      <div className="flex-1 px-4 space-y-6 pb-28">
+      <div className="flex-1 px-4 space-y-6 pb-nav-safe">
         {/* Security */}
         <section>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 mb-2">
