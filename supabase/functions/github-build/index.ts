@@ -99,60 +99,11 @@ jobs:
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           for IMG in "\$ICON_DIR"/*.png; do
             if [ -f "\$IMG" ]; then
-              SIZE=\$(sips -g pixelWidth "\$IMG" | tail -1 | awk '{print \$2}')
-              TMP_BG="\$(mktemp).png"
-              /usr/bin/python3 -c "
-          import subprocess, struct, zlib
-          s=int('\$SIZE')
-          def chunk(t,d):
-              return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
-          raw=b''
-          for _ in range(s):
-              raw+=b'\\x00'+(b'\\xff\\xff\\xff'*s)
-          ihdr=struct.pack('>IIBBBBB',s,s,8,2,0,0,0)
-          f=open('\$TMP_BG','wb')
-          f.write(b'\\x89PNG\\r\\n\\x1a\\n')
-          f.write(chunk(b'IHDR',ihdr))
-          f.write(chunk(b'IDAT',zlib.compress(raw)))
-          f.write(chunk(b'IEND',b''))
-          f.close()
-          "
-              sips "\$TMP_BG" --setProperty format png -o "\$TMP_BG" 2>/dev/null || true
-              /usr/bin/python3 -c "
-          import subprocess
-          subprocess.run(['sips','\$TMP_BG','-i'],check=False)
-          subprocess.run(['sips','\$IMG','-i'],check=False)
-          " 2>/dev/null || true
-              COMPOSITE="\$(mktemp).png"
-              cp "\$TMP_BG" "\$COMPOSITE"
-              sips "\$COMPOSITE" --setProperty format png -o "\$COMPOSITE" 2>/dev/null || true
-              # Use CoreGraphics via python to flatten alpha
-              /usr/bin/python3 -c "
-          import Quartz, CoreFoundation
-          from Quartz import CGImageSourceCreateWithURL, CGImageSourceCreateImageAtIndex
-          from Quartz import CGBitmapContextCreate, CGContextDrawImage, CGBitmapContextCreateImage
-          from Quartz import CGImageDestinationCreateWithURL, CGImageDestinationAddImage, CGImageDestinationFinalize
-          from Quartz import kCGImageAlphaNoneSkipLast
-          from CoreFoundation import CFURLCreateWithFileSystemPath, kCFURLPOSIXPathStyle, kCFAllocatorDefault
-          import os
-          src_url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, '\$IMG', kCFURLPOSIXPathStyle, False)
-          src = CGImageSourceCreateWithURL(src_url, None)
-          img = CGImageSourceCreateImageAtIndex(src, 0, None)
-          w = Quartz.CGImageGetWidth(img)
-          h = Quartz.CGImageGetHeight(img)
-          cs = Quartz.CGColorSpaceCreateDeviceRGB()
-          ctx = CGBitmapContextCreate(None, w, h, 8, w*4, cs, kCGImageAlphaNoneSkipLast)
-          Quartz.CGContextSetRGBFillColor(ctx, 1, 1, 1, 1)
-          Quartz.CGContextFillRect(ctx, Quartz.CGRectMake(0, 0, w, h))
-          CGContextDrawImage(ctx, Quartz.CGRectMake(0, 0, w, h), img)
-          out_img = CGBitmapContextCreateImage(ctx)
-          dst_url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, '\$IMG', kCFURLPOSIXPathStyle, False)
-          dst = CGImageDestinationCreateWithURL(dst_url, 'public.png', 1, None)
-          CGImageDestinationAddImage(dst, out_img, None)
-          CGImageDestinationFinalize(dst)
-          "
-              rm -f "\$TMP_BG" "\$COMPOSITE"
-              echo "Flattened alpha from \$(basename "\$IMG")"
+              TMP_JPG="\$(mktemp).jpg"
+              sips -s format jpeg -s formatOptions 100 "\$IMG" --out "\$TMP_JPG"
+              sips -s format png "\$TMP_JPG" --out "\$IMG"
+              rm -f "\$TMP_JPG"
+              echo "Removed alpha from \$(basename "\$IMG")"
             fi
           done
 
