@@ -32,7 +32,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
         className="fixed bottom-0 left-0 right-0 z-[9999] bg-background"
       >
         <div
-          className="w-full px-3 pt-2 nav-safe-inset"
+          className="w-full px-3 pt-2 pb-[5px] nav-safe-inset"
         >
           <div 
             className="bg-card/90 border border-border/30 rounded-2xl px-1 py-1.5"
