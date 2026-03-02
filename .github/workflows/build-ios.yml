@@ -74,10 +74,30 @@ jobs:
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           for IMG in "$ICON_DIR"/*.png; do
             if [ -f "$IMG" ]; then
-              sips -s format png -s formatOptions 100 "$IMG" --out "$IMG.tmp"
-              sips -s hasAlpha false "$IMG.tmp" --out "$IMG"
-              rm -f "$IMG.tmp"
-              echo "Removed alpha from $(basename "$IMG")"
+              /usr/bin/python3 -c "
+          import Quartz, CoreFoundation
+          from Quartz import CGImageSourceCreateWithURL, CGImageSourceCreateImageAtIndex
+          from Quartz import CGBitmapContextCreate, CGContextDrawImage, CGBitmapContextCreateImage
+          from Quartz import CGImageDestinationCreateWithURL, CGImageDestinationAddImage, CGImageDestinationFinalize
+          from Quartz import kCGImageAlphaNoneSkipLast
+          from CoreFoundation import CFURLCreateWithFileSystemPath, kCFURLPOSIXPathStyle, kCFAllocatorDefault
+          src_url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, '$IMG', kCFURLPOSIXPathStyle, False)
+          src = CGImageSourceCreateWithURL(src_url, None)
+          img = CGImageSourceCreateImageAtIndex(src, 0, None)
+          w = Quartz.CGImageGetWidth(img)
+          h = Quartz.CGImageGetHeight(img)
+          cs = Quartz.CGColorSpaceCreateDeviceRGB()
+          ctx = CGBitmapContextCreate(None, w, h, 8, w*4, cs, kCGImageAlphaNoneSkipLast)
+          Quartz.CGContextSetRGBFillColor(ctx, 1, 1, 1, 1)
+          Quartz.CGContextFillRect(ctx, Quartz.CGRectMake(0, 0, w, h))
+          CGContextDrawImage(ctx, Quartz.CGRectMake(0, 0, w, h), img)
+          out_img = CGBitmapContextCreateImage(ctx)
+          dst_url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, '$IMG', kCFURLPOSIXPathStyle, False)
+          dst = CGImageDestinationCreateWithURL(dst_url, 'public.png', 1, None)
+          CGImageDestinationAddImage(dst, out_img, None)
+          CGImageDestinationFinalize(dst)
+          "
+              echo "Flattened alpha from $(basename "$IMG")"
             fi
           done
 
