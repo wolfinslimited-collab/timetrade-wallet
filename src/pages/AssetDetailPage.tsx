@@ -198,7 +198,7 @@ export const AssetDetailPage = () => {
   return (
     <>
       <motion.div
-        className="min-h-screen flex flex-col max-w-md mx-auto pb-8"
+        className="h-full flex flex-col max-w-md mx-auto overflow-y-auto pb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}

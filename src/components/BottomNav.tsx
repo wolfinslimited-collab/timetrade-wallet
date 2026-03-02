@@ -29,11 +29,12 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
     const nav = (
       <nav 
         ref={ref}
-        className="fixed bottom-0 left-0 right-0 z-[9999] bg-background"
+        className="fixed bottom-0 left-0 right-0 z-[9999]"
+        style={{ backgroundColor: 'hsl(220 16% 6%)' }}
       >
         <div
-          className="max-w-md mx-auto px-4 pt-2"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+          className="max-w-md mx-auto px-3 pt-2"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 6px)' }}
         >
           <div 
             className="bg-card/90 border border-border/30 rounded-2xl px-1 py-1.5"
