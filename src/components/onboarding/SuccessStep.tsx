@@ -9,7 +9,7 @@ interface SuccessStepProps {
 
 export const SuccessStep = ({ walletName, onFinish }: SuccessStepProps) => {
   return (
-    <div className="flex flex-col min-h-screen p-6">
+    <div className="flex flex-col h-[100dvh] p-6">
       {/* Success Animation */}
       <div className="flex-1 flex flex-col items-center justify-center text-center">
         {/* Animated Checkmark */}
@@ -97,10 +97,11 @@ export const SuccessStep = ({ walletName, onFinish }: SuccessStepProps) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.2 }}
-        className="pb-8"
+        className="shrink-0"
+        style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <Button
-          onClick={onFinish}
+          onClick={() => { console.log('Go to Wallet clicked'); onFinish(); }}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
         >
           Go to Wallet

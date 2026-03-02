@@ -205,8 +205,8 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col">
-      <div className="flex-1">
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         {renderStep()}
       </div>
     </div>
