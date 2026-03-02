@@ -34,7 +34,7 @@ export const WalletTabs = () => {
       </div>
 
       {/* Wallet List */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-3 pb-24">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-3 pb-nav-safe">
         {activeTab === "WATCHLIST" && (
           <h2 className="text-2xl font-bold tracking-tight mb-4">WATCHLIST</h2>
         )}

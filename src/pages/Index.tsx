@@ -159,7 +159,7 @@ const Index = () => {
   if (currentView === "settings") {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <SettingsPage onBack={() => handleTabChange("wallet")} />
         </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
@@ -170,7 +170,7 @@ const Index = () => {
   if (currentView === "history") {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
         </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
@@ -181,7 +181,7 @@ const Index = () => {
   if (currentView === "staking") {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <StakingPage onBack={() => handleTabChange("wallet")} />
         </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
@@ -196,7 +196,7 @@ const Index = () => {
         unreadCount={unreadCount}
       />
 
-      <div className="flex-1 overflow-y-auto pb-24 -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex-1 overflow-y-auto pb-nav-safe -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
         <PullToRefresh onRefresh={handleRefresh}>
           {/* Balance Section */}
           <div className="px-6 pt-8 pb-6 text-center">

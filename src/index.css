@@ -166,4 +166,12 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0);
   }
+
+  .nav-safe-inset {
+    padding-bottom: clamp(4px, env(safe-area-inset-bottom, 0px), 10px);
+  }
+
+  .pb-nav-safe {
+    padding-bottom: calc(5rem + min(env(safe-area-inset-bottom, 0px), 10px));
+  }
 }

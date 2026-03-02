@@ -32,6 +32,14 @@ jobs:
       - name: Add iOS platform
         run: npx cap add ios || true
 
+      - name: Prepare app icon source
+        run: |
+          mkdir -p assets
+          cp public/app-logo.png assets/icon.png
+
+      - name: Generate iOS app icons
+        run: npx --yes @capacitor/assets generate --ios
+
       - name: Sync Capacitor
         run: npx cap sync ios
 

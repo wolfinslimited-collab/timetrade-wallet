@@ -86,7 +86,7 @@ export const AllAssetsPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col relative pb-24 overflow-hidden">
+    <div className="h-full w-full flex flex-col relative overflow-hidden">
       {/* Header */}
       <div className="sticky top-0 z-30 backdrop-blur-xl border-b border-border/20">
         <div className="flex items-center justify-between px-4 py-4">
@@ -172,7 +172,7 @@ export const AllAssetsPage = () => {
       </div>
 
       {/* Token List */}
-      <div className="flex-1 min-h-0 pt-2 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 min-h-0 pt-2 pb-nav-safe overflow-y-auto overflow-x-hidden">
         {isLoading && tokensWithValue.length === 0 ? (
           <div className="px-4 space-y-1 pt-2">
             {[1, 2, 3, 4].map((i) => (
