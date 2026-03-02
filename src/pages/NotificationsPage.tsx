@@ -41,7 +41,7 @@ export const NotificationsPage = ({
   );
 
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto">
+    <div className="h-full flex flex-col w-full">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border/30">
         <button
