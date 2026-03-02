@@ -316,7 +316,7 @@ const SwapPage = () => {
   // ===== SUCCESS SCREEN =====
   if (swapComplete) {
     return (
-      <div className="min-h-screen flex flex-col max-w-md mx-auto px-6">
+      <div className="h-full w-full flex flex-col px-6 overflow-y-auto overflow-x-hidden">
         <div className="flex-1 flex flex-col items-center justify-center gap-8">
           {/* Animated success icon */}
           <motion.div
@@ -451,7 +451,7 @@ const SwapPage = () => {
 
   // ===== MAIN SWAP UI =====
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 sticky top-0 z-30">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors">
@@ -500,7 +500,7 @@ const SwapPage = () => {
         </Popover>
       </div>
 
-      <div className="flex-1 px-5 pb-8">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-5 pb-8">
         {/* FROM Card */}
         <div className="bg-card rounded-2xl p-5 border border-border">
           <div className="flex items-center justify-between mb-4">

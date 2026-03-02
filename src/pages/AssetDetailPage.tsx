@@ -142,7 +142,7 @@ export const AssetDetailPage = () => {
 
   if (!asset) {
     return (
-      <div className="min-h-screen flex items-center justify-center max-w-md mx-auto">
+      <div className="h-full w-full flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Loading asset...</p>
@@ -198,7 +198,7 @@ export const AssetDetailPage = () => {
   return (
     <>
       <motion.div
-        className="h-full flex flex-col max-w-md mx-auto overflow-y-auto pb-8"
+        className="h-full w-full flex flex-col overflow-y-auto overflow-x-hidden pb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}

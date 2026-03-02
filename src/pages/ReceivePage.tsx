@@ -60,7 +60,7 @@ const ReceivePage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-6 pt-6 pb-2 relative flex items-center justify-center">
         <button
@@ -74,7 +74,7 @@ const ReceivePage = () => {
         <h1 className="text-xl font-bold text-center">Receive Crypto</h1>
       </div>
 
-      <div className="flex flex-col flex-1 px-5 pb-6 overflow-y-auto">
+      <div className="flex flex-col flex-1 min-h-0 px-5 pb-6 overflow-y-auto overflow-x-hidden">
         {/* ── Network Grid ── */}
         {!selectedNetworkId && (
           <div className="mt-3">

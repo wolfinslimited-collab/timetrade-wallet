@@ -11,7 +11,7 @@ export const LockScreenBackground = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col max-w-md mx-auto">
+    <div className="h-full w-full flex flex-col">
       {/* Fake header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">

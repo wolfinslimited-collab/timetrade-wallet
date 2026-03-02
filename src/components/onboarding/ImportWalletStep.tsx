@@ -134,7 +134,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
   const progress = validWords.length / wordCount;
 
   return (
-    <div className="flex flex-col min-h-screen max-w-md mx-auto" onPaste={handlePaste}>
+    <div className="flex flex-col min-h-screen w-full" onPaste={handlePaste}>
       {/* Header */}
       <motion.div
         initial={{ y: -10, opacity: 0 }}

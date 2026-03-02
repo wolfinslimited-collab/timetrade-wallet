@@ -145,7 +145,7 @@ export const AddressInputStep = ({ selectedChain, onSubmit }: AddressInputStepPr
   }, [chainSavedAddresses, address]);
 
   return (
-    <div className="flex flex-col h-full px-6 pb-8">
+    <div className="flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-8">
       {/* Network indicator */}
       <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
         <span>Sending on</span>

@@ -332,7 +332,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
   const feeSymbol = chainInfo.symbol;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto px-6 pb-safe-bottom">
+    <div className="flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-safe-bottom">
       {/* Header with back button */}
       <div className="flex items-center gap-3 py-4 -mx-6 px-6 sticky top-0 bg-background z-10">
         <button

@@ -82,7 +82,7 @@ export const AmountInputStep = ({
   };
 
   return (
-    <div className="flex flex-col h-full px-6 pb-8">
+    <div className="flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-8">
       {/* Asset Info */}
       <div className="mt-4 flex items-center gap-3 p-3 bg-card border border-border rounded-xl">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
@@ -107,7 +107,7 @@ export const AmountInputStep = ({
       {/* Recipient display */}
       <div className="mt-4 p-3 bg-card/50 border border-border rounded-xl">
         <p className="text-xs text-muted-foreground mb-1">Sending to</p>
-        <p className="font-mono text-sm truncate">{recipient}</p>
+        <p className="font-mono text-sm break-all">{recipient}</p>
       </div>
 
       {/* Amount Input */}

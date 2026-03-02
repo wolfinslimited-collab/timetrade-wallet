@@ -33,7 +33,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
         style={{ backgroundColor: 'hsl(220 16% 6%)' }}
       >
         <div
-          className="max-w-md mx-auto px-3 pt-2"
+          className="w-full px-3 pt-2"
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 6px)' }}
         >
           <div 

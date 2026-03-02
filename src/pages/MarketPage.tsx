@@ -227,7 +227,7 @@ export const MarketPage = ({ onBack }: MarketPageProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto pb-20">
+    <div className="h-full w-full bg-background flex flex-col pb-20">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div className="flex items-center gap-4">
