@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.wallet.ai',
-  appName: 'NextGen AI Wallet',
+  appName: 'Timetrade Wallet',
   webDir: 'dist',
   ios: {
     contentInset: 'never',

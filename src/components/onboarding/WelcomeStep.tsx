@@ -14,11 +14,11 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
         {/* Logo */}
         <div className="w-20 h-20 rounded-[22px] bg-card border border-border/40 flex items-center justify-center mb-10 shadow-2xl shadow-primary/10 overflow-hidden">
-          <img src="/app-logo.png" alt="AI Wallet" className="w-full h-full object-contain" />
+          <img src="/app-logo.png" alt="Timetrade Wallet" className="w-full h-full object-contain" />
         </div>
 
         <h1 className="text-[30px] font-extrabold tracking-tight text-center text-foreground leading-tight">
-          AI Wallet
+          Timetrade Wallet
         </h1>
         <p className="text-[14px] text-muted-foreground text-center mt-2.5 leading-relaxed max-w-[260px]">
           Your multi-chain crypto wallet with self-custody security
