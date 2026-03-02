@@ -81,6 +81,14 @@ export const AIPortfolioInsights = ({ assets, totalValue }: AIPortfolioInsightsP
         },
       });
       if (fnError) throw fnError;
+      if (data?.error) {
+        if (data.error === "AI credits exhausted" || data.error === "Rate limited") {
+          setError(data.error === "Rate limited" ? "AI rate limited — try again shortly" : "AI credits exhausted — top up in Settings → Workspace → Usage");
+        } else {
+          setError("Could not load AI insights");
+        }
+        return;
+      }
       setInsights(data);
     } catch (e) {
       setError("Could not load AI insights");
