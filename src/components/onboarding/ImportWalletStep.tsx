@@ -134,7 +134,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
   const progress = validWords.length / wordCount;
 
   return (
-    <div className="flex flex-col min-h-screen w-full" onPaste={handlePaste}>
+    <div className="flex flex-col h-[100dvh] w-full" onPaste={handlePaste}>
       {/* Header */}
       <motion.div
         initial={{ y: -10, opacity: 0 }}
@@ -225,7 +225,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       </motion.div>
 
       {/* Scrollable Word Grid */}
-      <div className="flex-1 overflow-auto px-5">
+      <div className="flex-1 overflow-auto px-5 pb-2">
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -279,7 +279,8 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.35 }}
-        className="px-5 pt-3 pb-8"
+        className="px-5 pt-3 shrink-0"
+        style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <motion.button
           onClick={handleImport}
