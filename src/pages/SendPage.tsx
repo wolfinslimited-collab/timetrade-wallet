@@ -139,7 +139,7 @@ const SendPage = () => {
   const showHeader = step !== "confirm" && step !== "success" && step !== "risk";
 
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {showHeader && (
         <div className="px-6 pt-6 pb-2 relative flex items-center justify-center">
           <button
@@ -154,34 +154,34 @@ const SendPage = () => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {step === "select" && (
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} />
           </div>
         )}
         {step === "address" && (
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <AddressInputStep selectedChain={selectedChain} onSubmit={handleAddressSubmit} />
           </div>
         )}
         {step === "risk" && (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col">
             <RiskCheckStep address={transaction.recipient} chain={selectedChain} amount={transaction.amount} senderAddress={senderAddress} onProceed={handleRiskProceed} onCancel={handleRiskCancel} />
           </div>
         )}
         {step === "amount" && selectedAsset && (
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <AmountInputStep recipient={transaction.recipient} selectedAsset={selectedAsset} selectedChain={selectedChain} onSubmit={handleAmountSubmit} />
           </div>
         )}
         {step === "confirm" && (
-          <div className="flex-1 h-full overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <ConfirmationStep transaction={transaction} selectedChain={selectedChain} isTestnet={isTestnet} onConfirm={handleConfirm} onBack={handleBack} />
           </div>
         )}
         {step === "success" && (
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <TransactionSuccessStep transaction={transaction} onClose={handleClose} />
           </div>
         )}

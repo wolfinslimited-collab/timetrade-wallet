@@ -135,7 +135,7 @@ const Index = () => {
 
   if (hasWallet === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-full w-full bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -190,7 +190,7 @@ const Index = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 max-w-md mx-auto w-full relative overflow-hidden">
+    <div className="flex flex-col flex-1 w-full relative overflow-hidden">
       <WalletHeader 
         onSettingsClick={() => handleTabChange("settings")}
         unreadCount={unreadCount}

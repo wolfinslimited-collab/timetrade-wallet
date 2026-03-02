@@ -9,7 +9,7 @@ interface WelcomeStepProps {
 
 export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps) => {
   return (
-    <div className="h-[100dvh] flex flex-col max-w-md mx-auto">
+    <div className="h-[100dvh] w-full flex flex-col">
       {/* Top section */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
         {/* Logo */}

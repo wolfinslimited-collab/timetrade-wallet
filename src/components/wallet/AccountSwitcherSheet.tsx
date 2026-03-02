@@ -836,7 +836,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { resetAddMode(); setEditingAccountId(null); } }}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[80vh] max-w-md mx-auto bg-background/95 backdrop-blur-xl border-border/50">
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[80vh] bg-background/95 backdrop-blur-xl border-border/50">
           <SheetHeader className="pb-4">
             <SheetTitle className="text-left flex items-center gap-2 text-lg">
               <Layers className="w-5 h-5 text-foreground" />

@@ -6,7 +6,7 @@ const AIChatPageRoute = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="h-full max-w-md mx-auto flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* Header with back button */}
       <div className="flex items-center gap-3 px-4 py-3">
         <button

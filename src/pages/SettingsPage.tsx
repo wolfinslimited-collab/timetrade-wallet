@@ -124,7 +124,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto">
+    <div className="h-full w-full flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 p-4">
         <h1 className="text-xl font-bold">Settings</h1>

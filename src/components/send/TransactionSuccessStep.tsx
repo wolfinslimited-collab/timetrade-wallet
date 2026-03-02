@@ -56,7 +56,7 @@ export const TransactionSuccessStep = ({ transaction, onClose }: TransactionSucc
   };
 
   return (
-    <div className="flex flex-col h-full px-6 pb-8 items-center">
+    <div className="flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-8 items-center">
       {/* Success Animation */}
       <div className="flex-1 flex flex-col items-center justify-center">
         <motion.div

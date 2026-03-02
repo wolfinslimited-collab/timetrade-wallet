@@ -104,7 +104,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   };
 
   return (
-    <div className="h-screen flex flex-col max-w-md mx-auto overflow-hidden relative">
+    <div className="h-screen w-full flex flex-col overflow-hidden relative">
       {/* Blurred wallet-like background */}
       <div className="absolute inset-0 z-0">
         <LockScreenBackground />
