@@ -417,7 +417,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col pb-20">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* Header - clean, no back button */}
       <div className="sticky top-0 z-10 backdrop-blur-xl border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-4">
@@ -434,7 +434,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
         </div>
       </div>
 
-      <div className="px-4 py-5 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-5 pb-24 space-y-5">
         {/* Hero Stats Card */}
         <Card className="p-0 bg-gradient-to-br from-card/90 to-card/40 border-border/30 overflow-hidden relative">
           <div className="absolute -top-20 -right-20 w-48 h-48 bg-foreground/5 rounded-full blur-3xl" />
