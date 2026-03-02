@@ -61,7 +61,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
   // Always fetch fresh blockchain data when the page loads
   useEffect(() => {
     if (isConnected) {
-      console.log('%c[TX HISTORY] 🔄 Fetching fresh transaction data', 'color: #06b6d4; font-weight: bold;');
+      refreshAll();
       refreshAll();
     }
   }, [isConnected, refreshAll]);

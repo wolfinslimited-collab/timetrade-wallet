@@ -305,7 +305,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
     try {
       // 1. Execute real on-chain transfer to staking wallet
-      console.log('[STAKING] Initiating on-chain transfer...');
+      // Initiating on-chain transfer...
       const transferResult = await executeStakeTransfer(pin, {
         chain: selectedToken.primaryChain,
         tokenSymbol: selectedToken.symbol,
@@ -315,7 +315,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
         isNative: selectedToken.isNative,
       });
 
-      console.log('[STAKING] Transfer successful:', transferResult);
+      // Transfer successful
 
       // 2. Record staking position in database with tx_hash
       const unlockDate = new Date();
@@ -354,7 +354,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
       fetchPositions();
 
       // Refresh blockchain data
-      console.log('[STAKING] Refreshing blockchain data...');
+      // Refresh blockchain data
       window.dispatchEvent(new CustomEvent('timetrade:addresses-updated'));
     } catch (err) {
       console.error('[STAKING] Stake transfer error:', err);

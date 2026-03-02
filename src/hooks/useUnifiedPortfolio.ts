@@ -7,14 +7,12 @@ import { getAllAddresses } from "@/utils/walletStorage";
 export interface UnifiedAsset {
   symbol: string;
   name: string;
-  // Base-unit balance (string) + decimals are required for correct per-asset tx formatting
-  // (e.g., USDT on Tron uses 6 decimals).
   balance: string;
   decimals: number;
   amount: number;
   price: number;
   valueUsd: number;
-  chain: Chain; // Track which chain this asset is on
+  chain: Chain;
   isNative: boolean;
   contractAddress?: string;
 }
@@ -25,7 +23,6 @@ function addBaseUnitStrings(a: string, b: string): string {
   try {
     return (BigInt(aa) + BigInt(bb)).toString();
   } catch {
-    // Fallback for non-integer strings (shouldn't happen, but avoid crashes)
     const sum = (parseFloat(aa) || 0) + (parseFloat(bb) || 0);
     return String(Math.round(sum));
   }
@@ -33,12 +30,6 @@ function addBaseUnitStrings(a: string, b: string): string {
 
 function getAddressesFromStorage() {
   const addresses = getAllAddresses();
-  
-  console.log(`%c[UNIFIED PORTFOLIO] 🔍 Reading Addresses from Storage`, 'color: #6366f1;', {
-    evm: addresses.evm || '(empty)',
-    solana: addresses.solana || '(empty)',
-    tron: addresses.tron || '(empty)',
-  });
 
   return {
     evmAddress: addresses.evm?.trim() || null,
@@ -58,16 +49,11 @@ const CHAINS: Chain[] = ["ethereum", "polygon", "solana", "tron", "arbitrum", "b
 export function useUnifiedPortfolio(enabled: boolean) {
   const queryClient = useQueryClient();
 
-  // Use a version counter to force re-reads of addresses
   const [addressVersion, setAddressVersion] = React.useState(0);
   
-  // Track mount state to avoid HMR issues with hook count changes
   const [isMounted, setIsMounted] = React.useState(false);
   React.useEffect(() => { setIsMounted(true); }, []);
 
-  // Compute addresses from storage when:
-  // - we become enabled (after mnemonic derivation writes addresses)
-  // - an account switch/unlock event bumps the version
   const addresses = React.useMemo(() => {
     if (!enabled || !isMounted) {
       return {
@@ -81,32 +67,13 @@ export function useUnifiedPortfolio(enabled: boolean) {
 
   const { evmAddress, solanaAddress, tronAddress } = addresses;
 
-  // Log active addresses whenever they change
-  React.useEffect(() => {
-    if (!enabled) return;
-    console.log(`%c[UNIFIED PORTFOLIO] 📍 Active Addresses (v${addressVersion})`, 'color: #a855f7; font-weight: bold;', {
-      evm: evmAddress || '(not set)',
-      solana: solanaAddress || '(not set)',
-      tron: tronAddress || '(not set)',
-      enabled,
-      timestamp: new Date().toISOString(),
-    });
-  }, [enabled, evmAddress, solanaAddress, tronAddress, addressVersion]);
-
   // Listen for account switch events and re-read addresses
   React.useEffect(() => {
     if (!enabled) return;
 
     const handleAccountSwitch = () => {
-      console.log(`%c[UNIFIED PORTFOLIO] 🔄 Account Switch Event Received`, 'color: #f97316; font-weight: bold;', {
-        timestamp: new Date().toISOString(),
-      });
-      
-      // Bump version to force useMemo recalculation
       setAddressVersion((v) => v + 1);
       
-      // Invalidate queries to force refetch with new addresses
-      console.log(`%c[UNIFIED PORTFOLIO] 🗑️ Invalidating Queries`, 'color: #eab308;');
       queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
       queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
     };
@@ -126,19 +93,6 @@ export function useUnifiedPortfolio(enabled: boolean) {
   const queryEvmAddress = enabled && evmAddress ? evmAddress : null;
   const querySolanaAddress = enabled && solanaAddress ? solanaAddress : null;
   const queryTronAddress = enabled && tronAddress ? tronAddress : null;
-
-  // Log query addresses
-  React.useEffect(() => {
-    if (enabled) {
-      console.log(`%c[UNIFIED PORTFOLIO] 🔗 Query Addresses (v${addressVersion})`, 'color: #3b82f6;', {
-        ethereum: queryEvmAddress || '(disabled)',
-        polygon: queryEvmAddress || '(disabled)',
-        arbitrum: queryEvmAddress || '(disabled)',
-        solana: querySolanaAddress || '(disabled)',
-        tron: queryTronAddress || '(disabled)',
-      });
-    }
-  }, [enabled, queryEvmAddress, querySolanaAddress, queryTronAddress, addressVersion]);
 
   // Fetch balances in parallel (React Query)
   const ethBalance = useWalletBalance(queryEvmAddress, "ethereum");
@@ -186,8 +140,6 @@ export function useUnifiedPortfolio(enabled: boolean) {
   const pricesQuery = useCryptoPrices(symbols);
 
   const assets: UnifiedAsset[] = React.useMemo(() => {
-    // Use composite key (chain + symbol) to show each asset per-chain separately
-    // This ensures USDC on Solana shows Solana badge, USDC on Ethereum shows ETH badge
     const byChainSymbol = new Map<
       string,
       {
@@ -239,7 +191,6 @@ export function useUnifiedPortfolio(enabled: boolean) {
       if (!existing.name && entry.name) existing.name = entry.name;
     };
 
-    // Helper to generate display name with chain distinction for native tokens
     const getNativeDisplayName = (chain: Chain, symbol: string, originalName?: string): string => {
       const chainNames: Record<Chain, string> = {
         ethereum: "Ethereum",
@@ -250,7 +201,6 @@ export function useUnifiedPortfolio(enabled: boolean) {
         tron: "Tron",
         bitcoin: "Bitcoin",
       };
-      // For ETH-like symbols on non-Ethereum chains, add the chain name
       if (symbol.toUpperCase() === "ETH" && chain !== "ethereum") {
         return `ETH (${chainNames[chain]})`;
       }
@@ -258,7 +208,6 @@ export function useUnifiedPortfolio(enabled: boolean) {
     };
 
     for (const b of balances) {
-      // Add native token with its chain - with chain-specific display name
       add({
         chain: b.chain,
         symbol: b.native.symbol,
@@ -268,7 +217,6 @@ export function useUnifiedPortfolio(enabled: boolean) {
         amount: toDecimalAmount(b.native.balance, b.native.decimals),
         isNative: true,
       });
-      // Add each token with its chain
       for (const t of b.tokens || []) {
         add({
           chain: b.chain,

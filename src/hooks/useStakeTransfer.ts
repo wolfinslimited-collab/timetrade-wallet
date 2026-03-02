@@ -76,7 +76,7 @@ export function useStakeTransfer() {
         throw new Error(`Staking is not available for ${params.chain}. Please contact support.`);
       }
 
-      console.log('[STAKE TRANSFER] Destination wallet:', destWallet);
+      // Destination wallet fetched
 
       // 2. Decrypt mnemonic
       const encryptedJson = getActiveAccountEncryptedSeed();
@@ -187,7 +187,7 @@ export function useStakeTransfer() {
         }
       }
 
-      console.log('[STAKE TRANSFER] Transaction signed, broadcasting...');
+      // Transaction signed, broadcasting...
 
       // 5. Broadcast transaction
       const broadcastResult = await broadcastMutation.mutateAsync({
@@ -196,7 +196,7 @@ export function useStakeTransfer() {
         testnet: false,
       });
 
-      console.log('[STAKE TRANSFER] Broadcast successful:', broadcastResult);
+      // Broadcast successful
 
       return {
         txHash: broadcastResult.txHash,

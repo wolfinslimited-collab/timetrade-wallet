@@ -68,7 +68,6 @@ export function useTronTransactionSigning(isTestnet: boolean = true): UseTronTra
           decimals: params.decimals || 6,
         };
 
-        console.log('Signing TRC-20 transaction:', trc20Params);
         return await signTrc20Transaction(pk, trc20Params, isTestnet);
       } else {
         // Native TRX transfer
@@ -78,7 +77,6 @@ export function useTronTransactionSigning(isTestnet: boolean = true): UseTronTra
           from: params.from,
         };
 
-        console.log('Signing TRX transaction:', trxParams);
         return await signTrxTransaction(pk, trxParams, isTestnet);
       }
     } catch (err) {

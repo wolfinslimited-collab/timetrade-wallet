@@ -245,7 +245,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
         const keypair = deriveSolanaKeypair(mnemonic.trim(), storedIndex, storedPath);
         const userPublicKey = keypair.publicKey.toBase58();
 
-        console.log("[SWAP] Getting Jupiter swap transaction for:", userPublicKey);
+        // Getting Jupiter swap transaction
 
         const { data: swapData, error: swapErr } = await supabase.functions.invoke("swap-quote", {
           body: {
@@ -272,7 +272,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
         const signedTxBytes = transaction.serialize();
         const signedTxHex = Buffer.from(signedTxBytes).toString("hex");
 
-        console.log("[SWAP] Transaction signed, broadcasting...");
+        // Transaction signed, broadcasting...
 
         const { data: broadcastData, error: broadcastErr } = await invokeBlockchain({
           action: "broadcastTransaction",
@@ -288,7 +288,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
         if (!broadcastResult?.success) throw new Error(broadcastResult?.error || "Broadcast failed");
 
         const hash = broadcastResult.data?.txHash;
-        console.log("[SWAP] ✅ Transaction broadcast successfully:", hash);
+        // Transaction broadcast successfully
 
         setTxHash(hash || null);
         setIsSwapping(false);

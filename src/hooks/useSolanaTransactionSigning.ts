@@ -168,7 +168,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
         // Derive keypair from mnemonic using stored path/index
         const { path, index } = getStoredSolanaDerivationInfo();
         keypair = deriveSolanaKeypair(privateKeyOrMnemonic.trim(), index, path);
-        console.log(`Using Solana derivation: path=${path}, index=${index}`);
+        // Solana derivation: path & index from storage
       } else {
         // Use raw private key
         keypair = keypairFromPrivateKey(privateKeyOrMnemonic);
@@ -270,13 +270,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
       
       const txHash = toBase58(signature);
 
-      console.log('Solana transaction signed successfully:', {
-        from: fromPubkey.toBase58(),
-        to: toPubkey.toBase58(),
-        lamports,
-        blockhash,
-        txHash,
-      });
+      // Transaction signed successfully
 
       return {
         signedTx: hexTx,
@@ -314,7 +308,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
       if (isMnemonic) {
         const { path, index } = getStoredSolanaDerivationInfo();
         keypair = deriveSolanaKeypair(privateKeyOrMnemonic.trim(), index, path);
-        console.log(`[SPL] Using Solana derivation: path=${path}, index=${index}`);
+        // SPL: Using Solana derivation from storage
       } else {
         keypair = keypairFromPrivateKey(privateKeyOrMnemonic);
       }
@@ -335,8 +329,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
       const fromAta = await getAssociatedTokenAddress(mintPubkey, fromPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
       const toAta = await getAssociatedTokenAddress(mintPubkey, toPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 
-      console.log('[SPL] From ATA:', fromAta.toBase58());
-      console.log('[SPL] To ATA:', toAta.toBase58());
+      // ATAs derived for from/to
 
       // Get recent blockhash
       let blockhash: string;
@@ -400,19 +393,19 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
             });
             if (!rpcError && rpcData?.success && rpcData?.data?.value) {
               destinationAccountExists = true;
-              console.log('[SPL] Destination ATA exists (verified via backend RPC)');
+              // Destination ATA exists
             } else {
-              console.log('[SPL] Destination ATA does not exist (verified via backend RPC)');
+              // Destination ATA does not exist
               destinationAccountExists = false;
             }
           } catch {
             // If backend check also fails, assume we need to create it
-            console.log('[SPL] Could not verify ATA existence, will attempt to create it');
+            // Could not verify ATA existence, will attempt to create it
             destinationAccountExists = false;
           }
         } else {
           // Standard account not found - we need to create it
-          console.log('[SPL] Destination ATA does not exist, will create it');
+          // Destination ATA does not exist, will create it
           destinationAccountExists = false;
         }
       }
@@ -478,14 +471,7 @@ export function useSolanaTransactionSigning(isTestnet: boolean = false): UseSola
 
       const txHash = toBase58(signature);
 
-      console.log('[SPL] Token transaction signed successfully:', {
-        from: fromPubkey.toBase58(),
-        to: toPubkey.toBase58(),
-        mint: mintPubkey.toBase58(),
-        amount: tokenAmount.toString(),
-        decimals,
-        txHash,
-      });
+      // SPL token transaction signed successfully
 
       return {
         signedTx: hexTx,
