@@ -231,7 +231,7 @@ const Index = () => {
           <QuickActions />
 
           {/* Token List */}
-          <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3 min-h-[40vh]">
+          <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
             <div className="px-5 flex items-center justify-between mb-3">
               <h2 className="text-[15px] font-bold text-foreground">Assets</h2>
               <button 
