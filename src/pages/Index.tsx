@@ -15,6 +15,7 @@ import { NotificationsPage } from "./NotificationsPage";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+import { AppUpdateBanner } from "@/components/AppUpdateBanner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
@@ -191,6 +192,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col flex-1 w-full relative overflow-hidden">
+      <AppUpdateBanner />
       <WalletHeader 
         onSettingsClick={() => handleTabChange("settings")}
         unreadCount={unreadCount}
