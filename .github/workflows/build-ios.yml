@@ -39,6 +39,7 @@ jobs:
         run: |
           test -f public/app-logo.png
           mkdir -p assets
+          # Convert to proper PNG format (source may be JPEG renamed to .png)
           sips -s format png public/app-logo.png --out assets/icon.png
           sips -z 1024 1024 assets/icon.png --out assets/icon.png
           echo "Icon prepared: $(file assets/icon.png)"
