@@ -62,12 +62,28 @@ jobs:
 
       - name: Prepare app icon source
         run: |
-          test -f public/app-logo.png
           mkdir -p assets
-          # Convert to proper PNG format (source may be JPEG renamed to .png)
-          sips -s format png public/app-logo.png --out assets/icon.png
+          if [ -f public/app-logo.png ]; then
+            SOURCE_PATH="public/app-logo.png"
+          elif [ -f public/app-logo.jpg ]; then
+            SOURCE_PATH="public/app-logo.jpg"
+          elif [ -f public/app-logo.jpeg ]; then
+            SOURCE_PATH="public/app-logo.jpeg"
+          else
+            echo "Missing app logo: add public/app-logo.png or public/app-logo.jpg"
+            exit 1
+          fi
+
+          sips -s format png "$SOURCE_PATH" --out assets/icon.png
           sips -z 1024 1024 assets/icon.png --out assets/icon.png
-          echo "Icon prepared: $(file assets/icon.png)"
+
+          ICON_FORMAT=$(sips -g format assets/icon.png | awk -F': ' '/format/ {print tolower($2)}')
+          if [ "$ICON_FORMAT" != "png" ]; then
+            echo "Icon conversion failed: expected PNG, got $ICON_FORMAT"
+            exit 1
+          fi
+
+          echo "Icon prepared from $SOURCE_PATH: $(file assets/icon.png)"
 
       - name: Generate iOS app icons
         run: |
@@ -293,16 +309,29 @@ jobs:
 
       - name: Prepare app icon source
         run: |
-          test -f public/app-logo.png
           mkdir -p assets
-          # Convert to proper PNG (source may be JPEG)
-          if command -v sips &>/dev/null; then
-            sips -s format png public/app-logo.png --out assets/icon.png
-            sips -z 1024 1024 assets/icon.png --out assets/icon.png
+          if [ -f public/app-logo.png ]; then
+            SOURCE_PATH="public/app-logo.png"
+          elif [ -f public/app-logo.jpg ]; then
+            SOURCE_PATH="public/app-logo.jpg"
+          elif [ -f public/app-logo.jpeg ]; then
+            SOURCE_PATH="public/app-logo.jpeg"
           else
-            cp public/app-logo.png assets/icon.png
+            echo "Missing app logo: add public/app-logo.png or public/app-logo.jpg"
+            exit 1
           fi
-          echo "Icon prepared"
+
+          if command -v magick &>/dev/null; then
+            magick "$SOURCE_PATH" -resize 1024x1024! -alpha remove -alpha off PNG24:assets/icon.png
+          elif command -v convert &>/dev/null; then
+            convert "$SOURCE_PATH" -resize 1024x1024! -alpha remove -alpha off PNG24:assets/icon.png
+          else
+            sudo apt-get update
+            sudo apt-get install -y imagemagick
+            convert "$SOURCE_PATH" -resize 1024x1024! -alpha remove -alpha off PNG24:assets/icon.png
+          fi
+
+          echo "Icon prepared from $SOURCE_PATH: $(file assets/icon.png)"
 
       - name: Generate Android app icons
         run: npx --yes @capacitor/assets generate --android
