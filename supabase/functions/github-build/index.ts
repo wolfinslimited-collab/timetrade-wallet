@@ -64,7 +64,10 @@ jobs:
         run: |
           test -f public/app-logo.png
           mkdir -p assets
-          cp public/app-logo.png assets/icon.png
+          # Convert to proper PNG format (source may be JPEG renamed to .png)
+          sips -s format png public/app-logo.png --out assets/icon.png
+          sips -z 1024 1024 assets/icon.png --out assets/icon.png
+          echo "Icon prepared: $(file assets/icon.png)"
 
       - name: Generate iOS app icons
         run: |
@@ -292,7 +295,14 @@ jobs:
         run: |
           test -f public/app-logo.png
           mkdir -p assets
-          cp public/app-logo.png assets/icon.png
+          # Convert to proper PNG (source may be JPEG)
+          if command -v sips &>/dev/null; then
+            sips -s format png public/app-logo.png --out assets/icon.png
+            sips -z 1024 1024 assets/icon.png --out assets/icon.png
+          else
+            cp public/app-logo.png assets/icon.png
+          fi
+          echo "Icon prepared"
 
       - name: Generate Android app icons
         run: npx --yes @capacitor/assets generate --android
