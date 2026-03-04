@@ -67,15 +67,14 @@ jobs:
           mkdir -p "$ICON_DIR"
 
           set +e
-          npx --yes @capacitor/assets@2.0.5 generate --ios --assetPath assets
+          npx --yes @capacitor/assets generate --ios --assetPath assets
           CAP_ASSETS_EXIT=$?
           set -e
 
           if [ "$CAP_ASSETS_EXIT" -ne 0 ] || [ ! -f "$ICON_DIR/Contents.json" ]; then
             echo "@capacitor/assets failed or produced no icon set (exit=$CAP_ASSETS_EXIT). Falling back to manual icon generation."
 
-            cat > "$ICON_DIR/Contents.json" << 'JSON'
-            {
+            jq -n '{
               "images": [
                 {"filename": "AppIcon-20x20@2x.png", "idiom": "iphone", "scale": "2x", "size": "20x20"},
                 {"filename": "AppIcon-20x20@3x.png", "idiom": "iphone", "scale": "3x", "size": "20x20"},
@@ -97,36 +96,32 @@ jobs:
                 {"filename": "AppIcon-1024x1024@1x.png", "idiom": "ios-marketing", "scale": "1x", "size": "1024x1024"}
               ],
               "info": {"author": "xcode", "version": 1}
-            }
-            JSON
+            }' > "$ICON_DIR/Contents.json"
 
-            cat > "$RUNNER_TEMP/icon-specs.txt" << 'EOF'
-            40 AppIcon-20x20@2x.png
-            60 AppIcon-20x20@3x.png
-            58 AppIcon-29x29@2x.png
-            87 AppIcon-29x29@3x.png
-            80 AppIcon-40x40@2x.png
-            120 AppIcon-40x40@3x.png
-            120 AppIcon-60x60@2x.png
-            180 AppIcon-60x60@3x.png
-            20 AppIcon-20x20@1x.png
-            40 AppIcon-20x20@2x-ipad.png
-            29 AppIcon-29x29@1x.png
-            58 AppIcon-29x29@2x-ipad.png
-            40 AppIcon-40x40@1x.png
-            80 AppIcon-40x40@2x-ipad.png
-            76 AppIcon-76x76@1x.png
-            152 AppIcon-76x76@2x.png
-            167 AppIcon-83.5x83.5@2x.png
-            1024 AppIcon-1024x1024@1x.png
-            EOF
-
-            while read -r PX FILE_NAME; do
-              [ -z "$PX" ] && continue
+            for SPEC in \
+              "40 AppIcon-20x20@2x.png" \
+              "60 AppIcon-20x20@3x.png" \
+              "58 AppIcon-29x29@2x.png" \
+              "87 AppIcon-29x29@3x.png" \
+              "80 AppIcon-40x40@2x.png" \
+              "120 AppIcon-40x40@3x.png" \
+              "120 AppIcon-60x60@2x.png" \
+              "180 AppIcon-60x60@3x.png" \
+              "20 AppIcon-20x20@1x.png" \
+              "40 AppIcon-20x20@2x-ipad.png" \
+              "29 AppIcon-29x29@1x.png" \
+              "58 AppIcon-29x29@2x-ipad.png" \
+              "40 AppIcon-40x40@1x.png" \
+              "80 AppIcon-40x40@2x-ipad.png" \
+              "76 AppIcon-76x76@1x.png" \
+              "152 AppIcon-76x76@2x.png" \
+              "167 AppIcon-83.5x83.5@2x.png" \
+              "1024 AppIcon-1024x1024@1x.png"
+            do
+              PX="${SPEC%% *}"
+              FILE_NAME="${SPEC#* }"
               sips -z "$PX" "$PX" assets/icon.png --out "$ICON_DIR/$FILE_NAME" >/dev/null
-            done < "$RUNNER_TEMP/icon-specs.txt"
-
-            rm -f "$RUNNER_TEMP/icon-specs.txt"
+            done
           fi
 
           test -f "$ICON_DIR/Contents.json"
