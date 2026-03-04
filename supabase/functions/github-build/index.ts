@@ -87,8 +87,76 @@ jobs:
 
       - name: Generate iOS app icons
         run: |
-          npx --yes @capacitor/assets generate --ios
-          test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json
+          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          rm -rf "\$ICON_DIR"
+          mkdir -p "\$ICON_DIR"
+
+          set +e
+          npx --yes @capacitor/assets@2.0.5 generate --ios --assetPath assets
+          CAP_ASSETS_EXIT=$?
+          set -e
+
+          if [ "\$CAP_ASSETS_EXIT" -ne 0 ] || [ ! -f "\$ICON_DIR/Contents.json" ]; then
+            echo "@capacitor/assets failed or produced no icon set (exit=\$CAP_ASSETS_EXIT). Falling back to manual icon generation."
+
+            cat > "\$ICON_DIR/Contents.json" << 'JSON'
+            {
+              "images": [
+                {"filename": "AppIcon-20x20@2x.png", "idiom": "iphone", "scale": "2x", "size": "20x20"},
+                {"filename": "AppIcon-20x20@3x.png", "idiom": "iphone", "scale": "3x", "size": "20x20"},
+                {"filename": "AppIcon-29x29@2x.png", "idiom": "iphone", "scale": "2x", "size": "29x29"},
+                {"filename": "AppIcon-29x29@3x.png", "idiom": "iphone", "scale": "3x", "size": "29x29"},
+                {"filename": "AppIcon-40x40@2x.png", "idiom": "iphone", "scale": "2x", "size": "40x40"},
+                {"filename": "AppIcon-40x40@3x.png", "idiom": "iphone", "scale": "3x", "size": "40x40"},
+                {"filename": "AppIcon-60x60@2x.png", "idiom": "iphone", "scale": "2x", "size": "60x60"},
+                {"filename": "AppIcon-60x60@3x.png", "idiom": "iphone", "scale": "3x", "size": "60x60"},
+                {"filename": "AppIcon-20x20@1x.png", "idiom": "ipad", "scale": "1x", "size": "20x20"},
+                {"filename": "AppIcon-20x20@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "20x20"},
+                {"filename": "AppIcon-29x29@1x.png", "idiom": "ipad", "scale": "1x", "size": "29x29"},
+                {"filename": "AppIcon-29x29@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "29x29"},
+                {"filename": "AppIcon-40x40@1x.png", "idiom": "ipad", "scale": "1x", "size": "40x40"},
+                {"filename": "AppIcon-40x40@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "40x40"},
+                {"filename": "AppIcon-76x76@1x.png", "idiom": "ipad", "scale": "1x", "size": "76x76"},
+                {"filename": "AppIcon-76x76@2x.png", "idiom": "ipad", "scale": "2x", "size": "76x76"},
+                {"filename": "AppIcon-83.5x83.5@2x.png", "idiom": "ipad", "scale": "2x", "size": "83.5x83.5"},
+                {"filename": "AppIcon-1024x1024@1x.png", "idiom": "ios-marketing", "scale": "1x", "size": "1024x1024"}
+              ],
+              "info": {"author": "xcode", "version": 1}
+            }
+            JSON
+
+            cat > "\$RUNNER_TEMP/icon-specs.txt" << 'EOF'
+            40 AppIcon-20x20@2x.png
+            60 AppIcon-20x20@3x.png
+            58 AppIcon-29x29@2x.png
+            87 AppIcon-29x29@3x.png
+            80 AppIcon-40x40@2x.png
+            120 AppIcon-40x40@3x.png
+            120 AppIcon-60x60@2x.png
+            180 AppIcon-60x60@3x.png
+            20 AppIcon-20x20@1x.png
+            40 AppIcon-20x20@2x-ipad.png
+            29 AppIcon-29x29@1x.png
+            58 AppIcon-29x29@2x-ipad.png
+            40 AppIcon-40x40@1x.png
+            80 AppIcon-40x40@2x-ipad.png
+            76 AppIcon-76x76@1x.png
+            152 AppIcon-76x76@2x.png
+            167 AppIcon-83.5x83.5@2x.png
+            1024 AppIcon-1024x1024@1x.png
+            EOF
+
+            while read -r PX FILE_NAME; do
+              [ -z "\$PX" ] && continue
+              sips -z "\$PX" "\$PX" assets/icon.png --out "\$ICON_DIR/\$FILE_NAME" >/dev/null
+            done < "\$RUNNER_TEMP/icon-specs.txt"
+
+            rm -f "\$RUNNER_TEMP/icon-specs.txt"
+          fi
+
+          test -f "\$ICON_DIR/Contents.json"
+          ls -1 "\$ICON_DIR" | sed 's/^/Generated icon: /'
+
 
       - name: Ensure 1024x1024 App Store icon
         run: |
@@ -101,7 +169,7 @@ jobs:
           fi
           
           CONTENTS="\$ICON_DIR/Contents.json"
-          if ! grep -q '"size" : "1024x1024"' "\$CONTENTS"; then
+          if ! grep -Eq '"size"[[:space:]]*:[[:space:]]*"1024x1024"' "\$CONTENTS"; then
             echo "Adding 1024x1024 entry to Contents.json..."
             TMP_JSON="\$(mktemp)"
             # Use jq to add the ios-marketing entry
