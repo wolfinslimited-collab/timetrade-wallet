@@ -653,6 +653,11 @@ export default function Build() {
               <Info className="w-3 h-3 mt-0.5 shrink-0" />
               Native Flutter app builds from <code className="text-primary">flutter_app/</code>. iOS requires signing secrets + TestFlight credentials in GitHub.
             </div>
+
+            <div className="flex items-start gap-1.5 text-xs text-amber-400 bg-amber-400/10 rounded-md px-3 py-2 border border-amber-400/20">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>For App Store submissions, use <strong>Capacitor iOS</strong> above. The Flutter iOS pipeline does not include App Store icon compliance checks.</span>
+            </div>
           </CardContent>
         </Card>
 
