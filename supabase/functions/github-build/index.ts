@@ -94,6 +94,11 @@ jobs:
           set +e
           npx --yes @capacitor/assets generate --ios --assetPath assets
           CAP_ASSETS_EXIT=$?
+          if [ "$CAP_ASSETS_EXIT" -ne 0 ]; then
+            echo "Primary @capacitor/assets run failed (exit=$CAP_ASSETS_EXIT), retrying with latest..."
+            npx --yes @capacitor/assets@latest generate --ios --assetPath assets
+            CAP_ASSETS_EXIT=$?
+          fi
           set -e
 
           if [ "\$CAP_ASSETS_EXIT" -ne 0 ] || [ ! -f "\$ICON_DIR/Contents.json" ]; then
