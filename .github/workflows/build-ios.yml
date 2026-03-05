@@ -299,7 +299,14 @@ jobs:
             exit 1
           fi
 
-          echo "Archived icon payload validated (Assets.car + CFBundleIconName=AppIcon)"
+          ARCHIVE_ASSET_INFO="$RUNNER_TEMP/archive-asset-info.json"
+          xcrun --sdk iphoneos assetutil --info "$ARCHIVE_APP/Assets.car" > "$ARCHIVE_ASSET_INFO" 2>/dev/null || (echo "Failed to inspect archive Assets.car" && exit 1)
+          if ! grep -qi "appicon" "$ARCHIVE_ASSET_INFO"; then
+            echo "Archived Assets.car does not contain AppIcon entries"
+            exit 1
+          fi
+
+          echo "Archived icon payload validated (Assets.car + CFBundleIconName=AppIcon + AppIcon renditions)"
 
       - name: Export IPA
         run: |
@@ -339,8 +346,15 @@ jobs:
             exit 1
           fi
           echo "CFBundleIconName=AppIcon"
-          
-          xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" 2>/dev/null | grep -i "appicon" | head -5 || echo "(assetutil grep done)"
+
+          IPA_ASSET_INFO="$RUNNER_TEMP/ipa-asset-info.json"
+          xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" > "$IPA_ASSET_INFO" 2>/dev/null || (echo "FATAL: Could not inspect IPA Assets.car" && exit 1)
+          if ! grep -qi "appicon" "$IPA_ASSET_INFO"; then
+            echo "FATAL: AppIcon entries missing in IPA Assets.car"
+            exit 1
+          fi
+
+          grep -i "appicon" "$IPA_ASSET_INFO" | head -5
           echo "IPA icon validation passed"
           
           rm -rf "$UNZIP_DIR"
