@@ -309,24 +309,21 @@ jobs:
           APP_DIR=$(find "$UNZIP_DIR/Payload" -name "*.app" -type d | head -1)
           echo "App bundle: $APP_DIR"
           
-          # Check Assets.car exists
           if [ ! -f "$APP_DIR/Assets.car" ]; then
             echo "FATAL: Assets.car missing from IPA!"
             exit 1
           fi
-          echo "✓ Assets.car found ($(du -h "$APP_DIR/Assets.car" | cut -f1))"
+          echo "Assets.car found ($(du -h "$APP_DIR/Assets.car" | cut -f1))"
           
-          # Check Info.plist icon mapping
           ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$APP_DIR/Info.plist" 2>/dev/null || true)
           if [ "$ICON_NAME" != "AppIcon" ]; then
             echo "FATAL: CFBundleIconName='$ICON_NAME' (expected 'AppIcon')"
             exit 1
           fi
-          echo "✓ CFBundleIconName=AppIcon"
+          echo "CFBundleIconName=AppIcon"
           
-          # List AppIcon files in Assets.car
           xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" 2>/dev/null | grep -i "appicon" | head -5 || echo "(assetutil grep done)"
-          echo "✓ IPA icon validation passed"
+          echo "IPA icon validation passed"
           
           rm -rf "$UNZIP_DIR"
 
