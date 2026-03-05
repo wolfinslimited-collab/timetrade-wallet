@@ -310,10 +310,7 @@ jobs:
 
       - name: Export IPA
         run: |
-          xcodebuild -exportArchive \
-            -archivePath $RUNNER_TEMP/App.xcarchive \
-            -exportOptionsPlist ios/App/ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/ipa-output
+          xcodebuild -exportArchive             -archivePath $RUNNER_TEMP/App.xcarchive             -exportOptionsPlist ios/App/ExportOptions.plist             -exportPath $RUNNER_TEMP/ipa-output
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
