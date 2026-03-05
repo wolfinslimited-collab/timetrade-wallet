@@ -63,6 +63,7 @@ jobs:
       - name: Prepare app icon source
         run: |
           mkdir -p assets
+          mkdir -p \$RUNNER_TEMP/icon-audit
           if [ -f public/app-logo.png ]; then
             SOURCE_PATH="public/app-logo.png"
           elif [ -f public/app-logo.jpg ]; then
@@ -70,28 +71,46 @@ jobs:
           elif [ -f public/app-logo.jpeg ]; then
             SOURCE_PATH="public/app-logo.jpeg"
           else
-            echo "Missing app logo: add public/app-logo.png or public/app-logo.jpg"
+            echo "FATAL: Missing app logo: add public/app-logo.png"
             exit 1
           fi
 
-          sips -s format png "$SOURCE_PATH" --out assets/icon.png
+          sips -s format png "\$SOURCE_PATH" --out assets/icon.png
           sips -z 1024 1024 assets/icon.png --out assets/icon.png
 
-          ICON_FORMAT=$(sips -g format assets/icon.png | awk -F': ' '/format/ {print tolower($2)}')
-          if [ "$ICON_FORMAT" != "png" ]; then
-            echo "Icon conversion failed: expected PNG, got $ICON_FORMAT"
+          TMP_JPG="\$(mktemp).jpg"
+          sips -s format jpeg -s formatOptions 100 assets/icon.png --out "\$TMP_JPG"
+          sips -s format png "\$TMP_JPG" --out assets/icon.png
+          rm -f "\$TMP_JPG"
+
+          ALPHA=\$(sips -g hasAlpha assets/icon.png | awk -F': ' '/hasAlpha/ {print tolower($2)}')
+          WIDTH=\$(sips -g pixelWidth assets/icon.png | awk -F': ' '/pixelWidth/ {print $2}')
+          HEIGHT=\$(sips -g pixelHeight assets/icon.png | awk -F': ' '/pixelHeight/ {print $2}')
+          FORMAT=\$(sips -g format assets/icon.png | awk -F': ' '/format/ {print tolower($2)}')
+
+          echo "source=\$SOURCE_PATH" > \$RUNNER_TEMP/icon-audit/source-meta.txt
+          echo "width=\$WIDTH" >> \$RUNNER_TEMP/icon-audit/source-meta.txt
+          echo "height=\$HEIGHT" >> \$RUNNER_TEMP/icon-audit/source-meta.txt
+          echo "hasAlpha=\$ALPHA" >> \$RUNNER_TEMP/icon-audit/source-meta.txt
+          echo "format=\$FORMAT" >> \$RUNNER_TEMP/icon-audit/source-meta.txt
+
+          if [ "\$FORMAT" != "png" ]; then
+            echo "FATAL: Icon is not PNG after conversion"
             exit 1
           fi
+          if [ "\$WIDTH" != "1024" ] || [ "\$HEIGHT" != "1024" ]; then
+            echo "FATAL: Icon is not 1024x1024"
+            exit 1
+          fi
+          echo "Icon prepared: \${WIDTH}x\${HEIGHT}, hasAlpha=\$ALPHA, format=\$FORMAT"
 
-          echo "Icon prepared from $SOURCE_PATH: $(file assets/icon.png)"
-
-      - name: Generate iOS app icons (manual - reliable)
+      - name: Generate iOS app icons
         run: |
-          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-          rm -rf "\$ICON_DIR"
-          mkdir -p "\$ICON_DIR"
+          # Remove ALL existing AppIcon directories to prevent Capacitor conflicts
+          find ios/ -name "AppIcon.appiconset" -type d -exec rm -rf {} + 2>/dev/null || true
 
-          echo "Generating all icon sizes manually from assets/icon.png..."
+          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          mkdir -p "\$ICON_DIR"
 
           jq -n '{
             "images": [
@@ -142,18 +161,17 @@ jobs:
             sips -z "\$PX" "\$PX" assets/icon.png --out "\$ICON_DIR/\$FILE_NAME" >/dev/null
           done
 
-          # Verify all icons generated
           EXPECTED=18
           ACTUAL=\$(ls -1 "\$ICON_DIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
           echo "Generated \$ACTUAL of \$EXPECTED icon files"
           if [ "\$ACTUAL" -lt "\$EXPECTED" ]; then
-            echo "ERROR: Missing icon files!"
+            echo "FATAL: Missing icon files!"
             exit 1
           fi
 
-          test -f "\$ICON_DIR/Contents.json"
-          cat "\$ICON_DIR/Contents.json"
-          ls -la "\$ICON_DIR/"
+          ls -la "\$ICON_DIR/" > \$RUNNER_TEMP/icon-audit/appiconset-listing.txt
+          cp "\$ICON_DIR/Contents.json" \$RUNNER_TEMP/icon-audit/Contents.json
+          echo "All \$ACTUAL icons generated successfully"
 
       - name: Remove alpha channel from all icons
         run: |
@@ -164,28 +182,19 @@ jobs:
               sips -s format jpeg -s formatOptions 100 "\$IMG" --out "\$TMP_JPG"
               sips -s format png "\$TMP_JPG" --out "\$IMG"
               rm -f "\$TMP_JPG"
-
-              ALPHA=\$(sips -g hasAlpha "\$IMG" | awk -F': ' '/hasAlpha/ {print tolower($2)}')
-              if [ "\$ALPHA" != "no" ]; then
-                echo "ERROR: Alpha channel still present in \$(basename "\$IMG")"
-                exit 1
-              fi
-
-              echo "Removed alpha from \$(basename "\$IMG") (hasAlpha=\$ALPHA)"
             fi
           done
 
           MARKETING_ICON="\$ICON_DIR/AppIcon-1024x1024@1x.png"
-          test -f "\$MARKETING_ICON" || (echo "ERROR: Missing ios-marketing icon file" && exit 1)
-
+          test -f "\$MARKETING_ICON" || (echo "FATAL: Missing 1024x1024 marketing icon" && exit 1)
           WIDTH=\$(sips -g pixelWidth "\$MARKETING_ICON" | awk -F': ' '/pixelWidth/ {print $2}')
           HEIGHT=\$(sips -g pixelHeight "\$MARKETING_ICON" | awk -F': ' '/pixelHeight/ {print $2}')
+          ALPHA=\$(sips -g hasAlpha "\$MARKETING_ICON" | awk -F': ' '/hasAlpha/ {print tolower($2)}')
+          echo "Marketing icon: \${WIDTH}x\${HEIGHT}, hasAlpha=\$ALPHA"
           if [ "\$WIDTH" != "1024" ] || [ "\$HEIGHT" != "1024" ]; then
-            echo "ERROR: ios-marketing icon must be 1024x1024, got \${WIDTH}x\${HEIGHT}"
+            echo "FATAL: Marketing icon is not 1024x1024"
             exit 1
           fi
-
-          echo "ios-marketing icon validated (\${WIDTH}x\${HEIGHT}, no alpha)"
 
       - name: Ensure Info.plist icon mapping
         run: |
@@ -205,18 +214,14 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconFiles array" "\$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconFiles:0 string AppIcon" "\$PLIST"
 
-          echo "Info.plist icon mapping:"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon" "\$PLIST"
+          echo "Info.plist icon mapping set"
 
       - name: Set iOS build number
         run: |
           BUILD_NUMBER="\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
           echo "BUILD_NUMBER=\$BUILD_NUMBER" >> "\$GITHUB_ENV"
-          echo "Setting CFBundleVersion to \$BUILD_NUMBER"
           PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion \$BUILD_NUMBER" "\$PLIST"
-          echo "Info.plist CFBundleVersion:"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "\$PLIST"
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "\$PBXPROJ" ]; then
             sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = \$BUILD_NUMBER;/g" "\$PBXPROJ"
@@ -241,11 +246,6 @@ jobs:
           PROFILE_UUID=\$(/usr/libexec/PlistBuddy -c "Print :UUID" "\$PROFILE_PLIST")
           TEAM_ID=\$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "\$PROFILE_PLIST")
           BUNDLE_ID=\$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "\$PROFILE_PLIST" | sed "s/^\${TEAM_ID}\\\\.//" )
-
-          echo "Profile Name: \$PROFILE_NAME"
-          echo "Profile UUID: \$PROFILE_UUID"
-          echo "Team ID: \$TEAM_ID"
-          echo "Bundle ID: \$BUNDLE_ID"
 
           echo "TEAM_ID=\$TEAM_ID" >> "\$GITHUB_ENV"
           echo "PROFILE_NAME=\$PROFILE_NAME" >> "\$GITHUB_ENV"
@@ -310,35 +310,43 @@ jobs:
             CURRENT_PROJECT_VERSION="\$BUILD_NUMBER" \\
             ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon
 
-      - name: Validate archived icon payload
+      - name: Validate archived icon payload (strict)
         run: |
-          ARCHIVE_APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
-          ARCHIVE_PLIST="$ARCHIVE_APP/Info.plist"
+          ARCHIVE_APP="\$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          test -f "\$ARCHIVE_APP/Assets.car" || (echo "FATAL: Missing Assets.car in archive" && exit 1)
+          test -f "\$ARCHIVE_APP/Info.plist" || (echo "FATAL: Missing Info.plist in archive" && exit 1)
 
-          test -f "$ARCHIVE_APP/Assets.car" || (echo "Missing Assets.car in archive" && exit 1)
-          test -f "$ARCHIVE_PLIST" || (echo "Missing Info.plist in archive" && exit 1)
-
-          ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$ARCHIVE_PLIST" 2>/dev/null || true)
-          if [ "$ICON_NAME" != "AppIcon" ]; then
-            echo "Archived app icon mapping invalid: CFBundleIconName='$ICON_NAME'"
+          ICON_NAME=\$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "\$ARCHIVE_APP/Info.plist" 2>/dev/null || true)
+          if [ "\$ICON_NAME" != "AppIcon" ]; then
+            echo "FATAL: CFBundleIconName='\$ICON_NAME' (expected 'AppIcon')"
             exit 1
           fi
 
-          ARCHIVE_ASSET_INFO="$RUNNER_TEMP/archive-asset-info.json"
-          xcrun --sdk iphoneos assetutil --info "$ARCHIVE_APP/Assets.car" > "$ARCHIVE_ASSET_INFO" 2>/dev/null || (echo "Failed to inspect archive Assets.car" && exit 1)
-          if ! grep -qi "appicon" "$ARCHIVE_ASSET_INFO"; then
-            echo "Archived Assets.car does not contain AppIcon entries"
+          ARCHIVE_ASSET_INFO="\$RUNNER_TEMP/icon-audit/archive-assetutil.json"
+          xcrun --sdk iphoneos assetutil --info "\$ARCHIVE_APP/Assets.car" > "\$ARCHIVE_ASSET_INFO" 2>/dev/null || (echo "FATAL: Could not inspect Assets.car" && exit 1)
+
+          MARKETING_COUNT=\$(jq '[.[] | select((.Name? // "") == "AppIcon" and ((.PixelWidth? // 0) == 1024) and ((.PixelHeight? // 0) == 1024))] | length' "\$ARCHIVE_ASSET_INFO")
+          IPHONE_COUNT=\$(jq '[.[] | select((.Name? // "") == "AppIcon" and ((.Idiom? // "") == "phone"))] | length' "\$ARCHIVE_ASSET_INFO")
+          IPAD_COUNT=\$(jq '[.[] | select((.Name? // "") == "AppIcon" and ((.Idiom? // "") == "pad"))] | length' "\$ARCHIVE_ASSET_INFO")
+
+          echo "Archive icon renditions: marketing(1024x1024)=\$MARKETING_COUNT, iphone=\$IPHONE_COUNT, ipad=\$IPAD_COUNT"
+
+          if [ "\$MARKETING_COUNT" -lt 1 ]; then
+            echo "FATAL: No 1024x1024 AppIcon rendition found in archive Assets.car"
+            jq '[.[] | select((.Name? // "") == "AppIcon")]' "\$ARCHIVE_ASSET_INFO"
+            exit 1
+          fi
+          if [ "\$IPHONE_COUNT" -lt 1 ]; then
+            echo "FATAL: No iphone AppIcon renditions in archive"
             exit 1
           fi
 
-          echo "Archived icon payload validated (Assets.car + CFBundleIconName=AppIcon + AppIcon renditions)"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons" "\$ARCHIVE_APP/Info.plist" > \$RUNNER_TEMP/icon-audit/archive-plist-icons.txt 2>&1 || true
+          echo "Archive icon payload validated"
 
       - name: Export IPA
         run: |
-          xcodebuild -exportArchive \
-            -archivePath \$RUNNER_TEMP/App.xcarchive \
-            -exportOptionsPlist ios/App/ExportOptions.plist \
-            -exportPath \$RUNNER_TEMP/ipa-output
+          xcodebuild -exportArchive -archivePath \$RUNNER_TEMP/App.xcarchive -exportOptionsPlist ios/App/ExportOptions.plist -exportPath \$RUNNER_TEMP/ipa-output
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -347,44 +355,51 @@ jobs:
           path: \${{ runner.temp }}/ipa-output/*.ipa
           if-no-files-found: error
 
-      - name: Validate IPA contains icons
+      - name: Validate IPA contains icons (strict)
         run: |
           IPA_PATH=\$(find \$RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
           echo "Validating IPA: \$IPA_PATH"
-          
+
           UNZIP_DIR="\$RUNNER_TEMP/ipa-check"
           mkdir -p "\$UNZIP_DIR"
           unzip -q "\$IPA_PATH" -d "\$UNZIP_DIR"
-          
+
           APP_DIR=\$(find "\$UNZIP_DIR/Payload" -name "*.app" -type d | head -1)
-          echo "App bundle: \$APP_DIR"
-          
-          if [ ! -f "\$APP_DIR/Assets.car" ]; then
-            echo "FATAL: Assets.car missing from IPA!"
-            exit 1
-          fi
-          echo "Assets.car found (\$(du -h "\$APP_DIR/Assets.car" | cut -f1))"
-          
+          test -f "\$APP_DIR/Assets.car" || (echo "FATAL: Assets.car missing from IPA" && exit 1)
+
           ICON_NAME=\$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "\$APP_DIR/Info.plist" 2>/dev/null || true)
           if [ "\$ICON_NAME" != "AppIcon" ]; then
-            echo "FATAL: CFBundleIconName='\$ICON_NAME' (expected 'AppIcon')"
+            echo "FATAL: IPA CFBundleIconName='\$ICON_NAME' (expected 'AppIcon')"
             exit 1
           fi
-          echo "CFBundleIconName=AppIcon"
 
-          IPA_ASSET_INFO="\$RUNNER_TEMP/ipa-asset-info.json"
+          IPA_ASSET_INFO="\$RUNNER_TEMP/icon-audit/ipa-assetutil.json"
           xcrun --sdk iphoneos assetutil --info "\$APP_DIR/Assets.car" > "\$IPA_ASSET_INFO" 2>/dev/null || (echo "FATAL: Could not inspect IPA Assets.car" && exit 1)
-          if ! grep -qi "appicon" "\$IPA_ASSET_INFO"; then
-            echo "FATAL: AppIcon entries missing in IPA Assets.car"
+
+          MARKETING_COUNT=\$(jq '[.[] | select((.Name? // "") == "AppIcon" and ((.PixelWidth? // 0) == 1024) and ((.PixelHeight? // 0) == 1024))] | length' "\$IPA_ASSET_INFO")
+          IPHONE_COUNT=\$(jq '[.[] | select((.Name? // "") == "AppIcon" and ((.Idiom? // "") == "phone"))] | length' "\$IPA_ASSET_INFO")
+
+          echo "IPA icon renditions: marketing(1024x1024)=\$MARKETING_COUNT, iphone=\$IPHONE_COUNT"
+
+          if [ "\$MARKETING_COUNT" -lt 1 ]; then
+            echo "FATAL: No 1024x1024 AppIcon rendition in IPA"
+            jq '[.[] | select((.Name? // "") == "AppIcon")]' "\$IPA_ASSET_INFO"
             exit 1
           fi
 
-          grep -i "appicon" "\$IPA_ASSET_INFO" | head -5
-          echo "IPA icon validation passed"
-          
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons" "\$APP_DIR/Info.plist" > \$RUNNER_TEMP/icon-audit/ipa-plist-icons.txt 2>&1 || true
+          echo "IPA icon validation passed (marketing=\$MARKETING_COUNT, iphone=\$IPHONE_COUNT)"
           rm -rf "\$UNZIP_DIR"
 
-      - name: Upload to TestFlight
+      - name: Upload icon audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: icon-audit-\${{ github.run_id }}
+          path: \${{ runner.temp }}/icon-audit/
+          if-no-files-found: warn
+
+      - name: Validate IPA with Apple
         env:
           APP_STORE_CONNECT_API_KEY_ID: \${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: \${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -392,6 +407,17 @@ jobs:
         run: |
           mkdir -p ~/private_keys
           echo -n "\$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_\${APP_STORE_CONNECT_API_KEY_ID}.p8
+          IPA_PATH=\$(find \$RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
+          echo "Validating IPA with Apple before upload..."
+          xcrun altool --validate-app --type ios --file "\$IPA_PATH" --apiKey "\$APP_STORE_CONNECT_API_KEY_ID" --apiIssuer "\$APP_STORE_CONNECT_ISSUER_ID"
+          echo "Apple validation passed"
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: \${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: \${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: \${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
           IPA_PATH=\$(find \$RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
           echo "Uploading IPA: \$IPA_PATH"
           xcrun altool --upload-app \\
