@@ -60,101 +60,75 @@ jobs:
 
           echo "Icon prepared from $SOURCE_PATH: $(file assets/icon.png)"
 
-      - name: Generate iOS app icons
+      - name: Generate iOS app icons (manual - reliable)
         run: |
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           rm -rf "$ICON_DIR"
           mkdir -p "$ICON_DIR"
 
-          set +e
-          npx --yes @capacitor/assets generate --ios --assetPath assets
-          CAP_ASSETS_EXIT=$?
-          if [ "$CAP_ASSETS_EXIT" -ne 0 ]; then
-            echo "Primary @capacitor/assets run failed (exit=$CAP_ASSETS_EXIT), retrying with latest..."
-            npx --yes @capacitor/assets@latest generate --ios --assetPath assets
-            CAP_ASSETS_EXIT=$?
-          fi
-          set -e
+          echo "Generating all icon sizes manually from assets/icon.png..."
 
-          if [ "$CAP_ASSETS_EXIT" -ne 0 ] || [ ! -f "$ICON_DIR/Contents.json" ]; then
-            echo "@capacitor/assets failed or produced no icon set (exit=$CAP_ASSETS_EXIT). Falling back to manual icon generation."
+          jq -n '{
+            "images": [
+              {"filename": "AppIcon-20x20@2x.png", "idiom": "iphone", "scale": "2x", "size": "20x20"},
+              {"filename": "AppIcon-20x20@3x.png", "idiom": "iphone", "scale": "3x", "size": "20x20"},
+              {"filename": "AppIcon-29x29@2x.png", "idiom": "iphone", "scale": "2x", "size": "29x29"},
+              {"filename": "AppIcon-29x29@3x.png", "idiom": "iphone", "scale": "3x", "size": "29x29"},
+              {"filename": "AppIcon-40x40@2x.png", "idiom": "iphone", "scale": "2x", "size": "40x40"},
+              {"filename": "AppIcon-40x40@3x.png", "idiom": "iphone", "scale": "3x", "size": "40x40"},
+              {"filename": "AppIcon-60x60@2x.png", "idiom": "iphone", "scale": "2x", "size": "60x60"},
+              {"filename": "AppIcon-60x60@3x.png", "idiom": "iphone", "scale": "3x", "size": "60x60"},
+              {"filename": "AppIcon-20x20@1x.png", "idiom": "ipad", "scale": "1x", "size": "20x20"},
+              {"filename": "AppIcon-20x20@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "20x20"},
+              {"filename": "AppIcon-29x29@1x.png", "idiom": "ipad", "scale": "1x", "size": "29x29"},
+              {"filename": "AppIcon-29x29@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "29x29"},
+              {"filename": "AppIcon-40x40@1x.png", "idiom": "ipad", "scale": "1x", "size": "40x40"},
+              {"filename": "AppIcon-40x40@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "40x40"},
+              {"filename": "AppIcon-76x76@1x.png", "idiom": "ipad", "scale": "1x", "size": "76x76"},
+              {"filename": "AppIcon-76x76@2x.png", "idiom": "ipad", "scale": "2x", "size": "76x76"},
+              {"filename": "AppIcon-83.5x83.5@2x.png", "idiom": "ipad", "scale": "2x", "size": "83.5x83.5"},
+              {"filename": "AppIcon-1024x1024@1x.png", "idiom": "ios-marketing", "scale": "1x", "size": "1024x1024"}
+            ],
+            "info": {"author": "xcode", "version": 1}
+          }' > "$ICON_DIR/Contents.json"
 
-            jq -n '{
-              "images": [
-                {"filename": "AppIcon-20x20@2x.png", "idiom": "iphone", "scale": "2x", "size": "20x20"},
-                {"filename": "AppIcon-20x20@3x.png", "idiom": "iphone", "scale": "3x", "size": "20x20"},
-                {"filename": "AppIcon-29x29@2x.png", "idiom": "iphone", "scale": "2x", "size": "29x29"},
-                {"filename": "AppIcon-29x29@3x.png", "idiom": "iphone", "scale": "3x", "size": "29x29"},
-                {"filename": "AppIcon-40x40@2x.png", "idiom": "iphone", "scale": "2x", "size": "40x40"},
-                {"filename": "AppIcon-40x40@3x.png", "idiom": "iphone", "scale": "3x", "size": "40x40"},
-                {"filename": "AppIcon-60x60@2x.png", "idiom": "iphone", "scale": "2x", "size": "60x60"},
-                {"filename": "AppIcon-60x60@3x.png", "idiom": "iphone", "scale": "3x", "size": "60x60"},
-                {"filename": "AppIcon-20x20@1x.png", "idiom": "ipad", "scale": "1x", "size": "20x20"},
-                {"filename": "AppIcon-20x20@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "20x20"},
-                {"filename": "AppIcon-29x29@1x.png", "idiom": "ipad", "scale": "1x", "size": "29x29"},
-                {"filename": "AppIcon-29x29@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "29x29"},
-                {"filename": "AppIcon-40x40@1x.png", "idiom": "ipad", "scale": "1x", "size": "40x40"},
-                {"filename": "AppIcon-40x40@2x-ipad.png", "idiom": "ipad", "scale": "2x", "size": "40x40"},
-                {"filename": "AppIcon-76x76@1x.png", "idiom": "ipad", "scale": "1x", "size": "76x76"},
-                {"filename": "AppIcon-76x76@2x.png", "idiom": "ipad", "scale": "2x", "size": "76x76"},
-                {"filename": "AppIcon-83.5x83.5@2x.png", "idiom": "ipad", "scale": "2x", "size": "83.5x83.5"},
-                {"filename": "AppIcon-1024x1024@1x.png", "idiom": "ios-marketing", "scale": "1x", "size": "1024x1024"}
-              ],
-              "info": {"author": "xcode", "version": 1}
-            }' > "$ICON_DIR/Contents.json"
+          for SPEC in \
+            "40 AppIcon-20x20@2x.png" \
+            "60 AppIcon-20x20@3x.png" \
+            "58 AppIcon-29x29@2x.png" \
+            "87 AppIcon-29x29@3x.png" \
+            "80 AppIcon-40x40@2x.png" \
+            "120 AppIcon-40x40@3x.png" \
+            "120 AppIcon-60x60@2x.png" \
+            "180 AppIcon-60x60@3x.png" \
+            "20 AppIcon-20x20@1x.png" \
+            "40 AppIcon-20x20@2x-ipad.png" \
+            "29 AppIcon-29x29@1x.png" \
+            "58 AppIcon-29x29@2x-ipad.png" \
+            "40 AppIcon-40x40@1x.png" \
+            "80 AppIcon-40x40@2x-ipad.png" \
+            "76 AppIcon-76x76@1x.png" \
+            "152 AppIcon-76x76@2x.png" \
+            "167 AppIcon-83.5x83.5@2x.png" \
+            "1024 AppIcon-1024x1024@1x.png"
+          do
+            PX="${SPEC%% *}"
+            FILE_NAME="${SPEC#* }"
+            sips -z "$PX" "$PX" assets/icon.png --out "$ICON_DIR/$FILE_NAME" >/dev/null
+          done
 
-            for SPEC in \
-              "40 AppIcon-20x20@2x.png" \
-              "60 AppIcon-20x20@3x.png" \
-              "58 AppIcon-29x29@2x.png" \
-              "87 AppIcon-29x29@3x.png" \
-              "80 AppIcon-40x40@2x.png" \
-              "120 AppIcon-40x40@3x.png" \
-              "120 AppIcon-60x60@2x.png" \
-              "180 AppIcon-60x60@3x.png" \
-              "20 AppIcon-20x20@1x.png" \
-              "40 AppIcon-20x20@2x-ipad.png" \
-              "29 AppIcon-29x29@1x.png" \
-              "58 AppIcon-29x29@2x-ipad.png" \
-              "40 AppIcon-40x40@1x.png" \
-              "80 AppIcon-40x40@2x-ipad.png" \
-              "76 AppIcon-76x76@1x.png" \
-              "152 AppIcon-76x76@2x.png" \
-              "167 AppIcon-83.5x83.5@2x.png" \
-              "1024 AppIcon-1024x1024@1x.png"
-            do
-              PX="${SPEC%% *}"
-              FILE_NAME="${SPEC#* }"
-              sips -z "$PX" "$PX" assets/icon.png --out "$ICON_DIR/$FILE_NAME" >/dev/null
-            done
+          # Verify all icons generated
+          EXPECTED=18
+          ACTUAL=$(ls -1 "$ICON_DIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
+          echo "Generated $ACTUAL of $EXPECTED icon files"
+          if [ "$ACTUAL" -lt "$EXPECTED" ]; then
+            echo "ERROR: Missing icon files!"
+            exit 1
           fi
 
           test -f "$ICON_DIR/Contents.json"
-          ls -1 "$ICON_DIR" | sed 's/^/Generated icon: /'
-
-
-      - name: Ensure 1024x1024 App Store icon
-        run: |
-          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-          ICON_1024="$ICON_DIR/AppIcon-1024x1024@1x.png"
-          
-          if [ ! -f "$ICON_1024" ]; then
-            echo "1024x1024 icon missing, generating from source..."
-            sips -z 1024 1024 assets/icon.png --out "$ICON_1024"
-          fi
-          
-          CONTENTS="$ICON_DIR/Contents.json"
-          if ! grep -Eq '"size"[[:space:]]*:[[:space:]]*"1024x1024"' "$CONTENTS"; then
-            echo "Adding 1024x1024 entry to Contents.json..."
-            TMP_JSON="$(mktemp)"
-            # Use jq to add the ios-marketing entry
-            jq '.images = [.images[] | select(.idiom != "ios-marketing")] + [{"filename":"AppIcon-1024x1024@1x.png","idiom":"ios-marketing","scale":"1x","size":"1024x1024"}]' "$CONTENTS" > "$TMP_JSON"
-            mv "$TMP_JSON" "$CONTENTS"
-            echo "Added 1024x1024 ios-marketing entry"
-          fi
-          
-          test -f "$ICON_1024" && echo "1024x1024 App Store icon ready"
-          grep -q "1024x1024" "$CONTENTS" && echo "Contents.json has 1024pt entry"
+          cat "$ICON_DIR/Contents.json"
+          ls -la "$ICON_DIR/"
 
       - name: Remove alpha channel from all icons
         run: |
@@ -322,6 +296,39 @@ jobs:
           name: ios-ipa-${{ github.run_id }}
           path: ${{ runner.temp }}/ipa-output/*.ipa
           if-no-files-found: error
+
+      - name: Validate IPA contains icons
+        run: |
+          IPA_PATH=$(find $RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
+          echo "Validating IPA: $IPA_PATH"
+          
+          UNZIP_DIR="$RUNNER_TEMP/ipa-check"
+          mkdir -p "$UNZIP_DIR"
+          unzip -q "$IPA_PATH" -d "$UNZIP_DIR"
+          
+          APP_DIR=$(find "$UNZIP_DIR/Payload" -name "*.app" -type d | head -1)
+          echo "App bundle: $APP_DIR"
+          
+          # Check Assets.car exists
+          if [ ! -f "$APP_DIR/Assets.car" ]; then
+            echo "FATAL: Assets.car missing from IPA!"
+            exit 1
+          fi
+          echo "✓ Assets.car found ($(du -h "$APP_DIR/Assets.car" | cut -f1))"
+          
+          # Check Info.plist icon mapping
+          ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$APP_DIR/Info.plist" 2>/dev/null || true)
+          if [ "$ICON_NAME" != "AppIcon" ]; then
+            echo "FATAL: CFBundleIconName='$ICON_NAME' (expected 'AppIcon')"
+            exit 1
+          fi
+          echo "✓ CFBundleIconName=AppIcon"
+          
+          # List AppIcon files in Assets.car
+          xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" 2>/dev/null | grep -i "appicon" | head -5 || echo "(assetutil grep done)"
+          echo "✓ IPA icon validation passed"
+          
+          rm -rf "$UNZIP_DIR"
 
       - name: Upload to TestFlight
         env:
