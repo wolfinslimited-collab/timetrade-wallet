@@ -297,6 +297,39 @@ jobs:
           path: ${{ runner.temp }}/ipa-output/*.ipa
           if-no-files-found: error
 
+      - name: Validate IPA contains icons
+        run: |
+          IPA_PATH=$(find $RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
+          echo "Validating IPA: $IPA_PATH"
+          
+          UNZIP_DIR="$RUNNER_TEMP/ipa-check"
+          mkdir -p "$UNZIP_DIR"
+          unzip -q "$IPA_PATH" -d "$UNZIP_DIR"
+          
+          APP_DIR=$(find "$UNZIP_DIR/Payload" -name "*.app" -type d | head -1)
+          echo "App bundle: $APP_DIR"
+          
+          # Check Assets.car exists
+          if [ ! -f "$APP_DIR/Assets.car" ]; then
+            echo "FATAL: Assets.car missing from IPA!"
+            exit 1
+          fi
+          echo "✓ Assets.car found ($(du -h "$APP_DIR/Assets.car" | cut -f1))"
+          
+          # Check Info.plist icon mapping
+          ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$APP_DIR/Info.plist" 2>/dev/null || true)
+          if [ "$ICON_NAME" != "AppIcon" ]; then
+            echo "FATAL: CFBundleIconName='$ICON_NAME' (expected 'AppIcon')"
+            exit 1
+          fi
+          echo "✓ CFBundleIconName=AppIcon"
+          
+          # List AppIcon files in Assets.car
+          xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" 2>/dev/null | grep -i "appicon" | head -5 || echo "(assetutil grep done)"
+          echo "✓ IPA icon validation passed"
+          
+          rm -rf "$UNZIP_DIR"
+
       - name: Upload to TestFlight
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
