@@ -69,6 +69,11 @@ jobs:
           set +e
           npx --yes @capacitor/assets generate --ios --assetPath assets
           CAP_ASSETS_EXIT=$?
+          if [ "$CAP_ASSETS_EXIT" -ne 0 ]; then
+            echo "Primary @capacitor/assets run failed (exit=$CAP_ASSETS_EXIT), retrying with latest..."
+            npx --yes @capacitor/assets@latest generate --ios --assetPath assets
+            CAP_ASSETS_EXIT=$?
+          fi
           set -e
 
           if [ "$CAP_ASSETS_EXIT" -ne 0 ] || [ ! -f "$ICON_DIR/Contents.json" ]; then
@@ -287,6 +292,22 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon
+
+      - name: Validate archived icon payload
+        run: |
+          ARCHIVE_APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          ARCHIVE_PLIST="$ARCHIVE_APP/Info.plist"
+
+          test -f "$ARCHIVE_APP/Assets.car" || (echo "Missing Assets.car in archive" && exit 1)
+          test -f "$ARCHIVE_PLIST" || (echo "Missing Info.plist in archive" && exit 1)
+
+          ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$ARCHIVE_PLIST" 2>/dev/null || true)
+          if [ "$ICON_NAME" != "AppIcon" ]; then
+            echo "Archived app icon mapping invalid: CFBundleIconName='$ICON_NAME'"
+            exit 1
+          fi
+
+          echo "Archived icon payload validated (Assets.car + CFBundleIconName=AppIcon)"
 
       - name: Export IPA
         run: |
