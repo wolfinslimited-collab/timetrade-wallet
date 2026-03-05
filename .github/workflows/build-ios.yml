@@ -139,9 +139,28 @@ jobs:
               sips -s format jpeg -s formatOptions 100 "$IMG" --out "$TMP_JPG"
               sips -s format png "$TMP_JPG" --out "$IMG"
               rm -f "$TMP_JPG"
-              echo "Removed alpha from $(basename "$IMG")"
+
+              ALPHA=$(sips -g hasAlpha "$IMG" | awk -F': ' '/hasAlpha/ {print tolower($2)}')
+              if [ "$ALPHA" != "no" ]; then
+                echo "ERROR: Alpha channel still present in $(basename "$IMG")"
+                exit 1
+              fi
+
+              echo "Removed alpha from $(basename "$IMG") (hasAlpha=$ALPHA)"
             fi
           done
+
+          MARKETING_ICON="$ICON_DIR/AppIcon-1024x1024@1x.png"
+          test -f "$MARKETING_ICON" || (echo "ERROR: Missing ios-marketing icon file" && exit 1)
+
+          WIDTH=$(sips -g pixelWidth "$MARKETING_ICON" | awk -F': ' '/pixelWidth/ {print $2}')
+          HEIGHT=$(sips -g pixelHeight "$MARKETING_ICON" | awk -F': ' '/pixelHeight/ {print $2}')
+          if [ "$WIDTH" != "1024" ] || [ "$HEIGHT" != "1024" ]; then
+            echo "ERROR: ios-marketing icon must be 1024x1024, got ${WIDTH}x${HEIGHT}"
+            exit 1
+          fi
+
+          echo "ios-marketing icon validated (${WIDTH}x${HEIGHT}, no alpha)"
 
       - name: Ensure Info.plist icon mapping
         run: |
@@ -176,7 +195,6 @@ jobs:
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "$PBXPROJ" ]; then
             sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBXPROJ"
-            sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = 1.0.${GITHUB_RUN_NUMBER};/g" "$PBXPROJ"
           fi
 
       - name: Setup signing assets
@@ -281,7 +299,14 @@ jobs:
             exit 1
           fi
 
-          echo "Archived icon payload validated (Assets.car + CFBundleIconName=AppIcon)"
+          ARCHIVE_ASSET_INFO="$RUNNER_TEMP/archive-asset-info.json"
+          xcrun --sdk iphoneos assetutil --info "$ARCHIVE_APP/Assets.car" > "$ARCHIVE_ASSET_INFO" 2>/dev/null || (echo "Failed to inspect archive Assets.car" && exit 1)
+          if ! grep -qi "appicon" "$ARCHIVE_ASSET_INFO"; then
+            echo "Archived Assets.car does not contain AppIcon entries"
+            exit 1
+          fi
+
+          echo "Archived icon payload validated (Assets.car + CFBundleIconName=AppIcon + AppIcon renditions)"
 
       - name: Export IPA
         run: |
@@ -321,8 +346,15 @@ jobs:
             exit 1
           fi
           echo "CFBundleIconName=AppIcon"
-          
-          xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" 2>/dev/null | grep -i "appicon" | head -5 || echo "(assetutil grep done)"
+
+          IPA_ASSET_INFO="$RUNNER_TEMP/ipa-asset-info.json"
+          xcrun --sdk iphoneos assetutil --info "$APP_DIR/Assets.car" > "$IPA_ASSET_INFO" 2>/dev/null || (echo "FATAL: Could not inspect IPA Assets.car" && exit 1)
+          if ! grep -qi "appicon" "$IPA_ASSET_INFO"; then
+            echo "FATAL: AppIcon entries missing in IPA Assets.car"
+            exit 1
+          fi
+
+          grep -i "appicon" "$IPA_ASSET_INFO" | head -5
           echo "IPA icon validation passed"
           
           rm -rf "$UNZIP_DIR"
