@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe } from "lucide-react";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { SUPPORTED_CHAINS } from "@/hooks/useBlockchain";
@@ -73,6 +74,7 @@ const SettingItem = ({ icon: Icon, label, description, onClick, rightElement, da
 
 export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const {
     isAvailable: biometricAvailable, 
     isEnabled: biometricEnabled, 
@@ -217,6 +219,21 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Legal */}
+        <section>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 mb-2">
+            Legal
+          </p>
+          <div className="bg-card/50 border border-border/30 rounded-2xl divide-y divide-border/20 overflow-hidden">
+            <SettingItem
+              icon={FileText}
+              label="Privacy Policy"
+              description="How we handle your data"
+              onClick={() => navigate('/privacy')}
+            />
           </div>
         </section>
 
