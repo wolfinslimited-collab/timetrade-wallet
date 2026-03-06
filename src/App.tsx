@@ -16,6 +16,7 @@ import SendPage from "./pages/SendPage";
 import ReceivePage from "./pages/ReceivePage";
 import NotFound from "./pages/NotFound";
 import Build from "./pages/Build";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +74,7 @@ const AnimatedRoutes = () => {
             <Route path="/send" element={<SendPage />} />
             <Route path="/receive" element={<ReceivePage />} />
             <Route path="/build" element={<Build />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </motion.div>
