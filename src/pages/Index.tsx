@@ -89,7 +89,16 @@ const Index = () => {
     const doReset = async () => {
       if (didReset) return;
       didReset = true;
-      try { wipeAllWalletData(); await wipeIndexedDb(); } finally { window.location.replace(window.location.pathname); }
+      try {
+        wipeAllWalletData();
+        await wipeIndexedDb();
+      } finally {
+        // Soft reset state without forcing a full page navigation reload.
+        setHasWallet(false);
+        setIsLocked(false);
+        setActiveTab("wallet");
+        navigate("/", { replace: true });
+      }
     };
     const onStorage = (e: StorageEvent) => { if (e.key === resetKey) void doReset(); };
     window.addEventListener("storage", onStorage);
@@ -101,7 +110,7 @@ const Index = () => {
       }
     } catch {}
     return () => { window.removeEventListener("storage", onStorage); try { bc?.close(); } catch {} };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
