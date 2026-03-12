@@ -300,12 +300,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         console.log(`%c[BLOCKCHAIN CONTEXT] 🔐 Seed phrase changed, re-deriving`, 'color: #a855f7;');
         deriveFromStoredMnemonic();
       } else {
-        // Same mnemonic but different account index — force refetch with new addresses
-        console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Same mnemonic, forcing query refresh`, 'color: #06b6d4;');
-        queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
-        queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
-        queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
-        queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
+        // Same mnemonic but different account index — the event dispatch below
+        // will trigger useUnifiedPortfolio to invalidate queries with new addresses.
+        console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Same mnemonic, account-switched event will handle refresh`, 'color: #06b6d4;');
       }
     };
 
