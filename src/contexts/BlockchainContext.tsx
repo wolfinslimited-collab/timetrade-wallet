@@ -453,15 +453,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     
     // Use setTimeout to ensure localStorage is written before event dispatch
     setTimeout(() => {
-      console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching account-switched event & invalidating queries`, 'color: #eab308; font-weight: bold;');
-      // Dispatch event to notify other components (header, portfolio, etc.)
+      console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching account-switched event`, 'color: #eab308; font-weight: bold;');
+      // The event will be caught by useUnifiedPortfolio which handles query invalidation
       window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
-      
-      // Invalidate all queries to refetch with new addresses
-      queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
     }, 50);
   }, [selectedChain, allDerivedAccounts, queryClient, activeAccountIndex]);
 
