@@ -29,6 +29,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
   const [showStaking, setShowStaking] = useState(true);
+  const [showSwap, setShowSwap] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -76,6 +77,9 @@ const Index = () => {
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "show_staking").single().then(({ data }) => {
       if (data) setShowStaking(data.value === true);
+    });
+    supabase.from("config").select("value").eq("key", "show_swap").single().then(({ data }) => {
+      if (data) setShowSwap(data.value === true);
     });
   }, []);
 
@@ -230,7 +234,7 @@ const Index = () => {
           </div>
 
           {/* Quick Actions */}
-          <QuickActions />
+          <QuickActions showSwap={showSwap} />
 
           {/* Token List */}
           <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">

@@ -29,7 +29,7 @@ const actions: QuickAction[] = [
   },
 ];
 
-export const QuickActions = () => {
+export const QuickActions = ({ showSwap = true }: { showSwap?: boolean }) => {
   const navigate = useNavigate();
 
   const handleAction = (action?: string) => {
@@ -38,9 +38,11 @@ export const QuickActions = () => {
     else if (action === "swap") navigate("/swap");
   };
 
+  const visibleActions = showSwap ? actions : actions.filter(a => a.action !== "swap");
+
   return (
     <div className="flex items-center justify-center gap-6 px-8 py-4">
-      {actions.map((action) => (
+      {visibleActions.map((action) => (
         <button
           key={action.label}
           onClick={() => handleAction(action.action)}
