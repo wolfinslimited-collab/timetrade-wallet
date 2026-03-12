@@ -234,7 +234,7 @@ const Index = () => {
           </div>
 
           {/* Quick Actions */}
-          <QuickActions />
+          <QuickActions showSwap={showSwap} />
 
           {/* Token List */}
           <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
