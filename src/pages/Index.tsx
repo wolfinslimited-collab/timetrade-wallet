@@ -97,11 +97,15 @@ const Index = () => {
         setHasWallet(false);
         setIsLocked(false);
         setActiveTab("wallet");
-        navigate("/", { replace: true });
+        navigate({ pathname: "/", search: location.search }, { replace: true });
       }
     };
     const onStorage = (e: StorageEvent) => { if (e.key === resetKey) void doReset(); };
+    const onWalletReset = () => { void doReset(); };
+
     window.addEventListener("storage", onStorage);
+    window.addEventListener("timetrade:wallet-reset", onWalletReset as EventListener);
+
     let bc: BroadcastChannel | null = null;
     try {
       if ("BroadcastChannel" in window) {
@@ -109,8 +113,12 @@ const Index = () => {
         bc.onmessage = (ev) => { if (ev?.data?.type === "wallet_reset") void doReset(); };
       }
     } catch {}
-    return () => { window.removeEventListener("storage", onStorage); try { bc?.close(); } catch {} };
-  }, [navigate]);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("timetrade:wallet-reset", onWalletReset as EventListener);
+      try { bc?.close(); } catch {}
+    };
+  }, [navigate, location.search]);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
