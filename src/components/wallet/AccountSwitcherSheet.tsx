@@ -792,8 +792,8 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       wipeAllWalletData();
       await wipeIndexedDb();
       
-      // Force reload to show onboarding
-      window.location.replace(window.location.pathname);
+      // Trigger same-tab soft reset without hard browser reload
+      window.dispatchEvent(new CustomEvent("timetrade:wallet-reset"));
       return;
     }
     

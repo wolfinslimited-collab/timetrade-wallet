@@ -122,7 +122,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
     removeBiometric();
     wipeAllWalletData();
     await wipeIndexedDb();
-    window.location.replace(window.location.pathname);
+    window.dispatchEvent(new CustomEvent("timetrade:wallet-reset"));
   };
 
   return (
