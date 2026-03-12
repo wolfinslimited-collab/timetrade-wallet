@@ -74,7 +74,11 @@ export function useUnifiedPortfolio(enabled: boolean) {
     const handleAccountSwitch = () => {
       setAddressVersion((v) => v + 1);
       
+      // Single point of invalidation — queries will refetch with the new addresses
+      // read from localStorage via the bumped addressVersion.
       queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
       queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
     };
 

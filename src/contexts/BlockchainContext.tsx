@@ -231,16 +231,11 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         });
         
         // CRITICAL: Notify portfolio hooks to re-read localStorage addresses AFTER derivation.
-        // Without this, the unified portfolio can stay stuck with null addresses (showing $0)
-        // until the user manually switches accounts.
+        // The event handler in useUnifiedPortfolio will handle query invalidation —
+        // do NOT duplicate invalidations here to avoid cascade refetch loops.
         setTimeout(() => {
-          console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching addresses-updated + invalidating queries`, 'color: #06b6d4; font-weight: bold;');
+          console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching addresses-updated`, 'color: #06b6d4; font-weight: bold;');
           window.dispatchEvent(new CustomEvent('timetrade:addresses-updated'));
-           // Force immediate refetch so the UI updates right after import/unlock.
-           queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
-           queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
-           queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
-           queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
         }, 250);
       }
     } catch (err) {
@@ -305,12 +300,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         console.log(`%c[BLOCKCHAIN CONTEXT] 🔐 Seed phrase changed, re-deriving`, 'color: #a855f7;');
         deriveFromStoredMnemonic();
       } else {
-        // Same mnemonic but different account index — force refetch with new addresses
-        console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Same mnemonic, forcing query refresh`, 'color: #06b6d4;');
-        queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
-        queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
-        queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
-        queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
+        // Same mnemonic but different account index — the event dispatch below
+        // will trigger useUnifiedPortfolio to invalidate queries with new addresses.
+        console.log(`%c[BLOCKCHAIN CONTEXT] 🔄 Same mnemonic, account-switched event will handle refresh`, 'color: #06b6d4;');
       }
     };
 
@@ -461,15 +453,9 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     
     // Use setTimeout to ensure localStorage is written before event dispatch
     setTimeout(() => {
-      console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching account-switched event & invalidating queries`, 'color: #eab308; font-weight: bold;');
-      // Dispatch event to notify other components (header, portfolio, etc.)
+      console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching account-switched event`, 'color: #eab308; font-weight: bold;');
+      // The event will be caught by useUnifiedPortfolio which handles query invalidation
       window.dispatchEvent(new CustomEvent('timetrade:account-switched'));
-      
-      // Invalidate all queries to refetch with new addresses
-      queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
     }, 50);
   }, [selectedChain, allDerivedAccounts, queryClient, activeAccountIndex]);
 
