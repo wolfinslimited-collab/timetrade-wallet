@@ -86,6 +86,8 @@ const Index = () => {
   useEffect(() => {
     let didReset = false;
     const resetKey = getResetSignalKey();
+    const isDev = import.meta.env.DEV;
+
     const doReset = async () => {
       if (didReset) return;
       didReset = true;
@@ -93,32 +95,55 @@ const Index = () => {
         wipeAllWalletData();
         await wipeIndexedDb();
       } finally {
-        // Soft reset state without forcing a full page navigation reload.
+        // Soft reset state only (no route navigation / hard refresh)
         setHasWallet(false);
         setIsLocked(false);
         setActiveTab("wallet");
-        navigate({ pathname: "/", search: location.search }, { replace: true });
       }
     };
-    const onStorage = (e: StorageEvent) => { if (e.key === resetKey) void doReset(); };
-    const onWalletReset = () => { void doReset(); };
 
-    window.addEventListener("storage", onStorage);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== resetKey) return;
+      if (!e.newValue || e.newValue === e.oldValue) return;
+      void doReset();
+    };
+
+    const onWalletReset = () => {
+      void doReset();
+    };
+
     window.addEventListener("timetrade:wallet-reset", onWalletReset as EventListener);
 
+    // In dev/preview, skip cross-tab reset listeners to avoid unwanted route refresh loops.
+    // Keep full cross-tab sync behavior for production builds.
     let bc: BroadcastChannel | null = null;
-    try {
-      if ("BroadcastChannel" in window) {
-        bc = new BroadcastChannel("timetrade_wallet");
-        bc.onmessage = (ev) => { if (ev?.data?.type === "wallet_reset") void doReset(); };
+    if (!isDev) {
+      window.addEventListener("storage", onStorage);
+      try {
+        if ("BroadcastChannel" in window) {
+          bc = new BroadcastChannel("timetrade_wallet");
+          bc.onmessage = (ev) => {
+            if (ev?.data?.type !== "wallet_reset") return;
+            void doReset();
+          };
+        }
+      } catch {
+        // ignore
       }
-    } catch {}
+    }
+
     return () => {
-      window.removeEventListener("storage", onStorage);
       window.removeEventListener("timetrade:wallet-reset", onWalletReset as EventListener);
-      try { bc?.close(); } catch {}
+      if (!isDev) {
+        window.removeEventListener("storage", onStorage);
+        try {
+          bc?.close();
+        } catch {
+          // ignore
+        }
+      }
     };
-  }, [navigate, location.search]);
+  }, []);
 
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
