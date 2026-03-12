@@ -78,6 +78,9 @@ const Index = () => {
     supabase.from("config").select("value").eq("key", "show_staking").single().then(({ data }) => {
       if (data) setShowStaking(data.value === true);
     });
+    supabase.from("config").select("value").eq("key", "show_swap").single().then(({ data }) => {
+      if (data) setShowSwap(data.value === true);
+    });
   }, []);
 
   useEffect(() => {
