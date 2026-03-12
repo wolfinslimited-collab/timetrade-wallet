@@ -29,6 +29,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
   const [showStaking, setShowStaking] = useState(true);
+  const [showSwap, setShowSwap] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
