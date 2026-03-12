@@ -231,16 +231,11 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         });
         
         // CRITICAL: Notify portfolio hooks to re-read localStorage addresses AFTER derivation.
-        // Without this, the unified portfolio can stay stuck with null addresses (showing $0)
-        // until the user manually switches accounts.
+        // The event handler in useUnifiedPortfolio will handle query invalidation —
+        // do NOT duplicate invalidations here to avoid cascade refetch loops.
         setTimeout(() => {
-          console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching addresses-updated + invalidating queries`, 'color: #06b6d4; font-weight: bold;');
+          console.log(`%c[BLOCKCHAIN CONTEXT] 📢 Dispatching addresses-updated`, 'color: #06b6d4; font-weight: bold;');
           window.dispatchEvent(new CustomEvent('timetrade:addresses-updated'));
-           // Force immediate refetch so the UI updates right after import/unlock.
-           queryClient.invalidateQueries({ queryKey: ['walletBalance'], refetchType: 'active' });
-           queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'active' });
-           queryClient.invalidateQueries({ queryKey: ['gasEstimate'], refetchType: 'active' });
-           queryClient.invalidateQueries({ queryKey: ['cryptoPrices'], refetchType: 'active' });
         }, 250);
       }
     } catch (err) {
