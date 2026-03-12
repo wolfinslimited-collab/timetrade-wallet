@@ -81,7 +81,7 @@ export const PullToRefresh = ({ children, onRefresh }: PullToRefreshProps) => {
     >
       {/* Pull indicator */}
       <motion.div
-        className="absolute left-1/2 -translate-x-1/2 z-20 flex items-center justify-center"
+        className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center"
         style={{ y: indicatorY, opacity }}
       >
         <motion.div
