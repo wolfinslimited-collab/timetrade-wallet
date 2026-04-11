@@ -1625,7 +1625,7 @@ Deno.serve(async (req) => {
     const msg = toErrorMessage(error);
     return new Response(
       JSON.stringify({ success: false, error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: msg.includes("GitHub API error [401]") ? 401 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
