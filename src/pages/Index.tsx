@@ -9,7 +9,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
-import { StakingPage } from "./StakingPage";
+
 import { NotificationsPage } from "./NotificationsPage";
 
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +28,7 @@ const Index = () => {
   });
   const [activeTab, setActiveTab] = useState<NavTab>("wallet");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showStaking, setShowStaking] = useState(true);
+  
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const Index = () => {
   const percentChange = prices?.length ? prices.reduce((sum, p) => sum + (p.change24h || 0), 0) / prices.length : 0;
   const dollarChange = displayBalance * (percentChange / 100);
   const isPositive = percentChange >= 0;
-  const hiddenTabs = useMemo<NavTab[]>(() => showStaking ? [] : ["staking"], [showStaking]);
+  const hiddenTabs = useMemo<NavTab[]>(() => ["staking"], []);
 
   useEffect(() => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
@@ -73,11 +73,6 @@ const Index = () => {
     setIsLocked(isProduction && walletCreated === "true" && !!hasPin && !alreadyUnlocked);
   }, []);
 
-  useEffect(() => {
-    supabase.from("config").select("value").eq("key", "show_staking").single().then(({ data }) => {
-      if (data) setShowStaking(data.value === true);
-    });
-  }, []);
 
   useEffect(() => {
     let didReset = false;
@@ -143,7 +138,7 @@ const Index = () => {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
-    const allowedTabs: NavTab[] = ["wallet", "history", "staking", "ai", "settings"];
+    const allowedTabs: NavTab[] = ["wallet", "history", "ai", "settings"];
     if (tab && allowedTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
     if (!tab && activeTab !== "wallet") setActiveTab("wallet");
   }, [searchParams, activeTab]);
@@ -221,16 +216,6 @@ const Index = () => {
     );
   }
 
-  if (currentView === "staking") {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <StakingPage onBack={() => handleTabChange("wallet")} />
-        </div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col flex-1 w-full relative overflow-hidden">
