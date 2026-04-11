@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
-enum TxType { send, receive, swap }
-enum TxQuickFilter { all, send, receive, swap }
+enum TxType { send, receive }
+enum TxQuickFilter { all, send, receive }
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -18,7 +18,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   final _transactions = <_DemoTx>[
     _DemoTx(type: TxType.receive, symbol: 'ETH', amount: 0.5, chain: 'Ethereum', time: '2h ago', hash: '0xabc...'),
     _DemoTx(type: TxType.send, symbol: 'SOL', amount: 10, chain: 'Solana', time: '5h ago', hash: '4xFg...'),
-    _DemoTx(type: TxType.swap, symbol: 'USDT', amount: 100, chain: 'Polygon', time: '1d ago', hash: '0xdef...', swapTo: 'ETH'),
     _DemoTx(type: TxType.receive, symbol: 'BNB', amount: 2, chain: 'BNB Chain', time: '2d ago', hash: '0x123...'),
   ];
 
@@ -121,8 +120,7 @@ class _DemoTx {
   final String chain;
   final String time;
   final String hash;
-  final String? swapTo;
-  const _DemoTx({required this.type, required this.symbol, required this.amount, required this.chain, required this.time, required this.hash, this.swapTo});
+  const _DemoTx({required this.type, required this.symbol, required this.amount, required this.chain, required this.time, required this.hash});
 }
 
 class _TransactionTile extends StatelessWidget {
@@ -133,7 +131,6 @@ class _TransactionTile extends StatelessWidget {
     switch (tx.type) {
       case TxType.send: return Icons.arrow_outward;
       case TxType.receive: return Icons.arrow_downward;
-      case TxType.swap: return Icons.swap_horiz;
     }
   }
 
@@ -141,7 +138,6 @@ class _TransactionTile extends StatelessWidget {
     switch (tx.type) {
       case TxType.send: return AppColors.destructive;
       case TxType.receive: return AppColors.success;
-      case TxType.swap: return AppColors.accent;
     }
   }
 
@@ -149,7 +145,6 @@ class _TransactionTile extends StatelessWidget {
     switch (tx.type) {
       case TxType.send: return 'Sent';
       case TxType.receive: return 'Received';
-      case TxType.swap: return 'Swapped';
     }
   }
 
@@ -170,7 +165,7 @@ class _TransactionTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$_label ${tx.symbol}${tx.swapTo != null ? ' → ${tx.swapTo}' : ''}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text('$_label ${tx.symbol}', style: const TextStyle(fontWeight: FontWeight.w500)),
                 Text('${tx.chain} • ${tx.time}', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
               ],
             ),
