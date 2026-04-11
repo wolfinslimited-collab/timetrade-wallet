@@ -32,7 +32,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/receive', builder: (_, __) => const ReceiveScreen()),
           
           GoRoute(path: '/history', builder: (_, __) => const TransactionHistoryScreen()),
-          GoRoute(path: '/staking', builder: (_, __) => const StakingScreen()),
+          
           GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
         ],
       ),
@@ -51,7 +51,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  static const _routes = ['/', '/history', '/staking', '/settings'];
+  static const _routes = ['/', '/history', '/settings'];
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +93,6 @@ class _MainShellState extends State<MainShell> {
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet, size: 27), label: 'Wallet'),
               BottomNavigationBarItem(icon: Icon(Icons.receipt_long, size: 27), label: 'History'),
-              BottomNavigationBarItem(icon: Icon(Icons.savings, size: 27), label: 'Staking'),
               BottomNavigationBarItem(icon: Icon(Icons.settings, size: 27), label: 'Settings'),
             ],
           ),
