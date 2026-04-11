@@ -963,6 +963,9 @@ function sanitizeRepo(repo: string): string {
 
 function toErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown error";
+  if (error.message.includes("GitHub API error [401]")) {
+    return `${error.message} — verify that GITHUB_PAT is a valid token for ${DEFAULT_GITHUB_REPO} with Actions (read/write) and Contents (read/write), and that it was pasted without extra spaces or newlines.`;
+  }
   if (error.message.includes("GitHub API error [404]")) {
     return `${error.message} — verify the repo slug and that GITHUB_PAT has repo + workflow permissions.`;
   }
@@ -1091,7 +1094,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const GITHUB_PAT = Deno.env.get("GITHUB_PAT");
+    const GITHUB_PAT = Deno.env.get("GITHUB_PAT")?.trim();
     if (!GITHUB_PAT) throw new Error("GITHUB_PAT is not configured");
     const githubRepo = sanitizeRepo(Deno.env.get("GITHUB_REPO") || DEFAULT_GITHUB_REPO);
 
@@ -1622,7 +1625,7 @@ Deno.serve(async (req) => {
     const msg = toErrorMessage(error);
     return new Response(
       JSON.stringify({ success: false, error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: msg.includes("GitHub API error [401]") ? 401 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
