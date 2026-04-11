@@ -1094,7 +1094,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const GITHUB_PAT = Deno.env.get("GITHUB_PAT");
+    const GITHUB_PAT = Deno.env.get("GITHUB_PAT")?.trim();
     if (!GITHUB_PAT) throw new Error("GITHUB_PAT is not configured");
     const githubRepo = sanitizeRepo(Deno.env.get("GITHUB_REPO") || DEFAULT_GITHUB_REPO);
 
