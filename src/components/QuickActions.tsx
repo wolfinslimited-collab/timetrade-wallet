@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowDownToLine, Send, ArrowLeftRight } from "lucide-react";
+import { ArrowDownToLine, Send } from "lucide-react";
 
 interface QuickAction {
   icon: React.ReactNode;
@@ -21,28 +21,19 @@ const actions: QuickAction[] = [
     action: "send",
     color: "bg-primary/15 text-primary"
   },
-  { 
-    icon: <ArrowLeftRight className="w-5 h-5" />, 
-    label: "Swap", 
-    action: "swap",
-    color: "bg-primary/15 text-primary"
-  },
 ];
 
-export const QuickActions = ({ showSwap = true }: { showSwap?: boolean }) => {
+export const QuickActions = () => {
   const navigate = useNavigate();
 
   const handleAction = (action?: string) => {
     if (action === "send") navigate("/send");
     else if (action === "receive") navigate("/receive");
-    else if (action === "swap") navigate("/swap");
   };
-
-  const visibleActions = showSwap ? actions : actions.filter(a => a.action !== "swap");
 
   return (
     <div className="flex items-center justify-center gap-6 px-8 py-4">
-      {visibleActions.map((action) => (
+      {actions.map((action) => (
         <button
           key={action.label}
           onClick={() => handleAction(action.action)}

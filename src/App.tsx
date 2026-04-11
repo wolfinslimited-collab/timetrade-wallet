@@ -11,10 +11,9 @@ import Index from "./pages/Index";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { AllAssetsPage } from "./pages/AllAssetsPage";
 import AIChatPageRoute from "./pages/AIChatPage";
-import SwapPage from "./pages/SwapPage";
+import NotFound from "./pages/NotFound";
 import SendPage from "./pages/SendPage";
 import ReceivePage from "./pages/ReceivePage";
-import NotFound from "./pages/NotFound";
 import Build from "./pages/Build";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
@@ -70,7 +69,7 @@ const AnimatedRoutes = () => {
             <Route path="/ai-chat" element={<AIChatPageRoute />} />
             <Route path="/asset" element={<AssetDetailPage />} />
             <Route path="/assets" element={<AllAssetsPage />} />
-            <Route path="/swap" element={<SwapPage />} />
+            <Route path="/swap" element={<NotFound />} />
             <Route path="/send" element={<SendPage />} />
             <Route path="/receive" element={<ReceivePage />} />
             <Route path="/build" element={<Build />} />
