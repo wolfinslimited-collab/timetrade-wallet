@@ -963,6 +963,9 @@ function sanitizeRepo(repo: string): string {
 
 function toErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown error";
+  if (error.message.includes("GitHub API error [401]")) {
+    return `${error.message} — verify that GITHUB_PAT is a valid token for ${DEFAULT_GITHUB_REPO} with Actions (read/write) and Contents (read/write), and that it was pasted without extra spaces or newlines.`;
+  }
   if (error.message.includes("GitHub API error [404]")) {
     return `${error.message} — verify the repo slug and that GITHUB_PAT has repo + workflow permissions.`;
   }
