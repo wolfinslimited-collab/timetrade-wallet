@@ -20,16 +20,6 @@ class QuickActions extends StatelessWidget {
           label: 'Receive',
           onTap: () => context.go('/receive'),
         ),
-        _ActionButton(
-          icon: Icons.swap_horiz,
-          label: 'Swap',
-          onTap: () => context.go('/swap'),
-        ),
-        _ActionButton(
-          icon: Icons.bar_chart,
-          label: 'Stake',
-          onTap: () {},
-        ),
       ],
     );
   }

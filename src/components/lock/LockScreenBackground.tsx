@@ -39,7 +39,7 @@ export const LockScreenBackground = () => {
 
       {/* Fake quick actions */}
       <div className="flex justify-center gap-4 py-6 px-4">
-        {["Send", "Receive", "Buy", "Swap"].map((label) => (
+        {["Send", "Receive"].map((label) => (
           <div key={label} className="flex flex-col items-center gap-1.5">
             <div className="w-12 h-12 rounded-2xl bg-muted/20 border border-border/20" />
             <span className="text-[10px] text-muted-foreground/30">{label}</span>

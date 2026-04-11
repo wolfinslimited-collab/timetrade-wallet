@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/send/screens/send_screen.dart';
 import '../../features/receive/screens/receive_screen.dart';
-import '../../features/swap/screens/swap_screen.dart';
+
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/lock/screens/lock_screen.dart';
@@ -30,7 +30,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
           GoRoute(path: '/send', builder: (_, __) => const SendScreen()),
           GoRoute(path: '/receive', builder: (_, __) => const ReceiveScreen()),
-          GoRoute(path: '/swap', builder: (_, __) => const SwapScreen()),
+          
           GoRoute(path: '/history', builder: (_, __) => const TransactionHistoryScreen()),
           GoRoute(path: '/staking', builder: (_, __) => const StakingScreen()),
           GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),

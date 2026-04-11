@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export interface TransactionFilters {
   dateFrom: Date | undefined;
   dateTo: Date | undefined;
-  types: ("send" | "receive" | "swap")[];
+  types: ("send" | "receive")[];
   statuses: ("completed" | "pending" | "failed")[];
   tokens: string[];
 }
@@ -58,7 +58,7 @@ export const TransactionFilterSheet = ({
     setLocalFilters(defaultFilters);
   };
 
-  const toggleType = (type: "send" | "receive" | "swap") => {
+  const toggleType = (type: "send" | "receive") => {
     setLocalFilters((prev) => ({
       ...prev,
       types: prev.types.includes(type)
@@ -168,7 +168,7 @@ export const TransactionFilterSheet = ({
           <div>
             <Label className="text-sm font-medium mb-3 block">Transaction Type</Label>
             <div className="flex flex-wrap gap-2">
-              {(["send", "receive", "swap"] as const).map((type) => (
+              {(["send", "receive"] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => toggleType(type)}
@@ -181,7 +181,6 @@ export const TransactionFilterSheet = ({
                 >
                   {type === "send" && "↗ Send"}
                   {type === "receive" && "↙ Receive"}
-                  {type === "swap" && "⇄ Swap"}
                 </button>
               ))}
             </div>
