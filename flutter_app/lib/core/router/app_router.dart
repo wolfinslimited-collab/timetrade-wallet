@@ -9,7 +9,7 @@ import '../../features/settings/screens/settings_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/lock/screens/lock_screen.dart';
 import '../../features/history/screens/transaction_history_screen.dart';
-import '../../features/staking/screens/staking_screen.dart';
+
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/ai/screens/ai_chat_screen.dart';
 import '../../features/market/screens/market_screen.dart';
