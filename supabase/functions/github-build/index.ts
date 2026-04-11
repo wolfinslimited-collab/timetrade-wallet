@@ -961,10 +961,22 @@ function sanitizeRepo(repo: string): string {
   return repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/^\/+|\/+$/g, "");
 }
 
+function normalizeGitHubToken(rawToken: string | null | undefined): string | null {
+  if (!rawToken) return null;
+
+  let cleaned = rawToken.trim();
+  cleaned = cleaned.replace(/^['"]+|['"]+$/g, "");
+  cleaned = cleaned.replace(/^(?:Bearer|token)\s+/i, "");
+  cleaned = cleaned.replace(/\s+/g, "");
+  cleaned = cleaned.replace(/^['"]+|['"]+$/g, "");
+
+  return cleaned || null;
+}
+
 function toErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown error";
   if (error.message.includes("GitHub API error [401]")) {
-    return `${error.message} — verify that GITHUB_PAT is a valid token for ${DEFAULT_GITHUB_REPO} with Actions (read/write) and Contents (read/write), and that it was pasted without extra spaces or newlines.`;
+    return `${error.message} — verify that GITHUB_PAT is a valid token for ${DEFAULT_GITHUB_REPO} with Actions (read/write) and Contents (read/write), and paste only the raw token value (no Bearer/token prefix, quotes, or whitespace).`;
   }
   if (error.message.includes("GitHub API error [404]")) {
     return `${error.message} — verify the repo slug and that GITHUB_PAT has repo + workflow permissions.`;
@@ -1094,7 +1106,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const GITHUB_PAT = Deno.env.get("GITHUB_PAT")?.trim();
+    const GITHUB_PAT = normalizeGitHubToken(Deno.env.get("GITHUB_PAT"));
     if (!GITHUB_PAT) throw new Error("GITHUB_PAT is not configured");
     const githubRepo = sanitizeRepo(Deno.env.get("GITHUB_REPO") || DEFAULT_GITHUB_REPO);
 
