@@ -318,7 +318,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       if (quickFilter !== "all" && tx.type !== quickFilter) return false;
 
       // Advanced filters
-      if (filters.types.length > 0 && !filters.types.includes(tx.type)) return false;
+      if (filters.types.length > 0 && !filters.types.includes(tx.type as "send" | "receive")) return false;
       if (filters.statuses.length > 0 && !filters.statuses.includes(tx.status)) return false;
       if (filters.tokens.length > 0 && !filters.tokens.includes(tx.symbol)) return false;
       
