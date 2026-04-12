@@ -1425,7 +1425,7 @@ Deno.serve(async (req) => {
           const workflows = await githubAPI(
             `/repos/${githubRepo}/actions/workflows`,
             GITHUB_PAT,
-          );
+          ) as { workflows?: Array<{ id: number; path: string }> };
           const wf = workflows.workflows?.find((w: { path: string }) =>
             w.path === `.github/workflows/${workflow}`
           );
@@ -1435,7 +1435,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        const runs = await githubAPI(path, GITHUB_PAT);
+        const runs = await githubAPI(path, GITHUB_PAT) as { workflow_runs?: unknown[] };
         return new Response(
           JSON.stringify({ success: true, runs: runs.workflow_runs }),
           {
@@ -1455,7 +1455,7 @@ Deno.serve(async (req) => {
           const artifactsRes = await githubAPI(
             `/repos/${githubRepo}/actions/runs/${runId}/artifacts`,
             GITHUB_PAT,
-          );
+          ) as { artifacts?: any[] };
           artifacts = artifactsRes.artifacts || [];
           if (artifacts.length > 0) break;
           if (attempt < 2) {
@@ -1546,7 +1546,7 @@ Deno.serve(async (req) => {
             const workflows = await githubAPI(
               `/repos/${githubRepo}/actions/workflows`,
               GITHUB_PAT,
-            );
+            ) as { workflows?: Array<{ id: number; path: string }> };
             const wf = workflows.workflows?.find((w: { path: string }) =>
               w.path === `.github/workflows/${workflow}`
             );
@@ -1554,7 +1554,7 @@ Deno.serve(async (req) => {
               const runsRes = await githubAPI(
                 `/repos/${githubRepo}/actions/workflows/${wf.id}/runs?per_page=5`,
                 GITHUB_PAT,
-              );
+              ) as { workflow_runs?: Array<Record<string, unknown>> };
               const runs = runsRes.workflow_runs || [];
               const buildTime = new Date(buildRecord.created_at).getTime();
               for (const r of runs) {
@@ -1576,12 +1576,12 @@ Deno.serve(async (req) => {
           const jobsRes = await githubAPI(
             `/repos/${githubRepo}/actions/runs/${runId}/jobs`,
             GITHUB_PAT,
-          );
+          ) as { jobs?: any[] };
 
           const runRes = await githubAPI(
             `/repos/${githubRepo}/actions/runs/${runId}`,
             GITHUB_PAT,
-          );
+          ) as { status?: string; conclusion?: string; html_url?: string };
 
           const jobs = jobsRes.jobs || [];
           const logs: Array<{
@@ -1740,7 +1740,7 @@ Deno.serve(async (req) => {
         const runsRes = await githubAPI(
           `/repos/${githubRepo}/actions/runs?per_page=5`,
           GITHUB_PAT,
-        );
+        ) as { workflow_runs?: unknown[] };
         const recentRuns = runsRes.workflow_runs || [];
 
         return new Response(

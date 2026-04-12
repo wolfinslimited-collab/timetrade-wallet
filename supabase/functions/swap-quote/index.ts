@@ -21,7 +21,7 @@ const NATIVE_TOKEN = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 interface QuoteRequest {
-  action: "quote" | "swap" | "tokens";
+  action: "quote" | "swap" | "tokens" | "search-tokens";
   chain: string;
   srcToken: string;
   destToken: string;
