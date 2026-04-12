@@ -77,7 +77,12 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] || [ -n "$ANDROID_KEYSTORE_PASSWORD" ] || [ -n "$ANDROID_KEY_ALIAS" ] || [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+              echo "Android signing is incomplete. Set ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD."
+              exit 1
+            fi
+
             echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
             cat > android/key.properties << KEYEOF
           storeFile=release.keystore
@@ -85,47 +90,70 @@ jobs:
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
           KEYEOF
-            GRADLE_FILE="android/app/build.gradle"
-            if [ -f "$GRADLE_FILE" ] && ! grep -q "signingConfigs" "$GRADLE_FILE"; then
-              sed -i '/android {/a\
-          \n    signingConfigs {\n        release {\n            def keystorePropertiesFile = rootProject.file("key.properties")\n            def keystoreProperties = new Properties()\n            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n        }\n    }' "$GRADLE_FILE"
-              sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' "$GRADLE_FILE"
-            fi
+            echo "Signing configured for release build"
           else
-            echo "No signing keystore provided, building debug APK"
+            echo "No signing secrets provided, building debug APK"
           fi
 
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
+          rm -rf ../build-artifacts/android-apk
+          mkdir -p ../build-artifacts/android-apk
           if [ -f "key.properties" ]; then
             ./gradlew assembleRelease
+            SIGNED_APK=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
+            if [ -z "$SIGNED_APK" ]; then
+              echo "Release build completed without a signed APK"
+              ls -la app/build/outputs/apk/release || true
+              exit 1
+            fi
+            cp "$SIGNED_APK" ../build-artifacts/android-apk/
+            echo "Signed APK staged from $SIGNED_APK"
           else
             ./gradlew assembleDebug
+            DEBUG_APK=$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name "*.apk" | head -n 1)
+            if [ -z "$DEBUG_APK" ]; then
+              echo "Debug build completed without an APK"
+              ls -la app/build/outputs/apk/debug || true
+              exit 1
+            fi
+            cp "$DEBUG_APK" ../build-artifacts/android-apk/
+            echo "Debug APK staged from $DEBUG_APK"
           fi
+          ls -la ../build-artifacts/android-apk
 
       - name: Build AAB (for Play Store)
         run: |
           cd android
+          rm -rf ../build-artifacts/android-aab
+          mkdir -p ../build-artifacts/android-aab
           if [ -f "key.properties" ]; then
             ./gradlew bundleRelease
+            AAB_PATH=$(find app/build/outputs/bundle/release -maxdepth 1 -type f -name "*.aab" | head -n 1)
+            if [ -z "$AAB_PATH" ]; then
+              echo "Release bundle completed without an AAB"
+              ls -la app/build/outputs/bundle/release || true
+              exit 1
+            fi
+            cp "$AAB_PATH" ../build-artifacts/android-aab/
+            echo "Release AAB staged from $AAB_PATH"
           fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-${{ github.run_id }}
-          path: |
-            android/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          path: build-artifacts/android-apk/*
+          if-no-files-found: error
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
-        if: ${{ hashFiles('android/app/build/outputs/bundle/release/*.aab') != '' }}
+        if: ${{ hashFiles('build-artifacts/android-aab/*.aab') != '' }}
         with:
           name: android-aab-${{ github.run_id }}
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: build-artifacts/android-aab/*.aab
 
       - name: Notify build complete
         if: always()

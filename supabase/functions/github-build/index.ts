@@ -511,7 +511,12 @@ jobs:
           ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -n "\$ANDROID_KEYSTORE_BASE64" ]; then
+          if [ -n "\$ANDROID_KEYSTORE_BASE64" ] || [ -n "\$ANDROID_KEYSTORE_PASSWORD" ] || [ -n "\$ANDROID_KEY_ALIAS" ] || [ -n "\$ANDROID_KEY_PASSWORD" ]; then
+            if [ -z "\$ANDROID_KEYSTORE_BASE64" ] || [ -z "\$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "\$ANDROID_KEY_ALIAS" ] || [ -z "\$ANDROID_KEY_PASSWORD" ]; then
+              echo "Android signing is incomplete. Set ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD."
+              exit 1
+            fi
+
             echo -n "\$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
             cat > android/key.properties << KEYEOF
           storeFile=release.keystore
@@ -519,55 +524,9 @@ jobs:
           keyAlias=\$ANDROID_KEY_ALIAS
           keyPassword=\$ANDROID_KEY_PASSWORD
           KEYEOF
-            GRADLE_FILE="android/app/build.gradle"
-            if [ ! -f "\$GRADLE_FILE" ]; then
-              echo "Expected Gradle file not found: \$GRADLE_FILE"
-              exit 1
-            fi
-
-            python3 - "\$GRADLE_FILE" <<'PY'
-            import re
-            import sys
-            from pathlib import Path
-
-            path = Path(sys.argv[1])
-            text = path.read_text()
-
-            signing_block = """    signingConfigs {
-                release {
-                    def keystorePropertiesFile = rootProject.file(\"key.properties\")
-                    def keystoreProperties = new Properties()
-                    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-                    storeFile file(keystoreProperties[\"storeFile\"])
-                    storePassword keystoreProperties[\"storePassword\"]
-                    keyAlias keystoreProperties[\"keyAlias\"]
-                    keyPassword keystoreProperties[\"keyPassword\"]
-                }
-            }
-
-            """
-
-            if "signingConfigs {" not in text:
-                if "android {\n" not in text:
-                    raise SystemExit("Unable to locate android block in app build.gradle")
-                text = text.replace("android {\n", "android {\n" + signing_block, 1)
-
-            if "signingConfig signingConfigs.release" not in text:
-                text, count = re.subn(
-                    r'(buildTypes\s*\{\s*release\s*\{\s*)',
-                    r'\1signingConfig signingConfigs.release\n            ',
-                    text,
-                    count=1,
-                )
-                if count == 0:
-                    raise SystemExit("Unable to locate release block in app build.gradle")
-
-            path.write_text(text)
-            PY
-
             echo "Signing configured for release build"
           else
-            echo "No signing keystore provided, building debug APK"
+            echo "No signing secrets provided, building debug APK"
           fi
 
       - name: Build APK
