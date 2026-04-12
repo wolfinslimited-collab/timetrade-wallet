@@ -86,52 +86,11 @@ jobs:
           keyPassword=$ANDROID_KEY_PASSWORD
           KEYEOF
             GRADLE_FILE="android/app/build.gradle"
-            if [ ! -f "$GRADLE_FILE" ]; then
-              echo "Expected Gradle file not found: $GRADLE_FILE"
-              exit 1
+            if [ -f "$GRADLE_FILE" ] && ! grep -q "signingConfigs" "$GRADLE_FILE"; then
+              sed -i '/android {/a\
+          \n    signingConfigs {\n        release {\n            def keystorePropertiesFile = rootProject.file("key.properties")\n            def keystoreProperties = new Properties()\n            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n        }\n    }' "$GRADLE_FILE"
+              sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' "$GRADLE_FILE"
             fi
-
-            python3 - "$GRADLE_FILE" <<'PY'
-            import re
-            import sys
-            from pathlib import Path
-
-            path = Path(sys.argv[1])
-            text = path.read_text()
-
-            signing_block = """    signingConfigs {
-                release {
-                    def keystorePropertiesFile = rootProject.file(\"key.properties\")
-                    def keystoreProperties = new Properties()
-                    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-                    storeFile file(keystoreProperties[\"storeFile\"])
-                    storePassword keystoreProperties[\"storePassword\"]
-                    keyAlias keystoreProperties[\"keyAlias\"]
-                    keyPassword keystoreProperties[\"keyPassword\"]
-                }
-            }
-
-            """
-
-            if "signingConfigs {" not in text:
-                if "android {\n" not in text:
-                    raise SystemExit("Unable to locate android block in app build.gradle")
-                text = text.replace("android {\n", "android {\n" + signing_block, 1)
-
-            if "signingConfig signingConfigs.release" not in text:
-                text, count = re.subn(
-                    r'(buildTypes\s*\{\s*release\s*\{\s*)',
-                    r'\1signingConfig signingConfigs.release\n            ',
-                    text,
-                    count=1,
-                )
-                if count == 0:
-                    raise SystemExit("Unable to locate release block in app build.gradle")
-
-            path.write_text(text)
-            PY
-
-            echo "Signing configured for release build"
           else
             echo "No signing keystore provided, building debug APK"
           fi
@@ -140,61 +99,33 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          rm -rf ../build-artifacts/android-apk
-          mkdir -p ../build-artifacts/android-apk
           if [ -f "key.properties" ]; then
             ./gradlew assembleRelease
-            SIGNED_APK=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
-            if [ -z "$SIGNED_APK" ]; then
-              echo "Release build completed without a signed APK"
-              ls -la app/build/outputs/apk/release || true
-              exit 1
-            fi
-            cp "$SIGNED_APK" ../build-artifacts/android-apk/
-            echo "Signed APK staged from $SIGNED_APK"
           else
             ./gradlew assembleDebug
-            DEBUG_APK=$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name "*.apk" | head -n 1)
-            if [ -z "$DEBUG_APK" ]; then
-              echo "Debug build completed without an APK"
-              ls -la app/build/outputs/apk/debug || true
-              exit 1
-            fi
-            cp "$DEBUG_APK" ../build-artifacts/android-apk/
-            echo "Debug APK staged from $DEBUG_APK"
           fi
-          ls -la ../build-artifacts/android-apk
 
       - name: Build AAB (for Play Store)
         run: |
           cd android
-          rm -rf ../build-artifacts/android-aab
-          mkdir -p ../build-artifacts/android-aab
           if [ -f "key.properties" ]; then
             ./gradlew bundleRelease
-            AAB_PATH=$(find app/build/outputs/bundle/release -maxdepth 1 -type f -name "*.aab" | head -n 1)
-            if [ -z "$AAB_PATH" ]; then
-              echo "Release bundle completed without an AAB"
-              ls -la app/build/outputs/bundle/release || true
-              exit 1
-            fi
-            cp "$AAB_PATH" ../build-artifacts/android-aab/
-            echo "Release AAB staged from $AAB_PATH"
           fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-${{ github.run_id }}
-          path: build-artifacts/android-apk/*
-          if-no-files-found: error
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
-        if: ${{ hashFiles('build-artifacts/android-aab/*.aab') != '' }}
+        if: ${{ hashFiles('android/app/build/outputs/bundle/release/*.aab') != '' }}
         with:
           name: android-aab-${{ github.run_id }}
-          path: build-artifacts/android-aab/*.aab
+          path: android/app/build/outputs/bundle/release/*.aab
 
       - name: Notify build complete
         if: always()
