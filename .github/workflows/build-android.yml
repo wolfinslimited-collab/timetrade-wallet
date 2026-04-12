@@ -79,13 +79,12 @@ jobs:
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
             echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-            cat > android/key.properties << EOF
+            cat > android/key.properties << KEYEOF
           storeFile=release.keystore
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
-          EOF
-            # Inject signing config into build.gradle
+          KEYEOF
             GRADLE_FILE="android/app/build.gradle"
             if [ -f "$GRADLE_FILE" ] && ! grep -q "signingConfigs" "$GRADLE_FILE"; then
               sed -i '/android {/a\
@@ -132,4 +131,4 @@ jobs:
         if: always()
         run: |
           BUILD_ID="${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
-          echo "Build ID ${BUILD_ID} finished with status ${{ job.status }}"
+          echo "Build ID $BUILD_ID finished with status ${{ job.status }}"
