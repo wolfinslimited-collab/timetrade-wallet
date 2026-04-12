@@ -894,6 +894,14 @@ interface BuildRequest {
   runId?: number;
 }
 
+interface GitHubWorkflowRun {
+  id: number;
+  name?: string;
+  status?: string | null;
+  html_url?: string;
+  created_at?: string | null;
+}
+
 async function githubAPI(
   path: string,
   token: string,
@@ -1583,16 +1591,20 @@ Deno.serve(async (req) => {
               const runsRes = await githubAPI(
                 `/repos/${githubRepo}/actions/workflows/${wf.id}/runs?per_page=5`,
                 GITHUB_PAT,
-              ) as { workflow_runs?: Array<Record<string, unknown>> };
+              ) as { workflow_runs?: GitHubWorkflowRun[] };
               const runs = runsRes.workflow_runs || [];
               const buildTime = new Date(buildRecord.created_at).getTime();
               for (const r of runs) {
+                if (!r.created_at) continue;
                 const runTime = new Date(r.created_at).getTime();
+                if (Number.isNaN(runTime)) continue;
                 if (Math.abs(runTime - buildTime) < 120000) {
                   runId = String(r.id);
-                  await supabase.from("builds").update({
-                    artifact_url: r.html_url,
-                  }).eq("id", buildId);
+                  if (r.html_url) {
+                    await supabase.from("builds").update({
+                      artifact_url: r.html_url,
+                    }).eq("id", buildId);
+                  }
                   break;
                 }
               }
@@ -1769,7 +1781,7 @@ Deno.serve(async (req) => {
         const runsRes = await githubAPI(
           `/repos/${githubRepo}/actions/runs?per_page=5`,
           GITHUB_PAT,
-        ) as { workflow_runs?: unknown[] };
+        ) as { workflow_runs?: GitHubWorkflowRun[] };
         const recentRuns = runsRes.workflow_runs || [];
 
         return new Response(
@@ -1779,13 +1791,11 @@ Deno.serve(async (req) => {
             status: buildRecord.status,
             conclusion: null,
             message: "Waiting for GitHub Actions to start the workflow...",
-            recent_runs: recentRuns.map((
-              r: { id: number; name: string; status: string; html_url: string },
-            ) => ({
+            recent_runs: recentRuns.map((r) => ({
               id: r.id,
-              name: r.name,
-              status: r.status,
-              url: r.html_url,
+              name: r.name || "",
+              status: r.status || "",
+              url: r.html_url || "",
             })),
           }),
           {
