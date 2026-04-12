@@ -798,7 +798,7 @@ async function getArbitrumTokensViaRPC(address: string): Promise<Array<{ symbol:
   const results = await Promise.allSettled(
     ARBITRUM_TOKENS.map(async (token) => {
       const balance = await rpcERC20BalanceOf(RPC_URL, token.address, address);
-      return { ...token, balance, contractAddress: token.address };
+      return { symbol: token.symbol, name: token.name, balance, decimals: token.decimals, contractAddress: token.address };
     })
   );
   return results
@@ -814,7 +814,7 @@ async function getBSCTokensViaRPC(address: string): Promise<Array<{ symbol: stri
   const results = await Promise.allSettled(
     BSC_TOKENS.map(async (token) => {
       const balance = await rpcERC20BalanceOf(RPC_URL, token.address, address);
-      return { ...token, balance, contractAddress: token.address };
+      return { symbol: token.symbol, name: token.name, balance, decimals: token.decimals, contractAddress: token.address };
     })
   );
   return results
