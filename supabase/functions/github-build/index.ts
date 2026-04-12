@@ -574,6 +574,8 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
+          rm -rf ../build-artifacts/android-apk
+          mkdir -p ../build-artifacts/android-apk
           if [ -f "key.properties" ]; then
             ./gradlew assembleRelease
             SIGNED_APK=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
@@ -582,32 +584,52 @@ jobs:
               ls -la app/build/outputs/apk/release || true
               exit 1
             fi
+            cp "\$SIGNED_APK" ../build-artifacts/android-apk/
+            echo "Signed APK staged from \$SIGNED_APK"
             echo "Signed APK generated at \$SIGNED_APK"
           else
             ./gradlew assembleDebug
+            DEBUG_APK=$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name "*.apk" | head -n 1)
+            if [ -z "\$DEBUG_APK" ]; then
+              echo "Debug build completed without an APK"
+              ls -la app/build/outputs/apk/debug || true
+              exit 1
+            fi
+            cp "\$DEBUG_APK" ../build-artifacts/android-apk/
+            echo "Debug APK staged from \$DEBUG_APK"
           fi
+          ls -la ../build-artifacts/android-apk
 
       - name: Build AAB (for Play Store)
         run: |
           cd android
+          rm -rf ../build-artifacts/android-aab
+          mkdir -p ../build-artifacts/android-aab
           if [ -f "key.properties" ]; then
             ./gradlew bundleRelease
+            AAB_PATH=$(find app/build/outputs/bundle/release -maxdepth 1 -type f -name "*.aab" | head -n 1)
+            if [ -z "\$AAB_PATH" ]; then
+              echo "Release bundle completed without an AAB"
+              ls -la app/build/outputs/bundle/release || true
+              exit 1
+            fi
+            cp "\$AAB_PATH" ../build-artifacts/android-aab/
+            echo "Release AAB staged from \$AAB_PATH"
           fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-\${{ github.run_id }}
-          path: |
-            android/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          path: build-artifacts/android-apk/*
+          if-no-files-found: error
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
-        if: \${{ hashFiles('android/app/build/outputs/bundle/release/*.aab') != '' }}
+        if: \${{ hashFiles('build-artifacts/android-aab/*.aab') != '' }}
         with:
           name: android-aab-\${{ github.run_id }}
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: build-artifacts/android-aab/*.aab
 
       - name: Notify build complete
         if: always()
