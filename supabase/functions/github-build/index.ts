@@ -475,6 +475,15 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Set Android build number
+        run: |
+          VERSION_CODE=\$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          VERSION_NAME="1.\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
+          echo "ANDROID_VERSION_CODE=\$VERSION_CODE" >> "\$GITHUB_ENV"
+          echo "ANDROID_VERSION_NAME=\$VERSION_NAME" >> "\$GITHUB_ENV"
+          echo "Android versionCode: \$VERSION_CODE"
+          echo "Android versionName: \$VERSION_NAME"
+
       - name: Prepare app icon source
         run: |
           mkdir -p assets
