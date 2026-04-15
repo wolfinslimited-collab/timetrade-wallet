@@ -198,8 +198,7 @@ jobs:
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
           PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_STRING" "$PLIST" 2>/dev/null || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION_STRING" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_STRING" "$PLIST" 2>/dev/null ||             /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION_STRING" "$PLIST"
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "$PBXPROJ" ]; then
             sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBXPROJ"
