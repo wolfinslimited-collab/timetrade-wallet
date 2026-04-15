@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X, RefreshCw } from "lucide-react";
+import { ChevronLeft, ArrowUpRight, ArrowDownLeft, Search, Filter, SlidersHorizontal, Loader2, ExternalLink, WifiOff, X, RefreshCw } from "lucide-react";
 import { getNetworkLogoUrl } from "@/config/networks";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -10,7 +10,7 @@ import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransac
 import { Badge } from "@/components/ui/badge";
 import { useUnifiedTransactions } from "@/hooks/useUnifiedTransactions";
 
-export type TransactionType = "send" | "receive" | "swap";
+export type TransactionType = "send" | "receive";
 export type TransactionStatus = "completed" | "pending" | "failed";
 
 export interface Transaction {
@@ -23,7 +23,7 @@ export interface Transaction {
   icon: string;
   usdValue: number;
   address?: string;
-  swapTo?: { amount: number; symbol: string; icon: string };
+  
   timestamp: Date;
   txHash: string;
   networkFee: number;
@@ -164,42 +164,26 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       const hasSentSomething = hasDirectSend || nativeSolSent || fallbackSwapCandidate;
       const hasReceivedSomething = hasDirectReceive || fallbackSwapCandidate;
 
+      // Classify former swaps as sends
       if (hasSentSomething && hasReceivedSomething && hasAssetChange) {
-        // This is a swap: pick best direct user transfers, with safe fallbacks.
         const sentTransfer = userSent[0] ?? transfers[0];
-        const receivedTransfer = userReceived[userReceived.length - 1] ?? transfers[transfers.length - 1] ?? sentTransfer;
-
-        // Resolve sent token info
-        let sentSymbol = info.symbol;
-        let sentAmount = 0;
-        if (sentTransfer) {
-          const sentMint = sentTransfer.mint;
-          const sentKnown = sentMint ? KNOWN_SPL[sentMint] : null;
-          const sentDecimals = sentKnown?.decimals || sentTransfer.decimals || 6;
-          sentSymbol = sentKnown?.symbol || sentTransfer.symbol || 'SPL';
-          sentAmount = parseFloat(sentTransfer.amount || "0") / Math.pow(10, sentDecimals);
-        } else {
-          sentSymbol = 'SOL';
-          sentAmount = parseFloat(tx.value || "0") / Math.pow(10, 9);
-        }
-
-        // Resolve received token info
-        const recvMint = receivedTransfer?.mint;
-        const recvKnown = recvMint ? KNOWN_SPL[recvMint] : null;
-        const recvSymbol = recvKnown?.symbol || receivedTransfer?.symbol || 'SPL';
-        const recvDecimals = recvKnown?.decimals || receivedTransfer?.decimals || 6;
-        const recvAmount = parseFloat(receivedTransfer?.amount || "0") / Math.pow(10, recvDecimals);
+        const sentMint = sentTransfer?.mint;
+        const sentKnown = sentMint ? KNOWN_SPL[sentMint] : null;
+        const sentDecimals = sentKnown?.decimals || sentTransfer?.decimals || 6;
+        const sentSymbol = sentKnown?.symbol || sentTransfer?.symbol || 'SPL';
+        const sentAmount = sentTransfer
+          ? parseFloat(sentTransfer.amount || "0") / Math.pow(10, sentDecimals)
+          : parseFloat(tx.value || "0") / Math.pow(10, 9);
 
         return {
           id: `${chain}:${tx.hash}`,
           chain,
-          type: "swap" as const,
+          type: "send" as const,
           status: tx.status === "confirmed" ? "completed" as const : tx.status === "pending" ? "pending" as const : "failed" as const,
           amount: sentAmount,
           symbol: sentSymbol,
           icon: info.icon,
           usdValue: 0,
-          swapTo: { amount: recvAmount, symbol: recvSymbol, icon: info.icon },
           timestamp: new Date((tx.timestamp || 0) * 1000),
           txHash: tx.hash,
           networkFee: 0,
@@ -272,13 +256,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       .map((u) =>
         convertBlockchainTx(u.chain, u.tx, getUserAddressForChain(u.chain), u.explorerUrl)
       )
-      .filter((tx) => {
-        if (tx.type === "swap") {
-          const recvAmount = tx.swapTo?.amount ?? 0;
-          return tx.amount >= minDisplayAmount || recvAmount >= minDisplayAmount;
-        }
-        return tx.amount >= minDisplayAmount;
-      });
+      .filter((tx) => tx.amount >= minDisplayAmount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, unifiedTx.combined, unifiedTx.addresses]);
 
@@ -295,7 +273,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     const tokens = new Set<string>();
     displayTransactions.forEach((tx) => {
       tokens.add(tx.symbol);
-      if (tx.swapTo) tokens.add(tx.swapTo.symbol);
+      
     });
     return Array.from(tokens);
   }, [displayTransactions]);
@@ -371,7 +349,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     switch (type) {
       case "send": return ArrowUpRight;
       case "receive": return ArrowDownLeft;
-      case "swap": return ArrowRightLeft;
+      
     }
   };
 
@@ -520,8 +498,8 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       )}
 
       {/* Quick Filter Tabs */}
-      <div className="grid grid-cols-4 gap-2 px-4 py-4">
-        {(["all", "send", "receive", "swap"] as QuickFilter[]).map((f) => (
+      <div className="grid grid-cols-3 gap-2 px-4 py-4">
+        {(["all", "send", "receive"] as QuickFilter[]).map((f) => (
           <button
             key={f}
             onClick={() => setQuickFilter(f)}
@@ -648,9 +626,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {tx.type === "swap" 
-                              ? `${tx.symbol} → ${tx.swapTo?.symbol}`
-                              : formatTime(tx.timestamp)}
+                            {formatTime(tx.timestamp)}
                           </p>
                         </div>
 
@@ -661,7 +637,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                             tx.type === "send" ? "text-destructive" : 
                             tx.type === "receive" ? "text-success" : "text-foreground"
                           )}>
-                            {tx.type === "send" ? "-" : tx.type === "receive" ? "+" : ""}
+                            {tx.type === "send" ? "-" : "+"}
                             {tx.amount.toFixed(6)} {tx.symbol}
                           </p>
                           {tx.address && (

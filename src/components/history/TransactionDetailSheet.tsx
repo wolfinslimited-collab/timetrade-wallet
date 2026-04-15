@@ -31,7 +31,7 @@ export const TransactionDetailSheet = ({ transaction, onClose }: TransactionDeta
     switch (type) {
       case "send": return ArrowUpRight;
       case "receive": return ArrowDownLeft;
-      case "swap": return ArrowRightLeft;
+      
     }
   };
 
@@ -83,48 +83,24 @@ export const TransactionDetailSheet = ({ transaction, onClose }: TransactionDeta
           <div className="text-center py-6">
             <div className={cn(
               "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
-              transaction.type === "send" ? "bg-red-500/10" :
-              transaction.type === "receive" ? "bg-green-500/10" :
-              "bg-blue-500/10"
+              transaction.type === "send" ? "bg-red-500/10" : "bg-green-500/10"
             )}>
               <Icon className={cn(
                 "w-8 h-8",
-                transaction.type === "send" ? "text-red-500" :
-                transaction.type === "receive" ? "text-green-500" :
-                "text-blue-500"
+                transaction.type === "send" ? "text-red-500" : "text-green-500"
               )} />
             </div>
 
-            {transaction.type === "swap" ? (
-              <div className="flex items-center justify-center gap-3">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {transaction.amount} {transaction.symbol}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{transaction.icon}</p>
-                </div>
-                <ArrowRightLeft className="w-5 h-5 text-muted-foreground" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {transaction.swapTo?.amount} {transaction.swapTo?.symbol}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{transaction.swapTo?.icon}</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className={cn(
-                  "text-3xl font-bold",
-                  transaction.type === "send" ? "text-red-500" : "text-green-500"
-                )}>
-                  {transaction.type === "send" ? "-" : "+"}
-                  {transaction.amount} {transaction.symbol}
-                </p>
-                <p className="text-muted-foreground mt-1">
-                  ≈ ${transaction.usdValue.toLocaleString()}
-                </p>
-              </>
-            )}
+            <p className={cn(
+                "text-3xl font-bold",
+                transaction.type === "send" ? "text-red-500" : "text-green-500"
+              )}>
+                {transaction.type === "send" ? "-" : "+"}
+                {transaction.amount} {transaction.symbol}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                ≈ ${transaction.usdValue.toLocaleString()}
+              </p>
 
             {/* Status Badge */}
             <div className={cn(
