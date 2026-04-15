@@ -164,42 +164,26 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       const hasSentSomething = hasDirectSend || nativeSolSent || fallbackSwapCandidate;
       const hasReceivedSomething = hasDirectReceive || fallbackSwapCandidate;
 
+      // Classify former swaps as sends
       if (hasSentSomething && hasReceivedSomething && hasAssetChange) {
-        // This is a swap: pick best direct user transfers, with safe fallbacks.
         const sentTransfer = userSent[0] ?? transfers[0];
-        const receivedTransfer = userReceived[userReceived.length - 1] ?? transfers[transfers.length - 1] ?? sentTransfer;
-
-        // Resolve sent token info
-        let sentSymbol = info.symbol;
-        let sentAmount = 0;
-        if (sentTransfer) {
-          const sentMint = sentTransfer.mint;
-          const sentKnown = sentMint ? KNOWN_SPL[sentMint] : null;
-          const sentDecimals = sentKnown?.decimals || sentTransfer.decimals || 6;
-          sentSymbol = sentKnown?.symbol || sentTransfer.symbol || 'SPL';
-          sentAmount = parseFloat(sentTransfer.amount || "0") / Math.pow(10, sentDecimals);
-        } else {
-          sentSymbol = 'SOL';
-          sentAmount = parseFloat(tx.value || "0") / Math.pow(10, 9);
-        }
-
-        // Resolve received token info
-        const recvMint = receivedTransfer?.mint;
-        const recvKnown = recvMint ? KNOWN_SPL[recvMint] : null;
-        const recvSymbol = recvKnown?.symbol || receivedTransfer?.symbol || 'SPL';
-        const recvDecimals = recvKnown?.decimals || receivedTransfer?.decimals || 6;
-        const recvAmount = parseFloat(receivedTransfer?.amount || "0") / Math.pow(10, recvDecimals);
+        const sentMint = sentTransfer?.mint;
+        const sentKnown = sentMint ? KNOWN_SPL[sentMint] : null;
+        const sentDecimals = sentKnown?.decimals || sentTransfer?.decimals || 6;
+        const sentSymbol = sentKnown?.symbol || sentTransfer?.symbol || 'SPL';
+        const sentAmount = sentTransfer
+          ? parseFloat(sentTransfer.amount || "0") / Math.pow(10, sentDecimals)
+          : parseFloat(tx.value || "0") / Math.pow(10, 9);
 
         return {
           id: `${chain}:${tx.hash}`,
           chain,
-          type: "swap" as const,
+          type: "send" as const,
           status: tx.status === "confirmed" ? "completed" as const : tx.status === "pending" ? "pending" as const : "failed" as const,
           amount: sentAmount,
           symbol: sentSymbol,
           icon: info.icon,
           usdValue: 0,
-          swapTo: { amount: recvAmount, symbol: recvSymbol, icon: info.icon },
           timestamp: new Date((tx.timestamp || 0) * 1000),
           txHash: tx.hash,
           networkFee: 0,
