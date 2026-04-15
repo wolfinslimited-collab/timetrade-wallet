@@ -10,7 +10,7 @@ import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransac
 import { Badge } from "@/components/ui/badge";
 import { useUnifiedTransactions } from "@/hooks/useUnifiedTransactions";
 
-export type TransactionType = "send" | "receive" | "swap";
+export type TransactionType = "send" | "receive";
 export type TransactionStatus = "completed" | "pending" | "failed";
 
 export interface Transaction {
@@ -23,7 +23,7 @@ export interface Transaction {
   icon: string;
   usdValue: number;
   address?: string;
-  swapTo?: { amount: number; symbol: string; icon: string };
+  
   timestamp: Date;
   txHash: string;
   networkFee: number;
@@ -272,13 +272,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       .map((u) =>
         convertBlockchainTx(u.chain, u.tx, getUserAddressForChain(u.chain), u.explorerUrl)
       )
-      .filter((tx) => {
-        if (tx.type === "swap") {
-          const recvAmount = tx.swapTo?.amount ?? 0;
-          return tx.amount >= minDisplayAmount || recvAmount >= minDisplayAmount;
-        }
-        return tx.amount >= minDisplayAmount;
-      });
+      .filter((tx) => tx.amount >= minDisplayAmount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, unifiedTx.combined, unifiedTx.addresses]);
 
@@ -295,7 +289,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     const tokens = new Set<string>();
     displayTransactions.forEach((tx) => {
       tokens.add(tx.symbol);
-      if (tx.swapTo) tokens.add(tx.swapTo.symbol);
+      
     });
     return Array.from(tokens);
   }, [displayTransactions]);
@@ -371,7 +365,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     switch (type) {
       case "send": return ArrowUpRight;
       case "receive": return ArrowDownLeft;
-      case "swap": return ArrowRightLeft;
+      
     }
   };
 
@@ -520,8 +514,8 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
       )}
 
       {/* Quick Filter Tabs */}
-      <div className="grid grid-cols-4 gap-2 px-4 py-4">
-        {(["all", "send", "receive", "swap"] as QuickFilter[]).map((f) => (
+      <div className="grid grid-cols-3 gap-2 px-4 py-4">
+        {(["all", "send", "receive"] as QuickFilter[]).map((f) => (
           <button
             key={f}
             onClick={() => setQuickFilter(f)}
@@ -648,9 +642,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {tx.type === "swap" 
-                              ? `${tx.symbol} → ${tx.swapTo?.symbol}`
-                              : formatTime(tx.timestamp)}
+                            {formatTime(tx.timestamp)}
                           </p>
                         </div>
 
@@ -661,7 +653,7 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
                             tx.type === "send" ? "text-destructive" : 
                             tx.type === "receive" ? "text-success" : "text-foreground"
                           )}>
-                            {tx.type === "send" ? "-" : tx.type === "receive" ? "+" : ""}
+                            {tx.type === "send" ? "-" : "+"}
                             {tx.amount.toFixed(6)} {tx.symbol}
                           </p>
                           {tx.address && (
