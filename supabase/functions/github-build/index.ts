@@ -219,12 +219,16 @@ jobs:
       - name: Set iOS build number
         run: |
           BUILD_NUMBER="\${GITHUB_RUN_NUMBER}.\${GITHUB_RUN_ATTEMPT}"
+          VERSION_STRING="1.0.\${GITHUB_RUN_NUMBER}"
           echo "BUILD_NUMBER=\$BUILD_NUMBER" >> "\$GITHUB_ENV"
           PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion \$BUILD_NUMBER" "\$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString \$VERSION_STRING" "\$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string \$VERSION_STRING" "\$PLIST"
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "\$PBXPROJ" ]; then
             sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = \$BUILD_NUMBER;/g" "\$PBXPROJ"
+            sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = \$VERSION_STRING;/g" "\$PBXPROJ"
           fi
 
       - name: Setup signing assets
