@@ -91,20 +91,16 @@ export const TransactionDetailSheet = ({ transaction, onClose }: TransactionDeta
               )} />
             </div>
 
-            <>
-              <p className={cn(
-                <p className={cn(
-                  "text-3xl font-bold",
-                  transaction.type === "send" ? "text-red-500" : "text-green-500"
-                )}>
-                  {transaction.type === "send" ? "-" : "+"}
-                  {transaction.amount} {transaction.symbol}
-                </p>
-                <p className="text-muted-foreground mt-1">
-                  ≈ ${transaction.usdValue.toLocaleString()}
-                </p>
-              </>
-            )}
+            <p className={cn(
+                "text-3xl font-bold",
+                transaction.type === "send" ? "text-red-500" : "text-green-500"
+              )}>
+                {transaction.type === "send" ? "-" : "+"}
+                {transaction.amount} {transaction.symbol}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                ≈ ${transaction.usdValue.toLocaleString()}
+              </p>
 
             {/* Status Badge */}
             <div className={cn(
