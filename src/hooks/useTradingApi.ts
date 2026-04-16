@@ -1,10 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { useState, useCallback, useEffect } from "react";
+import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
-
-// Configure ed25519 to use sha512
-ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m));
+import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
+import { getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
+import { deriveSolanaKeypair } from "@/hooks/useSolanaTransactionSigning";
+import nacl from "tweetnacl";
 
 const API_BASE = "https://svhgjaadzthgnfdrbklt.supabase.co/functions/v1/mobile-api";
 
@@ -110,28 +110,27 @@ export function useTradingApi() {
 
   const isAuthenticated = !!session;
 
-  // Get Solana private key from encrypted storage
-  const getSolanaKeypair = useCallback(async (): Promise<{ publicKey: string; privateKey: Uint8Array } | null> => {
+  const getSolanaKeypair = useCallback(async (): Promise<Keypair | null> => {
     try {
-      const accountsStr = localStorage.getItem("timetrade_user_accounts");
-      if (!accountsStr) return null;
-      const accounts = JSON.parse(accountsStr);
-      const active = Array.isArray(accounts) ? accounts.find((a: any) => a.isActive) || accounts[0] : null;
-      if (!active?.addresses) return null;
+      // Get encrypted seed phrase
+      const encryptedStr = getActiveAccountEncryptedSeed();
+      if (!encryptedStr) return null;
 
-      const solAddress = active.addresses.find((a: any) => a.chain === "solana")?.address;
-      if (!solAddress) return null;
+      const encrypted: EncryptedData = JSON.parse(encryptedStr);
 
-      // Get private key from IndexedDB
-      const { getDecryptedKey } = await import("@/utils/walletStorage");
-      const pin = sessionStorage.getItem("timetrade_session_pin");
+      // Get PIN from stored hash or session
+      const pin = localStorage.getItem("timetrade_pin");
       if (!pin) return null;
 
-      const privKeyHex = await getDecryptedKey(solAddress, pin);
-      if (!privKeyHex) return null;
+      // Decrypt mnemonic
+      const mnemonic = await decryptPrivateKey(encrypted, pin);
 
-      const privateKey = new Uint8Array(Buffer.from(privKeyHex, "hex"));
-      return { publicKey: solAddress, privateKey };
+      // Get stored derivation path index
+      const storedIndex = localStorage.getItem("timetrade_solana_balance_account_index");
+      const index = storedIndex ? parseInt(storedIndex, 10) : 0;
+      const storedPath = localStorage.getItem("timetrade_solana_derivation_path") as any;
+
+      return deriveSolanaKeypair(mnemonic, index, storedPath || "bip44Change");
     } catch {
       return null;
     }
@@ -142,24 +141,26 @@ export function useTradingApi() {
     setAuthError(null);
     try {
       const keypair = await getSolanaKeypair();
-      if (!keypair) throw new Error("No Solana wallet found. Please set up your wallet first.");
+      if (!keypair) throw new Error("No Solana wallet found. Make sure your wallet is set up and unlocked.");
+
+      const walletAddress = keypair.publicKey.toBase58();
 
       // Step 1: Request challenge
       const { challenge, nonce } = await apiCall<{ challenge: string; nonce: string }>("/auth/challenge", {
         method: "POST",
-        body: { wallet_address: keypair.publicKey },
+        body: { wallet_address: walletAddress },
       });
 
-      // Step 2: Sign challenge with Ed25519
+      // Step 2: Sign challenge with Ed25519 via tweetnacl
       const messageBytes = new TextEncoder().encode(challenge);
-      const signature = await ed.signAsync(messageBytes, keypair.privateKey.slice(0, 32));
+      const signature = nacl.sign.detached(messageBytes, keypair.secretKey);
       const signatureBase58 = bs58.encode(signature);
 
       // Step 3: Verify
       const result = await apiCall<{ token: string; expires_at: string; user_id: string; wallet_address: string }>("/auth/verify", {
         method: "POST",
         body: {
-          wallet_address: keypair.publicKey,
+          wallet_address: walletAddress,
           signature: signatureBase58,
           nonce,
           device_info: {
