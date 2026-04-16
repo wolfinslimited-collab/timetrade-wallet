@@ -1,10 +1,4 @@
 import { useState, useCallback, useEffect } from "react";
-import { Keypair } from "@solana/web3.js";
-import nacl from "tweetnacl";
-import { getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
-import { decryptPrivateKey } from "@/utils/encryption";
-import { deriveSolanaAddress } from "@/utils/walletDerivation";
-import { deriveSolanaKeypair } from "@/hooks/useSolanaTransactionSigning";
 
 const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
 const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
@@ -100,59 +94,18 @@ async function apiCall<T>(path: string, options: { method?: string; body?: any; 
   return res.json();
 }
 
-// ── Wallet signature auth ──
+// ── Email/password auth ──
 
-async function getMnemonicFromStorage(): Promise<string | null> {
-  const encryptedSeed = getActiveAccountEncryptedSeed();
-  if (!encryptedSeed) return null;
-
-  const pin = localStorage.getItem("timetrade_pin");
-  if (!pin) return null;
-
-  try {
-    const parsed = JSON.parse(encryptedSeed);
-    return await decryptPrivateKey(parsed, pin);
-  } catch {
-    return null;
-  }
-}
-
-function getSolanaPathStyle(): string {
-  return localStorage.getItem("timetrade_solana_derivation_path") || "phantom";
-}
-
-async function performWalletAuth(): Promise<string | null> {
-  const mnemonic = await getMnemonicFromStorage();
-  if (!mnemonic) return null;
-
-  const pathStyle = getSolanaPathStyle() as any;
-  const walletAddress = deriveSolanaAddress(mnemonic, 0, pathStyle);
-  const keypair = deriveSolanaKeypair(mnemonic, 0, pathStyle);
-
-  // Step 1: Get challenge
-  const challengeData = await apiCall<{ challenge: string; nonce: string }>("/auth/challenge", {
+async function performEmailAuth(email: string, password: string): Promise<string | null> {
+  const data = await apiCall<{ token?: string; access_token?: string }>("/auth/login", {
     method: "POST",
-    body: { wallet_address: walletAddress },
+    body: { email, password },
   });
 
-  // Step 2: Sign the challenge message
-  const messageBytes = new TextEncoder().encode(challengeData.challenge);
-  const signature = nacl.sign.detached(messageBytes, keypair.secretKey);
-  const signatureBase64 = btoa(String.fromCharCode(...signature));
-
-  // Step 3: Verify and get token
-  const verifyData = await apiCall<{ token: string }>("/auth/verify", {
-    method: "POST",
-    body: {
-      wallet_address: walletAddress,
-      signature: signatureBase64,
-      nonce: challengeData.nonce,
-    },
-  });
-
-  if (verifyData.token) {
-    storeToken(verifyData.token);
-    return verifyData.token;
+  const token = data.token || data.access_token;
+  if (token) {
+    storeToken(token);
+    return token;
   }
   return null;
 }
@@ -181,15 +134,15 @@ export function useTradingApi() {
     setIsCheckingSession(false);
   }, []);
 
-  const authenticate = useCallback(async () => {
+  const authenticate = useCallback(async (email: string, password: string) => {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const token = await performWalletAuth();
+      const token = await performEmailAuth(email, password);
       if (token) {
         setIsAuthenticated(true);
       } else {
-        setAuthError("Could not authenticate. Make sure your wallet is set up.");
+        setAuthError("Invalid credentials. Please try again.");
       }
     } catch (e: any) {
       setAuthError(e.message || "Authentication failed");
@@ -246,31 +199,6 @@ export function useTradingApi() {
   useEffect(() => {
     if (isAuthenticated) fetchDashboardData();
   }, [isAuthenticated, fetchDashboardData]);
-
-  // Auto-authenticate when wallet is unlocked
-  useEffect(() => {
-    if (isAuthenticated) return;
-    
-    const token = getStoredToken();
-    if (token) {
-      setIsAuthenticated(true);
-      return;
-    }
-
-    // Try auto-auth if wallet is available
-    const tryAutoAuth = async () => {
-      const mnemonic = await getMnemonicFromStorage();
-      if (mnemonic) {
-        try {
-          const newToken = await performWalletAuth();
-          if (newToken) setIsAuthenticated(true);
-        } catch { /* silent */ }
-      }
-      setIsCheckingSession(false);
-    };
-
-    tryAutoAuth();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     isAuthenticated,
