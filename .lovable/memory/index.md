@@ -1,0 +1,99 @@
+# Project Memory
+
+## Core
+- Identity: Timetrade Wallet. Multi-chain self-custody wallet using React+Capacitor (iOS/Android) and Supabase Edge Functions.
+- Constraints: Wallet-only mode. No swap, trade, or staking features. Focus strictly on Send/Receive.
+- Visuals: Native app feel. Navy/blue palette (bg hsl(220 16% 6%), primary hsl(217 91% 60%)). SF Pro Display. Zero-latency UI (no CSS transitions).
+- Security: Imported mnemonic only (no WalletConnect/MetaMask). 6-digit PIN or Biometrics mandatory.
+- Networks: Ethereum, Polygon, Arbitrum One, BSC, Solana, Tron, Bitcoin.
+- Optimization: Event-driven blockchain data fetching only. Never use polling.
+- Code Quality: Strict no console.log policy across the production codebase.
+
+## Memories
+- [Visual Identity](mem://style/visual-identity) — Native-app feel, colors, UI shapes, external API logos (no local SVG)
+- [Settings Page](mem://features/settings-page) — Security management, networks grid, and multi-step seed phrase view flow
+- [Fee Estimation](mem://features/fee-estimation) — Live gas fetching with EIP-1559 priority and 4 speed tiers
+- [Live Price Data](mem://technical/live-price-data) — CoinGecko API integration for real-time USD valuations and trends
+- [BIP39 Compliance](mem://technical/bip39-standard-compliance) — Strict @scure/bip39 dictionary validation for 12/24 word mnemonics
+- [Wallet Import UI](mem://features/wallet-import-ui) — High-contrast real-time word tracking, autocomplete, and dictionary validation
+- [Encryption Details](mem://technical/security/encryption-details) — AES-GCM local storage with PBKDF2 derived keys tied to app PIN
+- [Wallet Derivation Logic](mem://technical/wallet-derivation-logic) — EVM ethers.js HDNodeWallet multi-chain derivation implementation
+- [Multi-Chain Paths](mem://technical/multi-chain-derivation-paths) — Standard BIP44 derivation paths across all 7 supported networks
+- [Unified Portfolio Hook](mem://technical/unified-portfolio-hook) — Reactive multi-chain aggregation with strict cross-chain deduplication
+- [Imported Mnemonic Only](mem://features/wallet-type/imported-mnemonic-only) — External wallet connections (MetaMask/WalletConnect) disabled
+- [ED25519 Implementation](mem://technical/ed25519-derivation-implementation) — Custom @noble/hashes implementation for Solana and BIP32
+- [Blockchain Implementation](mem://technical/blockchain-implementation) — Helius RPC for Solana, Tatum RPC for EVM/Tron
+- [Pull to Refresh Mobile](mem://features/ui/pull-to-refresh-mobile) — Silent gesture handling with haptic feedback and no success toasts
+- [API Call Optimization](mem://technical/optimization/blockchain-api-calls) — Strict event-driven data fetching to minimize RPC requests
+- [Unified Activity Feed](mem://features/transaction-history/unified-activity-feed) — Multi-chain history with semantic colors and swap detection
+- [Wallet Info Sheet](mem://features/wallet-info-sheet) — Clean public addresses overview with copy function and no legacy logic
+- [Address Validation](mem://technical/address-validation) — @nodehash/address-validator implementation for multi-chain destinations
+- [Dynamic Header Display](mem://features/wallet-header/dynamic-header-display) — 3-column sticky header: AI Assistant, Nickname, Notifications
+- [Visual Indicators](mem://features/transaction-history/visual-indicators) — Semantic history colors and enhanced ERC-20 symbol detection
+- [Welcome Screen UI](mem://features/onboarding/welcome-screen-ui) — High-fidelity layout, dual-line CTAs, instant transitions
+- [Biometric Authentication](mem://features/biometric-authentication) — WebAuthn PIN-linked signing bypass and unlock
+- [Transaction Direction Logic](mem://technical/transaction-direction-logic) — Chain-aware address comparison logic for EVM, Tron, and Solana
+- [Solana Integration](mem://features/solana-network-integration) — Helius RPC deep fetching, SPL transfers, and phantom derivation path
+- [Tron Integration](mem://features/tron-network-integration) — Base58 validation, custom double SHA256 signing, TRX/TRC-20 asset support
+- [Onboarding Flow](mem://features/onboarding-flow) — Fast mandatory sequence bypassing biometrics (Welcome -> Seed -> PIN Setup)
+- [Solana Simulation](mem://technical/solana-transaction-simulation) — skipPreflight true flag and edge function fallback for ATA access
+- [Avatar Generation System](mem://features/ui/avatar-generation-system) — Deterministic text-based avatars via ui-avatars.com API
+- [Proactive Derivation](mem://technical/proactive-address-derivation-logic) — Immediate multi-chain address generation upon initial PIN unlock
+- [Arbitrum Integration](mem://technical/backend/arbitrum-integration-details) — Arbitrum RPC endpoints and Native/Bridged USDC contract tracking
+- [Access Control](mem://features/security/access-control-and-signing) — PIN lock screen, PIN-seed sync, silent auth and unlock behavior
+- [Account Architecture](mem://technical/account-management-architecture) — Multi-account store, fast-path switching, ID synchronization logic
+- [Asset Display Logic](mem://style/asset-display-logic) — Subtitle formatting and non-primary chain labeling (e.g. 'ETH (Arbitrum One)')
+- [Supabase Architecture](mem://technical/backend/integrated-supabase-architecture) — Encapsulated edge functions for blockchain and user operations
+- [Dashboard & Navigation](mem://features/ui/dashboard-and-navigation) — Portal-based glassy bottom bar, dynamic scaling unified asset lists
+- [Wallet Reset Scope](mem://technical/wallet-reset-scope) — PIN-protected total wipe of client data and reset-on-empty automation
+- [Modal Design System](mem://style/modal-design-system) — Full-width native layouts with strict z-index prioritization
+- [System Notifications](mem://features/notifications/system-details) — Dedicated route with category filtering and swipe-to-delete interactions
+- [Asset Detail Page](mem://features/asset-detail-page) — Live SVG charts, localized history feed, primary-styled transactional actions
+- [Blockchain Fetching Strategy](mem://technical/backend/blockchain-fetching-strategy) — Direct RPC/Blockscout calls for accurate ERC-20 tracking
+- [All Assets Page](mem://features/all-assets-page) — Full-screen filtered portfolio view with staggered list animations
+- [Motion Design System](mem://style/motion-design-system) — Zero-latency tactile tap feedback, explicitly removing CSS/Framer transitions
+- [Send Crypto](mem://features/send-crypto) — Multi-step network grid, inline AI risk check, dynamic fee USD conversion
+- [Receive Crypto](mem://features/receive-crypto) — 3-column network selection layout with robust, strictly-branded QR code generation
+- [User Registration System](mem://features/user-registration-system) — Edge function for geolocation and metadata capture (zero keys stored)
+- [Live Price Charts](mem://features/live-price-charts) — On-demand CoinGecko multi-timeframe fetching with React Query caching
+- [PIN Keypad Design](mem://style/pin-keypad-design) — Unified 3D embossed aesthetic for all security inputs across the application
+- [Lock Screen UI](mem://style/lock-screen-ui) — Frosted glass blur overlay, session storage unlock state, 30-second error lockout
+- [Unified Signing Certificate](mem://technical/ci-cd/unified-signing-certificate) — Shared Apple Distribution p12 cert for iOS and macOS builds
+- [Runtime Signing Injection](mem://technical/ci-cd/runtime-signing-injection) — Dynamic profile extraction and pbxproj shell patching in Capacitor CI
+- [Build Center Overview](mem://features/build-center/overview) — Supabase edge function dispatched automated Capacitor and Flutter builds
+- [CI Self-Healing Engine](mem://features/build-center/self-healing-engine) — Force-pushed GitHub workflow YAML to permanently resolve config drift
+- [GitHub Secrets Integration](mem://technical/ci-cd/github-secrets) — Base64 encoded certs and keystores for dynamic mobile build signing
+- [Signing Security Constraints](mem://constraints/signing-security) — Strict prohibition on physical .mobileprovision files within the repository
+- [Workflow Template Logic](mem://technical/ci-cd/workflow-template-logic) — Escaping rules for shell variables in edge function YAML generation
+- [Capacitor iOS/Android Transition](mem://technical/ci-cd/capacitor-ios-android-transition) — Move from Flutter hybrid to direct React wrapping in Capacitor 8
+- [App Startup Behavior](mem://technical/capacitor-configuration/app-startup-behavior) — Native bundled dist loading without remote server URLs
+- [iOS Signing Configuration v2](mem://technical/ios/signing-configuration-v2) — Manual SPM targeted signing for successful TestFlight delivery
+- [iOS Versioning Logic](mem://technical/ci-cd/ios-versioning-logic) — Auto-incrementing CFBundleVersion build numbers via PlistBuddy injection
+- [Native App Experience](mem://style/native-app-experience) — 100dvh edge-to-edge layout, fixed viewports, custom momentum scroll containers
+- [Flutter App Architecture](mem://technical/flutter-app-architecture) — Standalone native Dart mirror app designed strictly for local development
+- [Mobile Notifications Style](mem://style/mobile-notifications) — Top-center offset Sonner toasts avoiding notches, redundant alerts disabled
+- [Keyboard Management System](mem://technical/ui/keyboard-management) — Centralized blur-on-route-change to dismiss native mobile keyboards
+- [Filter Layout System](mem://features/transaction-history/filter-layout) — Grid-cols-4 filter buttons explicitly preventing horizontal scrolling
+- [Flutter Build System](mem://technical/ci-cd/flutter-build-system) — Dynamic multi-platform iOS/Android project generation during CI execution
+- [Dust Filtering Mechanism](mem://features/transaction-history/dust-filtering) — Automatic exclusion of spam or negligible micro-transactions
+- [AI Chat Assistant](mem://features/ai/chat-assistant) — Premium UI with portfolio context injection and live bouncing typing indicators
+- [AI Portfolio Insights](mem://features/ai/portfolio-insights) — Animated SVG ring gauges and robust 402/rate-limit edge case error handling
+- [Transaction Risk Detection](mem://features/ai/transaction-risk-detection) — Real-time AI destination scoring inline during the send confirmation flow
+- [iOS App Icon Compliance](mem://technical/ci-cd/ios-app-icon-compliance) — Strict image flattening, sips conversion, and programmatic AssetCatalog generation
+- [App Update System](mem://features/app-update-system) — Supabase DB config driven banner prompting version upgrades with dismissal option
+- [App Icon Generation System](mem://style/app-icon) — Single high-res 1024x1024 source image driving all platform densities in CI
+- [App Store Metadata Constraints](mem://deployment/app-store-metadata-constraints) — Plain text validation requirements strictly forbidding emojis in store listings
+- [Android App Icon Compliance](mem://technical/ci-cd/android-app-icon-compliance) — ImageMagick alpha channel removal and automated Capacitor density generation
+- [Edge Function Encoding Rules](mem://technical/backend/edge-function-encoding-constraints) — Latin1 constraint enforcing emoji-free strings in workflow templates
+- [App Store Listing Content](mem://deployment/app-store-listing-content) — AI-focused keywords and text content formatting for App Store validation
+- [iOS Submission Guidelines](mem://deployment/ios-submission-guidelines) — Mandatory Capacitor pipeline for valid App Store connect bundle processing
+- [State Reset Policy](mem://technical/navigation/state-reset-policy) — Soft state-only resets prioritizing route stability over full browser reloads
+- [Wallet Only Mode Requirement](mem://features/wallet-only-mode) — Hard constraint removing all exchange and stake features from code and database
+- [GitHub Auth Handling](mem://technical/ci-cd/github-auth-handling) — Robust PAT string sanitization and specific 401 error resolution in edge functions
+- [Query Invalidation Strategy](mem://technical/portfolio/query-invalidation-strategy) — Centralized refetch orchestration via useUnifiedPortfolio event listeners
+- [Global App Configuration](mem://technical/database/global-app-config) — Shared Supabase config table for remotely coordinated feature flags
+- [Android Signing Implementation](mem://technical/ci-cd/android-signing-implementation) — Native Gradle signing workflow and strict validated APK extraction
+- [Android Package Name Identifier](mem://technical/android/package-name) — Standardized 'com.wallet.ai' namespace across native app components
+- [Android Obfuscation Policy](mem://technical/android/obfuscation-and-mapping) — Enabled R8 rules with CI artifact mapping upload for crash diagnostics
+- [Android CI Versioning Logic](mem://technical/ci-cd/android-versioning-logic) — Auto-incrementing Android version code derived from GitHub run metadata
+- [AI Trading Tab](mem://features/ai-trading-tab) — Bottom nav AI Trading tab with Ed25519 wallet auth and external mobile API dashboard
