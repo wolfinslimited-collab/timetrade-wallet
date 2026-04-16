@@ -5,14 +5,20 @@ const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
 const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwNTczNDUsImV4cCI6MjA2MDYzMzM0NX0.GeFsFp8FQB3W78UMF0cXc9X1oqG6fnCGVuJGj7MvVeE";
 const API_BASE = `${TIMETRADE_SUPABASE_URL}/functions/v1/mobile-api`;
 
-// Dedicated Supabase client for Timetrade auth (separate from wallet's Supabase)
-const tradeSupabase = createClient(TIMETRADE_SUPABASE_URL, TIMETRADE_SUPABASE_ANON_KEY, {
-  auth: {
-    storageKey: "timetrade_trading_auth",
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// Lazy-initialized Supabase client to avoid module-level side effects that conflict with React HMR
+let _tradeSupabase: ReturnType<typeof createClient> | null = null;
+function getTradeSupabase() {
+  if (!_tradeSupabase) {
+    _tradeSupabase = createClient(TIMETRADE_SUPABASE_URL, TIMETRADE_SUPABASE_ANON_KEY, {
+      auth: {
+        storageKey: "timetrade_trading_auth",
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
+  }
+  return _tradeSupabase;
+}
 
 interface WalletBalance {
   usd_balance: number;
