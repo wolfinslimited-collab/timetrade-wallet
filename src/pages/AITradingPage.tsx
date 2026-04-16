@@ -46,17 +46,11 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [referralCode, setReferralCode] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
 
   const inputClass = "w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30";
 
-  const handleSubmit = () => {
-    if (isSignUp) {
-      api.register(email, password, referralCode || undefined);
-    } else {
-      api.authenticate(email, password);
-    }
+  const handleLogin = () => {
+    api.authenticate(email, password);
   };
 
   return (
@@ -66,7 +60,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </div>
       <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-[320px]">
-        {isSignUp ? "Sign up to start AI-powered Solana trading" : "Sign in to access your AI trading dashboard"}
+        Sign in to access your AI trading dashboard
       </p>
 
       {api.authError && (
@@ -84,45 +78,28 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-sm font-semibold text-foreground">Password</label>
-            {!isSignUp && (
-              <button className="text-xs text-primary font-medium">Forgot password?</button>
-            )}
+            <a href="https://timetrade.live/forgot-password" target="_blank" rel="noopener noreferrer" className="text-xs text-primary font-medium">Forgot password?</a>
           </div>
-          <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} className={inputClass} />
+          <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} className={inputClass} />
         </div>
-
-        {isSignUp && (
-          <div>
-            <label className="text-sm font-semibold text-foreground mb-1.5 block">
-              Referral Code <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-            </label>
-            <input type="text" placeholder="E.G. AB3K7X2P" value={referralCode} onChange={(e) => setReferralCode(e.target.value)} className={inputClass} />
-          </div>
-        )}
       </div>
 
       <Button
-        onClick={handleSubmit}
+        onClick={handleLogin}
         disabled={api.isAuthenticating || !email || !password}
         className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
       >
         {api.isAuthenticating ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isSignUp ? "Creating account..." : "Signing in..."}</>
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</>
         ) : (
-          isSignUp ? "Create Account" : "Sign In"
+          "Sign In"
         )}
       </Button>
 
-      <button
-        onClick={() => setIsSignUp(!isSignUp)}
-        className="mt-4 text-sm text-muted-foreground"
-      >
-        {isSignUp ? (
-          <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
-        ) : (
-          <>Don't have an account? <span className="text-primary font-medium">Sign up</span></>
-        )}
-      </button>
+      <p className="mt-4 text-sm text-muted-foreground">
+        Don't have an account?{" "}
+        <a href="https://timetrade.live/register" target="_blank" rel="noopener noreferrer" className="text-primary font-medium">Sign up</a>
+      </p>
     </div>
   );
 }
