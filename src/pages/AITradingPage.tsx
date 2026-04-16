@@ -41,16 +41,43 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
   );
 };
 
-/* ── Login Screen ── */
+/* ── Auth Screens ── */
+
+type AuthView = "login" | "signup" | "forgot";
 
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
+  const [view, setView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const inputClass = "w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30";
 
-  const handleLogin = () => {
-    api.authenticate(email, password);
+  const switchView = (v: AuthView) => {
+    setView(v);
+    setEmail("");
+    setPassword("");
+    setReferralCode("");
+    setForgotSent(false);
+    setForgotError(null);
+  };
+
+  const handleLogin = () => api.authenticate(email, password);
+  const handleSignup = () => api.register(email, password, referralCode || undefined);
+  const handleForgot = async () => {
+    setForgotLoading(true);
+    setForgotError(null);
+    try {
+      await api.forgotPassword(email);
+      setForgotSent(true);
+    } catch (e: any) {
+      setForgotError(e.message || "Failed to send reset email");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -58,48 +85,90 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
         <Bot className="w-7 h-7 text-primary" />
       </div>
-      <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
+      <h2 className="text-xl font-bold text-foreground mb-1">
+        {view === "login" ? "AI Trading" : view === "signup" ? "Create Account" : "Reset Password"}
+      </h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-[320px]">
-        Sign in to access your AI trading dashboard
+        {view === "login"
+          ? "Sign in to access your AI trading dashboard"
+          : view === "signup"
+          ? "Create a new account to get started"
+          : "Enter your email to receive a reset link"}
       </p>
 
-      {api.authError && (
+      {(api.authError || forgotError) && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 mb-4 w-full max-w-[320px]">
-          <p className="text-xs text-destructive text-center">{api.authError}</p>
+          <p className="text-xs text-destructive text-center">{api.authError || forgotError}</p>
         </div>
       )}
 
-      <div className="w-full max-w-[320px] space-y-4 mb-5">
-        <div>
-          <label className="text-sm font-semibold text-foreground mb-1.5 block">Email</label>
-          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-semibold text-foreground">Password</label>
-            <a href="https://timetrade.live/forgot-password" target="_blank" rel="noopener noreferrer" className="text-xs text-primary font-medium">Forgot password?</a>
+      {view === "forgot" && forgotSent ? (
+        <div className="w-full max-w-[320px] space-y-4">
+          <div className="bg-success/10 border border-success/20 rounded-xl px-4 py-4">
+            <p className="text-xs text-success text-center">Password reset link sent to your email. Please check your inbox.</p>
           </div>
-          <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} className={inputClass} />
+          <Button onClick={() => switchView("login")} variant="outline" className="w-full h-12 rounded-xl text-sm font-semibold">
+            Back to Sign In
+          </Button>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="w-full max-w-[320px] space-y-4 mb-5">
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Email</label>
+              <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+            </div>
 
-      <Button
-        onClick={handleLogin}
-        disabled={api.isAuthenticating || !email || !password}
-        className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
-      >
-        {api.isAuthenticating ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</>
-        ) : (
-          "Sign In"
-        )}
-      </Button>
+            {view !== "forgot" && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-semibold text-foreground">Password</label>
+                  {view === "login" && (
+                    <button onClick={() => switchView("forgot")} className="text-xs text-primary font-medium">Forgot password?</button>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (view === "login" ? handleLogin() : handleSignup())}
+                  className={inputClass}
+                />
+              </div>
+            )}
 
-      <p className="mt-4 text-sm text-muted-foreground">
-        Don't have an account?{" "}
-        <a href="https://timetrade.live/register" target="_blank" rel="noopener noreferrer" className="text-primary font-medium">Sign up</a>
-      </p>
+            {view === "signup" && (
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  Referral Code <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <input type="text" placeholder="Enter referral code" value={referralCode} onChange={(e) => setReferralCode(e.target.value)} className={inputClass} />
+              </div>
+            )}
+          </div>
+
+          <Button
+            onClick={view === "login" ? handleLogin : view === "signup" ? handleSignup : handleForgot}
+            disabled={(view === "forgot" ? forgotLoading : api.isAuthenticating) || !email || (view !== "forgot" && !password)}
+            className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
+          >
+            {(view === "forgot" ? forgotLoading : api.isAuthenticating) ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />{view === "forgot" ? "Sending..." : view === "login" ? "Signing in..." : "Creating account..."}</>
+            ) : (
+              view === "login" ? "Sign In" : view === "signup" ? "Create Account" : "Send Reset Link"
+            )}
+          </Button>
+
+          <p className="mt-4 text-sm text-muted-foreground">
+            {view === "login" ? (
+              <>Don't have an account?{" "}<button onClick={() => switchView("signup")} className="text-primary font-medium">Sign up</button></>
+            ) : (
+              <>Already have an account?{" "}<button onClick={() => switchView("login")} className="text-primary font-medium">Sign in</button></>
+            )}
+          </p>
+        </>
+      )}
     </div>
   );
 }

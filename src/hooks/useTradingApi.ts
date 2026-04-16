@@ -124,6 +124,13 @@ async function performEmailRegister(email: string, password: string, referralCod
   return null;
 }
 
+async function performForgotPassword(email: string): Promise<void> {
+  await apiCall("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
 // ── Hook ──
 
 export function useTradingApi() {
@@ -231,6 +238,10 @@ export function useTradingApi() {
     if (isAuthenticated) fetchDashboardData();
   }, [isAuthenticated, fetchDashboardData]);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    await performForgotPassword(email);
+  }, []);
+
   return {
     isAuthenticated,
     isAuthenticating,
@@ -238,6 +249,7 @@ export function useTradingApi() {
     authError,
     authenticate,
     register,
+    forgotPassword,
     logout,
     balance,
     tradingStatus,
