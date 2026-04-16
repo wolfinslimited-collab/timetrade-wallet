@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 
 const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
-const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwNTczNDUsImV4cCI6MjA2MDYzMzM0NX0.GeFsFp8FQB3W78UMF0cXc9X1oqG6fnCGVuJGj7MvVeE";
+const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
 const API_BASE = `${TIMETRADE_SUPABASE_URL}/functions/v1/mobile-api`;
 
 // Lazy-initialized Supabase client to avoid module-level side effects that conflict with React HMR
