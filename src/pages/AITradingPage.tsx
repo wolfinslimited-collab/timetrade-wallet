@@ -2,34 +2,25 @@ import { useState } from "react";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Mail, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
-interface BalanceCardProps {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  iconBg: string;
-  showSign?: boolean;
-}
+/* ── Shared Cards ── */
 
-function BalanceCard({ label, value, icon, iconBg, showSign }: BalanceCardProps) {
+function BalanceCard({ label, value, icon, iconBg, showSign }: {
+  label: string; value: number; icon: React.ReactNode; iconBg: string; showSign?: boolean;
+}) {
   return (
     <Card className="bg-card border-border/40">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2.5">
-          <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", iconBg)}>
-            {icon}
-          </div>
+          <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", iconBg)}>{icon}</div>
           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{label}</p>
         </div>
-        <p className={cn(
-          "text-lg font-bold font-mono",
-          showSign && value !== 0
-            ? value > 0 ? "text-success" : "text-destructive"
-            : "text-foreground"
-        )}>
+        <p className={cn("text-lg font-bold font-mono", showSign && value !== 0 ? (value > 0 ? "text-success" : "text-destructive") : "text-foreground")}>
           {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
       </CardContent>
@@ -44,14 +35,8 @@ function PnLCard({ label, value }: { label: string; value: number }) {
       <CardContent className="p-4">
         <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">{label}</p>
         <div className="flex items-center gap-1.5">
-          {value !== 0 && (isProfit
-            ? <TrendingUp className="w-3.5 h-3.5 text-success" />
-            : <TrendingDown className="w-3.5 h-3.5 text-destructive" />
-          )}
-          <span className={cn(
-            "text-lg font-bold font-mono",
-            value === 0 ? "text-muted-foreground" : isProfit ? "text-success" : "text-destructive"
-          )}>
+          {value !== 0 && (isProfit ? <TrendingUp className="w-3.5 h-3.5 text-success" /> : <TrendingDown className="w-3.5 h-3.5 text-destructive" />)}
+          <span className={cn("text-lg font-bold font-mono", value === 0 ? "text-muted-foreground" : isProfit ? "text-success" : "text-destructive")}>
             {isProfit && value > 0 ? "+" : ""}${value.toFixed(2)}
           </span>
         </div>
@@ -60,47 +45,117 @@ function PnLCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-// Auth screen
-function TradingAuth({ onAuth, isAuthenticating, authError }: {
-  onAuth: () => void;
-  isAuthenticating: boolean;
-  authError: string | null;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center px-6 py-16 text-center min-h-[60vh]">
-      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-        <Bot className="w-8 h-8 text-primary" />
+/* ── Auth Screen ── */
+
+function TradingAuth({ api }: { api: ReturnType<typeof useTradingApi> }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signupSuccess, setSignupSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    if (password.length < 6) {
+      api.signIn("", ""); // trigger error
+      return;
+    }
+
+    if (isLogin) {
+      await api.signIn(email, password);
+    } else {
+      const success = await api.signUp(email, password);
+      if (success) setSignupSuccess(true);
+    }
+  };
+
+  if (signupSuccess) {
+    return (
+      <div className="flex flex-col items-center justify-center px-6 py-16 text-center min-h-[60vh]">
+        <div className="w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center mb-6">
+          <CheckCircle2 className="w-8 h-8 text-success" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground mb-2">Check Your Email</h2>
+        <p className="text-sm text-muted-foreground mb-8 max-w-[280px]">
+          We've sent a verification link to <span className="text-foreground font-medium">{email}</span>. Please verify your email to sign in.
+        </p>
+        <Button variant="outline" onClick={() => { setSignupSuccess(false); setIsLogin(true); }} className="rounded-xl">
+          Back to Sign In
+        </Button>
       </div>
-      <h2 className="text-xl font-bold text-foreground mb-2">AI Trading</h2>
-      <p className="text-sm text-muted-foreground mb-8 max-w-[280px]">
-        Connect your wallet to access AI-powered trading. Sign a message to authenticate securely.
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-12 min-h-[60vh]">
+      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+        <Bot className="w-7 h-7 text-primary" />
+      </div>
+      <h2 className="text-xl font-bold text-foreground mb-1">
+        {isLogin ? "Welcome Back" : "Create Account"}
+      </h2>
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-[280px]">
+        {isLogin ? "Sign in to access your AI trading dashboard" : "Sign up to start AI-powered trading"}
       </p>
-      {authError && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 mb-4 max-w-[320px]">
-          <p className="text-xs text-destructive">{authError}</p>
+
+      {api.authError && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 mb-4 w-full max-w-[320px]">
+          <p className="text-xs text-destructive text-center">{api.authError}</p>
         </div>
       )}
-      <Button
-        onClick={onAuth}
-        disabled={isAuthenticating}
-        className="w-full max-w-[280px] h-12 rounded-xl font-semibold text-sm"
+
+      <form onSubmit={handleSubmit} className="w-full max-w-[320px] space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="trade-email" className="text-xs text-muted-foreground">Email</Label>
+          <Input
+            id="trade-email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            className="h-11 rounded-xl bg-secondary/50 border-border/40"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="trade-password" className="text-xs text-muted-foreground">Password</Label>
+          <Input
+            id="trade-password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            autoComplete={isLogin ? "current-password" : "new-password"}
+            className="h-11 rounded-xl bg-secondary/50 border-border/40"
+          />
+        </div>
+        <Button type="submit" disabled={api.isAuthenticating} className="w-full h-12 rounded-xl font-semibold text-sm">
+          {api.isAuthenticating ? (
+            <><Loader2 className="w-4 h-4 animate-spin mr-2" />Please wait...</>
+          ) : (
+            <><Mail className="w-4 h-4 mr-2" />{isLogin ? "Sign In" : "Create Account"}</>
+          )}
+        </Button>
+      </form>
+
+      <button
+        type="button"
+        className="mt-4 text-sm text-muted-foreground active:text-primary"
+        onClick={() => { setIsLogin(!isLogin); }}
       >
-        {isAuthenticating ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Authenticating...</>
-        ) : (
-          "Connect & Sign"
-        )}
-      </Button>
-      <p className="text-[10px] text-muted-foreground mt-4 max-w-[240px]">
-        Uses your Solana keypair for Ed25519 signature verification
-      </p>
+        {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+      </button>
     </div>
   );
 }
 
-// Dashboard
+/* ── Dashboard ── */
+
 function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
-  const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout, toggleTrading } = api;
+  const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout, toggleTrading, userEmail } = api;
   const [toggling, setToggling] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
@@ -160,10 +215,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <CardContent className="p-4 relative">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className={cn(
-                "w-8 h-8 rounded-xl flex items-center justify-center",
-                tradingStatus?.trading_active ? "bg-success/10" : "bg-muted/10"
-              )}>
+              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", tradingStatus?.trading_active ? "bg-success/10" : "bg-muted/10")}>
                 <Bot className={cn("w-4 h-4", tradingStatus?.trading_active ? "text-success" : "text-muted-foreground")} />
               </div>
               <div>
@@ -188,9 +240,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             variant={tradingStatus?.trading_active ? "destructive" : "default"}
             className="w-full h-10 rounded-xl text-xs font-semibold"
           >
-            {toggling ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : tradingStatus?.trading_active ? "Stop Trading" : "Start Trading"}
+            {toggling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tradingStatus?.trading_active ? "Stop Trading" : "Start Trading"}
           </Button>
         </CardContent>
       </Card>
@@ -239,17 +289,21 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Profile</p>
             <div className="space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-xs text-muted-foreground">Name</span>
-                <span className="text-xs text-foreground font-medium">{profile.display_name}</span>
+                <span className="text-xs text-muted-foreground">Email</span>
+                <span className="text-xs text-foreground font-medium">{userEmail || "—"}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-muted-foreground">Referral</span>
-                <span className="text-xs text-foreground font-mono">{profile.referral_code}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-muted-foreground">Member since</span>
-                <span className="text-xs text-foreground">{profile.member_since ? format(new Date(profile.member_since), "MMM d, yyyy") : "—"}</span>
-              </div>
+              {profile.display_name && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Name</span>
+                  <span className="text-xs text-foreground font-medium">{profile.display_name}</span>
+                </div>
+              )}
+              {profile.referral_code && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Referral</span>
+                  <span className="text-xs text-foreground font-mono">{profile.referral_code}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -258,6 +312,8 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   );
 }
 
+/* ── Main Page ── */
+
 interface AITradingPageProps {
   onBack?: () => void;
 }
@@ -265,17 +321,17 @@ interface AITradingPageProps {
 export const AITradingPage = ({ onBack }: AITradingPageProps) => {
   const api = useTradingApi();
 
+  if (api.isCheckingSession) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-background">
-      {api.isAuthenticated ? (
-        <TradingDashboard api={api} />
-      ) : (
-        <TradingAuth
-          onAuth={api.authenticate}
-          isAuthenticating={api.isAuthenticating}
-          authError={api.authError}
-        />
-      )}
+      {api.isAuthenticated ? <TradingDashboard api={api} /> : <TradingAuth api={api} />}
     </div>
   );
 };
