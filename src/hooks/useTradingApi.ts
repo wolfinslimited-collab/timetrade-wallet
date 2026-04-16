@@ -94,7 +94,7 @@ export function useTradingApi() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session } } = await tradeSupabase.auth.getSession();
+        const { data: { session } } = await getTradeSupabase().auth.getSession();
         if (session?.user) {
           setIsAuthenticated(true);
           setUserEmail(session.user.email || null);
@@ -104,7 +104,7 @@ export function useTradingApi() {
     };
     checkSession();
 
-    const { data: { subscription } } = tradeSupabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = getTradeSupabase().auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session?.user);
       setUserEmail(session?.user?.email || null);
     });
@@ -116,7 +116,7 @@ export function useTradingApi() {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const { error } = await tradeSupabase.auth.signInWithPassword({ email, password });
+      const { error } = await getTradeSupabase().auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes("Invalid login")) {
           setAuthError("Invalid email or password. Please try again.");
@@ -137,7 +137,7 @@ export function useTradingApi() {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const { error } = await tradeSupabase.auth.signUp({ email, password });
+      const { error } = await getTradeSupabase().auth.signUp({ email, password });
       if (error) {
         if (error.message.includes("already registered")) {
           setAuthError("This email is already registered. Try signing in.");
@@ -157,7 +157,7 @@ export function useTradingApi() {
   }, []);
 
   const logout = useCallback(async () => {
-    await tradeSupabase.auth.signOut();
+    await getTradeSupabase().auth.signOut();
     setIsAuthenticated(false);
     setUserEmail(null);
     setBalance(null);
@@ -168,7 +168,7 @@ export function useTradingApi() {
   }, []);
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const { data: { session } } = await tradeSupabase.auth.getSession();
+    const { data: { session } } = await getTradeSupabase().auth.getSession();
     return session?.access_token || null;
   }, []);
 
