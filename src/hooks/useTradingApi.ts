@@ -124,6 +124,13 @@ async function performEmailRegister(email: string, password: string, referralCod
   return null;
 }
 
+async function performForgotPassword(email: string): Promise<void> {
+  await apiCall("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
 // ── Hook ──
 
 export function useTradingApi() {
