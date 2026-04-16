@@ -1,25 +1,18 @@
 import { useState, useCallback, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
-
+import { Keypair } from "@solana/web3.js";
+import nacl from "tweetnacl";
+import { getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
+import { decryptPrivateKey } from "@/utils/encryption";
+import { deriveSolanaAddress } from "@/utils/walletDerivation";
+import { deriveSolanaKeypair } from "@/hooks/useSolanaTransactionSigning";
 
 const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
 const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
 const API_BASE = `${TIMETRADE_SUPABASE_URL}/functions/v1/mobile-api`;
 
-// Lazy-initialized Supabase client to avoid module-level side effects that conflict with React HMR
-let _tradeSupabase: ReturnType<typeof createClient> | null = null;
-function getTradeSupabase() {
-  if (!_tradeSupabase) {
-    _tradeSupabase = createClient(TIMETRADE_SUPABASE_URL, TIMETRADE_SUPABASE_ANON_KEY, {
-      auth: {
-        storageKey: "timetrade_trading_auth",
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    });
-  }
-  return _tradeSupabase;
-}
+const TOKEN_STORAGE_KEY = "timetrade_trading_api_token";
+const TOKEN_EXPIRY_KEY = "timetrade_trading_token_expiry";
+const TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface WalletBalance {
   usd_balance: number;
@@ -60,6 +53,32 @@ interface UserProfile {
   member_since: string;
 }
 
+// ── Token storage ──
+
+function getStoredToken(): string | null {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  if (!token || !expiry) return null;
+  if (Date.now() > parseInt(expiry, 10)) {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    return null;
+  }
+  return token;
+}
+
+function storeToken(token: string) {
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  localStorage.setItem(TOKEN_EXPIRY_KEY, String(Date.now() + TOKEN_LIFETIME_MS));
+}
+
+function clearStoredToken() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(TOKEN_EXPIRY_KEY);
+}
+
+// ── API helper ──
+
 async function apiCall<T>(path: string, options: { method?: string; body?: any; token?: string } = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -81,12 +100,70 @@ async function apiCall<T>(path: string, options: { method?: string; body?: any; 
   return res.json();
 }
 
+// ── Wallet signature auth ──
+
+async function getMnemonicFromStorage(): Promise<string | null> {
+  const encryptedSeed = getActiveAccountEncryptedSeed();
+  if (!encryptedSeed) return null;
+
+  const pin = localStorage.getItem("timetrade_pin");
+  if (!pin) return null;
+
+  try {
+    const parsed = JSON.parse(encryptedSeed);
+    return await decryptPrivateKey(parsed, pin);
+  } catch {
+    return null;
+  }
+}
+
+function getSolanaPathStyle(): string {
+  return localStorage.getItem("timetrade_solana_derivation_path") || "phantom";
+}
+
+async function performWalletAuth(): Promise<string | null> {
+  const mnemonic = await getMnemonicFromStorage();
+  if (!mnemonic) return null;
+
+  const pathStyle = getSolanaPathStyle() as any;
+  const walletAddress = deriveSolanaAddress(mnemonic, 0, pathStyle);
+  const keypair = deriveSolanaKeypair(mnemonic, 0, pathStyle);
+
+  // Step 1: Get challenge
+  const challengeData = await apiCall<{ challenge: string; nonce: string }>("/auth/challenge", {
+    method: "POST",
+    body: { wallet_address: walletAddress },
+  });
+
+  // Step 2: Sign the challenge message
+  const messageBytes = new TextEncoder().encode(challengeData.challenge);
+  const signature = nacl.sign.detached(messageBytes, keypair.secretKey);
+  const signatureBase64 = btoa(String.fromCharCode(...signature));
+
+  // Step 3: Verify and get token
+  const verifyData = await apiCall<{ token: string }>("/auth/verify", {
+    method: "POST",
+    body: {
+      wallet_address: walletAddress,
+      signature: signatureBase64,
+      nonce: challengeData.nonce,
+    },
+  });
+
+  if (verifyData.token) {
+    storeToken(verifyData.token);
+    return verifyData.token;
+  }
+  return null;
+}
+
+// ── Hook ──
+
 export function useTradingApi() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [balance, setBalance] = useState<WalletBalance | null>(null);
   const [tradingStatus, setTradingStatus] = useState<TradingStatus | null>(null);
@@ -95,76 +172,35 @@ export function useTradingApi() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check existing session on mount
+  // Check existing token on mount
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await getTradeSupabase().auth.getSession();
-        if (session?.user) {
-          setIsAuthenticated(true);
-          setUserEmail(session.user.email || null);
-        }
-      } catch { /* ignore */ }
-      setIsCheckingSession(false);
-    };
-    checkSession();
-
-    const { data: { subscription } } = getTradeSupabase().auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session?.user);
-      setUserEmail(session?.user?.email || null);
-    });
-
-    return () => subscription.unsubscribe();
+    const token = getStoredToken();
+    if (token) {
+      setIsAuthenticated(true);
+    }
+    setIsCheckingSession(false);
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const authenticate = useCallback(async () => {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const { error } = await getTradeSupabase().auth.signInWithPassword({ email, password });
-      if (error) {
-        if (error.message.includes("Invalid login")) {
-          setAuthError("Invalid email or password. Please try again.");
-        } else if (error.message.includes("Email not confirmed")) {
-          setAuthError("Please verify your email before signing in.");
-        } else {
-          setAuthError(error.message);
-        }
+      const token = await performWalletAuth();
+      if (token) {
+        setIsAuthenticated(true);
+      } else {
+        setAuthError("Could not authenticate. Make sure your wallet is set up.");
       }
     } catch (e: any) {
-      setAuthError(e.message || "Sign in failed");
+      setAuthError(e.message || "Authentication failed");
     } finally {
       setIsAuthenticating(false);
     }
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
-    setIsAuthenticating(true);
-    setAuthError(null);
-    try {
-      const { error } = await getTradeSupabase().auth.signUp({ email, password });
-      if (error) {
-        if (error.message.includes("already registered")) {
-          setAuthError("This email is already registered. Try signing in.");
-        } else {
-          setAuthError(error.message);
-        }
-        return false;
-      }
-      // Return true to show "check email" message
-      return true;
-    } catch (e: any) {
-      setAuthError(e.message || "Sign up failed");
-      return false;
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    await getTradeSupabase().auth.signOut();
+  const logout = useCallback(() => {
+    clearStoredToken();
     setIsAuthenticated(false);
-    setUserEmail(null);
     setBalance(null);
     setTradingStatus(null);
     setEarnings(null);
@@ -172,13 +208,12 @@ export function useTradingApi() {
     setProfile(null);
   }, []);
 
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const { data: { session } } = await getTradeSupabase().auth.getSession();
-    return session?.access_token || null;
+  const getToken = useCallback((): string | null => {
+    return getStoredToken();
   }, []);
 
   const fetchDashboardData = useCallback(async () => {
-    const token = await getAccessToken();
+    const token = getToken();
     if (!token) return;
     setIsLoading(true);
     try {
@@ -196,30 +231,53 @@ export function useTradingApi() {
       if (prof) setProfile(prof);
     } catch { /* ignore */ }
     setIsLoading(false);
-  }, [getAccessToken]);
+  }, [getToken]);
 
   const toggleTrading = useCallback(async (action: "start" | "stop", amount?: number) => {
-    const token = await getAccessToken();
+    const token = getToken();
     if (!token) return;
     const body: any = { action };
     if (action === "start" && amount) body.amount = amount;
     await apiCall("/trading/toggle", { method: "POST", token, body });
     await fetchDashboardData();
-  }, [getAccessToken, fetchDashboardData]);
+  }, [getToken, fetchDashboardData]);
 
   // Auto-fetch on auth
   useEffect(() => {
     if (isAuthenticated) fetchDashboardData();
   }, [isAuthenticated, fetchDashboardData]);
 
+  // Auto-authenticate when wallet is unlocked
+  useEffect(() => {
+    if (isAuthenticated) return;
+    
+    const token = getStoredToken();
+    if (token) {
+      setIsAuthenticated(true);
+      return;
+    }
+
+    // Try auto-auth if wallet is available
+    const tryAutoAuth = async () => {
+      const mnemonic = await getMnemonicFromStorage();
+      if (mnemonic) {
+        try {
+          const newToken = await performWalletAuth();
+          if (newToken) setIsAuthenticated(true);
+        } catch { /* silent */ }
+      }
+      setIsCheckingSession(false);
+    };
+
+    tryAutoAuth();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return {
     isAuthenticated,
     isAuthenticating,
     isCheckingSession,
     authError,
-    userEmail,
-    signIn,
-    signUp,
+    authenticate,
     logout,
     balance,
     tradingStatus,
