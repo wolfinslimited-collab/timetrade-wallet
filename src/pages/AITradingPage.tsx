@@ -1,34 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Mail, CheckCircle2 } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 /* ── Shared Cards ── */
 
-function BalanceCard({ label, value, icon, iconBg, showSign }: {
+const BalanceCard = ({ label, value, icon, iconBg, showSign }: {
   label: string; value: number; icon: React.ReactNode; iconBg: string; showSign?: boolean;
-}) {
-  return (
-    <Card className="bg-card border-border/40">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-2.5">
-          <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", iconBg)}>{icon}</div>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{label}</p>
-        </div>
-        <p className={cn("text-lg font-bold font-mono", showSign && value !== 0 ? (value > 0 ? "text-success" : "text-destructive") : "text-foreground")}>
-          {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
+}) => (
+  <Card className="bg-card border-border/40">
+    <CardContent className="p-4">
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", iconBg)}>{icon}</div>
+        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{label}</p>
+      </div>
+      <p className={cn("text-lg font-bold font-mono", showSign && value !== 0 ? (value > 0 ? "text-success" : "text-destructive") : "text-foreground")}>
+        {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </p>
+    </CardContent>
+  </Card>
+);
 
-function PnLCard({ label, value }: { label: string; value: number }) {
+const PnLCard = ({ label, value }: { label: string; value: number }) => {
   const isProfit = value >= 0;
   return (
     <Card className="bg-card border-border/40">
@@ -43,59 +39,19 @@ function PnLCard({ label, value }: { label: string; value: number }) {
       </CardContent>
     </Card>
   );
-}
+};
 
-/* ── Auth Screen ── */
+/* ── Connect Screen ── */
 
-function TradingAuth({ api }: { api: ReturnType<typeof useTradingApi> }) {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [signupSuccess, setSignupSuccess] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-    if (password.length < 6) {
-      api.signIn("", ""); // trigger error
-      return;
-    }
-
-    if (isLogin) {
-      await api.signIn(email, password);
-    } else {
-      const success = await api.signUp(email, password);
-      if (success) setSignupSuccess(true);
-    }
-  };
-
-  if (signupSuccess) {
-    return (
-      <div className="flex flex-col items-center justify-center px-6 py-16 text-center min-h-[60vh]">
-        <div className="w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center mb-6">
-          <CheckCircle2 className="w-8 h-8 text-success" />
-        </div>
-        <h2 className="text-xl font-bold text-foreground mb-2">Check Your Email</h2>
-        <p className="text-sm text-muted-foreground mb-8 max-w-[280px]">
-          We've sent a verification link to <span className="text-foreground font-medium">{email}</span>. Please verify your email to sign in.
-        </p>
-        <Button variant="outline" onClick={() => { setSignupSuccess(false); setIsLogin(true); }} className="rounded-xl">
-          Back to Sign In
-        </Button>
-      </div>
-    );
-  }
-
+function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 min-h-[60vh]">
       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
         <Bot className="w-7 h-7 text-primary" />
       </div>
-      <h2 className="text-xl font-bold text-foreground mb-1">
-        {isLogin ? "Welcome Back" : "Create Account"}
-      </h2>
+      <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-[280px]">
-        {isLogin ? "Sign in to access your AI trading dashboard" : "Sign up to start AI-powered trading"}
+        Connect your wallet to access the AI trading dashboard
       </p>
 
       {api.authError && (
@@ -104,50 +60,17 @@ function TradingAuth({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="w-full max-w-[320px] space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="trade-email" className="text-xs text-muted-foreground">Email</Label>
-          <Input
-            id="trade-email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            className="h-11 rounded-xl bg-secondary/50 border-border/40"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="trade-password" className="text-xs text-muted-foreground">Password</Label>
-          <Input
-            id="trade-password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            autoComplete={isLogin ? "current-password" : "new-password"}
-            className="h-11 rounded-xl bg-secondary/50 border-border/40"
-          />
-        </div>
-        <Button type="submit" disabled={api.isAuthenticating} className="w-full h-12 rounded-xl font-semibold text-sm">
-          {api.isAuthenticating ? (
-            <><Loader2 className="w-4 h-4 animate-spin mr-2" />Please wait...</>
-          ) : (
-            <><Mail className="w-4 h-4 mr-2" />{isLogin ? "Sign In" : "Create Account"}</>
-          )}
-        </Button>
-      </form>
-
-      <button
-        type="button"
-        className="mt-4 text-sm text-muted-foreground active:text-primary"
-        onClick={() => { setIsLogin(!isLogin); }}
+      <Button
+        onClick={api.authenticate}
+        disabled={api.isAuthenticating}
+        className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
       >
-        {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-      </button>
+        {api.isAuthenticating ? (
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Connecting...</>
+        ) : (
+          <><Wallet className="w-4 h-4 mr-2" />Connect Wallet</>
+        )}
+      </Button>
     </div>
   );
 }
@@ -155,7 +78,7 @@ function TradingAuth({ api }: { api: ReturnType<typeof useTradingApi> }) {
 /* ── Dashboard ── */
 
 function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
-  const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout, toggleTrading, userEmail } = api;
+  const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
@@ -166,9 +89,9 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
     setToggling(true);
     try {
       if (tradingStatus?.trading_active) {
-        await toggleTrading("stop");
+        await api.toggleTrading("stop");
       } else {
-        await toggleTrading("start", balance?.usd_balance || 0);
+        await api.toggleTrading("start", balance?.usd_balance || 0);
       }
     } finally {
       setToggling(false);
@@ -288,10 +211,12 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           <CardContent className="p-4">
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Profile</p>
             <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-xs text-muted-foreground">Email</span>
-                <span className="text-xs text-foreground font-medium">{userEmail || "—"}</span>
-              </div>
+              {profile.wallet_address && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Wallet</span>
+                  <span className="text-xs text-foreground font-mono">{profile.wallet_address.slice(0, 6)}...{profile.wallet_address.slice(-4)}</span>
+                </div>
+              )}
               {profile.display_name && (
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Name</span>
@@ -331,7 +256,7 @@ export const AITradingPage = ({ onBack }: AITradingPageProps) => {
 
   return (
     <div className="min-h-full bg-background">
-      {api.isAuthenticated ? <TradingDashboard api={api} /> : <TradingAuth api={api} />}
+      {api.isAuthenticated ? <TradingDashboard api={api} /> : <TradingConnect api={api} />}
     </div>
   );
 };
