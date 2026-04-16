@@ -146,10 +146,20 @@ export function useTradingApi() {
       const walletAddress = keypair.publicKey.toBase58();
 
       // Step 1: Request challenge
-      const { challenge, nonce } = await apiCall<{ challenge: string; nonce: string }>("/auth/challenge", {
-        method: "POST",
-        body: { wallet_address: walletAddress },
-      });
+      let challenge: string;
+      let nonce: string;
+      try {
+        const res = await apiCall<{ challenge: string; nonce: string }>("/auth/challenge", {
+          method: "POST",
+          body: { wallet_address: walletAddress },
+        });
+        challenge = res.challenge;
+        nonce = res.nonce;
+      } catch (e: any) {
+        throw new Error(e.message?.includes("404") || e.message?.includes("Not found")
+          ? `No Timetrade account found for ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}. Please sign up at timetrade.live first.`
+          : `Failed to get challenge: ${e.message}`);
+      }
 
       // Step 2: Sign challenge with Ed25519 via tweetnacl
       const messageBytes = new TextEncoder().encode(challenge);
@@ -179,7 +189,12 @@ export function useTradingApi() {
       storeSession(newSession);
       setSession(newSession);
     } catch (e: any) {
-      setAuthError(e.message || "Authentication failed");
+      const msg = e.message || "Authentication failed";
+      if (msg.includes("Invalid signature")) {
+        setAuthError("Signature verification failed. Make sure your Solana wallet is registered on timetrade.live before connecting.");
+      } else {
+        setAuthError(msg);
+      }
     } finally {
       setIsAuthenticating(false);
     }
