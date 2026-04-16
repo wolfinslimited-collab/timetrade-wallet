@@ -128,7 +128,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </p>
 
       <PinUnlockModal
-        isOpen={showPin}
+        open={showPin}
         onClose={() => setShowPin(false)}
         onSuccess={handlePinSuccess}
         title="Unlock to Connect"
