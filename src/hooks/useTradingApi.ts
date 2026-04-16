@@ -5,14 +5,20 @@ const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
 const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwNTczNDUsImV4cCI6MjA2MDYzMzM0NX0.GeFsFp8FQB3W78UMF0cXc9X1oqG6fnCGVuJGj7MvVeE";
 const API_BASE = `${TIMETRADE_SUPABASE_URL}/functions/v1/mobile-api`;
 
-// Dedicated Supabase client for Timetrade auth (separate from wallet's Supabase)
-const tradeSupabase = createClient(TIMETRADE_SUPABASE_URL, TIMETRADE_SUPABASE_ANON_KEY, {
-  auth: {
-    storageKey: "timetrade_trading_auth",
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// Lazy-initialized Supabase client to avoid module-level side effects that conflict with React HMR
+let _tradeSupabase: ReturnType<typeof createClient> | null = null;
+function getTradeSupabase() {
+  if (!_tradeSupabase) {
+    _tradeSupabase = createClient(TIMETRADE_SUPABASE_URL, TIMETRADE_SUPABASE_ANON_KEY, {
+      auth: {
+        storageKey: "timetrade_trading_auth",
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
+  }
+  return _tradeSupabase;
+}
 
 interface WalletBalance {
   usd_balance: number;
@@ -88,7 +94,7 @@ export function useTradingApi() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session } } = await tradeSupabase.auth.getSession();
+        const { data: { session } } = await getTradeSupabase().auth.getSession();
         if (session?.user) {
           setIsAuthenticated(true);
           setUserEmail(session.user.email || null);
@@ -98,7 +104,7 @@ export function useTradingApi() {
     };
     checkSession();
 
-    const { data: { subscription } } = tradeSupabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = getTradeSupabase().auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session?.user);
       setUserEmail(session?.user?.email || null);
     });
@@ -110,7 +116,7 @@ export function useTradingApi() {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const { error } = await tradeSupabase.auth.signInWithPassword({ email, password });
+      const { error } = await getTradeSupabase().auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes("Invalid login")) {
           setAuthError("Invalid email or password. Please try again.");
@@ -131,7 +137,7 @@ export function useTradingApi() {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const { error } = await tradeSupabase.auth.signUp({ email, password });
+      const { error } = await getTradeSupabase().auth.signUp({ email, password });
       if (error) {
         if (error.message.includes("already registered")) {
           setAuthError("This email is already registered. Try signing in.");
@@ -151,7 +157,7 @@ export function useTradingApi() {
   }, []);
 
   const logout = useCallback(async () => {
-    await tradeSupabase.auth.signOut();
+    await getTradeSupabase().auth.signOut();
     setIsAuthenticated(false);
     setUserEmail(null);
     setBalance(null);
@@ -162,7 +168,7 @@ export function useTradingApi() {
   }, []);
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const { data: { session } } = await tradeSupabase.auth.getSession();
+    const { data: { session } } = await getTradeSupabase().auth.getSession();
     return session?.access_token || null;
   }, []);
 
