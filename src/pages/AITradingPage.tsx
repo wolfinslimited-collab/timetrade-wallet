@@ -113,7 +113,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </Button>
 
       <button
-        onClick={() => { setIsSignUp(!isSignUp); api.authError && api.authenticate("", ""); }}
+        onClick={() => setIsSignUp(!isSignUp)}
         className="mt-4 text-sm text-muted-foreground"
       >
         {isSignUp ? (
