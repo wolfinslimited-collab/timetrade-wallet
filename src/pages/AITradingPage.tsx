@@ -46,12 +46,14 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+
+  const inputClass = "w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30";
 
   const handleSubmit = () => {
     if (isSignUp) {
-      api.register(email, password, displayName);
+      api.register(email, password, referralCode || undefined);
     } else {
       api.authenticate(email, password);
     }
@@ -63,8 +65,8 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <Bot className="w-7 h-7 text-primary" />
       </div>
       <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
-      <p className="text-sm text-muted-foreground mb-6 text-center max-w-[280px]">
-        {isSignUp ? "Create your Timetrade account" : "Sign in to access your AI trading dashboard"}
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-[320px]">
+        {isSignUp ? "Sign up to start AI-powered Solana trading" : "Sign in to access your AI trading dashboard"}
       </p>
 
       {api.authError && (
@@ -73,31 +75,30 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       )}
 
-      <div className="w-full max-w-[320px] space-y-3 mb-4">
+      <div className="w-full max-w-[320px] space-y-4 mb-5">
+        <div>
+          <label className="text-sm font-semibold text-foreground mb-1.5 block">Email</label>
+          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-sm font-semibold text-foreground">Password</label>
+            {!isSignUp && (
+              <button className="text-xs text-primary font-medium">Forgot password?</button>
+            )}
+          </div>
+          <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} className={inputClass} />
+        </div>
+
         {isSignUp && (
-          <input
-            type="text"
-            placeholder="Display name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
+          <div>
+            <label className="text-sm font-semibold text-foreground mb-1.5 block">
+              Referral Code <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+            </label>
+            <input type="text" placeholder="E.G. AB3K7X2P" value={referralCode} onChange={(e) => setReferralCode(e.target.value)} className={inputClass} />
+          </div>
         )}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
       </div>
 
       <Button

@@ -110,10 +110,10 @@ async function performEmailAuth(email: string, password: string): Promise<string
   return null;
 }
 
-async function performEmailRegister(email: string, password: string, displayName?: string): Promise<string | null> {
+async function performEmailRegister(email: string, password: string, referralCode?: string): Promise<string | null> {
   const data = await apiCall<{ token?: string; access_token?: string; message?: string }>("/auth/register", {
     method: "POST",
-    body: { email, password, display_name: displayName || email.split("@")[0] },
+    body: { email, password, referral_code: referralCode || undefined },
   });
 
   const token = data.token || data.access_token;
@@ -165,11 +165,11 @@ export function useTradingApi() {
     }
   }, []);
 
-  const register = useCallback(async (email: string, password: string, displayName?: string) => {
+  const register = useCallback(async (email: string, password: string, referralCode?: string) => {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const token = await performEmailRegister(email, password, displayName);
+      const token = await performEmailRegister(email, password, referralCode);
       if (token) {
         setIsAuthenticated(true);
       } else {
