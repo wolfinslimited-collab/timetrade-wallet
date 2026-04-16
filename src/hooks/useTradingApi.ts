@@ -61,7 +61,11 @@ interface UserProfile {
 }
 
 async function apiCall<T>(path: string, options: { method?: string; body?: any; token?: string } = {}): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${TIMETRADE_SUPABASE_ANON_KEY}`,
+    "apikey": TIMETRADE_SUPABASE_ANON_KEY,
+  };
   if (options.token) headers["x-api-token"] = options.token;
 
   const res = await fetch(`${API_BASE}${path}`, {
