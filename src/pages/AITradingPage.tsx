@@ -46,9 +46,15 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = () => {
-    api.authenticate(email, password);
+  const handleSubmit = () => {
+    if (isSignUp) {
+      api.register(email, password, displayName);
+    } else {
+      api.authenticate(email, password);
+    }
   };
 
   return (
@@ -58,7 +64,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </div>
       <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-[280px]">
-        Sign in with your Timetrade account to access the AI trading dashboard
+        {isSignUp ? "Create your Timetrade account" : "Sign in to access your AI trading dashboard"}
       </p>
 
       {api.authError && (
@@ -68,6 +74,15 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       )}
 
       <div className="w-full max-w-[320px] space-y-3 mb-4">
+        {isSignUp && (
+          <input
+            type="text"
+            placeholder="Display name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        )}
         <input
           type="email"
           placeholder="Email"
@@ -80,22 +95,33 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
 
       <Button
-        onClick={handleLogin}
+        onClick={handleSubmit}
         disabled={api.isAuthenticating || !email || !password}
         className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
       >
         {api.isAuthenticating ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</>
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isSignUp ? "Creating account..." : "Signing in..."}</>
         ) : (
-          "Sign In"
+          isSignUp ? "Create Account" : "Sign In"
         )}
       </Button>
+
+      <button
+        onClick={() => { setIsSignUp(!isSignUp); api.authError && api.authenticate("", ""); }}
+        className="mt-4 text-sm text-muted-foreground"
+      >
+        {isSignUp ? (
+          <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
+        ) : (
+          <>Don't have an account? <span className="text-primary font-medium">Sign up</span></>
+        )}
+      </button>
     </div>
   );
 }
