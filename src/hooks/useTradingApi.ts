@@ -238,6 +238,10 @@ export function useTradingApi() {
     if (isAuthenticated) fetchDashboardData();
   }, [isAuthenticated, fetchDashboardData]);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    await performForgotPassword(email);
+  }, []);
+
   return {
     isAuthenticated,
     isAuthenticating,
@@ -245,6 +249,7 @@ export function useTradingApi() {
     authError,
     authenticate,
     register,
+    forgotPassword,
     logout,
     balance,
     tradingStatus,
