@@ -41,9 +41,16 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
   );
 };
 
-/* ── Connect Screen ── */
+/* ── Login Screen ── */
 
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = () => {
+    api.authenticate(email, password);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 min-h-[60vh]">
       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
@@ -51,7 +58,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </div>
       <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-[280px]">
-        Connect your wallet to access the AI trading dashboard
+        Sign in with your Timetrade account to access the AI trading dashboard
       </p>
 
       {api.authError && (
@@ -60,15 +67,33 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       )}
 
+      <div className="w-full max-w-[320px] space-y-3 mb-4">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+
       <Button
-        onClick={api.authenticate}
-        disabled={api.isAuthenticating}
+        onClick={handleLogin}
+        disabled={api.isAuthenticating || !email || !password}
         className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
       >
         {api.isAuthenticating ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Connecting...</>
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</>
         ) : (
-          <><Wallet className="w-4 h-4 mr-2" />Connect Wallet</>
+          "Sign In"
         )}
       </Button>
     </div>
