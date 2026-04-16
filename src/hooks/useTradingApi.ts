@@ -8,9 +8,7 @@ const TOKEN_STORAGE_KEY = "timetrade_trading_api_token";
 const TOKEN_EXPIRY_KEY = "timetrade_trading_token_expiry";
 const TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// ── Types ──
-
-export interface WalletBalance {
+interface WalletBalance {
   usd_balance: number;
   locked_balance: number;
   released_profit: number;
@@ -19,13 +17,7 @@ export interface WalletBalance {
   sol_balance: number;
 }
 
-export interface PortfolioSummary {
-  total_deposited: number;
-  total_profit: number;
-  roi_percent: number;
-}
-
-export interface TradingStatus {
+interface TradingStatus {
   trading_active: boolean;
   locked_balance: number;
   released_profit: number;
@@ -36,22 +28,18 @@ export interface TradingStatus {
   mode: string;
 }
 
-export interface EarningsChart {
-  data: { date: string; amount: number }[];
+interface EarningsSummary {
+  earnings: any[];
   total_usd: number;
   days: number;
 }
 
-export interface EarningsTotal {
-  total_earned: number;
-}
-
-export interface TradeHistoryItem {
+interface TradeHistoryItem {
   id: string;
   [key: string]: any;
 }
 
-export interface UserProfile {
+interface UserProfile {
   user_id: string;
   wallet_address: string;
   display_name: string;
@@ -106,29 +94,32 @@ async function apiCall<T>(path: string, options: { method?: string; body?: any; 
   return res.json();
 }
 
-// ── Wallet challenge/verify auth ──
+// ── Email/password auth ──
 
-async function performWalletAuth(walletAddress: string, signMessage: (message: Uint8Array) => Uint8Array): Promise<string | null> {
-  // Step 1: Get challenge
-  const { nonce, message } = await apiCall<{ nonce: string; message: string }>("/auth/challenge", {
+async function performEmailAuth(email: string, password: string): Promise<string | null> {
+  const data = await apiCall<{ token?: string; access_token?: string }>("/auth/login", {
     method: "POST",
-    body: { walletAddress },
+    body: { email, password },
   });
 
-  // Step 2: Sign the message
-  const messageBytes = new TextEncoder().encode(message);
-  const signatureBytes = signMessage(messageBytes);
-  const signature = btoa(String.fromCharCode(...signatureBytes));
+  const token = data.token || data.access_token;
+  if (token) {
+    storeToken(token);
+    return token;
+  }
+  return null;
+}
 
-  // Step 3: Verify signature
-  const data = await apiCall<{ token: string; user: any }>("/auth/verify", {
+async function performEmailRegister(email: string, password: string, referralCode?: string): Promise<string | null> {
+  const data = await apiCall<{ token?: string; access_token?: string; message?: string }>("/auth/register", {
     method: "POST",
-    body: { walletAddress, signature, nonce },
+    body: { email, password, referral_code: referralCode || undefined },
   });
 
-  if (data.token) {
-    storeToken(data.token);
-    return data.token;
+  const token = data.token || data.access_token;
+  if (token) {
+    storeToken(token);
+    return token;
   }
   return null;
 }
@@ -142,10 +133,8 @@ export function useTradingApi() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   const [balance, setBalance] = useState<WalletBalance | null>(null);
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [tradingStatus, setTradingStatus] = useState<TradingStatus | null>(null);
-  const [earningsChart, setEarningsChart] = useState<EarningsChart | null>(null);
-  const [earningsTotal, setEarningsTotal] = useState<EarningsTotal | null>(null);
+  const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
   const [tradeHistory, setTradeHistory] = useState<TradeHistoryItem[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -159,18 +148,35 @@ export function useTradingApi() {
     setIsCheckingSession(false);
   }, []);
 
-  const authenticate = useCallback(async (walletAddress: string, signMessage: (msg: Uint8Array) => Uint8Array) => {
+  const authenticate = useCallback(async (email: string, password: string) => {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const token = await performWalletAuth(walletAddress, signMessage);
+      const token = await performEmailAuth(email, password);
       if (token) {
         setIsAuthenticated(true);
       } else {
-        setAuthError("Authentication failed. Please try again.");
+        setAuthError("Invalid credentials. Please try again.");
       }
     } catch (e: any) {
       setAuthError(e.message || "Authentication failed");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, referralCode?: string) => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const token = await performEmailRegister(email, password, referralCode);
+      if (token) {
+        setIsAuthenticated(true);
+      } else {
+        setAuthError("Registration failed. Please try again.");
+      }
+    } catch (e: any) {
+      setAuthError(e.message || "Registration failed");
     } finally {
       setIsAuthenticating(false);
     }
@@ -180,10 +186,8 @@ export function useTradingApi() {
     clearStoredToken();
     setIsAuthenticated(false);
     setBalance(null);
-    setPortfolio(null);
     setTradingStatus(null);
-    setEarningsChart(null);
-    setEarningsTotal(null);
+    setEarnings(null);
     setTradeHistory([]);
     setProfile(null);
   }, []);
@@ -197,41 +201,28 @@ export function useTradingApi() {
     if (!token) return;
     setIsLoading(true);
     try {
-      const [bal, port, earn, earnTotal, trades, prof] = await Promise.all([
+      const [bal, status, earn, trades, prof] = await Promise.all([
         apiCall<WalletBalance>("/wallet/balance", { token }).catch(() => null),
-        apiCall<PortfolioSummary>("/portfolio/summary", { token }).catch(() => null),
-        apiCall<EarningsChart>("/earnings/chart?days=30", { token }).catch(() => null),
-        apiCall<EarningsTotal>("/earnings/total", { token }).catch(() => null),
-        apiCall<TradeHistoryItem[]>("/trades/history?limit=20&offset=0", { token }).catch(() => []),
+        apiCall<TradingStatus>("/trading/status", { token }).catch(() => null),
+        apiCall<EarningsSummary>("/history/earnings?days=7", { token }).catch(() => null),
+        apiCall<TradeHistoryItem[]>("/history/trades?limit=20", { token }).catch(() => []),
         apiCall<UserProfile>("/profile", { token }).catch(() => null),
       ]);
       if (bal) setBalance(bal);
-      if (port) setPortfolio(port);
-      if (earn) setEarningsChart(earn);
-      if (earnTotal) setEarningsTotal(earnTotal);
+      if (status) setTradingStatus(status);
+      if (earn) setEarnings(earn);
       setTradeHistory(Array.isArray(trades) ? trades : []);
       if (prof) setProfile(prof);
     } catch { /* ignore */ }
     setIsLoading(false);
   }, [getToken]);
 
-  const startTrading = useCallback(async (params: {
-    allocatedAmount: number;
-    riskLevel?: string;
-    strategyType?: string;
-    profitTargetPct?: number;
-    stopLossPct?: number;
-  }) => {
+  const toggleTrading = useCallback(async (action: "start" | "stop", amount?: number) => {
     const token = getToken();
     if (!token) return;
-    await apiCall("/trading/start", { method: "POST", token, body: params });
-    await fetchDashboardData();
-  }, [getToken, fetchDashboardData]);
-
-  const stopTrading = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-    await apiCall("/trading/stop", { method: "POST", token });
+    const body: any = { action };
+    if (action === "start" && amount) body.amount = amount;
+    await apiCall("/trading/toggle", { method: "POST", token, body });
     await fetchDashboardData();
   }, [getToken, fetchDashboardData]);
 
@@ -246,17 +237,15 @@ export function useTradingApi() {
     isCheckingSession,
     authError,
     authenticate,
+    register,
     logout,
     balance,
-    portfolio,
     tradingStatus,
-    earningsChart,
-    earningsTotal,
+    earnings,
     tradeHistory,
     profile,
     isLoading,
     fetchDashboardData,
-    startTrading,
-    stopTrading,
+    toggleTrading,
   };
 }

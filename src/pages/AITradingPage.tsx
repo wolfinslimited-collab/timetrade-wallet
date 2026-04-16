@@ -1,16 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, ShieldCheck } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
-import { getActiveAccountEncryptedSeed, WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
-import { deriveSolanaKeypair } from "@/hooks/useSolanaTransactionSigning";
-import { SolanaDerivationPath } from "@/utils/walletDerivation";
-import nacl from "tweetnacl";
 
 /* ── Shared Cards ── */
 
@@ -47,49 +41,17 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
   );
 };
 
-/* ── Connect Wallet Screen ── */
+/* ── Login Screen ── */
 
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
-  const [showPin, setShowPin] = useState(false);
-  const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handlePinSubmit = async () => {
-    if (pin.length !== 6) return;
-    setIsProcessing(true);
-    setPinError(null);
-    try {
-      const encryptedSeedJson = getActiveAccountEncryptedSeed();
-      if (!encryptedSeedJson) {
-        setPinError("No wallet found. Import a wallet first.");
-        setIsProcessing(false);
-        return;
-      }
-      const encryptedSeed: EncryptedData = JSON.parse(encryptedSeedJson);
-      const mnemonic = await decryptPrivateKey(encryptedSeed, pin);
+  const inputClass = "w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30";
 
-      const storedPath = (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) || "phantom";
-      const storedIndex = parseInt(localStorage.getItem('timetrade_solana_balance_account_index') || '0', 10);
-      const keypair = deriveSolanaKeypair(mnemonic.trim(), storedIndex, storedPath);
-      const walletAddress = keypair.publicKey.toBase58();
-
-      const signMessage = (message: Uint8Array): Uint8Array => {
-        return nacl.sign.detached(message, keypair.secretKey);
-      };
-
-      setShowPin(false);
-      setPin("");
-      await api.authenticate(walletAddress, signMessage);
-    } catch (e: any) {
-      setPinError("Incorrect PIN");
-      setPin("");
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleLogin = () => {
+    api.authenticate(email, password);
   };
-
-  const hasWallet = !!getActiveAccountEncryptedSeed();
 
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 min-h-[60vh]">
@@ -98,7 +60,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </div>
       <h2 className="text-xl font-bold text-foreground mb-1">AI Trading</h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-[320px]">
-        Connect your wallet to access AI-powered automated trading
+        Sign in to access your AI trading dashboard
       </p>
 
       {api.authError && (
@@ -107,60 +69,37 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       )}
 
-      {hasWallet ? (
-        <Button
-          onClick={() => setShowPin(true)}
-          disabled={api.isAuthenticating}
-          className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm gap-2"
-        >
-          {api.isAuthenticating ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />Connecting...</>
-          ) : (
-            <><Wallet className="w-4 h-4" />Connect Wallet</>
-          )}
-        </Button>
-      ) : (
-        <div className="bg-muted/30 border border-border/40 rounded-xl px-4 py-3 w-full max-w-[320px]">
-          <p className="text-xs text-muted-foreground text-center">Import a wallet first to use AI Trading</p>
+      <div className="w-full max-w-[320px] space-y-4 mb-5">
+        <div>
+          <label className="text-sm font-semibold text-foreground mb-1.5 block">Email</label>
+          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
         </div>
-      )}
 
-      <div className="flex items-center gap-1.5 mt-4">
-        <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-        <p className="text-[10px] text-muted-foreground">Signed with your Solana keypair</p>
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-sm font-semibold text-foreground">Password</label>
+            <a href="https://timetrade.live/forgot-password" target="_blank" rel="noopener noreferrer" className="text-xs text-primary font-medium">Forgot password?</a>
+          </div>
+          <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} className={inputClass} />
+        </div>
       </div>
+
+      <Button
+        onClick={handleLogin}
+        disabled={api.isAuthenticating || !email || !password}
+        className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
+      >
+        {api.isAuthenticating ? (
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</>
+        ) : (
+          "Sign In"
+        )}
+      </Button>
 
       <p className="mt-4 text-sm text-muted-foreground">
         Don't have an account?{" "}
-        <a href="https://timetrade.live/register" target="_blank" rel="noopener noreferrer" className="text-primary font-medium">Sign up at timetrade.live</a>
+        <a href="https://timetrade.live/register" target="_blank" rel="noopener noreferrer" className="text-primary font-medium">Sign up</a>
       </p>
-
-      {/* PIN Dialog */}
-      <Dialog open={showPin} onOpenChange={(open) => { setShowPin(open); if (!open) { setPin(""); setPinError(null); } }}>
-        <DialogContent className="sm:max-w-[320px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Lock className="w-4 h-4" /> Enter PIN</DialogTitle>
-            <DialogDescription>Enter your 6-digit PIN to sign the authentication challenge</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <input
-              type="password"
-              inputMode="numeric"
-              maxLength={6}
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
-              placeholder="••••••"
-              className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-center text-lg tracking-[0.5em] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              autoFocus
-            />
-            {pinError && <p className="text-xs text-destructive text-center">{pinError}</p>}
-            <Button onClick={handlePinSubmit} disabled={pin.length !== 6 || isProcessing} className="w-full h-10 rounded-xl text-sm font-semibold">
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock & Connect"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -168,20 +107,20 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
 /* ── Dashboard ── */
 
 function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
-  const { balance, portfolio, tradingStatus, earningsTotal, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
+  const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
-  const totalProfit = portfolio?.total_profit || balance?.released_profit || 0;
-  const roi = portfolio?.roi_percent || 0;
+  const totalProfit = balance?.released_profit || 0;
+  const earningsTotal = earnings?.total_usd || 0;
 
   const handleToggle = async () => {
     setToggling(true);
     try {
       if (tradingStatus?.trading_active) {
-        await api.stopTrading();
+        await api.toggleTrading("stop");
       } else {
-        await api.startTrading({ allocatedAmount: balance?.usd_balance || 0 });
+        await api.toggleTrading("start", balance?.usd_balance || 0);
       }
     } finally {
       setToggling(false);
@@ -222,18 +161,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <BalanceCard label="Total Profit" value={totalProfit} icon={<TrendingUp className="w-4 h-4 text-success" />} iconBg="bg-success/10" showSign />
       </div>
 
-      {/* ROI */}
-      {portfolio && (
-        <Card className="bg-card border-border/40">
-          <CardContent className="p-4 flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">ROI</span>
-            <span className={cn("text-sm font-bold font-mono", roi >= 0 ? "text-success" : "text-destructive")}>
-              {roi >= 0 ? "+" : ""}{roi.toFixed(2)}%
-            </span>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Trading Status + Toggle */}
       <Card className="bg-card border-border/40 overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/5 pointer-events-none" />
@@ -270,13 +197,11 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </CardContent>
       </Card>
 
-      {/* Earnings */}
-      {earningsTotal && (
-        <div>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2.5">Total Earnings</p>
-          <PnLCard label="Earned" value={earningsTotal.total_earned || 0} />
-        </div>
-      )}
+      {/* Earnings Summary */}
+      <div>
+        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2.5">7-Day Earnings</p>
+        <PnLCard label="Total" value={earningsTotal} />
+      </div>
 
       {/* Recent Trades */}
       <div>
