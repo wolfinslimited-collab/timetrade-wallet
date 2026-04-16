@@ -217,6 +217,17 @@ const Index = () => {
     );
   }
 
+  if (currentView === "staking") {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <StakingPage onBack={() => handleTabChange("wallet")} />
+        </div>
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col flex-1 w-full relative overflow-hidden">
