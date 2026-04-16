@@ -8,6 +8,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
+import { StakingPage } from "./StakingPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 
 import { NotificationsPage } from "./NotificationsPage";
@@ -138,7 +139,7 @@ const Index = () => {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
-    const allowedTabs: NavTab[] = ["wallet", "history", "ai", "settings"];
+    const allowedTabs: NavTab[] = ["wallet", "history", "staking", "ai", "settings"];
     if (tab && allowedTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
     if (!tab && activeTab !== "wallet") setActiveTab("wallet");
   }, [searchParams, activeTab]);
