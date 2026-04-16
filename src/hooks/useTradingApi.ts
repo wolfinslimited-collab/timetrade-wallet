@@ -110,6 +110,20 @@ async function performEmailAuth(email: string, password: string): Promise<string
   return null;
 }
 
+async function performEmailRegister(email: string, password: string, displayName?: string): Promise<string | null> {
+  const data = await apiCall<{ token?: string; access_token?: string; message?: string }>("/auth/register", {
+    method: "POST",
+    body: { email, password, display_name: displayName || email.split("@")[0] },
+  });
+
+  const token = data.token || data.access_token;
+  if (token) {
+    storeToken(token);
+    return token;
+  }
+  return null;
+}
+
 // ── Hook ──
 
 export function useTradingApi() {
@@ -146,6 +160,23 @@ export function useTradingApi() {
       }
     } catch (e: any) {
       setAuthError(e.message || "Authentication failed");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, displayName?: string) => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const token = await performEmailRegister(email, password, displayName);
+      if (token) {
+        setIsAuthenticated(true);
+      } else {
+        setAuthError("Registration failed. Please try again.");
+      }
+    } catch (e: any) {
+      setAuthError(e.message || "Registration failed");
     } finally {
       setIsAuthenticating(false);
     }
@@ -206,6 +237,7 @@ export function useTradingApi() {
     isCheckingSession,
     authError,
     authenticate,
+    register,
     logout,
     balance,
     tradingStatus,
