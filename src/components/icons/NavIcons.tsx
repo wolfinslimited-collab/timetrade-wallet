@@ -39,3 +39,11 @@ export const AIAssistantIcon = ({ className, color = "currentColor" }: IconProps
     <path opacity="0.4" d="M19 3L20 5.5L22 4L20.5 6.5L19 3Z" stroke={color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+
+export const AITradingIcon = ({ className, color = "currentColor" }: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M3 17L9 11L13 15L21 7" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M17 7H21V11" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path opacity="0.4" d="M12 2L13.5 5.5L17 4L15 7.5L12 2Z" stroke={color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
