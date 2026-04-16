@@ -51,33 +51,41 @@ const PnLCard = ({ label, value }: { label: string; value: number }) => {
 
 function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [showPin, setShowPin] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handlePinSuccess = async (pin: string) => {
-    setShowPin(false);
+  const handlePinSubmit = async () => {
+    if (pin.length !== 6) return;
+    setIsProcessing(true);
+    setPinError(null);
     try {
-      // Decrypt mnemonic
       const encryptedSeedJson = getActiveAccountEncryptedSeed();
       if (!encryptedSeedJson) {
-        api.authenticate("", () => { throw new Error("No wallet found"); });
+        setPinError("No wallet found. Import a wallet first.");
+        setIsProcessing(false);
         return;
       }
       const encryptedSeed: EncryptedData = JSON.parse(encryptedSeedJson);
       const mnemonic = await decryptPrivateKey(encryptedSeed, pin);
 
-      // Derive Solana keypair
       const storedPath = (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) || "phantom";
       const storedIndex = parseInt(localStorage.getItem('timetrade_solana_balance_account_index') || '0', 10);
       const keypair = deriveSolanaKeypair(mnemonic.trim(), storedIndex, storedPath);
       const walletAddress = keypair.publicKey.toBase58();
 
-      // Sign function using nacl
       const signMessage = (message: Uint8Array): Uint8Array => {
         return nacl.sign.detached(message, keypair.secretKey);
       };
 
+      setShowPin(false);
+      setPin("");
       await api.authenticate(walletAddress, signMessage);
     } catch (e: any) {
-      // Error is set in the hook
+      setPinError("Incorrect PIN");
+      setPin("");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -127,13 +135,32 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <a href="https://timetrade.live/register" target="_blank" rel="noopener noreferrer" className="text-primary font-medium">Sign up at timetrade.live</a>
       </p>
 
-      <PinUnlockModal
-        open={showPin}
-        onOpenChange={setShowPin}
-        onSuccess={handlePinSuccess}
-        title="Unlock to Connect"
-        description="Enter your PIN to sign the authentication challenge"
-      />
+      {/* PIN Dialog */}
+      <Dialog open={showPin} onOpenChange={(open) => { setShowPin(open); if (!open) { setPin(""); setPinError(null); } }}>
+        <DialogContent className="sm:max-w-[320px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="w-4 h-4" /> Enter PIN</DialogTitle>
+            <DialogDescription>Enter your 6-digit PIN to sign the authentication challenge</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
+              placeholder="••••••"
+              className="w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-center text-lg tracking-[0.5em] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              autoFocus
+            />
+            {pinError && <p className="text-xs text-destructive text-center">{pinError}</p>}
+            <Button onClick={handlePinSubmit} disabled={pin.length !== 6 || isProcessing} className="w-full h-10 rounded-xl text-sm font-semibold">
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock & Connect"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
