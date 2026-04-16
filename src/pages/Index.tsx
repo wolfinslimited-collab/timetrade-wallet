@@ -8,6 +8,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
+import { StakingPage } from "./StakingPage";
 import { TransactionHistoryPage } from "./TransactionHistoryPage";
 
 import { NotificationsPage } from "./NotificationsPage";
@@ -43,7 +44,7 @@ const Index = () => {
   const percentChange = prices?.length ? prices.reduce((sum, p) => sum + (p.change24h || 0), 0) / prices.length : 0;
   const dollarChange = displayBalance * (percentChange / 100);
   const isPositive = percentChange >= 0;
-  const hiddenTabs = useMemo<NavTab[]>(() => ["staking"], []);
+  const hiddenTabs = useMemo<NavTab[]>(() => [], []);
 
   useEffect(() => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
@@ -138,7 +139,7 @@ const Index = () => {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
-    const allowedTabs: NavTab[] = ["wallet", "history", "ai", "settings"];
+    const allowedTabs: NavTab[] = ["wallet", "history", "staking", "ai", "settings"];
     if (tab && allowedTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
     if (!tab && activeTab !== "wallet") setActiveTab("wallet");
   }, [searchParams, activeTab]);
@@ -210,6 +211,17 @@ const Index = () => {
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
+        </div>
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
+      </div>
+    );
+  }
+
+  if (currentView === "staking") {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <StakingPage onBack={() => handleTabChange("wallet")} />
         </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </div>
