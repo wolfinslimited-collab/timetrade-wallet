@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { LiveTradingFeed } from "@/components/trading/LiveTradingFeed";
 
 /* ── Shared Cards ── */
 
@@ -178,9 +177,9 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
 /* ── Dashboard ── */
 
 function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
+  const navigate = useNavigate();
   const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
-  const [liveOpen, setLiveOpen] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
   const totalProfit = balance?.released_profit || 0;
@@ -217,7 +216,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setLiveOpen(true)}
+            onClick={() => navigate("/live-trades")}
             className="h-8 px-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center gap-1.5 active:scale-95"
           >
             <Activity className="w-3.5 h-3.5 text-primary" />
@@ -232,15 +231,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           </button>
         </div>
       </div>
-
-      <Dialog open={liveOpen} onOpenChange={setLiveOpen}>
-        <DialogContent className="max-w-lg w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto p-4">
-          <DialogHeader>
-            <DialogTitle className="text-base">Live Trading</DialogTitle>
-          </DialogHeader>
-          <LiveTradingFeed />
-        </DialogContent>
-      </Dialog>
 
       {/* Balance Cards */}
       <div className="grid grid-cols-2 gap-3">
