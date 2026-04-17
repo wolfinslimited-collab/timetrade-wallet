@@ -325,7 +325,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           )}
         </Button>
       </div>
-      </div>
 
       {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
@@ -434,35 +433,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      {/* Account — compact */}
-      {profile && (
-        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] text-foreground font-bold uppercase tracking-wider">Account</p>
-            <Shield className="w-3.5 h-3.5 text-muted-foreground/60" />
-          </div>
-          <div className="space-y-2.5">
-            {profile.display_name && (
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] text-muted-foreground font-medium">Name</span>
-                <span className="text-xs text-foreground font-semibold">{profile.display_name}</span>
-              </div>
-            )}
-            {profile.wallet_address && (
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] text-muted-foreground font-medium">Wallet</span>
-                <span className="text-xs text-foreground font-mono tabular-nums">{profile.wallet_address.slice(0, 6)}…{profile.wallet_address.slice(-4)}</span>
-              </div>
-            )}
-            {profile.referral_code && (
-              <div className="flex justify-between items-center pt-1 border-t border-border/30">
-                <span className="text-[11px] text-muted-foreground font-medium">Referral Code</span>
-                <span className="text-xs text-primary font-mono font-bold tracking-wider">{profile.referral_code}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
