@@ -13,32 +13,32 @@ import { format } from "date-fns";
 
 /* ── Shared Cards ── */
 
-const StatCard = ({ label, value, icon, accent, showSign }: {
-  label: string; value: number; icon: React.ReactNode; accent: string; showSign?: boolean;
+const MetricTile = ({ label, value, icon, tint, showSign }: {
+  label: string; value: number; icon: React.ReactNode; tint: string; showSign?: boolean;
 }) => {
   const isProfit = value >= 0;
   const valueColor = showSign && value !== 0
     ? (isProfit ? "text-success" : "text-destructive")
     : "text-foreground";
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-card/60 p-3.5">
-      <div className={cn("absolute -top-6 -right-6 w-20 h-20 rounded-full opacity-20 blur-2xl", accent)} />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", accent.replace("bg-", "bg-").replace("/40", "/15"))}>
-            {icon}
-          </div>
-          {showSign && value !== 0 && (
-            isProfit
-              ? <TrendingUp className="w-3 h-3 text-success" />
-              : <TrendingDown className="w-3 h-3 text-destructive" />
-          )}
+    <div className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/80 backdrop-blur-sm p-4 hover:border-border/70 transition-colors">
+      <div className="flex items-start justify-between mb-3">
+        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", tint)}>
+          {icon}
         </div>
-        <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest mb-1">{label}</p>
-        <p className={cn("text-base font-bold font-mono tracking-tight", valueColor)}>
-          {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
+        {showSign && value !== 0 && (
+          <div className={cn(
+            "px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5",
+            isProfit ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+          )}>
+            {isProfit ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+          </div>
+        )}
       </div>
+      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1">{label}</p>
+      <p className={cn("text-lg font-bold font-mono tracking-tight tabular-nums", valueColor)}>
+        {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </p>
     </div>
   );
 };
@@ -208,169 +208,223 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   }
 
   return (
-    <div className="px-4 py-5 space-y-5 pb-32">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/20 to-violet-500/20 border border-primary/30 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+    <div className="px-4 py-4 space-y-4 pb-32">
+      {/* Header — minimal, clean */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
+              <Bot className="w-5 h-5 text-primary-foreground" />
+            </div>
+            {tradingStatus?.trading_active && (
+              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-background animate-pulse" />
+            )}
           </div>
           <div>
-            <h1 className="text-base font-bold text-foreground leading-tight">AI Trading</h1>
-            <p className="text-[10px] text-muted-foreground">{format(new Date(), "EEEE, MMM d")}</p>
+            <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">AI Trading</h1>
+            <p className="text-[10px] text-muted-foreground font-medium">{format(new Date(), "EEE, MMM d • HH:mm")}</p>
           </div>
         </div>
         <div className="flex gap-1.5">
-          <button onClick={fetchDashboardData} className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center active:scale-95">
+          <button onClick={fetchDashboardData} className="w-9 h-9 rounded-xl bg-card/80 border border-border/40 flex items-center justify-center active:scale-95 hover:bg-card transition-colors">
             <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", isLoading && "animate-spin")} />
           </button>
-          <button onClick={logout} className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center active:scale-95">
+          <button onClick={logout} className="w-9 h-9 rounded-xl bg-card/80 border border-border/40 flex items-center justify-center active:scale-95 hover:bg-card transition-colors">
             <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
       </div>
 
-      {/* Hero Balance Card */}
-      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-violet-500/10 p-5">
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-violet-500/20 blur-3xl" />
+      {/* Hero Portfolio — refined, premium */}
+      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card to-card/40 p-5 shadow-xl shadow-black/5">
+        {/* subtle accent glow */}
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-violet-500/10 blur-3xl translate-y-1/2 -translate-x-1/4" />
+
         <div className="relative">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Total Portfolio</p>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground/60" />
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Portfolio Value</p>
+            </div>
             <div className={cn(
-              "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1",
+              "px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur",
               tradingStatus?.trading_active
-                ? "bg-success/15 text-success border border-success/30"
-                : "bg-muted/20 text-muted-foreground border border-border/50"
+                ? "bg-success/10 text-success border border-success/20"
+                : "bg-muted/10 text-muted-foreground border border-border/40"
             )}>
-              <div className={cn("w-1.5 h-1.5 rounded-full", tradingStatus?.trading_active ? "bg-success animate-pulse" : "bg-muted-foreground")} />
-              {tradingStatus?.trading_active ? "Trading" : "Idle"}
+              <div className={cn("w-1.5 h-1.5 rounded-full", tradingStatus?.trading_active ? "bg-success animate-pulse" : "bg-muted-foreground/60")} />
+              {tradingStatus?.trading_active ? "Active" : "Paused"}
             </div>
           </div>
-          <p className="text-3xl font-bold font-mono text-foreground tracking-tight mb-3">
-            ${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className={cn("w-3.5 h-3.5", totalProfit >= 0 ? "text-success" : "text-destructive")} />
-              <span className={cn("text-xs font-semibold font-mono", totalProfit >= 0 ? "text-success" : "text-destructive")}>
-                {totalProfit >= 0 ? "+" : ""}${totalProfit.toFixed(2)}
+
+          <div className="flex items-baseline gap-2 mb-4">
+            <span className="text-[20px] font-bold text-muted-foreground/80 font-mono">$</span>
+            <p className="text-[40px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
+              {totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          {/* Compact PnL strip */}
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border",
+              totalProfit >= 0 ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"
+            )}>
+              {totalProfit >= 0
+                ? <TrendingUp className="w-3 h-3 text-success" />
+                : <TrendingDown className="w-3 h-3 text-destructive" />}
+              <span className={cn("text-[11px] font-bold font-mono tabular-nums", totalProfit >= 0 ? "text-success" : "text-destructive")}>
+                {totalProfit >= 0 ? "+" : ""}${Math.abs(totalProfit).toFixed(2)}
               </span>
-              <span className="text-[10px] text-muted-foreground">all-time</span>
+              <span className="text-[9px] text-muted-foreground font-medium">all time</span>
             </div>
-            <div className="w-px h-3 bg-border/60" />
-            <div className="flex items-center gap-1.5">
+            <div className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border",
+              earningsTotal >= 0 ? "bg-card/60 border-border/40" : "bg-destructive/5 border-destructive/20"
+            )}>
               <Zap className="w-3 h-3 text-amber-500" />
-              <span className="text-[10px] text-muted-foreground">7d:</span>
-              <span className={cn("text-xs font-semibold font-mono", earningsTotal >= 0 ? "text-success" : "text-destructive")}>
-                {earningsTotal >= 0 ? "+" : ""}${earningsTotal.toFixed(2)}
+              <span className={cn("text-[11px] font-bold font-mono tabular-nums", earningsTotal >= 0 ? "text-foreground" : "text-destructive")}>
+                {earningsTotal >= 0 ? "+" : ""}${Math.abs(earningsTotal).toFixed(2)}
               </span>
+              <span className="text-[9px] text-muted-foreground font-medium">7d</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* Primary CTA + Live Trades */}
+      <div className="grid grid-cols-[1fr_auto] gap-2.5">
         <Button
           onClick={handleToggle}
           disabled={toggling}
           className={cn(
-            "h-12 rounded-2xl text-xs font-bold shadow-lg",
+            "h-13 rounded-2xl text-sm font-bold shadow-lg transition-all",
             tradingStatus?.trading_active
-              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              : "bg-gradient-to-r from-primary to-violet-500 hover:opacity-90 text-primary-foreground"
+              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
+              : "bg-gradient-to-br from-primary via-primary to-primary/80 hover:opacity-95 text-primary-foreground shadow-primary/30"
           )}
+          style={{ height: "52px" }}
         >
           {toggling ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : tradingStatus?.trading_active ? (
-            <><Lock className="w-3.5 h-3.5 mr-1.5" />Stop Trading</>
+            <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
           ) : (
-            <><Zap className="w-3.5 h-3.5 mr-1.5" />Start Trading</>
+            <><Zap className="w-4 h-4 mr-2" />Start Trading</>
           )}
         </Button>
         <button
           onClick={() => navigate("/live-trades")}
-          className="h-12 rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-1.5 active:scale-95"
+          className="h-[52px] px-4 rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
         >
-          <Activity className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-bold text-foreground">Live Trades</span>
-          <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+          <div className="relative">
+            <Activity className="w-4 h-4 text-primary" />
+            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+          </div>
+          <span className="text-xs font-bold text-foreground">Live</span>
         </button>
       </div>
 
-      {/* Stat Grid */}
+      {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
-        <StatCard label="Available" value={balance?.usd_balance || 0} icon={<Wallet className="w-3.5 h-3.5 text-primary" />} accent="bg-primary/40" />
-        <StatCard label="In Trading" value={balance?.locked_balance || 0} icon={<Lock className="w-3.5 h-3.5 text-amber-500" />} accent="bg-amber-500/40" />
-        <StatCard label="Released Profit" value={totalProfit} icon={<TrendingUp className="w-3.5 h-3.5 text-success" />} accent="bg-success/40" showSign />
-        <StatCard label="7-Day Earnings" value={earningsTotal} icon={<BarChart3 className="w-3.5 h-3.5 text-violet-500" />} accent="bg-violet-500/40" showSign />
+        <MetricTile label="Available" value={balance?.usd_balance || 0} icon={<Wallet className="w-4 h-4 text-primary" />} tint="bg-primary/10" />
+        <MetricTile label="In Trading" value={balance?.locked_balance || 0} icon={<Lock className="w-4 h-4 text-amber-500" />} tint="bg-amber-500/10" />
+        <MetricTile label="Realized P&L" value={totalProfit} icon={<DollarSign className="w-4 h-4 text-success" />} tint="bg-success/10" showSign />
+        <MetricTile label="7-Day Earnings" value={earningsTotal} icon={<BarChart3 className="w-4 h-4 text-violet-500" />} tint="bg-violet-500/10" showSign />
       </div>
 
-      {/* Trading Bot Status */}
-      <Card className="border-border/50 bg-card overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center border",
-                tradingStatus?.trading_active
-                  ? "bg-success/10 border-success/30"
-                  : "bg-muted/10 border-border/40"
-              )}>
-                <Bot className={cn("w-5 h-5", tradingStatus?.trading_active ? "text-success" : "text-muted-foreground")} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">Trading Bot</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {tradingStatus?.trading_active ? `${tradingStatus.mode || "Live"} mode • ${tradingStatus.strategies?.length || 0} strategies` : "Standby"}
-                </p>
-              </div>
+      {/* Bot Status — refined */}
+      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-11 h-11 rounded-2xl flex items-center justify-center border",
+              tradingStatus?.trading_active
+                ? "bg-success/10 border-success/30 shadow-lg shadow-success/10"
+                : "bg-muted/5 border-border/40"
+            )}>
+              <Bot className={cn("w-5 h-5", tradingStatus?.trading_active ? "text-success" : "text-muted-foreground")} />
             </div>
-            <Shield className={cn("w-4 h-4", tradingStatus?.trading_active ? "text-success" : "text-muted-foreground")} />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-bold text-foreground">Trading Bot</p>
+                {tradingStatus?.trading_active && (
+                  <div className="px-1.5 py-0 rounded-md bg-success/15 text-success text-[8px] font-bold uppercase tracking-wide">Live</div>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {tradingStatus?.trading_active
+                  ? `${tradingStatus.mode || "Live"} mode • ${tradingStatus.strategies?.length || 0} strategies running`
+                  : "Bot is idle — start trading to activate"}
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <Shield className={cn("w-4 h-4 shrink-0", tradingStatus?.trading_active ? "text-success" : "text-muted-foreground/50")} />
+        </div>
+      </div>
 
-      {/* Recent Trades */}
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Recent Trades</p>
+      {/* Recent Trades — institutional list style */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] text-foreground font-bold uppercase tracking-wider">Recent Activity</p>
+            {tradeHistory.length > 0 && (
+              <div className="px-1.5 py-0 rounded-md bg-muted/20 text-muted-foreground text-[9px] font-bold tabular-nums">
+                {tradeHistory.length}
+              </div>
+            )}
+          </div>
           {tradeHistory.length > 0 && (
-            <button onClick={() => navigate("/live-trades")} className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70">
+            <button onClick={() => navigate("/live-trades")} className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70 hover:opacity-80">
               View all <ChevronRight className="w-3 h-3" />
             </button>
           )}
         </div>
-        <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
           {tradeHistory.length === 0 ? (
-            <div className="py-10 text-center">
-              <div className="w-10 h-10 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto mb-2">
-                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+            <div className="py-12 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-muted/10 flex items-center justify-center mx-auto mb-3 border border-border/30">
+                <BarChart3 className="w-5 h-5 text-muted-foreground/60" />
               </div>
-              <p className="text-xs text-muted-foreground">No trades yet</p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">Start trading to see activity</p>
+              <p className="text-xs font-semibold text-foreground">No trades yet</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Start trading to see your activity here</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/40">
-              {tradeHistory.slice(0, 8).map((trade, i) => {
+            <div className="divide-y divide-border/30">
+              {tradeHistory.slice(0, 6).map((trade, i) => {
                 const pnl = trade.pnl || 0;
                 const isProfit = pnl >= 0;
                 return (
-                  <div key={trade.id || i} className="flex items-center justify-between py-3 px-3.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", isProfit ? "bg-success/10" : "bg-destructive/10")}>
-                        {isProfit ? <ArrowUpRight className="w-3.5 h-3.5 text-success" /> : <ArrowDownRight className="w-3.5 h-3.5 text-destructive" />}
+                  <div key={trade.id || i} className="flex items-center justify-between py-3 px-3.5 hover:bg-muted/5 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border",
+                        isProfit
+                          ? "bg-success/10 border-success/20"
+                          : "bg-destructive/10 border-destructive/20"
+                      )}>
+                        {isProfit
+                          ? <ArrowUpRight className="w-4 h-4 text-success" />
+                          : <ArrowDownRight className="w-4 h-4 text-destructive" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground truncate">{trade.pair || trade.symbol || "Trade"}</p>
-                        <p className="text-[10px] text-muted-foreground">{trade.closed_at ? format(new Date(trade.closed_at), "MMM d, HH:mm") : ""}</p>
+                        <p className="text-[13px] font-bold text-foreground truncate tracking-tight">
+                          {trade.pair || trade.symbol || "Trade"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-medium">
+                          {trade.closed_at ? format(new Date(trade.closed_at), "MMM d • HH:mm") : "Pending"}
+                        </p>
                       </div>
                     </div>
-                    <span className={cn("font-mono text-xs font-bold", isProfit ? "text-success" : "text-destructive")}>
-                      {isProfit ? "+" : ""}${pnl.toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <p className={cn("font-mono text-[13px] font-bold tabular-nums", isProfit ? "text-success" : "text-destructive")}>
+                        {isProfit ? "+" : ""}${Math.abs(pnl).toFixed(2)}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">
+                        {isProfit ? "Profit" : "Loss"}
+                      </p>
+                    </div>
                   </div>
                 );
               })}
@@ -379,27 +433,30 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      {/* Profile */}
+      {/* Account — compact */}
       {profile && (
-        <div className="rounded-2xl border border-border/50 bg-card p-4">
-          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-3">Account</p>
-          <div className="space-y-2">
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] text-foreground font-bold uppercase tracking-wider">Account</p>
+            <Shield className="w-3.5 h-3.5 text-muted-foreground/60" />
+          </div>
+          <div className="space-y-2.5">
             {profile.display_name && (
               <div className="flex justify-between items-center">
-                <span className="text-[11px] text-muted-foreground">Name</span>
+                <span className="text-[11px] text-muted-foreground font-medium">Name</span>
                 <span className="text-xs text-foreground font-semibold">{profile.display_name}</span>
               </div>
             )}
             {profile.wallet_address && (
               <div className="flex justify-between items-center">
-                <span className="text-[11px] text-muted-foreground">Wallet</span>
-                <span className="text-xs text-foreground font-mono">{profile.wallet_address.slice(0, 6)}…{profile.wallet_address.slice(-4)}</span>
+                <span className="text-[11px] text-muted-foreground font-medium">Wallet</span>
+                <span className="text-xs text-foreground font-mono tabular-nums">{profile.wallet_address.slice(0, 6)}…{profile.wallet_address.slice(-4)}</span>
               </div>
             )}
             {profile.referral_code && (
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] text-muted-foreground">Referral Code</span>
-                <span className="text-xs text-primary font-mono font-bold">{profile.referral_code}</span>
+              <div className="flex justify-between items-center pt-1 border-t border-border/30">
+                <span className="text-[11px] text-muted-foreground font-medium">Referral Code</span>
+                <span className="text-xs text-primary font-mono font-bold tracking-wider">{profile.referral_code}</span>
               </div>
             )}
           </div>
