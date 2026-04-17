@@ -243,19 +243,29 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
         <div className="relative">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1 h-1 rounded-full bg-muted-foreground/60" />
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Portfolio Value</p>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur",
+                tradingStatus?.trading_active
+                  ? "bg-success/10 text-success border border-success/20"
+                  : "bg-muted/10 text-muted-foreground border border-border/40"
+              )}>
+                <div className={cn("w-1.5 h-1.5 rounded-full", tradingStatus?.trading_active ? "bg-success animate-pulse" : "bg-muted-foreground/60")} />
+                {tradingStatus?.trading_active ? "Active" : "Paused"}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Portfolio</p>
             </div>
-            <div className={cn(
-              "px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur",
-              tradingStatus?.trading_active
-                ? "bg-success/10 text-success border border-success/20"
-                : "bg-muted/10 text-muted-foreground border border-border/40"
-            )}>
-              <div className={cn("w-1.5 h-1.5 rounded-full", tradingStatus?.trading_active ? "bg-success animate-pulse" : "bg-muted-foreground/60")} />
-              {tradingStatus?.trading_active ? "Active" : "Paused"}
-            </div>
+            <button
+              onClick={() => navigate("/live-trades")}
+              className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/60 border border-border/50 hover:border-primary/40 hover:bg-background active:scale-95 transition-all backdrop-blur"
+            >
+              <div className="relative flex items-center justify-center">
+                <Activity className="w-3 h-3 text-primary" />
+                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              </div>
+              <span className="text-[10px] font-bold text-foreground tracking-wide">Live</span>
+              <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+            </button>
           </div>
 
           <div className="flex items-baseline gap-2 mb-4">
@@ -313,19 +323,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           <><Zap className="w-4 h-4 mr-2" />Start Trading</>
         )}
       </Button>
-
-      {/* Live Trades — full width, secondary */}
-      <button
-        onClick={() => navigate("/live-trades")}
-        className="w-full h-[48px] rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
-      >
-        <div className="relative">
-          <Activity className="w-4 h-4 text-primary" />
-          <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-        </div>
-        <span className="text-sm font-bold text-foreground">Live Trades</span>
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-0.5" />
-      </button>
 
       {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
