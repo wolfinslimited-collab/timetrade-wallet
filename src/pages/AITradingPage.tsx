@@ -1,44 +1,45 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
+import {
+  Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot,
+  LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Activity, Sparkles,
+  ChevronRight, Shield, Zap, BarChart3,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 /* ── Shared Cards ── */
 
-const BalanceCard = ({ label, value, icon, iconBg, showSign }: {
-  label: string; value: number; icon: React.ReactNode; iconBg: string; showSign?: boolean;
-}) => (
-  <Card className="bg-card border-border/40">
-    <CardContent className="p-4">
-      <div className="flex items-center gap-2 mb-2.5">
-        <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", iconBg)}>{icon}</div>
-        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{label}</p>
-      </div>
-      <p className={cn("text-lg font-bold font-mono", showSign && value !== 0 ? (value > 0 ? "text-success" : "text-destructive") : "text-foreground")}>
-        {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </p>
-    </CardContent>
-  </Card>
-);
-
-const PnLCard = ({ label, value }: { label: string; value: number }) => {
+const StatCard = ({ label, value, icon, accent, showSign }: {
+  label: string; value: number; icon: React.ReactNode; accent: string; showSign?: boolean;
+}) => {
   const isProfit = value >= 0;
+  const valueColor = showSign && value !== 0
+    ? (isProfit ? "text-success" : "text-destructive")
+    : "text-foreground";
   return (
-    <Card className="bg-card border-border/40">
-      <CardContent className="p-4">
-        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">{label}</p>
-        <div className="flex items-center gap-1.5">
-          {value !== 0 && (isProfit ? <TrendingUp className="w-3.5 h-3.5 text-success" /> : <TrendingDown className="w-3.5 h-3.5 text-destructive" />)}
-          <span className={cn("text-lg font-bold font-mono", value === 0 ? "text-muted-foreground" : isProfit ? "text-success" : "text-destructive")}>
-            {isProfit && value > 0 ? "+" : ""}${value.toFixed(2)}
-          </span>
+    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-card/60 p-3.5">
+      <div className={cn("absolute -top-6 -right-6 w-20 h-20 rounded-full opacity-20 blur-2xl", accent)} />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", accent.replace("bg-", "bg-").replace("/40", "/15"))}>
+            {icon}
+          </div>
+          {showSign && value !== 0 && (
+            isProfit
+              ? <TrendingUp className="w-3 h-3 text-success" />
+              : <TrendingDown className="w-3 h-3 text-destructive" />
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest mb-1">{label}</p>
+        <p className={cn("text-base font-bold font-mono tracking-tight", valueColor)}>
+          {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </p>
+      </div>
+    </div>
   );
 };
 
