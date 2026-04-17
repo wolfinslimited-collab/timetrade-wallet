@@ -242,7 +242,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-violet-500/10 blur-3xl translate-y-1/2 -translate-x-1/4" />
 
         <div className="relative">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <div className="flex items-center gap-2">
               <div className={cn(
                 "px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur",
@@ -255,17 +255,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               </div>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Portfolio</p>
             </div>
-            <button
-              onClick={() => navigate("/live-trades")}
-              className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/60 border border-border/50 hover:border-primary/40 hover:bg-background active:scale-95 transition-all backdrop-blur"
-            >
-              <div className="relative flex items-center justify-center">
-                <Activity className="w-3 h-3 text-primary" />
-                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              </div>
-              <span className="text-[10px] font-bold text-foreground tracking-wide">Live</span>
-              <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-            </button>
           </div>
 
           <div className="flex items-baseline gap-2 mb-4">
@@ -300,29 +289,29 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               <span className="text-[9px] text-muted-foreground font-medium">7d</span>
             </div>
           </div>
+
+          <div className="mt-5 border-t border-border/30 pt-4">
+            <Button
+              onClick={handleToggle}
+              disabled={toggling}
+              className={cn(
+                "w-full h-14 rounded-2xl text-sm font-bold shadow-lg",
+                tradingStatus?.trading_active
+                  ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
+                  : "bg-gradient-to-br from-primary via-primary to-primary/80 hover:opacity-95 text-primary-foreground shadow-primary/30"
+              )}
+            >
+              {toggling ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : tradingStatus?.trading_active ? (
+                <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
+              ) : (
+                <><Zap className="w-4 h-4 mr-2" />Start Trading</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Primary CTA — full width */}
-      <Button
-        onClick={handleToggle}
-        disabled={toggling}
-        className={cn(
-          "w-full rounded-2xl text-sm font-bold shadow-lg transition-all",
-          tradingStatus?.trading_active
-            ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
-            : "bg-gradient-to-br from-primary via-primary to-primary/80 hover:opacity-95 text-primary-foreground shadow-primary/30"
-        )}
-        style={{ height: "54px" }}
-      >
-        {toggling ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : tradingStatus?.trading_active ? (
-          <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
-        ) : (
-          <><Zap className="w-4 h-4 mr-2" />Start Trading</>
-        )}
-      </Button>
 
       {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
@@ -373,11 +362,17 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               </div>
             )}
           </div>
-          {tradeHistory.length > 0 && (
-            <button onClick={() => navigate("/live-trades")} className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70 hover:opacity-80">
-              View all <ChevronRight className="w-3 h-3" />
-            </button>
-          )}
+          <button
+            onClick={() => navigate("/live-trades")}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/40 bg-card/70 px-3 text-[11px] font-semibold text-foreground active:scale-95"
+          >
+            <span className="relative flex items-center justify-center">
+              <Activity className="w-3.5 h-3.5 text-primary" />
+              <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
+            Live Trades
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
         </div>
         <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
           {tradeHistory.length === 0 ? (
