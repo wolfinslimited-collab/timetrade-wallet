@@ -18,7 +18,7 @@ const LiveTradesPage = () => {
         </button>
         <h1 className="text-xl font-bold text-center">Live Trading</h1>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 pb-32">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
         <LiveTradingFeed />
       </div>
     </div>
