@@ -12,17 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Reference the same Timetrade Mobile API base used by useTradingApi
-const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
-const TIMETRADE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
-const API_BASE = `${TIMETRADE_SUPABASE_URL}/functions/v1/mobile-api`;
-
-// Public endpoints (no auth) — falls back to simulation if unavailable
-const LIVE_TRADES_ENDPOINT = `${API_BASE}/public/live-trades`;
-const POOL_STATS_ENDPOINT = `${API_BASE}/public/pool-stats`;
-
-const POOL_TOTAL_FALLBACK = 57_510_000;
+const POOL_TOTAL = 57_510_000;
 
 const SOLANA_TOKENS = [
   "BONK", "WIF", "JTO", "PYTH", "JUP", "TNSR", "RENDER", "HNT", "RAY", "ORCA", "MNDE", "DRIFT", "W", "KMNO",
@@ -84,53 +74,6 @@ function genTrade(): ClosedTrade {
     isNew: true,
     allocation: +allocation.toFixed(0),
   };
-}
-
-async function fetchLiveTrades(): Promise<ClosedTrade[] | null> {
-  try {
-    const res = await fetch(LIVE_TRADES_ENDPOINT, {
-      headers: {
-        Authorization: `Bearer ${TIMETRADE_ANON_KEY}`,
-        apikey: TIMETRADE_ANON_KEY,
-      },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data)) return null;
-    return data.map((t: any) => ({
-      id: t.id || crypto.randomUUID(),
-      timestamp: t.timestamp ? new Date(t.timestamp) : new Date(),
-      source: t.source === "perp" ? "perp" : "sniper",
-      symbol: t.symbol || "—",
-      side: t.side || "BUY",
-      entryPrice: Number(t.entry_price) || 0,
-      exitPrice: Number(t.exit_price) || 0,
-      pnlPct: Number(t.pnl_pct) || 0,
-      pnlUsd: Number(t.pnl_usd) || 0,
-      holdingTime: t.holding_time || "—",
-      status: (Number(t.pnl_pct) || 0) >= 0 ? "win" : "loss",
-      isNew: false,
-      allocation: Number(t.allocation) || 0,
-    }));
-  } catch {
-    return null;
-  }
-}
-
-async function fetchPoolTotal(): Promise<number | null> {
-  try {
-    const res = await fetch(POOL_STATS_ENDPOINT, {
-      headers: {
-        Authorization: `Bearer ${TIMETRADE_ANON_KEY}`,
-        apikey: TIMETRADE_ANON_KEY,
-      },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return Number(data?.pool_total) || null;
-  } catch {
-    return null;
-  }
 }
 
 function FlowNode({ trade, index }: { trade: ClosedTrade; index: number }) {
@@ -209,10 +152,9 @@ function FlowNode({ trade, index }: { trade: ClosedTrade; index: number }) {
 
 export function LiveTradingFeed() {
   const [trades, setTrades] = useState<ClosedTrade[]>([]);
-  const [poolTotal, setPoolTotal] = useState<number>(POOL_TOTAL_FALLBACK);
+  const [poolTotal] = useState<number>(POOL_TOTAL);
   const [isLive, setIsLive] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const usingApiRef = useRef(false);
 
   const addTrade = useCallback(() => {
     const trade = genTrade();
@@ -222,30 +164,16 @@ export function LiveTradingFeed() {
     });
   }, []);
 
-  // Initial: try API, fallback to simulated seed
+  // Seed with simulated initial trades
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [apiTrades, apiPool] = await Promise.all([fetchLiveTrades(), fetchPoolTotal()]);
-      if (cancelled) return;
-      if (apiPool) setPoolTotal(apiPool);
-      if (apiTrades && apiTrades.length > 0) {
-        usingApiRef.current = true;
-        setTrades(apiTrades.slice(0, 20));
-      } else {
-        const seed: ClosedTrade[] = [];
-        for (let i = 0; i < 5; i++) {
-          const t = genTrade();
-          t.isNew = false;
-          t.timestamp = new Date(Date.now() - (5 - i) * 45000);
-          seed.push(t);
-        }
-        setTrades(seed);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const seed: ClosedTrade[] = [];
+    for (let i = 0; i < 5; i++) {
+      const t = genTrade();
+      t.isNew = false;
+      t.timestamp = new Date(Date.now() - (5 - i) * 45000);
+      seed.push(t);
+    }
+    setTrades(seed);
   }, []);
 
   useEffect(() => {
@@ -253,20 +181,7 @@ export function LiveTradingFeed() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-    const tick = async () => {
-      if (usingApiRef.current) {
-        const apiTrades = await fetchLiveTrades();
-        if (apiTrades && apiTrades.length > 0) {
-          setTrades((prev) => {
-            const prevIds = new Set(prev.map((t) => t.id));
-            return apiTrades.slice(0, 20).map((t) => ({ ...t, isNew: !prevIds.has(t.id) }));
-          });
-          return;
-        }
-      }
-      addTrade();
-    };
-    intervalRef.current = setInterval(tick, 5000);
+    intervalRef.current = setInterval(addTrade, 5000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
