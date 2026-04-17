@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { LiveTradingFeed } from "@/components/trading/LiveTradingFeed";
 
 /* ── Shared Cards ── */
 
@@ -206,6 +207,9 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
   return (
     <div className="px-4 py-6 space-y-6 pb-32">
+      {/* Live Trading Feed */}
+      <LiveTradingFeed />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
