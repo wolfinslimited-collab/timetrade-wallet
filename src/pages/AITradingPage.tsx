@@ -293,13 +293,23 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      {/* Primary CTA + Live Trades */}
-      <div className="grid grid-cols-[1fr_auto] gap-2.5">
+      {/* Live Trades + Primary CTA — equal row */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <button
+          onClick={() => navigate("/live-trades")}
+          className="h-[52px] rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
+        >
+          <div className="relative">
+            <Activity className="w-4 h-4 text-primary" />
+            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+          </div>
+          <span className="text-sm font-bold text-foreground">Live Trades</span>
+        </button>
         <Button
           onClick={handleToggle}
           disabled={toggling}
           className={cn(
-            "h-13 rounded-2xl text-sm font-bold shadow-lg transition-all",
+            "rounded-2xl text-sm font-bold shadow-lg transition-all",
             tradingStatus?.trading_active
               ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
               : "bg-gradient-to-br from-primary via-primary to-primary/80 hover:opacity-95 text-primary-foreground shadow-primary/30"
@@ -314,16 +324,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             <><Zap className="w-4 h-4 mr-2" />Start Trading</>
           )}
         </Button>
-        <button
-          onClick={() => navigate("/live-trades")}
-          className="h-[52px] px-4 rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
-        >
-          <div className="relative">
-            <Activity className="w-4 h-4 text-primary" />
-            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-          </div>
-          <span className="text-xs font-bold text-foreground">Live</span>
-        </button>
+      </div>
       </div>
 
       {/* Metrics Grid — 2x2 polished */}
