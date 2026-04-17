@@ -324,19 +324,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         )}
       </Button>
 
-      {/* Live Trades — full width, secondary */}
-      <button
-        onClick={() => navigate("/live-trades")}
-        className="w-full h-[48px] rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
-      >
-        <div className="relative">
-          <Activity className="w-4 h-4 text-primary" />
-          <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-        </div>
-        <span className="text-sm font-bold text-foreground">Live Trades</span>
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-0.5" />
-      </button>
-
       {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
         <MetricTile label="Available" value={balance?.usd_balance || 0} icon={<Wallet className="w-4 h-4 text-primary" />} tint="bg-primary/10" />
