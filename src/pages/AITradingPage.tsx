@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot, LogOut, RefreshCw, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { LiveTradesFeed } from "@/components/trading/LiveTradesFeed";
 
 /* ── Shared Cards ── */
 
@@ -344,7 +343,6 @@ interface AITradingPageProps {
 
 export const AITradingPage = ({ onBack }: AITradingPageProps) => {
   const api = useTradingApi();
-  const [tab, setTab] = useState<"dashboard" | "live">("dashboard");
 
   if (api.isCheckingSession) {
     return (
@@ -354,43 +352,9 @@ export const AITradingPage = ({ onBack }: AITradingPageProps) => {
     );
   }
 
-  if (!api.isAuthenticated) {
-    return (
-      <div className="min-h-full bg-background">
-        <TradingConnect api={api} />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-full bg-background">
-      <div className="px-4 pt-4">
-        <div className="grid grid-cols-2 gap-1 p-1 bg-secondary/50 rounded-xl">
-          <button
-            onClick={() => setTab("dashboard")}
-            className={cn(
-              "h-9 rounded-lg text-xs font-semibold transition-colors",
-              tab === "dashboard" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            )}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => setTab("live")}
-            className={cn(
-              "h-9 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
-              tab === "live" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            )}
-          >
-            Live
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
-            </span>
-          </button>
-        </div>
-      </div>
-      {tab === "dashboard" ? <TradingDashboard api={api} /> : <LiveTradesFeed />}
+      {api.isAuthenticated ? <TradingDashboard api={api} /> : <TradingConnect api={api} />}
     </div>
   );
 };
