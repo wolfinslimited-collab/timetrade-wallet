@@ -152,10 +152,9 @@ function FlowNode({ trade, index }: { trade: ClosedTrade; index: number }) {
 
 export function LiveTradingFeed() {
   const [trades, setTrades] = useState<ClosedTrade[]>([]);
-  const [poolTotal, setPoolTotal] = useState<number>(POOL_TOTAL_FALLBACK);
+  const [poolTotal] = useState<number>(POOL_TOTAL);
   const [isLive, setIsLive] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const usingApiRef = useRef(false);
 
   const addTrade = useCallback(() => {
     const trade = genTrade();
@@ -165,30 +164,16 @@ export function LiveTradingFeed() {
     });
   }, []);
 
-  // Initial: try API, fallback to simulated seed
+  // Seed with simulated initial trades
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [apiTrades, apiPool] = await Promise.all([fetchLiveTrades(), fetchPoolTotal()]);
-      if (cancelled) return;
-      if (apiPool) setPoolTotal(apiPool);
-      if (apiTrades && apiTrades.length > 0) {
-        usingApiRef.current = true;
-        setTrades(apiTrades.slice(0, 20));
-      } else {
-        const seed: ClosedTrade[] = [];
-        for (let i = 0; i < 5; i++) {
-          const t = genTrade();
-          t.isNew = false;
-          t.timestamp = new Date(Date.now() - (5 - i) * 45000);
-          seed.push(t);
-        }
-        setTrades(seed);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const seed: ClosedTrade[] = [];
+    for (let i = 0; i < 5; i++) {
+      const t = genTrade();
+      t.isNew = false;
+      t.timestamp = new Date(Date.now() - (5 - i) * 45000);
+      seed.push(t);
+    }
+    setTrades(seed);
   }, []);
 
   useEffect(() => {
@@ -196,20 +181,7 @@ export function LiveTradingFeed() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-    const tick = async () => {
-      if (usingApiRef.current) {
-        const apiTrades = await fetchLiveTrades();
-        if (apiTrades && apiTrades.length > 0) {
-          setTrades((prev) => {
-            const prevIds = new Set(prev.map((t) => t.id));
-            return apiTrades.slice(0, 20).map((t) => ({ ...t, isNew: !prevIds.has(t.id) }));
-          });
-          return;
-        }
-      }
-      addTrade();
-    };
-    intervalRef.current = setInterval(tick, 5000);
+    intervalRef.current = setInterval(addTrade, 5000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
