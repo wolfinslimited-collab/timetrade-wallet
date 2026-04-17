@@ -180,6 +180,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
 function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
   const totalProfit = balance?.released_profit || 0;
@@ -208,9 +209,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
   return (
     <div className="px-4 py-6 space-y-6 pb-32">
-      {/* Live Trading Feed */}
-      <LiveTradingFeed />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -218,6 +216,14 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(), "EEEE, MMMM d")}</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setLiveOpen(true)}
+            className="h-8 px-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center gap-1.5 active:scale-95"
+          >
+            <Activity className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] font-semibold text-primary">Live Trades</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+          </button>
           <button onClick={fetchDashboardData} className="w-8 h-8 rounded-xl bg-card border border-border/40 flex items-center justify-center active:scale-95">
             <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", isLoading && "animate-spin")} />
           </button>
@@ -226,6 +232,15 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           </button>
         </div>
       </div>
+
+      <Dialog open={liveOpen} onOpenChange={setLiveOpen}>
+        <DialogContent className="max-w-lg w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto p-4">
+          <DialogHeader>
+            <DialogTitle className="text-base">Live Trading</DialogTitle>
+          </DialogHeader>
+          <LiveTradingFeed />
+        </DialogContent>
+      </Dialog>
 
       {/* Balance Cards */}
       <div className="grid grid-cols-2 gap-3">
