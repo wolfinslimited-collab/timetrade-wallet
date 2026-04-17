@@ -293,38 +293,39 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      {/* Live Trades + Primary CTA — equal row */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <button
-          onClick={() => navigate("/live-trades")}
-          className="h-[52px] rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
-        >
-          <div className="relative">
-            <Activity className="w-4 h-4 text-primary" />
-            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-          </div>
-          <span className="text-sm font-bold text-foreground">Live Trades</span>
-        </button>
-        <Button
-          onClick={handleToggle}
-          disabled={toggling}
-          className={cn(
-            "rounded-2xl text-sm font-bold shadow-lg transition-all",
-            tradingStatus?.trading_active
-              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
-              : "bg-gradient-to-br from-primary via-primary to-primary/80 hover:opacity-95 text-primary-foreground shadow-primary/30"
-          )}
-          style={{ height: "52px" }}
-        >
-          {toggling ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : tradingStatus?.trading_active ? (
-            <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
-          ) : (
-            <><Zap className="w-4 h-4 mr-2" />Start Trading</>
-          )}
-        </Button>
-      </div>
+      {/* Primary CTA — full width */}
+      <Button
+        onClick={handleToggle}
+        disabled={toggling}
+        className={cn(
+          "w-full rounded-2xl text-sm font-bold shadow-lg transition-all",
+          tradingStatus?.trading_active
+            ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
+            : "bg-gradient-to-br from-primary via-primary to-primary/80 hover:opacity-95 text-primary-foreground shadow-primary/30"
+        )}
+        style={{ height: "54px" }}
+      >
+        {toggling ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : tradingStatus?.trading_active ? (
+          <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
+        ) : (
+          <><Zap className="w-4 h-4 mr-2" />Start Trading</>
+        )}
+      </Button>
+
+      {/* Live Trades — full width, secondary */}
+      <button
+        onClick={() => navigate("/live-trades")}
+        className="w-full h-[48px] rounded-2xl bg-card border border-border/50 flex items-center justify-center gap-2 active:scale-95 hover:bg-card/80 hover:border-primary/30 transition-all"
+      >
+        <div className="relative">
+          <Activity className="w-4 h-4 text-primary" />
+          <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+        </div>
+        <span className="text-sm font-bold text-foreground">Live Trades</span>
+        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-0.5" />
+      </button>
 
       {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
