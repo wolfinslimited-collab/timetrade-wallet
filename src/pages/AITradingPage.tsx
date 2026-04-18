@@ -348,62 +348,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[28px] border border-border/40 bg-card/75 p-4 shadow-xl shadow-black/5 backdrop-blur-sm">
-        <div className="absolute inset-y-0 right-0 w-32 bg-primary/10 blur-3xl" />
-        <div className="relative flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-background/70 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-              <Sparkles className="w-3 h-3 text-primary" />
-              Trading Control
-            </div>
-            <h2 className="mt-3 text-[15px] font-bold tracking-tight text-foreground">
-              {tradingStatus?.trading_active ? "Manage your live trading session" : "Launch your AI trading session"}
-            </h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              {tradingStatus?.trading_active
-                ? "The main action lives here now, separate from your balance card for a cleaner dashboard flow."
-                : "A dedicated control area gives Start Trading its own clear, premium position."}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
-              tradingStatus?.trading_active
-                ? "border-destructive/20 bg-destructive/10"
-                : "border-primary/20 bg-primary/10"
-            )}
-          >
-            {tradingStatus?.trading_active ? (
-              <Lock className="w-4 h-4 text-destructive" />
-            ) : (
-              <Zap className="w-4 h-4 text-primary" />
-            )}
-          </div>
-        </div>
-
-        <div className="relative mt-4">
-          <Button
-            onClick={handleToggle}
-            disabled={toggling}
-            className={cn(
-              "w-full h-14 rounded-2xl text-sm font-bold shadow-lg",
-              tradingStatus?.trading_active
-                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
-                : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/30"
-            )}
-          >
-            {toggling ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : tradingStatus?.trading_active ? (
-              <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
-            ) : (
-              <><Zap className="w-4 h-4 mr-2" />Start Trading</>
-            )}
-          </Button>
-        </div>
-      </div>
-
       {/* Metrics Grid — 2x2 polished */}
       <div className="grid grid-cols-2 gap-2.5">
         <MetricTile label="Available" value={balance?.usd_balance || 0} icon={<Wallet className="w-4 h-4 text-primary" />} tint="bg-primary/10" />
