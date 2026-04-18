@@ -36,6 +36,63 @@ const CHAIN_META: Record<string, { name: string; color: string }> = {
   tron: { name: "Tron", color: "from-red-500/20 to-rose-500/10" },
 };
 
+/** Coin logo from the project-wide elbstream API */
+const coinLogo = (symbol: string) =>
+  `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
+
+interface CoinSpec {
+  key: string;            // unique id (matches deposit address chain key when possible)
+  symbol: string;         // e.g. ETH
+  chainLabel: string;     // e.g. Ethereum, TRC-20 (Tron)
+  minDeposit?: string;    // display only
+  addressChain: string;   // chain key in api.depositAddresses
+}
+
+/** Deposit coins (6) — order matches spec */
+const DEPOSIT_COINS: CoinSpec[] = [
+  { key: "eth",          symbol: "ETH",  chainLabel: "Ethereum",      minDeposit: "0.004 ETH", addressChain: "ethereum" },
+  { key: "btc",          symbol: "BTC",  chainLabel: "Bitcoin",       minDeposit: "0.0005 BTC", addressChain: "bitcoin" },
+  { key: "bnb",          symbol: "BNB",  chainLabel: "BSC",           minDeposit: "0.02 BNB",  addressChain: "bsc" },
+  { key: "sol",          symbol: "SOL",  chainLabel: "Solana",        minDeposit: "0.02 SOL",  addressChain: "solana" },
+  { key: "usdc-sol",     symbol: "USDC", chainLabel: "Solana SPL",    minDeposit: "5 USDC",    addressChain: "solana" },
+  { key: "usdt-tron",    symbol: "USDT", chainLabel: "TRC-20 (Tron)", minDeposit: "10 USDT",   addressChain: "tron" },
+];
+
+/** Withdraw coins (5) — USDC Solana temporarily disabled */
+const WITHDRAW_COINS: CoinSpec[] = [
+  { key: "eth",       symbol: "ETH",  chainLabel: "Ethereum",      addressChain: "ethereum" },
+  { key: "btc",       symbol: "BTC",  chainLabel: "Bitcoin",       addressChain: "bitcoin" },
+  { key: "bnb",       symbol: "BNB",  chainLabel: "BSC",           addressChain: "bsc" },
+  { key: "sol",       symbol: "SOL",  chainLabel: "Solana",        addressChain: "solana" },
+  { key: "usdt-tron", symbol: "USDT", chainLabel: "TRC-20 (Tron)", addressChain: "tron" },
+];
+
+/** Coin logo tile with graceful fallback */
+function CoinLogo({ symbol, size = 40 }: { symbol: string; size?: number }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-border/40 flex items-center justify-center"
+      >
+        <span className="text-[10px] font-bold text-foreground">{symbol.slice(0, 3)}</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={coinLogo(symbol)}
+      alt={symbol}
+      width={size}
+      height={size}
+      onError={() => setErrored(true)}
+      className="rounded-full object-cover"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
 const AITradingWalletPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -194,42 +251,28 @@ function BalanceCard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 /* ── Deposit ── */
 
 function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; loading: boolean }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const active = useMemo(() => addresses.find((a) => a.chain === selected) || addresses[0], [addresses, selected]);
-
-  if (loading && addresses.length === 0) {
-    return (
-      <div className="rounded-3xl border border-border/40 bg-card/60 p-12 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (addresses.length === 0) {
-    return (
-      <div className="rounded-3xl border border-border/60 bg-card/95 p-6 text-center space-y-2">
-        <p className="text-sm font-semibold text-foreground">No deposit addresses</p>
-        <p className="text-xs text-muted-foreground">Contact support to generate your deposit wallets.</p>
-      </div>
-    );
-  }
+  const [selectedKey, setSelectedKey] = useState<string>(DEPOSIT_COINS[0].key);
+  const selectedCoin = DEPOSIT_COINS.find((c) => c.key === selectedKey) || DEPOSIT_COINS[0];
+  const active = useMemo(
+    () => addresses.find((a) => a.chain === selectedCoin.addressChain),
+    [addresses, selectedCoin]
+  );
 
   return (
     <div className="rounded-3xl border border-border/40 bg-card/60 p-5 space-y-5">
       <div>
         <h3 className="text-xl font-bold text-foreground">Deposit</h3>
-        <p className="text-sm text-muted-foreground mt-1">Select a currency and send to your deposit address</p>
+        <p className="text-sm text-muted-foreground mt-1">Select a coin and send to your deposit address</p>
       </div>
 
-      {/* Currency grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {addresses.map((addr) => {
-          const meta = CHAIN_META[addr.chain] || { name: addr.chain, color: "from-muted/20 to-muted/10" };
-          const isActive = (active?.chain || addresses[0]?.chain) === addr.chain;
+      {/* Coin grid — 6 coins */}
+      <div className="grid grid-cols-3 gap-2">
+        {DEPOSIT_COINS.map((coin) => {
+          const isActive = coin.key === selectedKey;
           return (
             <button
-              key={addr.chain}
-              onClick={() => setSelected(addr.chain)}
+              key={coin.key}
+              onClick={() => setSelectedKey(coin.key)}
               className={cn(
                 "rounded-2xl border p-3 flex flex-col items-center gap-2 transition-all",
                 isActive
@@ -237,14 +280,29 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
                   : "border-border/40 bg-background/40 hover:border-border"
               )}
             >
-              <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br", meta.color)} />
-              <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">{addr.currency}</p>
+              <CoinLogo symbol={coin.symbol} size={36} />
+              <div className="text-center">
+                <p className="text-[12px] font-bold text-foreground leading-tight">{coin.symbol}</p>
+                <p className="text-[9px] text-muted-foreground font-medium leading-tight mt-0.5">
+                  {coin.chainLabel}
+                </p>
+              </div>
+              {coin.minDeposit && (
+                <p className="text-[8px] text-muted-foreground/80 font-mono leading-tight">
+                  Min {coin.minDeposit}
+                </p>
+              )}
             </button>
           );
         })}
       </div>
 
-      {active && (
+      {/* Address area */}
+      {loading && !active ? (
+        <div className="py-10 flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : active ? (
         <div className="space-y-4">
           <div className="flex flex-col items-center">
             <div className="p-3 rounded-2xl bg-white">
@@ -254,7 +312,8 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
 
           <div className="rounded-xl border border-border/40 bg-background/60 p-3">
             <p className="text-[11px] text-muted-foreground mb-1.5">
-              Send {active.currency} ({CHAIN_META[active.chain]?.name || active.chain}) to:
+              Send <span className="text-foreground font-bold">{selectedCoin.symbol}</span> on{" "}
+              <span className="text-foreground font-bold">{selectedCoin.chainLabel}</span> to:
             </p>
             <div className="flex items-center justify-between gap-2">
               <p className="text-[12px] font-mono text-foreground break-all">{active.address}</p>
@@ -267,11 +326,21 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
             <div className="space-y-1">
               <p className="text-[12px] font-bold text-foreground">Important</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Only send <span className="text-foreground font-bold">{active.currency}</span> on the{" "}
-                <span className="text-foreground font-bold">{CHAIN_META[active.chain]?.name || active.chain}</span> network.
+                Only send <span className="text-foreground font-bold">{selectedCoin.symbol}</span> on the{" "}
+                <span className="text-foreground font-bold">{selectedCoin.chainLabel}</span> network.
+                {selectedCoin.minDeposit && (
+                  <> Minimum deposit: <span className="text-foreground font-bold">{selectedCoin.minDeposit}</span>.</>
+                )}
               </p>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border/60 bg-background/40 p-4 text-center space-y-1">
+          <p className="text-[12px] font-semibold text-foreground">Address not available</p>
+          <p className="text-[11px] text-muted-foreground">
+            A {selectedCoin.symbol} ({selectedCoin.chainLabel}) deposit address has not been generated for your account yet.
+          </p>
         </div>
       )}
     </div>
@@ -283,21 +352,33 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
 function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [amount, setAmount] = useState("");
   const [destination, setDestination] = useState("");
-  const [chain, setChain] = useState<string>("solana");
+  const [selectedKey, setSelectedKey] = useState<string>(WITHDRAW_COINS[0].key);
   const [submitting, setSubmitting] = useState(false);
+
+  const selectedCoin = WITHDRAW_COINS.find((c) => c.key === selectedKey) || WITHDRAW_COINS[0];
 
   const available = api.balance?.usd_balance || 0;
   const numAmount = parseFloat(amount) || 0;
-  const canSubmit = numAmount > 0 && numAmount <= available && destination.trim().length > 10 && !submitting;
 
-  const chains = api.depositAddresses.length > 0 ? api.depositAddresses.map((a) => a.chain) : ["solana"];
+  const MIN_USD = 10;
+  const MAX_USD = 10000;
+  const FEE_USD = 2;
+
+  const amountValid = numAmount >= MIN_USD && numAmount <= MAX_USD && numAmount <= available;
+  const canSubmit = amountValid && destination.trim().length > 10 && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await api.withdraw({ amount: numAmount, destination_wallet: destination.trim(), chain });
-      toast.success("Withdrawal submitted", { description: `$${numAmount.toFixed(2)} sent to ${destination.slice(0, 8)}…` });
+      await api.withdraw({
+        amount: numAmount,
+        destination_wallet: destination.trim(),
+        chain: selectedCoin.addressChain,
+      });
+      toast.success("Withdrawal submitted", {
+        description: `$${numAmount.toFixed(2)} ${selectedCoin.symbol} sent to ${destination.slice(0, 8)}…`,
+      });
       setAmount("");
       setDestination("");
     } catch (e: any) {
@@ -320,6 +401,39 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <span className="text-[13px] font-bold font-mono text-success tabular-nums">${available.toFixed(2)}</span>
       </div>
 
+      {/* Coin grid — 5 coins */}
+      <div className="space-y-2">
+        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Coin & Network</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {WITHDRAW_COINS.map((coin) => {
+            const isActive = coin.key === selectedKey;
+            return (
+              <button
+                key={coin.key}
+                onClick={() => setSelectedKey(coin.key)}
+                className={cn(
+                  "rounded-2xl border p-3 flex flex-col items-center gap-2 transition-all",
+                  isActive
+                    ? "border-primary/60 bg-primary/5 shadow-sm"
+                    : "border-border/40 bg-background/40 hover:border-border"
+                )}
+              >
+                <CoinLogo symbol={coin.symbol} size={32} />
+                <div className="text-center">
+                  <p className="text-[12px] font-bold text-foreground leading-tight">{coin.symbol}</p>
+                  <p className="text-[9px] text-muted-foreground font-medium leading-tight mt-0.5">
+                    {coin.chainLabel}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+          Note: USDC on Solana withdrawals are temporarily disabled.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="amount" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Amount (USD)</Label>
         <div className="relative">
@@ -332,45 +446,39 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="h-12 pl-7 pr-16 rounded-2xl text-base font-mono"
-            max={available}
-            min={0}
+            max={Math.min(available, MAX_USD)}
+            min={MIN_USD}
           />
           <button
             type="button"
-            onClick={() => setAmount(String(available))}
+            onClick={() => setAmount(String(Math.min(available, MAX_USD)))}
             className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15"
           >
             MAX
           </button>
         </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
+          <span>Min ${MIN_USD} • Max ${MAX_USD.toLocaleString()}</span>
+          <span>Fee ${FEE_USD.toFixed(2)}</span>
+        </div>
+        {numAmount > 0 && numAmount < MIN_USD && (
+          <p className="text-[10px] text-destructive font-medium">Minimum withdrawal is ${MIN_USD}.</p>
+        )}
+        {numAmount > MAX_USD && (
+          <p className="text-[10px] text-destructive font-medium">Maximum withdrawal is ${MAX_USD.toLocaleString()}.</p>
+        )}
         {numAmount > available && (
           <p className="text-[10px] text-destructive font-medium">Exceeds available balance.</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Network</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {chains.map((c) => (
-            <button
-              key={c}
-              onClick={() => setChain(c)}
-              className={cn(
-                "rounded-xl border py-2.5 text-[12px] font-bold transition-colors",
-                chain === c ? "border-primary/60 bg-primary/5 text-foreground" : "border-border/40 bg-background/40 text-muted-foreground"
-              )}
-            >
-              {CHAIN_META[c]?.name || c}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="dest" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Destination Address</Label>
+        <Label htmlFor="dest" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {selectedCoin.symbol} Destination Address ({selectedCoin.chainLabel})
+        </Label>
         <Input
           id="dest"
-          placeholder="Paste wallet address"
+          placeholder={`Paste your ${selectedCoin.symbol} wallet address`}
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
           className="h-12 rounded-2xl font-mono text-xs"
@@ -378,11 +486,11 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </div>
 
       <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full h-12 rounded-2xl">
-        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Withdraw"}
+        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Withdraw ${selectedCoin.symbol}`}
       </Button>
 
       <p className="text-[10px] text-muted-foreground text-center leading-relaxed px-2">
-        Withdrawals are processed automatically. Double-check the destination — transactions cannot be reversed.
+        OTP email verification required. Double-check the destination — transactions cannot be reversed.
       </p>
     </div>
   );
