@@ -346,6 +346,33 @@ function DepositSection({
             </div>
           </div>
 
+          {mainWalletAsset && (
+            <button
+              type="button"
+              onClick={() => onSendFromMain(active.address, selectedCoin.addressChain)}
+              className="w-full rounded-2xl border border-primary/40 bg-primary/10 hover:bg-primary/15 active:scale-[0.99] transition-all p-4 flex items-center justify-between text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                  <ArrowUpFromLine className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-foreground leading-tight">Send from Main Wallet</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
+                    Available:{" "}
+                    <span className="font-mono text-foreground font-semibold">
+                      {mainWalletAsset.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })} {mainWalletAsset.symbol}
+                    </span>
+                    {mainWalletAsset.valueUsd > 0 && (
+                      <> · ${mainWalletAsset.valueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <ChevronLeft className="w-4 h-4 text-primary rotate-180 shrink-0" />
+            </button>
+          )}
+
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <div className="space-y-1">
