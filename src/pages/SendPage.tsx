@@ -23,13 +23,15 @@ const SendPage = () => {
   const { addresses } = useWalletAddresses(true);
   const { refreshAll } = useBlockchainContext();
 
-  // Optional prefill from URL (e.g. /send?recipient=0x...&chain=ethereum)
+  // Optional prefill from URL (e.g. /send?recipient=0x...&chain=ethereum&symbol=SOL)
   const prefill = useMemo(() => {
     const r = (searchParams.get("recipient") || "").trim();
     const c = (searchParams.get("chain") || "").trim().toLowerCase() as Chain;
+    const s = (searchParams.get("symbol") || "").trim();
     return {
       recipient: r,
       chain: VALID_CHAINS.includes(c) ? c : null,
+      symbol: s || null,
     };
   }, [searchParams]);
 
