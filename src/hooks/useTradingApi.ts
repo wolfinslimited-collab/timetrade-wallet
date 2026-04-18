@@ -218,6 +218,8 @@ export function useTradingApi() {
     setEarnings(null);
     setTradeHistory([]);
     setProfile(null);
+    setDepositAddresses([]);
+    setWalletTransactions([]);
   }, []);
 
   const getToken = useCallback((): string | null => {
@@ -244,6 +246,30 @@ export function useTradingApi() {
     } catch { /* ignore */ }
     setIsLoading(false);
   }, [getToken]);
+
+  const fetchWalletData = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setIsLoadingWallet(true);
+    try {
+      const [bal, addrs, txs] = await Promise.all([
+        apiCall<WalletBalance>("/wallet/balance", { token }).catch(() => null),
+        apiCall<{ addresses: DepositAddress[] }>("/wallet/deposit-addresses", { token }).catch(() => ({ addresses: [] })),
+        apiCall<{ transactions: WalletTransaction[] }>("/transactions", { token }).catch(() => ({ transactions: [] })),
+      ]);
+      if (bal) setBalance(bal);
+      setDepositAddresses(Array.isArray(addrs?.addresses) ? addrs.addresses : []);
+      setWalletTransactions(Array.isArray(txs?.transactions) ? txs.transactions : []);
+    } catch { /* ignore */ }
+    setIsLoadingWallet(false);
+  }, [getToken]);
+
+  const withdraw = useCallback(async (params: { amount: number; destination_wallet: string; chain?: string }) => {
+    const token = getToken();
+    if (!token) throw new Error("Not authenticated");
+    await apiCall("/wallet/withdraw", { method: "POST", token, body: params });
+    await fetchWalletData();
+  }, [getToken, fetchWalletData]);
 
   const toggleTrading = useCallback(async (action: "start" | "stop", amount?: number) => {
     const token = getToken();
@@ -277,8 +303,13 @@ export function useTradingApi() {
     earnings,
     tradeHistory,
     profile,
+    depositAddresses,
+    walletTransactions,
     isLoading,
+    isLoadingWallet,
     fetchDashboardData,
+    fetchWalletData,
+    withdraw,
     toggleTrading,
   };
 }
