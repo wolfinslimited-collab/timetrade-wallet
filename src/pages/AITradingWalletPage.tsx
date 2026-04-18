@@ -352,21 +352,33 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
 function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [amount, setAmount] = useState("");
   const [destination, setDestination] = useState("");
-  const [chain, setChain] = useState<string>("solana");
+  const [selectedKey, setSelectedKey] = useState<string>(WITHDRAW_COINS[0].key);
   const [submitting, setSubmitting] = useState(false);
+
+  const selectedCoin = WITHDRAW_COINS.find((c) => c.key === selectedKey) || WITHDRAW_COINS[0];
 
   const available = api.balance?.usd_balance || 0;
   const numAmount = parseFloat(amount) || 0;
-  const canSubmit = numAmount > 0 && numAmount <= available && destination.trim().length > 10 && !submitting;
 
-  const chains = api.depositAddresses.length > 0 ? api.depositAddresses.map((a) => a.chain) : ["solana"];
+  const MIN_USD = 10;
+  const MAX_USD = 10000;
+  const FEE_USD = 2;
+
+  const amountValid = numAmount >= MIN_USD && numAmount <= MAX_USD && numAmount <= available;
+  const canSubmit = amountValid && destination.trim().length > 10 && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await api.withdraw({ amount: numAmount, destination_wallet: destination.trim(), chain });
-      toast.success("Withdrawal submitted", { description: `$${numAmount.toFixed(2)} sent to ${destination.slice(0, 8)}…` });
+      await api.withdraw({
+        amount: numAmount,
+        destination_wallet: destination.trim(),
+        chain: selectedCoin.addressChain,
+      });
+      toast.success("Withdrawal submitted", {
+        description: `$${numAmount.toFixed(2)} ${selectedCoin.symbol} sent to ${destination.slice(0, 8)}…`,
+      });
       setAmount("");
       setDestination("");
     } catch (e: any) {
@@ -389,6 +401,39 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <span className="text-[13px] font-bold font-mono text-success tabular-nums">${available.toFixed(2)}</span>
       </div>
 
+      {/* Coin grid — 5 coins */}
+      <div className="space-y-2">
+        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Coin & Network</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {WITHDRAW_COINS.map((coin) => {
+            const isActive = coin.key === selectedKey;
+            return (
+              <button
+                key={coin.key}
+                onClick={() => setSelectedKey(coin.key)}
+                className={cn(
+                  "rounded-2xl border p-3 flex flex-col items-center gap-2 transition-all",
+                  isActive
+                    ? "border-primary/60 bg-primary/5 shadow-sm"
+                    : "border-border/40 bg-background/40 hover:border-border"
+                )}
+              >
+                <CoinLogo symbol={coin.symbol} size={32} />
+                <div className="text-center">
+                  <p className="text-[12px] font-bold text-foreground leading-tight">{coin.symbol}</p>
+                  <p className="text-[9px] text-muted-foreground font-medium leading-tight mt-0.5">
+                    {coin.chainLabel}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+          Note: USDC on Solana withdrawals are temporarily disabled.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="amount" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Amount (USD)</Label>
         <div className="relative">
@@ -401,45 +446,39 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="h-12 pl-7 pr-16 rounded-2xl text-base font-mono"
-            max={available}
-            min={0}
+            max={Math.min(available, MAX_USD)}
+            min={MIN_USD}
           />
           <button
             type="button"
-            onClick={() => setAmount(String(available))}
+            onClick={() => setAmount(String(Math.min(available, MAX_USD)))}
             className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15"
           >
             MAX
           </button>
         </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
+          <span>Min ${MIN_USD} • Max ${MAX_USD.toLocaleString()}</span>
+          <span>Fee ${FEE_USD.toFixed(2)}</span>
+        </div>
+        {numAmount > 0 && numAmount < MIN_USD && (
+          <p className="text-[10px] text-destructive font-medium">Minimum withdrawal is ${MIN_USD}.</p>
+        )}
+        {numAmount > MAX_USD && (
+          <p className="text-[10px] text-destructive font-medium">Maximum withdrawal is ${MAX_USD.toLocaleString()}.</p>
+        )}
         {numAmount > available && (
           <p className="text-[10px] text-destructive font-medium">Exceeds available balance.</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Network</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {chains.map((c) => (
-            <button
-              key={c}
-              onClick={() => setChain(c)}
-              className={cn(
-                "rounded-xl border py-2.5 text-[12px] font-bold transition-colors",
-                chain === c ? "border-primary/60 bg-primary/5 text-foreground" : "border-border/40 bg-background/40 text-muted-foreground"
-              )}
-            >
-              {CHAIN_META[c]?.name || c}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="dest" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Destination Address</Label>
+        <Label htmlFor="dest" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {selectedCoin.symbol} Destination Address ({selectedCoin.chainLabel})
+        </Label>
         <Input
           id="dest"
-          placeholder="Paste wallet address"
+          placeholder={`Paste your ${selectedCoin.symbol} wallet address`}
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
           className="h-12 rounded-2xl font-mono text-xs"
@@ -447,11 +486,11 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </div>
 
       <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full h-12 rounded-2xl">
-        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Withdraw"}
+        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Withdraw ${selectedCoin.symbol}`}
       </Button>
 
       <p className="text-[10px] text-muted-foreground text-center leading-relaxed px-2">
-        Withdrawals are processed automatically. Double-check the destination — transactions cannot be reversed.
+        OTP email verification required. Double-check the destination — transactions cannot be reversed.
       </p>
     </div>
   );
