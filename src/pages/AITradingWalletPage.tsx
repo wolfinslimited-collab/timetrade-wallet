@@ -276,31 +276,41 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
       </div>
 
       {/* Coin grid — 6 coins */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2.5">
         {DEPOSIT_COINS.map((coin) => {
           const isActive = coin.key === selectedKey;
+          const grad = COIN_GRADIENTS[coin.symbol] || { glow: "from-primary/30 to-transparent", ring: "" };
           return (
             <button
               key={coin.key}
               onClick={() => setSelectedKey(coin.key)}
               className={cn(
-                "rounded-2xl border p-3 flex flex-col items-center gap-2 transition-all",
+                "group relative overflow-hidden rounded-2xl border p-3.5 flex flex-col items-center gap-2.5 transition-all active:scale-[0.97]",
                 isActive
-                  ? "border-primary/60 bg-primary/5 shadow-sm"
-                  : "border-border/40 bg-background/40 hover:border-border"
+                  ? cn("border-primary/70 bg-gradient-to-b from-primary/[0.08] to-card", grad.ring)
+                  : "border-border/40 bg-card/60 hover:border-border hover:bg-card/80"
               )}
             >
-              <CoinLogo symbol={coin.symbol} size={36} />
-              <div className="text-center">
-                <p className="text-[12px] font-bold text-foreground leading-tight">{coin.symbol}</p>
-                <p className="text-[9px] text-muted-foreground font-medium leading-tight mt-0.5">
+              <div
+                className={cn(
+                  "absolute inset-x-0 -top-8 h-20 bg-gradient-to-b blur-2xl pointer-events-none transition-opacity",
+                  grad.glow,
+                  isActive ? "opacity-100" : "opacity-40 group-hover:opacity-70"
+                )}
+              />
+              <div className="relative">
+                <CoinLogo symbol={coin.symbol} size={44} />
+              </div>
+              <div className="relative text-center">
+                <p className="text-[14px] font-bold text-foreground leading-tight tracking-tight">{coin.symbol}</p>
+                <p className="text-[10px] text-muted-foreground font-medium leading-tight mt-0.5">
                   {coin.chainLabel}
                 </p>
               </div>
               {coin.minDeposit && (
-                <p className="text-[8px] text-muted-foreground/80 font-mono leading-tight">
+                <span className="relative text-[9px] font-mono font-semibold text-muted-foreground/90 px-1.5 py-0.5 rounded-md bg-background/60 border border-border/40">
                   Min {coin.minDeposit}
-                </p>
+                </span>
               )}
             </button>
           );
