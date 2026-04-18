@@ -251,42 +251,28 @@ function BalanceCard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 /* ── Deposit ── */
 
 function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; loading: boolean }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const active = useMemo(() => addresses.find((a) => a.chain === selected) || addresses[0], [addresses, selected]);
-
-  if (loading && addresses.length === 0) {
-    return (
-      <div className="rounded-3xl border border-border/40 bg-card/60 p-12 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (addresses.length === 0) {
-    return (
-      <div className="rounded-3xl border border-border/60 bg-card/95 p-6 text-center space-y-2">
-        <p className="text-sm font-semibold text-foreground">No deposit addresses</p>
-        <p className="text-xs text-muted-foreground">Contact support to generate your deposit wallets.</p>
-      </div>
-    );
-  }
+  const [selectedKey, setSelectedKey] = useState<string>(DEPOSIT_COINS[0].key);
+  const selectedCoin = DEPOSIT_COINS.find((c) => c.key === selectedKey) || DEPOSIT_COINS[0];
+  const active = useMemo(
+    () => addresses.find((a) => a.chain === selectedCoin.addressChain),
+    [addresses, selectedCoin]
+  );
 
   return (
     <div className="rounded-3xl border border-border/40 bg-card/60 p-5 space-y-5">
       <div>
         <h3 className="text-xl font-bold text-foreground">Deposit</h3>
-        <p className="text-sm text-muted-foreground mt-1">Select a currency and send to your deposit address</p>
+        <p className="text-sm text-muted-foreground mt-1">Select a coin and send to your deposit address</p>
       </div>
 
-      {/* Currency grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {addresses.map((addr) => {
-          const meta = CHAIN_META[addr.chain] || { name: addr.chain, color: "from-muted/20 to-muted/10" };
-          const isActive = (active?.chain || addresses[0]?.chain) === addr.chain;
+      {/* Coin grid — 6 coins */}
+      <div className="grid grid-cols-3 gap-2">
+        {DEPOSIT_COINS.map((coin) => {
+          const isActive = coin.key === selectedKey;
           return (
             <button
-              key={addr.chain}
-              onClick={() => setSelected(addr.chain)}
+              key={coin.key}
+              onClick={() => setSelectedKey(coin.key)}
               className={cn(
                 "rounded-2xl border p-3 flex flex-col items-center gap-2 transition-all",
                 isActive
@@ -294,14 +280,29 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
                   : "border-border/40 bg-background/40 hover:border-border"
               )}
             >
-              <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br", meta.color)} />
-              <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">{addr.currency}</p>
+              <CoinLogo symbol={coin.symbol} size={36} />
+              <div className="text-center">
+                <p className="text-[12px] font-bold text-foreground leading-tight">{coin.symbol}</p>
+                <p className="text-[9px] text-muted-foreground font-medium leading-tight mt-0.5">
+                  {coin.chainLabel}
+                </p>
+              </div>
+              {coin.minDeposit && (
+                <p className="text-[8px] text-muted-foreground/80 font-mono leading-tight">
+                  Min {coin.minDeposit}
+                </p>
+              )}
             </button>
           );
         })}
       </div>
 
-      {active && (
+      {/* Address area */}
+      {loading && !active ? (
+        <div className="py-10 flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : active ? (
         <div className="space-y-4">
           <div className="flex flex-col items-center">
             <div className="p-3 rounded-2xl bg-white">
@@ -311,7 +312,8 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
 
           <div className="rounded-xl border border-border/40 bg-background/60 p-3">
             <p className="text-[11px] text-muted-foreground mb-1.5">
-              Send {active.currency} ({CHAIN_META[active.chain]?.name || active.chain}) to:
+              Send <span className="text-foreground font-bold">{selectedCoin.symbol}</span> on{" "}
+              <span className="text-foreground font-bold">{selectedCoin.chainLabel}</span> to:
             </p>
             <div className="flex items-center justify-between gap-2">
               <p className="text-[12px] font-mono text-foreground break-all">{active.address}</p>
@@ -324,11 +326,21 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
             <div className="space-y-1">
               <p className="text-[12px] font-bold text-foreground">Important</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Only send <span className="text-foreground font-bold">{active.currency}</span> on the{" "}
-                <span className="text-foreground font-bold">{CHAIN_META[active.chain]?.name || active.chain}</span> network.
+                Only send <span className="text-foreground font-bold">{selectedCoin.symbol}</span> on the{" "}
+                <span className="text-foreground font-bold">{selectedCoin.chainLabel}</span> network.
+                {selectedCoin.minDeposit && (
+                  <> Minimum deposit: <span className="text-foreground font-bold">{selectedCoin.minDeposit}</span>.</>
+                )}
               </p>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border/60 bg-background/40 p-4 text-center space-y-1">
+          <p className="text-[12px] font-semibold text-foreground">Address not available</p>
+          <p className="text-[11px] text-muted-foreground">
+            A {selectedCoin.symbol} ({selectedCoin.chainLabel}) deposit address has not been generated for your account yet.
+          </p>
         </div>
       )}
     </div>
