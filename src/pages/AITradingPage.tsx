@@ -423,17 +423,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               </div>
             )}
           </div>
-          <button
-            onClick={() => navigate("/live-trades")}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/40 bg-card/70 px-3 text-[11px] font-semibold text-foreground active:scale-95"
-          >
-            <span className="relative flex items-center justify-center">
-              <Activity className="w-3.5 h-3.5 text-primary" />
-              <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
-            </span>
-            Live Trades
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
         </div>
         <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
           {tradeHistory.length === 0 ? (
