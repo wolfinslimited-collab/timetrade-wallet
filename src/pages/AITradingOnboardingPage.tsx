@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { TradingOnboardingWizard, type TradingProfile } from "@/components/trading/TradingOnboardingWizard";
@@ -27,7 +27,6 @@ const AITradingOnboardingPage = () => {
   }, [api.isCheckingSession, api.isAuthenticated, api.tradingStatus?.trading_active, navigate]);
 
   const handleComplete = async (profile: TradingProfile) => {
-    setSubmitting(true);
     try {
       localStorage.setItem(TRADING_PROFILE_KEY, JSON.stringify(profile));
       await api.toggleTrading("start", profile.allocatedAmount);
@@ -37,8 +36,6 @@ const AITradingOnboardingPage = () => {
       navigate("/?tab=trading", { replace: true });
     } catch (e: any) {
       toast.error("Failed to start", { description: e?.message || "Please try again." });
-    } finally {
-      setSubmitting(false);
     }
   };
 
