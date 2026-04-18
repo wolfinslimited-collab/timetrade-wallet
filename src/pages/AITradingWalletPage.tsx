@@ -263,9 +263,9 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
             </div>
           </div>
 
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-            <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-relaxed">
-              ⚠ Sending any other asset or using a different network will result in loss of funds.
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-[10px] text-destructive leading-relaxed">
+              Sending any other asset or using a different network will result in loss of funds.
             </p>
           </div>
         </div>
