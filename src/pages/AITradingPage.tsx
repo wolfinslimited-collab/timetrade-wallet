@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { TradingOnboardingWizard, type TradingProfile } from "@/components/trading/TradingOnboardingWizard";
+import { TradeAccountWallet } from "@/components/trading/TradeAccountWallet";
 import { toast } from "sonner";
 
 const TRADING_PROFILE_KEY = "timetrade_trading_profile";
@@ -226,7 +227,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             )}
           </div>
           <div>
-            <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">AI Trading</h1>
+            <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">Trade Account</h1>
             <p className="text-[10px] text-muted-foreground font-medium">{format(new Date(), "EEE, MMM d • HH:mm")}</p>
           </div>
         </div>
@@ -264,6 +265,12 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           <ChevronRight className="w-4 h-4 text-muted-foreground group-active:translate-x-0.5 transition-transform" />
         </div>
       </button>
+
+      {/* Trade Account Wallet — deposit address + SOL balance */}
+      <TradeAccountWallet
+        solWallet={balance?.sol_wallet || null}
+        solBalance={balance?.sol_balance || 0}
+      />
 
       {/* Hero Portfolio — refined, premium */}
       <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card to-card/40 p-5 shadow-xl shadow-black/5">
