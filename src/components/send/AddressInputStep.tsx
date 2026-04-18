@@ -12,6 +12,7 @@ import { validateCryptoAddress } from "@nodehash/address-validator";
 interface AddressInputStepProps {
   selectedChain: Chain;
   onSubmit: (address: string) => void;
+  initialAddress?: string;
 }
 
 // Map our chain names to @nodehash/address-validator chain names
