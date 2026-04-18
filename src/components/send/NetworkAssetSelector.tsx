@@ -29,15 +29,18 @@ interface NetworkAssetSelectorProps {
   onClose: () => void;
   /** Optional: pre-select a network on mount (from URL param). */
   prefillChain?: Chain | null;
+  /** Optional: when set, auto-pick the matching asset on this chain and submit. */
+  prefillSymbol?: string | null;
 }
 
-export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, NetworkAssetSelectorProps>(({ onSubmit, onClose, prefillChain }, ref) => {
+export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, NetworkAssetSelectorProps>(({ onSubmit, onClose, prefillChain, prefillSymbol }, ref) => {
   const { addresses } = useWalletAddresses(true);
   const { prices } = useBlockchainContext();
 
   const [selectedNetwork, setSelectedNetwork] = useState<Chain | null>(prefillChain ?? null);
   const [assets, setAssets] = useState<AvailableAsset[]>([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
 
   useImperativeHandle(ref, () => ({
     handleBack: () => {
