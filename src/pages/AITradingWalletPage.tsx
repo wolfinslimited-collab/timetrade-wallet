@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import {
@@ -12,6 +12,7 @@ import {
   Loader2,
   RefreshCw,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { useTradingApi, type DepositAddress, type WalletTransaction } from "@/hooks/useTradingApi";
 import { Button } from "@/components/ui/button";
@@ -20,13 +21,11 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-type TabId = "balance" | "deposit" | "withdraw" | "history";
+type TabId = "deposit" | "withdraw";
 
-const TABS: { id: TabId; label: string; icon: typeof Wallet }[] = [
-  { id: "balance", label: "Balance", icon: Wallet },
-  { id: "deposit", label: "Deposit", icon: ArrowDownToLine },
-  { id: "withdraw", label: "Withdraw", icon: ArrowUpFromLine },
-  { id: "history", label: "History", icon: Clock },
+const TABS: { id: TabId; label: string }[] = [
+  { id: "deposit", label: "Deposit" },
+  { id: "withdraw", label: "Withdraw" },
 ];
 
 const CHAIN_META: Record<string, { name: string; color: string }> = {
@@ -39,8 +38,21 @@ const CHAIN_META: Record<string, { name: string; color: string }> = {
 
 const AITradingWalletPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const api = useTradingApi();
-  const [tab, setTab] = useState<TabId>("balance");
+  const initialTab = (searchParams.get("tab") as TabId) === "withdraw" ? "withdraw" : "deposit";
+  const [tab, setTab] = useState<TabId>(initialTab);
+
+  // Sync URL with tab
+  useEffect(() => {
+    const current = searchParams.get("tab");
+    if (current !== tab) {
+      const next = new URLSearchParams(searchParams);
+      next.set("tab", tab);
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // Auth gate
   useEffect(() => {
@@ -81,115 +93,100 @@ const AITradingWalletPage = () => {
           <h1 className="text-[15px] font-bold text-foreground tracking-tight leading-tight">Trading Wallet</h1>
           <p className="text-[10px] text-muted-foreground font-medium">Manage funds for AI agents</p>
         </div>
-        <button
-          onClick={() => api.fetchWalletData()}
-          className="w-9 h-9 rounded-xl bg-card/80 border border-border/40 flex items-center justify-center active:scale-95 transition-transform"
-          aria-label="Refresh"
-        >
-          <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", api.isLoadingWallet && "animate-spin")} />
-        </button>
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 pt-3">
-        <div className="grid grid-cols-4 gap-1.5 p-1 rounded-2xl bg-card/60 border border-border/40">
-          {TABS.map(({ id, label, icon: Icon }) => (
+      <div className="px-4 py-4 pb-32 space-y-6">
+        {/* Persistent Balance card */}
+        <BalanceCard api={api} />
+
+        {/* Wallet section heading */}
+        <div>
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">Wallet</h2>
+          <p className="text-sm text-muted-foreground mt-1">Deposit and withdraw crypto across multiple networks</p>
+        </div>
+
+        {/* 2-tab switch */}
+        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-card/60 border border-border/40">
+          {TABS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-semibold transition-colors",
+                "flex items-center justify-center py-3 rounded-xl text-sm font-semibold transition-colors",
                 tab === id
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-background text-foreground shadow-sm border border-border/60"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="w-3.5 h-3.5" />
               {label}
             </button>
           ))}
         </div>
-      </div>
 
-      <div className="px-4 py-4 pb-32 space-y-4">
-        {tab === "balance" && <BalanceSection api={api} onDeposit={() => setTab("deposit")} onWithdraw={() => setTab("withdraw")} />}
+        {/* Tab content */}
         {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} />}
         {tab === "withdraw" && <WithdrawSection api={api} />}
-        {tab === "history" && <HistorySection transactions={api.walletTransactions} loading={api.isLoadingWallet} />}
+
+        {/* Persistent Transaction History */}
+        <div className="rounded-3xl border border-border/40 bg-card/60 p-5">
+          <h3 className="text-xl font-bold text-foreground mb-4">Transaction History</h3>
+          <HistorySection transactions={api.walletTransactions} loading={api.isLoadingWallet} />
+        </div>
       </div>
     </div>
   );
 };
 
-/* ── Balance ── */
+/* ── Balance Card ── */
 
-function BalanceSection({
-  api,
-  onDeposit,
-  onWithdraw,
-}: {
-  api: ReturnType<typeof useTradingApi>;
-  onDeposit: () => void;
-  onWithdraw: () => void;
-}) {
+function BalanceCard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const balance = api.balance;
   const usd = balance?.usd_balance || 0;
   const locked = balance?.locked_balance || 0;
-  const profit = balance?.released_profit || 0;
   const total = usd + locked;
 
   return (
-    <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card to-card/40 p-5 shadow-xl shadow-black/5">
-        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="relative">
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.18em] mb-2">Total Balance</p>
-          <div className="flex items-baseline gap-1.5 mb-4">
-            <span className="text-[20px] font-bold text-muted-foreground/80 font-mono">$</span>
-            <p className="text-[40px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
-              {total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+    <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card to-card/40 p-5 shadow-xl shadow-black/5">
+      <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-primary" />
+            </div>
+            <p className="text-[15px] font-bold text-foreground tracking-tight">Balance</p>
+          </div>
+          <button
+            onClick={() => api.fetchWalletData()}
+            className="w-9 h-9 rounded-xl bg-card/60 border border-border/40 flex items-center justify-center active:scale-95 hover:bg-card transition-colors"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", api.isLoadingWallet && "animate-spin")} />
+          </button>
+        </div>
+
+        <div className="text-center mb-5">
+          <p className="text-[36px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
+            ${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-[11px] text-muted-foreground font-medium mt-2">Total Balance</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/40">
+          <div className="text-center">
+            <p className="text-[20px] font-bold font-mono text-success tabular-nums leading-tight">
+              ${usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
+            <p className="text-[11px] text-muted-foreground font-medium mt-1">Available</p>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Stat label="Available" value={usd} accent="text-foreground" />
-            <Stat label="Locked" value={locked} accent="text-amber-500" />
-            <Stat label="Profit" value={profit} accent={profit >= 0 ? "text-success" : "text-destructive"} prefix={profit >= 0 ? "+" : ""} />
+          <div className="text-center">
+            <p className="text-[20px] font-bold font-mono text-muted-foreground tabular-nums leading-tight">
+              ${locked.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[11px] text-muted-foreground font-medium mt-1">In Trading</p>
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Button onClick={onDeposit} className="h-12 rounded-2xl">
-          <ArrowDownToLine className="w-4 h-4 mr-2" />
-          Deposit
-        </Button>
-        <Button onClick={onWithdraw} variant="secondary" className="h-12 rounded-2xl">
-          <ArrowUpFromLine className="w-4 h-4 mr-2" />
-          Withdraw
-        </Button>
-      </div>
-
-      {balance?.sol_wallet && (
-        <div className="rounded-2xl border border-border/40 bg-card/60 p-3">
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">Trading SOL Wallet</p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-mono text-foreground truncate">{balance.sol_wallet}</p>
-            <CopyButton text={balance.sol_wallet} />
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1.5 font-mono">Balance: {balance.sol_balance.toFixed(4)} SOL</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, value, accent, prefix = "" }: { label: string; value: number; accent: string; prefix?: string }) {
-  return (
-    <div className="rounded-xl border border-border/40 bg-background/40 px-3 py-2">
-      <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">{label}</p>
-      <p className={cn("text-[13px] font-bold font-mono tabular-nums mt-0.5", accent)}>
-        {prefix}${Math.abs(value).toFixed(2)}
-      </p>
     </div>
   );
 }
@@ -202,7 +199,7 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
 
   if (loading && addresses.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="rounded-3xl border border-border/40 bg-card/60 p-12 flex items-center justify-center">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
@@ -210,7 +207,7 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
 
   if (addresses.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/60 bg-card/95 p-6 text-center space-y-2">
+      <div className="rounded-3xl border border-border/60 bg-card/95 p-6 text-center space-y-2">
         <p className="text-sm font-semibold text-foreground">No deposit addresses</p>
         <p className="text-xs text-muted-foreground">Contact support to generate your deposit wallets.</p>
       </div>
@@ -218,9 +215,14 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
   }
 
   return (
-    <div className="space-y-4">
-      {/* Chain selector */}
-      <div className="grid grid-cols-2 gap-2">
+    <div className="rounded-3xl border border-border/40 bg-card/60 p-5 space-y-5">
+      <div>
+        <h3 className="text-xl font-bold text-foreground">Deposit</h3>
+        <p className="text-sm text-muted-foreground mt-1">Select a currency and send to your deposit address</p>
+      </div>
+
+      {/* Currency grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {addresses.map((addr) => {
           const meta = CHAIN_META[addr.chain] || { name: addr.chain, color: "from-muted/20 to-muted/10" };
           const isActive = (active?.chain || addresses[0]?.chain) === addr.chain;
@@ -229,44 +231,46 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
               key={addr.chain}
               onClick={() => setSelected(addr.chain)}
               className={cn(
-                "rounded-2xl border p-3 text-left transition-all",
+                "rounded-2xl border p-3 flex flex-col items-center gap-2 transition-all",
                 isActive
                   ? "border-primary/60 bg-primary/5 shadow-sm"
-                  : "border-border/40 bg-card/60 hover:border-border"
+                  : "border-border/40 bg-background/40 hover:border-border"
               )}
             >
-              <div className={cn("w-8 h-8 rounded-xl bg-gradient-to-br mb-2", meta.color)} />
-              <p className="text-[12px] font-bold text-foreground">{meta.name}</p>
-              <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{addr.currency}</p>
+              <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br", meta.color)} />
+              <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">{addr.currency}</p>
             </button>
           );
         })}
       </div>
 
       {active && (
-        <div className="rounded-3xl border border-border/40 bg-card/80 p-5 space-y-4">
-          <div className="flex flex-col items-center gap-3">
-            <div className="p-3 rounded-2xl bg-background border border-border/40">
-              <QRCodeSVG value={active.address} size={180} bgColor="transparent" fgColor="hsl(var(--foreground))" level="M" />
+        <div className="space-y-4">
+          <div className="flex flex-col items-center">
+            <div className="p-3 rounded-2xl bg-white">
+              <QRCodeSVG value={active.address} size={180} bgColor="#ffffff" fgColor="#000000" level="M" />
             </div>
-            <p className="text-[10px] text-muted-foreground text-center font-medium">
-              Send only <span className="text-foreground font-bold">{active.currency}</span> on the{" "}
-              <span className="text-foreground font-bold">{CHAIN_META[active.chain]?.name || active.chain}</span> network
-            </p>
           </div>
 
           <div className="rounded-xl border border-border/40 bg-background/60 p-3">
-            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">Address</p>
+            <p className="text-[11px] text-muted-foreground mb-1.5">
+              Send {active.currency} ({CHAIN_META[active.chain]?.name || active.chain}) to:
+            </p>
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-mono text-foreground break-all">{active.address}</p>
+              <p className="text-[12px] font-mono text-foreground break-all">{active.address}</p>
               <CopyButton text={active.address} />
             </div>
           </div>
 
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-            <p className="text-[10px] text-destructive leading-relaxed">
-              Sending any other asset or using a different network will result in loss of funds.
-            </p>
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-[12px] font-bold text-foreground">Important</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Only send <span className="text-foreground font-bold">{active.currency}</span> on the{" "}
+                <span className="text-foreground font-bold">{CHAIN_META[active.chain]?.name || active.chain}</span> network.
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -304,74 +308,78 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-border/40 bg-card/60 p-3 flex items-center justify-between">
-        <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Available</p>
-        <p className="text-[14px] font-bold font-mono text-foreground tabular-nums">${available.toFixed(2)}</p>
+    <div className="rounded-3xl border border-border/40 bg-card/60 p-5 space-y-5">
+      <div>
+        <h3 className="text-xl font-bold text-foreground">Withdraw</h3>
+        <p className="text-sm text-muted-foreground mt-1">Withdraw crypto to your wallet</p>
       </div>
 
-      <div className="rounded-3xl border border-border/40 bg-card/80 p-5 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="amount" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Amount (USD)</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">$</span>
-            <Input
-              id="amount"
-              type="number"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="h-12 pl-7 pr-16 rounded-2xl text-base font-mono"
-              max={available}
-              min={0}
-            />
-            <button
-              type="button"
-              onClick={() => setAmount(String(available))}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15"
-            >
-              MAX
-            </button>
-          </div>
-          {numAmount > available && (
-            <p className="text-[10px] text-destructive font-medium">Exceeds available balance.</p>
-          )}
-        </div>
+      <div className="rounded-xl border border-border/40 bg-background/40 px-3 py-2.5 flex items-center gap-2">
+        <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
+        <span className="text-[12px] text-muted-foreground">Available:</span>
+        <span className="text-[13px] font-bold font-mono text-success tabular-nums">${available.toFixed(2)}</span>
+      </div>
 
-        <div className="space-y-2">
-          <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Network</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {chains.map((c) => (
-              <button
-                key={c}
-                onClick={() => setChain(c)}
-                className={cn(
-                  "rounded-xl border py-2.5 text-[12px] font-bold transition-colors",
-                  chain === c ? "border-primary/60 bg-primary/5 text-foreground" : "border-border/40 bg-background/40 text-muted-foreground"
-                )}
-              >
-                {CHAIN_META[c]?.name || c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="dest" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Destination Address</Label>
+      <div className="space-y-2">
+        <Label htmlFor="amount" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Amount (USD)</Label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">$</span>
           <Input
-            id="dest"
-            placeholder="Paste wallet address"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            className="h-12 rounded-2xl font-mono text-xs"
+            id="amount"
+            type="number"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="h-12 pl-7 pr-16 rounded-2xl text-base font-mono"
+            max={available}
+            min={0}
           />
+          <button
+            type="button"
+            onClick={() => setAmount(String(available))}
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15"
+          >
+            MAX
+          </button>
         </div>
-
-        <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full h-12 rounded-2xl">
-          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Withdraw"}
-        </Button>
+        {numAmount > available && (
+          <p className="text-[10px] text-destructive font-medium">Exceeds available balance.</p>
+        )}
       </div>
+
+      <div className="space-y-2">
+        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Network</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {chains.map((c) => (
+            <button
+              key={c}
+              onClick={() => setChain(c)}
+              className={cn(
+                "rounded-xl border py-2.5 text-[12px] font-bold transition-colors",
+                chain === c ? "border-primary/60 bg-primary/5 text-foreground" : "border-border/40 bg-background/40 text-muted-foreground"
+              )}
+            >
+              {CHAIN_META[c]?.name || c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="dest" className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Destination Address</Label>
+        <Input
+          id="dest"
+          placeholder="Paste wallet address"
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
+          className="h-12 rounded-2xl font-mono text-xs"
+        />
+      </div>
+
+      <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full h-12 rounded-2xl">
+        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Withdraw"}
+      </Button>
 
       <p className="text-[10px] text-muted-foreground text-center leading-relaxed px-2">
         Withdrawals are processed automatically. Double-check the destination — transactions cannot be reversed.
@@ -385,7 +393,7 @@ function WithdrawSection({ api }: { api: ReturnType<typeof useTradingApi> }) {
 function HistorySection({ transactions, loading }: { transactions: WalletTransaction[]; loading: boolean }) {
   if (loading && transactions.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-8">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
@@ -393,10 +401,9 @@ function HistorySection({ transactions, loading }: { transactions: WalletTransac
 
   if (transactions.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/60 bg-card/95 p-8 text-center space-y-2">
+      <div className="py-10 text-center space-y-2">
         <Clock className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-        <p className="text-sm font-semibold text-foreground">No transactions yet</p>
-        <p className="text-xs text-muted-foreground">Your deposits and withdrawals will appear here.</p>
+        <p className="text-sm text-muted-foreground">No transactions yet</p>
       </div>
     );
   }
@@ -410,7 +417,7 @@ function HistorySection({ transactions, loading }: { transactions: WalletTransac
         const colorClass = isWithdraw ? "text-destructive" : isDeposit ? "text-success" : "text-foreground";
         const status = (tx.status || "pending").toLowerCase();
         return (
-          <div key={tx.id} className="rounded-2xl border border-border/40 bg-card/60 p-3 flex items-center gap-3">
+          <div key={tx.id} className="rounded-2xl border border-border/40 bg-background/40 p-3 flex items-center gap-3">
             <div className={cn(
               "w-9 h-9 rounded-xl flex items-center justify-center border",
               isDeposit ? "bg-success/10 border-success/20" : isWithdraw ? "bg-destructive/10 border-destructive/20" : "bg-muted/10 border-border/40"
