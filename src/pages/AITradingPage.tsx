@@ -503,6 +503,13 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
+      {showWizard && (
+        <TradingOnboardingWizard
+          balance={availableBalance}
+          onComplete={handleWizardComplete}
+          onCancel={() => setShowWizard(false)}
+        />
+      )}
     </div>
   );
 }
