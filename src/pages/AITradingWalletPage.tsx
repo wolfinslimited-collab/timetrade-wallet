@@ -15,6 +15,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useTradingApi, type DepositAddress, type WalletTransaction } from "@/hooks/useTradingApi";
+import { useUnifiedPortfolio } from "@/hooks/useUnifiedPortfolio";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +98,7 @@ const AITradingWalletPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const api = useTradingApi();
+  const portfolio = useUnifiedPortfolio(true);
   const initialTab = (searchParams.get("tab") as TabId) === "withdraw" ? "withdraw" : "deposit";
   const [tab, setTab] = useState<TabId>(initialTab);
 
@@ -181,7 +183,7 @@ const AITradingWalletPage = () => {
         </div>
 
         {/* Tab content */}
-        {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} />}
+        {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} portfolioAssets={portfolio.assets} onSendFromMain={(recipient, chain) => navigate(`/send?recipient=${encodeURIComponent(recipient)}&chain=${chain}`)} />}
         {tab === "withdraw" && <WithdrawSection api={api} />}
 
         {/* Persistent Transaction History */}
@@ -250,13 +252,36 @@ function BalanceCard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
 /* ── Deposit ── */
 
-function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; loading: boolean }) {
+function DepositSection({
+  addresses,
+  loading,
+  portfolioAssets,
+  onSendFromMain,
+}: {
+  addresses: DepositAddress[];
+  loading: boolean;
+  portfolioAssets: import("@/hooks/useUnifiedPortfolio").UnifiedAsset[];
+  onSendFromMain: (recipient: string, chain: string) => void;
+}) {
   const [selectedKey, setSelectedKey] = useState<string>(DEPOSIT_COINS[0].key);
   const selectedCoin = DEPOSIT_COINS.find((c) => c.key === selectedKey) || DEPOSIT_COINS[0];
   const active = useMemo(
     () => addresses.find((a) => a.chain === selectedCoin.addressChain),
     [addresses, selectedCoin]
   );
+
+  // Detect matching balance in user's main wallet (same symbol + same chain)
+  const mainWalletAsset = useMemo(() => {
+    if (!portfolioAssets?.length) return null;
+    const wantedChain = selectedCoin.addressChain; // ethereum | bsc | solana | tron | bitcoin
+    const wantedSymbol = selectedCoin.symbol.toUpperCase();
+    return portfolioAssets.find(
+      (a) =>
+        a.chain === wantedChain &&
+        a.symbol?.toUpperCase() === wantedSymbol &&
+        a.amount > 0,
+    ) || null;
+  }, [portfolioAssets, selectedCoin]);
 
   return (
     <div className="rounded-3xl border border-border/40 bg-card/60 p-5 space-y-5">
@@ -320,6 +345,33 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
               <CopyButton text={active.address} />
             </div>
           </div>
+
+          {mainWalletAsset && (
+            <button
+              type="button"
+              onClick={() => onSendFromMain(active.address, selectedCoin.addressChain)}
+              className="w-full rounded-2xl border border-primary/40 bg-primary/10 hover:bg-primary/15 active:scale-[0.99] transition-all p-4 flex items-center justify-between text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                  <ArrowUpFromLine className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-foreground leading-tight">Send from Main Wallet</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
+                    Available:{" "}
+                    <span className="font-mono text-foreground font-semibold">
+                      {mainWalletAsset.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })} {mainWalletAsset.symbol}
+                    </span>
+                    {mainWalletAsset.valueUsd > 0 && (
+                      <> · ${mainWalletAsset.valueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <ChevronLeft className="w-4 h-4 text-primary rotate-180 shrink-0" />
+            </button>
+          )}
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
