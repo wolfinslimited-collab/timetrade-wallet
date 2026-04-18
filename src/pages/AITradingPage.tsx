@@ -266,6 +266,12 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </button>
 
+      {/* Trade Account Wallet — deposit address + SOL balance */}
+      <TradeAccountWallet
+        solWallet={balance?.sol_wallet || null}
+        solBalance={balance?.sol_balance || 0}
+      />
+
       {/* Hero Portfolio — refined, premium */}
       <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card to-card/40 p-5 shadow-xl shadow-black/5">
         {/* subtle accent glow */}
