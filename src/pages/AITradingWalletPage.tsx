@@ -98,6 +98,7 @@ const AITradingWalletPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const api = useTradingApi();
+  const portfolio = useUnifiedPortfolio(true);
   const initialTab = (searchParams.get("tab") as TabId) === "withdraw" ? "withdraw" : "deposit";
   const [tab, setTab] = useState<TabId>(initialTab);
 
