@@ -47,6 +47,24 @@ interface UserProfile {
   member_since: string;
 }
 
+export interface DepositAddress {
+  chain: string;
+  address: string;
+  currency: string;
+}
+
+export interface WalletTransaction {
+  id: string;
+  type?: string;
+  amount?: number;
+  status?: string;
+  chain?: string;
+  tx_hash?: string;
+  destination_wallet?: string;
+  created_at?: string;
+  [key: string]: any;
+}
+
 // ── Token storage ──
 
 function getStoredToken(): string | null {
@@ -144,7 +162,10 @@ export function useTradingApi() {
   const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
   const [tradeHistory, setTradeHistory] = useState<TradeHistoryItem[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [depositAddresses, setDepositAddresses] = useState<DepositAddress[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false);
 
   // Check existing token on mount
   useEffect(() => {
