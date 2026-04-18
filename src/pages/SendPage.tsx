@@ -178,7 +178,7 @@ const SendPage = () => {
       <div className="flex-1 min-h-0 flex flex-col">
         {step === "select" && (
           <div className="flex-1 min-h-0">
-            <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} />
+            <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} prefillChain={prefill.chain} />
           </div>
         )}
         {step === "address" && (
