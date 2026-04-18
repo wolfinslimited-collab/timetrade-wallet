@@ -95,7 +95,7 @@ const AITradingWalletPage = () => {
         </div>
       </div>
 
-      <div className="px-4 py-4 pb-32 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 pb-nav-safe space-y-6" style={{ WebkitOverflowScrolling: 'touch' }}>
         {/* Persistent Balance card */}
         <BalanceCard api={api} />
 
