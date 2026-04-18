@@ -121,7 +121,7 @@ export function TradingOnboardingWizard({ balance, onComplete, onCancel }: Wizar
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto border-border/60 shadow-2xl bg-card/95 backdrop-blur-md relative">
+    <Card className="w-full mx-auto border-border/60 shadow-2xl bg-card/95 backdrop-blur-md relative">
       <CardContent className="p-6 space-y-6">
         {/* Header / step indicators */}
         <div className="space-y-2">
