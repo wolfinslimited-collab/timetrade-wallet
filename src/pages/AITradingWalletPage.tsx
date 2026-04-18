@@ -252,13 +252,36 @@ function BalanceCard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
 /* ── Deposit ── */
 
-function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; loading: boolean }) {
+function DepositSection({
+  addresses,
+  loading,
+  portfolioAssets,
+  onSendFromMain,
+}: {
+  addresses: DepositAddress[];
+  loading: boolean;
+  portfolioAssets: import("@/hooks/useUnifiedPortfolio").UnifiedAsset[];
+  onSendFromMain: (recipient: string, chain: string) => void;
+}) {
   const [selectedKey, setSelectedKey] = useState<string>(DEPOSIT_COINS[0].key);
   const selectedCoin = DEPOSIT_COINS.find((c) => c.key === selectedKey) || DEPOSIT_COINS[0];
   const active = useMemo(
     () => addresses.find((a) => a.chain === selectedCoin.addressChain),
     [addresses, selectedCoin]
   );
+
+  // Detect matching balance in user's main wallet (same symbol + same chain)
+  const mainWalletAsset = useMemo(() => {
+    if (!portfolioAssets?.length) return null;
+    const wantedChain = selectedCoin.addressChain; // ethereum | bsc | solana | tron | bitcoin
+    const wantedSymbol = selectedCoin.symbol.toUpperCase();
+    return portfolioAssets.find(
+      (a) =>
+        a.chain === wantedChain &&
+        a.symbol?.toUpperCase() === wantedSymbol &&
+        a.amount > 0,
+    ) || null;
+  }, [portfolioAssets, selectedCoin]);
 
   return (
     <div className="rounded-3xl border border-border/40 bg-card/60 p-5 space-y-5">
