@@ -183,7 +183,7 @@ const AITradingWalletPage = () => {
         </div>
 
         {/* Tab content */}
-        {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} portfolioAssets={portfolio.assets} onSendFromMain={(recipient, chain) => navigate(`/send?recipient=${encodeURIComponent(recipient)}&chain=${chain}`)} />}
+        {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} portfolioAssets={portfolio.assets} onSendFromMain={(recipient, chain, symbol) => navigate(`/send?recipient=${encodeURIComponent(recipient)}&chain=${chain}&symbol=${encodeURIComponent(symbol)}`)} />}
         {tab === "withdraw" && <WithdrawSection api={api} />}
 
         {/* Persistent Transaction History */}
@@ -261,7 +261,7 @@ function DepositSection({
   addresses: DepositAddress[];
   loading: boolean;
   portfolioAssets: import("@/hooks/useUnifiedPortfolio").UnifiedAsset[];
-  onSendFromMain: (recipient: string, chain: string) => void;
+  onSendFromMain: (recipient: string, chain: string, symbol: string) => void;
 }) {
   const [selectedKey, setSelectedKey] = useState<string>(DEPOSIT_COINS[0].key);
   const selectedCoin = DEPOSIT_COINS.find((c) => c.key === selectedKey) || DEPOSIT_COINS[0];
@@ -349,7 +349,7 @@ function DepositSection({
           {mainWalletAsset && (
             <button
               type="button"
-              onClick={() => onSendFromMain(active.address, selectedCoin.addressChain)}
+              onClick={() => onSendFromMain(active.address, selectedCoin.addressChain, mainWalletAsset.symbol)}
               className="w-full rounded-2xl border border-primary/40 bg-primary/10 hover:bg-primary/15 active:scale-[0.99] transition-all p-4 flex items-center justify-between text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
