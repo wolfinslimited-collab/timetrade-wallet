@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { TradingOnboardingWizard, type TradingProfile } from "@/components/trading/TradingOnboardingWizard";
+import { toast } from "sonner";
+
+const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 
 /* ── Shared Cards ── */
 
