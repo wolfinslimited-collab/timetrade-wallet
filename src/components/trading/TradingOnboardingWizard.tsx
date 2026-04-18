@@ -157,9 +157,9 @@ export function TradingOnboardingWizard({ balance, onComplete, onCancel }: Wizar
 
         <div className="flex items-center gap-3">
           {step === 0 ? (
-            <Button variant="ghost" onClick={onCancel} className="flex-1">Cancel</Button>
+            <Button variant="ghost" onClick={onCancel} className="flex-1 text-muted-foreground hover:bg-transparent hover:text-foreground">Cancel</Button>
           ) : (
-            <Button variant="ghost" onClick={prev} className="flex-1"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
+            <Button variant="ghost" onClick={prev} className="flex-1 text-muted-foreground hover:bg-transparent hover:text-foreground"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
           )}
           {step < 3 ? (
             <Button onClick={next} disabled={!canNext} className="flex-1">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
