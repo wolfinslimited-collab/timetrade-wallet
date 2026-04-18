@@ -79,9 +79,9 @@ const AITradingWalletPage = () => {
   }
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="h-full w-full flex flex-col bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-background/80 backdrop-blur-md border-b border-border/40">
+      <div className="shrink-0 z-10 flex items-center gap-3 px-4 py-3 bg-background/80 backdrop-blur-md border-b border-border/40">
         <button
           onClick={() => navigate(-1)}
           className="w-9 h-9 rounded-xl bg-card/80 border border-border/40 flex items-center justify-center active:scale-95 transition-transform"
