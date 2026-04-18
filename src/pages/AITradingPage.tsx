@@ -209,10 +209,10 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-32">
-      {/* Header — title row */}
+      {/* Header — minimal, clean */}
       <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="relative shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="relative">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
               <Bot className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -220,12 +220,12 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-background animate-pulse" />
             )}
           </div>
-          <div className="min-w-0">
+          <div>
             <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">AI Trading</h1>
-            <p className="text-[10px] text-muted-foreground font-medium truncate">{format(new Date(), "EEE, MMM d • HH:mm")}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">{format(new Date(), "EEE, MMM d • HH:mm")}</p>
           </div>
         </div>
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex gap-1.5">
           <button onClick={fetchDashboardData} className="w-9 h-9 rounded-xl bg-card/80 border border-border/40 flex items-center justify-center active:scale-95 hover:bg-card transition-colors">
             <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", isLoading && "animate-spin")} />
           </button>
@@ -233,36 +233,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
-      </div>
-
-      {/* Inline action row — Wallet + Start/Stop Trading (per port guide) */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          onClick={() => navigate("/")}
-          className="h-11 rounded-xl px-3.5 text-[13px] font-semibold border-border/50 bg-card/60 backdrop-blur-sm"
-        >
-          <Wallet className="w-3.5 h-3.5 mr-1.5" />
-          Wallet
-        </Button>
-        <Button
-          onClick={handleToggle}
-          disabled={toggling}
-          className={cn(
-            "flex-1 h-11 rounded-xl text-[13px] font-bold shadow-lg",
-            tradingStatus?.trading_active
-              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
-              : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/30"
-          )}
-        >
-          {toggling ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : tradingStatus?.trading_active ? (
-            <><Lock className="w-3.5 h-3.5 mr-1.5" />Stop Trading</>
-          ) : (
-            <><Zap className="w-3.5 h-3.5 mr-1.5" />Start Trading</>
-          )}
-        </Button>
       </div>
 
       {/* Live Trades — prominent top access */}
@@ -345,6 +315,62 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-[28px] border border-border/40 bg-card/75 p-4 shadow-xl shadow-black/5 backdrop-blur-sm">
+        <div className="absolute inset-y-0 right-0 w-32 bg-primary/10 blur-3xl" />
+        <div className="relative flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-background/70 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <Sparkles className="w-3 h-3 text-primary" />
+              Trading Control
+            </div>
+            <h2 className="mt-3 text-[15px] font-bold tracking-tight text-foreground">
+              {tradingStatus?.trading_active ? "Manage your live trading session" : "Launch your AI trading session"}
+            </h2>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              {tradingStatus?.trading_active
+                ? "The main action lives here now, separate from your balance card for a cleaner dashboard flow."
+                : "A dedicated control area gives Start Trading its own clear, premium position."}
+            </p>
+          </div>
+
+          <div
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
+              tradingStatus?.trading_active
+                ? "border-destructive/20 bg-destructive/10"
+                : "border-primary/20 bg-primary/10"
+            )}
+          >
+            {tradingStatus?.trading_active ? (
+              <Lock className="w-4 h-4 text-destructive" />
+            ) : (
+              <Zap className="w-4 h-4 text-primary" />
+            )}
+          </div>
+        </div>
+
+        <div className="relative mt-4">
+          <Button
+            onClick={handleToggle}
+            disabled={toggling}
+            className={cn(
+              "w-full h-14 rounded-2xl text-sm font-bold shadow-lg",
+              tradingStatus?.trading_active
+                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
+                : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/30"
+            )}
+          >
+            {toggling ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : tradingStatus?.trading_active ? (
+              <><Lock className="w-4 h-4 mr-2" />Stop Trading</>
+            ) : (
+              <><Zap className="w-4 h-4 mr-2" />Start Trading</>
+            )}
+          </Button>
         </div>
       </div>
 
