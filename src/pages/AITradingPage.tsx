@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { TradingOnboardingWizard, type TradingProfile } from "@/components/trading/TradingOnboardingWizard";
+import { TradeAccountWallet } from "@/components/trading/TradeAccountWallet";
 import { toast } from "sonner";
 
 const TRADING_PROFILE_KEY = "timetrade_trading_profile";
@@ -226,7 +227,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             )}
           </div>
           <div>
-            <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">AI Trading</h1>
+            <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">Trade Account</h1>
             <p className="text-[10px] text-muted-foreground font-medium">{format(new Date(), "EEE, MMM d • HH:mm")}</p>
           </div>
         </div>
