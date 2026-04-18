@@ -268,9 +268,10 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-violet-500/10 blur-3xl translate-y-1/2 -translate-x-1/4" />
 
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-2">
+        <div className="relative grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+          {/* LEFT — balance + PnL */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
               <div className={cn(
                 "px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur",
                 tradingStatus?.trading_active
@@ -282,58 +283,59 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               </div>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Portfolio</p>
             </div>
-          </div>
 
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-[20px] font-bold text-muted-foreground/80 font-mono">$</span>
-            <p className="text-[40px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
-              {totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-          </div>
-
-          {/* Compact PnL strip */}
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border",
-              totalProfit >= 0 ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"
-            )}>
-              {totalProfit >= 0
-                ? <TrendingUp className="w-3 h-3 text-success" />
-                : <TrendingDown className="w-3 h-3 text-destructive" />}
-              <span className={cn("text-[11px] font-bold font-mono tabular-nums", totalProfit >= 0 ? "text-success" : "text-destructive")}>
-                {totalProfit >= 0 ? "+" : ""}${Math.abs(totalProfit).toFixed(2)}
-              </span>
-              <span className="text-[9px] text-muted-foreground font-medium">all time</span>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-[20px] font-bold text-muted-foreground/80 font-mono">$</span>
+              <p className="text-[40px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
+                {totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
             </div>
-            <div className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border",
-              earningsTotal >= 0 ? "bg-card/60 border-border/40" : "bg-destructive/5 border-destructive/20"
-            )}>
-              <Zap className="w-3 h-3 text-amber-500" />
-              <span className={cn("text-[11px] font-bold font-mono tabular-nums", earningsTotal >= 0 ? "text-foreground" : "text-destructive")}>
-                {earningsTotal >= 0 ? "+" : ""}${Math.abs(earningsTotal).toFixed(2)}
-              </span>
-              <span className="text-[9px] text-muted-foreground font-medium">7d</span>
+
+            {/* Compact PnL strip */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border",
+                totalProfit >= 0 ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"
+              )}>
+                {totalProfit >= 0
+                  ? <TrendingUp className="w-3 h-3 text-success" />
+                  : <TrendingDown className="w-3 h-3 text-destructive" />}
+                <span className={cn("text-[11px] font-bold font-mono tabular-nums", totalProfit >= 0 ? "text-success" : "text-destructive")}>
+                  {totalProfit >= 0 ? "+" : ""}${Math.abs(totalProfit).toFixed(2)}
+                </span>
+                <span className="text-[9px] text-muted-foreground font-medium">all time</span>
+              </div>
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border",
+                earningsTotal >= 0 ? "bg-card/60 border-border/40" : "bg-destructive/5 border-destructive/20"
+              )}>
+                <Zap className="w-3 h-3 text-amber-500" />
+                <span className={cn("text-[11px] font-bold font-mono tabular-nums", earningsTotal >= 0 ? "text-foreground" : "text-destructive")}>
+                  {earningsTotal >= 0 ? "+" : ""}${Math.abs(earningsTotal).toFixed(2)}
+                </span>
+                <span className="text-[9px] text-muted-foreground font-medium">7d</span>
+              </div>
             </div>
           </div>
 
-          {/* Wallet shortcut — embedded inside portfolio card */}
+          {/* RIGHT — Wallet shortcut */}
           <button
             onClick={() => navigate("/ai-trading/wallet")}
-            className="mt-4 w-full relative overflow-hidden rounded-2xl border border-border/40 bg-background/40 backdrop-blur-sm p-3 active:scale-[0.99] transition-transform hover:border-border/70"
+            className="group relative overflow-hidden rounded-2xl border border-border/40 bg-background/40 backdrop-blur-sm p-4 active:scale-[0.99] transition-transform hover:border-border/70 sm:min-w-[220px] w-full sm:w-auto text-left"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Wallet className="w-4 h-4 text-primary" />
+            <div className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-3">
+              <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                <Wallet className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-[13px] font-bold text-foreground tracking-tight">Wallet</p>
+              <div className="flex-1 min-w-0 sm:flex-none">
+                <div className="flex items-center gap-1">
+                  <p className="text-[13px] font-bold text-foreground tracking-tight">Wallet</p>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
                 <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Deposit · Withdraw</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </div>
           </button>
-
         </div>
       </div>
 
