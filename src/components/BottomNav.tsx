@@ -14,7 +14,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: (c) => <HomeIcon className="w-[22px] h-[22px]" color={c} />, label: "Home", tab: "wallet" },
   { icon: (c) => <TransactionHistoryIcon className="w-[22px] h-[22px]" color={c} />, label: "History", tab: "history" },
-  { icon: (c) => <AITradingIcon className="w-[22px] h-[22px]" color={c} />, label: "Trade Account", tab: "trading" },
+  { icon: (c) => <AITradingIcon className="w-[22px] h-[22px]" color={c} />, label: "AI Trade", tab: "trading" },
   { icon: (c) => <UsdtIcon className="w-[22px] h-[22px]" color={c} />, label: "Stake", tab: "staking" },
   { icon: (c) => <AccountSettingsIcon className="w-[22px] h-[22px]" color={c} />, label: "Settings", tab: "settings" },
 ];
