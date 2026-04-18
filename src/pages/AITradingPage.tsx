@@ -318,39 +318,43 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             </div>
           </div>
 
-          {/* RIGHT — Premium Wallet panel */}
-          <button
-            onClick={() => navigate("/ai-trading/wallet")}
-            className="group relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 active:scale-[0.99] transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 text-left flex flex-col justify-between min-h-[170px]"
-          >
-            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+          {/* RIGHT — Wallet actions */}
+          <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 via-card/40 to-transparent p-3 flex flex-col gap-2">
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
 
-            <div className="relative flex items-start justify-between">
-              <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 shadow-inner">
-                <Wallet className="w-5 h-5 text-primary" />
+            <div className="relative flex items-center gap-2 px-1 pb-1">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
+                <Wallet className="w-3.5 h-3.5 text-primary" />
               </div>
-              <div className="w-7 h-7 rounded-full bg-background/60 border border-border/40 flex items-center justify-center group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
-              </div>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Wallet</p>
             </div>
 
-            <div className="relative">
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em] mb-1">Available</p>
-              <p className="text-[22px] font-bold font-mono text-foreground tracking-tight tabular-nums leading-none">
-                ${availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <div className="flex items-center gap-1.5 mt-3">
-                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-background/50 border border-border/40">
-                  <ArrowDownRight className="w-3 h-3 text-success" />
-                  <span className="text-[10px] font-semibold text-foreground">Deposit</span>
+            <button
+              onClick={() => navigate("/ai-trading/wallet?tab=deposit")}
+              className="relative flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-background/50 hover:bg-background/80 hover:border-success/30 px-3 py-2.5 active:scale-[0.99] transition-all text-left"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-success/10 border border-success/20 flex items-center justify-center">
+                  <ArrowDownRight className="w-3.5 h-3.5 text-success" />
                 </div>
-                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-background/50 border border-border/40">
-                  <ArrowUpRight className="w-3 h-3 text-primary" />
-                  <span className="text-[10px] font-semibold text-foreground">Withdraw</span>
-                </div>
+                <span className="text-[12px] font-semibold text-foreground">Deposit</span>
               </div>
-            </div>
-          </button>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+
+            <button
+              onClick={() => navigate("/ai-trading/wallet?tab=withdraw")}
+              className="relative flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-background/50 hover:bg-background/80 hover:border-primary/30 px-3 py-2.5 active:scale-[0.99] transition-all text-left"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <ArrowUpRight className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-[12px] font-semibold text-foreground">Withdraw</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+          </div>
         </div>
       </div>
 
