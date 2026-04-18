@@ -201,10 +201,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
       }
       return;
     }
-    if (availableBalance <= 0) {
-      toast.error("Insufficient balance", { description: "Deposit funds before starting trading." });
-      return;
-    }
     navigate("/ai-trading/start");
   };
 
