@@ -11,7 +11,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
 const SUGGESTIONS = [
   { icon: Zap, label: "What is gas fee?", color: "from-amber-500/20 to-orange-500/20 border-amber-500/20" },
-  { icon: TrendingUp, label: "Explain staking", color: "from-emerald-500/20 to-green-500/20 border-emerald-500/20" },
+  { icon: TrendingUp, label: "How to spot scam tokens?", color: "from-emerald-500/20 to-green-500/20 border-emerald-500/20" },
   { icon: Shield, label: "How to stay safe?", color: "from-blue-500/20 to-cyan-500/20 border-blue-500/20" },
   { icon: MessageCircle, label: "What are stablecoins?", color: "from-purple-500/20 to-pink-500/20 border-purple-500/20" },
 ];
