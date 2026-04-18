@@ -29,11 +29,21 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 const CHAIN_META: Record<string, { name: string; color: string }> = {
-  solana: { name: "Solana", color: "from-purple-500/20 to-fuchsia-500/10" },
-  ethereum: { name: "Ethereum", color: "from-indigo-500/20 to-blue-500/10" },
-  bitcoin: { name: "Bitcoin", color: "from-orange-500/20 to-amber-500/10" },
-  bsc: { name: "BNB Smart Chain", color: "from-yellow-500/20 to-amber-500/10" },
-  tron: { name: "Tron", color: "from-red-500/20 to-rose-500/10" },
+  solana:   { name: "Solana",          color: "from-purple-500/30 via-fuchsia-500/15 to-transparent" },
+  ethereum: { name: "Ethereum",        color: "from-indigo-500/30 via-blue-500/15 to-transparent" },
+  bitcoin:  { name: "Bitcoin",         color: "from-orange-500/30 via-amber-500/15 to-transparent" },
+  bsc:      { name: "BNB Smart Chain", color: "from-yellow-500/30 via-amber-500/15 to-transparent" },
+  tron:     { name: "Tron",            color: "from-red-500/30 via-rose-500/15 to-transparent" },
+};
+
+/** Per-coin gradient/glow color for visual impact */
+const COIN_GRADIENTS: Record<string, { glow: string; ring: string }> = {
+  ETH:  { glow: "from-indigo-500/40 via-blue-500/15 to-transparent",  ring: "shadow-[0_8px_30px_-6px_rgba(99,102,241,0.45)]" },
+  BTC:  { glow: "from-orange-500/40 via-amber-500/15 to-transparent", ring: "shadow-[0_8px_30px_-6px_rgba(249,115,22,0.45)]" },
+  BNB:  { glow: "from-yellow-500/40 via-amber-500/15 to-transparent", ring: "shadow-[0_8px_30px_-6px_rgba(234,179,8,0.45)]" },
+  SOL:  { glow: "from-purple-500/40 via-fuchsia-500/15 to-transparent", ring: "shadow-[0_8px_30px_-6px_rgba(168,85,247,0.45)]" },
+  USDC: { glow: "from-sky-500/40 via-blue-500/15 to-transparent",     ring: "shadow-[0_8px_30px_-6px_rgba(14,165,233,0.45)]" },
+  USDT: { glow: "from-emerald-500/40 via-teal-500/15 to-transparent", ring: "shadow-[0_8px_30px_-6px_rgba(16,185,129,0.45)]" },
 };
 
 /** Coin logo from the project-wide elbstream API */
