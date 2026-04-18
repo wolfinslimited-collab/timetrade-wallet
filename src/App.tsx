@@ -17,6 +17,7 @@ import ReceivePage from "./pages/ReceivePage";
 import Build from "./pages/Build";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import LiveTradesPage from "./pages/LiveTradesPage";
+import AITradingOnboardingPage from "./pages/AITradingOnboardingPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +77,7 @@ const AnimatedRoutes = () => {
             <Route path="/build" element={<Build />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/live-trades" element={<LiveTradesPage />} />
+            <Route path="/ai-trading/start" element={<AITradingOnboardingPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </motion.div>
