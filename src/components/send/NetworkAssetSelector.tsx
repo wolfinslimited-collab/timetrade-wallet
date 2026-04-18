@@ -27,13 +27,15 @@ export interface NetworkAssetSelectorHandle {
 interface NetworkAssetSelectorProps {
   onSubmit: (network: Chain, asset: AvailableAsset, senderAddress: string) => void;
   onClose: () => void;
+  /** Optional: pre-select a network on mount (from URL param). */
+  prefillChain?: Chain | null;
 }
 
-export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, NetworkAssetSelectorProps>(({ onSubmit, onClose }, ref) => {
+export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, NetworkAssetSelectorProps>(({ onSubmit, onClose, prefillChain }, ref) => {
   const { addresses } = useWalletAddresses(true);
   const { prices } = useBlockchainContext();
 
-  const [selectedNetwork, setSelectedNetwork] = useState<Chain | null>(null);
+  const [selectedNetwork, setSelectedNetwork] = useState<Chain | null>(prefillChain ?? null);
   const [assets, setAssets] = useState<AvailableAsset[]>([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
