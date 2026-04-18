@@ -261,7 +261,7 @@ function DepositSection({
   addresses: DepositAddress[];
   loading: boolean;
   portfolioAssets: import("@/hooks/useUnifiedPortfolio").UnifiedAsset[];
-  onSendFromMain: (recipient: string, chain: string) => void;
+  onSendFromMain: (recipient: string, chain: string, symbol: string) => void;
 }) {
   const [selectedKey, setSelectedKey] = useState<string>(DEPOSIT_COINS[0].key);
   const selectedCoin = DEPOSIT_COINS.find((c) => c.key === selectedKey) || DEPOSIT_COINS[0];
