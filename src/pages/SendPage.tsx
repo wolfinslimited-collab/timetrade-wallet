@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { NetworkAssetSelector, AvailableAsset, NetworkAssetSelectorHandle } from "@/components/send/NetworkAssetSelector";
@@ -14,18 +14,39 @@ import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { toast } from "@/hooks/use-toast";
 import type { SendStep, TransactionData } from "@/components/send/SendCryptoSheet";
 
+const VALID_CHAINS: Chain[] = ["ethereum", "polygon", "arbitrum", "bsc", "solana", "tron", "bitcoin"];
+
 const SendPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const broadcastMutation = useBroadcastTransaction();
   const { addresses } = useWalletAddresses(true);
   const { refreshAll } = useBlockchainContext();
 
+  // Optional prefill from URL (e.g. /send?recipient=0x...&chain=ethereum)
+  const prefill = useMemo(() => {
+    const r = (searchParams.get("recipient") || "").trim();
+    const c = (searchParams.get("chain") || "").trim().toLowerCase() as Chain;
+    return {
+      recipient: r,
+      chain: VALID_CHAINS.includes(c) ? c : null,
+    };
+  }, [searchParams]);
+
   const [step, setStep] = useState<SendStep>("select");
-  const [selectedChain, setSelectedChain] = useState<Chain>("ethereum");
+  const [selectedChain, setSelectedChain] = useState<Chain>(prefill.chain ?? "ethereum");
   const [selectedAsset, setSelectedAsset] = useState<AvailableAsset | null>(null);
   const [senderAddress, setSenderAddress] = useState<string>("");
   const [isTestnet] = useState(false);
   const networkSelectorRef = useRef<NetworkAssetSelectorHandle>(null);
+
+  // Pre-set recipient when arriving with a URL prefill
+  useEffect(() => {
+    if (prefill.recipient) {
+      setTransaction((prev) => ({ ...prev, recipient: prefill.recipient }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
