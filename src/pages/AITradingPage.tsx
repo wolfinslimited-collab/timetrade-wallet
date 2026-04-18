@@ -240,43 +240,27 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      {/* Live Trades + Wallet — prominent top access */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <button
-          onClick={() => navigate("/live-trades")}
-          className="group relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-r from-card via-card to-card/80 p-3.5 active:scale-[0.99] transition-transform shadow-lg shadow-black/5"
-        >
-          <div className="absolute inset-y-0 right-0 w-24 bg-primary/10 blur-3xl" />
-          <div className="relative flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <Activity className="w-4 h-4 text-primary" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-success border-2 border-background" />
-              </span>
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-[12px] font-bold text-foreground tracking-tight">Live Trades</p>
-              <p className="text-[9px] text-muted-foreground font-medium mt-0.5">Real-time activity</p>
-            </div>
+      {/* Live Trades — prominent top access */}
+      <button
+        onClick={() => navigate("/live-trades")}
+        className="group relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-r from-card via-card to-card/80 p-3.5 active:scale-[0.99] transition-transform shadow-lg shadow-black/5 w-full"
+      >
+        <div className="absolute inset-y-0 right-0 w-24 bg-primary/10 blur-3xl" />
+        <div className="relative flex items-center gap-2.5">
+          <div className="relative w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <Activity className="w-4 h-4 text-primary" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-success border-2 border-background" />
+            </span>
           </div>
-        </button>
-        <button
-          onClick={() => navigate("/ai-trading/wallet")}
-          className="group relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-r from-card via-card to-card/80 p-3.5 active:scale-[0.99] transition-transform shadow-lg shadow-black/5"
-        >
-          <div className="absolute inset-y-0 right-0 w-24 bg-primary/10 blur-3xl" />
-          <div className="relative flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <Wallet className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-[12px] font-bold text-foreground tracking-tight">Wallet</p>
-              <p className="text-[9px] text-muted-foreground font-medium mt-0.5">Deposit · Withdraw</p>
-            </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-[12px] font-bold text-foreground tracking-tight">Live Trades</p>
+            <p className="text-[9px] text-muted-foreground font-medium mt-0.5">Real-time activity</p>
           </div>
-        </button>
-      </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
+      </button>
 
       {/* Hero Portfolio — refined, premium */}
       <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card to-card/40 p-5 shadow-xl shadow-black/5">
