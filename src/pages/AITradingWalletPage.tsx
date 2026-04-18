@@ -183,7 +183,7 @@ const AITradingWalletPage = () => {
         </div>
 
         {/* Tab content */}
-        {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} />}
+        {tab === "deposit" && <DepositSection addresses={api.depositAddresses} loading={api.isLoadingWallet} portfolioAssets={portfolio.assets} onSendFromMain={(recipient, chain) => navigate(`/send?recipient=${encodeURIComponent(recipient)}&chain=${chain}`)} />}
         {tab === "withdraw" && <WithdrawSection api={api} />}
 
         {/* Persistent Transaction History */}
