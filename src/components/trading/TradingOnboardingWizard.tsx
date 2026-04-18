@@ -121,62 +121,57 @@ export function TradingOnboardingWizard({ balance, onComplete, onCancel }: Wizar
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={onCancel}>
-      <Card className="w-full max-w-lg border-border/60 shadow-2xl bg-card/95 backdrop-blur-md relative" onClick={e => e.stopPropagation()}>
-        <CardContent className="p-6 space-y-6">
-          {/* Header / step indicators */}
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <div className="flex-1 flex items-center">
-                {STEPS.map((s, i) => (
-                  <div key={s} className="flex-1 flex flex-col items-center gap-1.5">
-                    <span className={cn("text-xs transition-colors", i <= step ? "text-primary font-medium" : "text-muted-foreground")}>{s}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={onCancel} className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors ml-2 shrink-0">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex gap-1.5">
-              {STEPS.map((_, i) => (
-                <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-muted/40">
-                  <motion.div className="h-full bg-primary rounded-full" initial={false}
-                    animate={{ width: i <= step ? "100%" : "0%" }} transition={{ duration: 0.3, ease: "easeInOut" }} />
+    <Card className="w-full max-w-lg mx-auto border-border/60 shadow-2xl bg-card/95 backdrop-blur-md relative">
+      <CardContent className="p-6 space-y-6">
+        {/* Header / step indicators */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <div className="flex-1 flex items-center">
+              {STEPS.map((s, i) => (
+                <div key={s} className="flex-1 flex flex-col items-center gap-1.5">
+                  <span className={cn("text-xs transition-colors", i <= step ? "text-primary font-medium" : "text-muted-foreground")}>{s}</span>
                 </div>
               ))}
             </div>
           </div>
-
-          <AnimatePresence mode="wait" custom={dir}>
-            <motion.div key={step} custom={dir} variants={variants}
-              initial="enter" animate="center" exit="exit"
-              transition={{ duration: 0.25, ease: "easeInOut" }} className="min-h-[280px]">
-              {step === 0 && <StepAmount maxAmount={safeMax} amount={amount} setAmount={setAmount} presets={presets} valid={amountValid} />}
-              {step === 1 && <StepRisk riskLevel={riskLevel} setRiskLevel={setRiskLevel} />}
-              {step === 2 && <StepStrategy strategyType={strategyType} setStrategyType={setStrategyType} />}
-              {step === 3 && <StepReview amount={numAmount} riskLevel={riskLevel} strategyType={strategyType} profitTarget={profitTarget} />}
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="flex items-center gap-3">
-            {step === 0 ? (
-              <Button variant="ghost" onClick={onCancel} className="flex-1">Cancel</Button>
-            ) : (
-              <Button variant="ghost" onClick={prev} className="flex-1"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
-            )}
-            {step < 3 ? (
-              <Button onClick={next} disabled={!canNext} className="flex-1">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
-            ) : (
-              <Button onClick={handleComplete} disabled={submitting} className="flex-1">
-                {submitting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-                Start Trading
-              </Button>
-            )}
+          <div className="flex gap-1.5">
+            {STEPS.map((_, i) => (
+              <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-muted/40">
+                <motion.div className="h-full bg-primary rounded-full" initial={false}
+                  animate={{ width: i <= step ? "100%" : "0%" }} transition={{ duration: 0.3, ease: "easeInOut" }} />
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        <AnimatePresence mode="wait" custom={dir}>
+          <motion.div key={step} custom={dir} variants={variants}
+            initial="enter" animate="center" exit="exit"
+            transition={{ duration: 0.25, ease: "easeInOut" }} className="min-h-[280px]">
+            {step === 0 && <StepAmount maxAmount={safeMax} amount={amount} setAmount={setAmount} presets={presets} valid={amountValid} />}
+            {step === 1 && <StepRisk riskLevel={riskLevel} setRiskLevel={setRiskLevel} />}
+            {step === 2 && <StepStrategy strategyType={strategyType} setStrategyType={setStrategyType} />}
+            {step === 3 && <StepReview amount={numAmount} riskLevel={riskLevel} strategyType={strategyType} profitTarget={profitTarget} />}
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="flex items-center gap-3">
+          {step === 0 ? (
+            <Button variant="ghost" onClick={onCancel} className="flex-1">Cancel</Button>
+          ) : (
+            <Button variant="ghost" onClick={prev} className="flex-1"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
+          )}
+          {step < 3 ? (
+            <Button onClick={next} disabled={!canNext} className="flex-1">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
+          ) : (
+            <Button onClick={handleComplete} disabled={submitting} className="flex-1">
+              {submitting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+              Start Trading
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
