@@ -41,11 +41,11 @@ function validateAddressForChain(addr: string, chain: Chain): { valid: boolean; 
   return { valid: false, error: res.error || `Invalid ${getChainInfo(chain).name} address` };
 }
 
-export const AddressInputStep = ({ selectedChain, onSubmit }: AddressInputStepProps) => {
+export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: AddressInputStepProps) => {
   const { toast } = useToast();
   const { addresses: savedAddresses, saveAddress, removeAddress, getAddressesForChain } = useSavedAddresses();
   
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(initialAddress || "");
   const [showScanner, setShowScanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
