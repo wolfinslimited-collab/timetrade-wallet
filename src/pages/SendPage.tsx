@@ -180,12 +180,18 @@ const SendPage = () => {
       <div className="flex-1 min-h-0 flex flex-col">
         {step === "select" && (
           <div className="flex-1 min-h-0">
-            <NetworkAssetSelector ref={networkSelectorRef} onSubmit={handleNetworkAssetSelect} onClose={handleClose} prefillChain={prefill.chain} />
+            <NetworkAssetSelector
+              ref={networkSelectorRef}
+              onSubmit={handleNetworkAssetSelect}
+              onClose={handleClose}
+              prefillChain={prefill.chain}
+              prefillSymbol={prefill.symbol}
+            />
           </div>
         )}
         {step === "address" && (
           <div className="flex-1 min-h-0">
-            <AddressInputStep selectedChain={selectedChain} onSubmit={handleAddressSubmit} />
+            <AddressInputStep selectedChain={selectedChain} onSubmit={handleAddressSubmit} initialAddress={transaction.recipient} />
           </div>
         )}
         {step === "risk" && (
