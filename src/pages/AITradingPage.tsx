@@ -317,6 +317,23 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             </div>
           </div>
 
+          {/* Wallet shortcut — embedded inside portfolio card */}
+          <button
+            onClick={() => navigate("/ai-trading/wallet")}
+            className="mt-4 w-full relative overflow-hidden rounded-2xl border border-border/40 bg-background/40 backdrop-blur-sm p-3 active:scale-[0.99] transition-transform hover:border-border/70"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                <Wallet className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-[13px] font-bold text-foreground tracking-tight">Wallet</p>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Deposit · Withdraw</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </button>
+
         </div>
       </div>
 
