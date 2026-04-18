@@ -70,7 +70,6 @@ const AITradingOnboardingPage = () => {
       <div className="px-4 py-4 pb-32">
         <TradingOnboardingWizard
           balance={availableBalance}
-          submitting={submitting}
           onComplete={handleComplete}
           onCancel={() => navigate(-1)}
         />
