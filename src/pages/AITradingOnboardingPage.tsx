@@ -1,18 +1,20 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, Wallet } from "lucide-react";
 import { TradingOnboardingWizard, type TradingProfile } from "@/components/trading/TradingOnboardingWizard";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 
 const AITradingOnboardingPage = () => {
   const navigate = useNavigate();
   const api = useTradingApi();
-  
 
   const availableBalance = api.balance?.usd_balance || 0;
+  const balanceLoaded = api.balance !== null;
+  const hasBalance = availableBalance > 0;
 
   // Guard: if not authenticated or already trading, bounce back
   useEffect(() => {
