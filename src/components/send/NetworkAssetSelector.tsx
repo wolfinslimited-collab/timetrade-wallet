@@ -140,6 +140,20 @@ export const NetworkAssetSelector = forwardRef<NetworkAssetSelectorHandle, Netwo
     fetchAssets();
   }, [selectedNetwork, addresses, prices]);
 
+  // Auto-submit when a prefillSymbol is provided and we found a matching asset
+  useEffect(() => {
+    if (autoSubmitted || !prefillSymbol || !selectedNetwork || isLoadingAssets || assets.length === 0) return;
+    const match = assets.find(
+      (a) => a.symbol?.toUpperCase() === prefillSymbol.toUpperCase()
+    );
+    if (match) {
+      const senderAddress = getSenderAddress(match.chain);
+      setAutoSubmitted(true);
+      onSubmit(match.chain, match, senderAddress);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets, isLoadingAssets, prefillSymbol, selectedNetwork, autoSubmitted]);
+
   const handleAssetSelect = (asset: AvailableAsset) => {
     const senderAddress = getSenderAddress(asset.chain);
     onSubmit(asset.chain, asset, senderAddress);
