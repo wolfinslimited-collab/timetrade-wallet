@@ -185,19 +185,42 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const navigate = useNavigate();
   const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
   const totalProfit = balance?.released_profit || 0;
   const earningsTotal = earnings?.total_usd || 0;
+  const availableBalance = balance?.usd_balance || 0;
 
   const handleToggle = async () => {
+    if (tradingStatus?.trading_active) {
+      setToggling(true);
+      try {
+        await api.toggleTrading("stop");
+      } finally {
+        setToggling(false);
+      }
+      return;
+    }
+    if (availableBalance <= 0) {
+      toast.error("Insufficient balance", { description: "Deposit funds before starting trading." });
+      return;
+    }
+    setShowWizard(true);
+  };
+
+  const handleWizardComplete = async (profile: TradingProfile) => {
     setToggling(true);
     try {
-      if (tradingStatus?.trading_active) {
-        await api.toggleTrading("stop");
-      } else {
-        await api.toggleTrading("start", balance?.usd_balance || 0);
-      }
+      // Persist preferences locally for future use
+      localStorage.setItem(TRADING_PROFILE_KEY, JSON.stringify(profile));
+      await api.toggleTrading("start", profile.allocatedAmount);
+      setShowWizard(false);
+      toast.success("Trading started", {
+        description: `$${profile.allocatedAmount.toFixed(2)} allocated to AI agents.`,
+      });
+    } catch (e: any) {
+      toast.error("Failed to start", { description: e?.message || "Please try again." });
     } finally {
       setToggling(false);
     }
