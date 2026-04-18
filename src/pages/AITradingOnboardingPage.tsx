@@ -10,7 +10,7 @@ const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 const AITradingOnboardingPage = () => {
   const navigate = useNavigate();
   const api = useTradingApi();
-  const [submitting, setSubmitting] = useState(false);
+  
 
   const availableBalance = api.balance?.usd_balance || 0;
 
