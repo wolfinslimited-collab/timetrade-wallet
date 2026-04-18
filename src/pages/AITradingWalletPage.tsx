@@ -246,8 +246,8 @@ function DepositSection({ addresses, loading }: { addresses: DepositAddress[]; l
       {active && (
         <div className="rounded-3xl border border-border/40 bg-card/80 p-5 space-y-4">
           <div className="flex flex-col items-center gap-3">
-            <div className="p-3 rounded-2xl bg-white">
-              <QRCodeSVG value={active.address} size={180} bgColor="#ffffff" fgColor="#000000" level="M" />
+            <div className="p-3 rounded-2xl bg-background border border-border/40">
+              <QRCodeSVG value={active.address} size={180} bgColor="transparent" fgColor="hsl(var(--foreground))" level="M" />
             </div>
             <p className="text-[10px] text-muted-foreground text-center font-medium">
               Send only <span className="text-foreground font-bold">{active.currency}</span> on the{" "}
