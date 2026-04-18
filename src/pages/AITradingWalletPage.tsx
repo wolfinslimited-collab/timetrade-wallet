@@ -36,6 +36,63 @@ const CHAIN_META: Record<string, { name: string; color: string }> = {
   tron: { name: "Tron", color: "from-red-500/20 to-rose-500/10" },
 };
 
+/** Coin logo from the project-wide elbstream API */
+const coinLogo = (symbol: string) =>
+  `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
+
+interface CoinSpec {
+  key: string;            // unique id (matches deposit address chain key when possible)
+  symbol: string;         // e.g. ETH
+  chainLabel: string;     // e.g. Ethereum, TRC-20 (Tron)
+  minDeposit?: string;    // display only
+  addressChain: string;   // chain key in api.depositAddresses
+}
+
+/** Deposit coins (6) — order matches spec */
+const DEPOSIT_COINS: CoinSpec[] = [
+  { key: "eth",          symbol: "ETH",  chainLabel: "Ethereum",      minDeposit: "0.004 ETH", addressChain: "ethereum" },
+  { key: "btc",          symbol: "BTC",  chainLabel: "Bitcoin",       minDeposit: "0.0005 BTC", addressChain: "bitcoin" },
+  { key: "bnb",          symbol: "BNB",  chainLabel: "BSC",           minDeposit: "0.02 BNB",  addressChain: "bsc" },
+  { key: "sol",          symbol: "SOL",  chainLabel: "Solana",        minDeposit: "0.02 SOL",  addressChain: "solana" },
+  { key: "usdc-sol",     symbol: "USDC", chainLabel: "Solana SPL",    minDeposit: "5 USDC",    addressChain: "solana" },
+  { key: "usdt-tron",    symbol: "USDT", chainLabel: "TRC-20 (Tron)", minDeposit: "10 USDT",   addressChain: "tron" },
+];
+
+/** Withdraw coins (5) — USDC Solana temporarily disabled */
+const WITHDRAW_COINS: CoinSpec[] = [
+  { key: "eth",       symbol: "ETH",  chainLabel: "Ethereum",      addressChain: "ethereum" },
+  { key: "btc",       symbol: "BTC",  chainLabel: "Bitcoin",       addressChain: "bitcoin" },
+  { key: "bnb",       symbol: "BNB",  chainLabel: "BSC",           addressChain: "bsc" },
+  { key: "sol",       symbol: "SOL",  chainLabel: "Solana",        addressChain: "solana" },
+  { key: "usdt-tron", symbol: "USDT", chainLabel: "TRC-20 (Tron)", addressChain: "tron" },
+];
+
+/** Coin logo tile with graceful fallback */
+function CoinLogo({ symbol, size = 40 }: { symbol: string; size?: number }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-border/40 flex items-center justify-center"
+      >
+        <span className="text-[10px] font-bold text-foreground">{symbol.slice(0, 3)}</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={coinLogo(symbol)}
+      alt={symbol}
+      width={size}
+      height={size}
+      onError={() => setErrored(true)}
+      className="rounded-full object-cover"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
 const AITradingWalletPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
