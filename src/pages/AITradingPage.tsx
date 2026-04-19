@@ -15,38 +15,6 @@ import { toast } from "sonner";
 
 const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 
-/* ── Shared Cards ── */
-
-const MetricTile = ({ label, value, icon, tint, showSign }: {
-  label: string; value: number; icon: React.ReactNode; tint: string; showSign?: boolean;
-}) => {
-  const isProfit = value >= 0;
-  const valueColor = showSign && value !== 0
-    ? (isProfit ? "text-success" : "text-destructive")
-    : "text-foreground";
-  return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/80 backdrop-blur-sm p-4 hover:border-border/70 transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", tint)}>
-          {icon}
-        </div>
-        {showSign && value !== 0 && (
-          <div className={cn(
-            "px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5",
-            isProfit ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-          )}>
-            {isProfit ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-          </div>
-        )}
-      </div>
-      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1">{label}</p>
-      <p className={cn("text-lg font-bold font-mono tracking-tight tabular-nums", valueColor)}>
-        {showSign && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </p>
-    </div>
-  );
-};
-
 /* ── Auth Screens ── */
 
 type AuthView = "login" | "signup" | "forgot";
