@@ -4,9 +4,9 @@ import { useTradingApi } from "@/hooks/useTradingApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, TrendingUp, TrendingDown, Wallet, Lock, DollarSign, Bot,
-  LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Activity, Sparkles,
-  ChevronRight, Shield, Zap, BarChart3,
+  Loader2, TrendingUp, TrendingDown, Wallet, Lock, Bot,
+  LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Activity,
+  ChevronRight, Zap, BarChart3, Plus, ArrowDown, Power,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
