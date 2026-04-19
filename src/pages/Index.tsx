@@ -45,7 +45,7 @@ const Index = () => {
   const percentChange = prices?.length ? prices.reduce((sum, p) => sum + (p.change24h || 0), 0) / prices.length : 0;
   const dollarChange = displayBalance * (percentChange / 100);
   const isPositive = percentChange >= 0;
-  const hiddenTabs = useMemo<NavTab[]>(() => ["trading", "staking"], []);
+  const hiddenTabs = useMemo<NavTab[]>(() => [], []);
 
   useEffect(() => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
