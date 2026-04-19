@@ -1,19 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTradingApi } from "@/hooks/useTradingApi";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, TrendingUp, TrendingDown, Wallet, Lock, Bot,
-  LogOut, RefreshCw, ArrowUpRight, ArrowDownRight, Activity,
-  ChevronRight, Zap, BarChart3, Plus, ArrowDown, Power,
+  Loader2, TrendingUp, TrendingDown, Bot, LogOut, RefreshCw,
+  ArrowUpRight, ArrowDownRight, Activity, Zap, BarChart3,
+  ArrowDown, Power, Sparkles, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { TradingOnboardingWizard, type TradingProfile } from "@/components/trading/TradingOnboardingWizard";
-import { toast } from "sonner";
-
-const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 
 /* ── Auth Screens ── */
 
@@ -151,26 +146,28 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
 function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const navigate = useNavigate();
-  const { balance, tradingStatus, earnings, tradeHistory, profile, isLoading, fetchDashboardData, logout } = api;
+  const { balance, tradingStatus, earnings, tradeHistory, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
+  const [hideBalance, setHideBalance] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
   const totalProfit = balance?.released_profit || 0;
   const earningsTotal = earnings?.total_usd || 0;
   const availableBalance = balance?.usd_balance || 0;
+  const lockedBalance = balance?.locked_balance || 0;
+  const isActive = !!tradingStatus?.trading_active;
 
   const handleToggle = async () => {
-    if (tradingStatus?.trading_active) {
+    if (isActive) {
       setToggling(true);
-      try {
-        await api.toggleTrading("stop");
-      } finally {
-        setToggling(false);
-      }
+      try { await api.toggleTrading("stop"); } finally { setToggling(false); }
       return;
     }
     navigate("/ai-trading/start");
   };
+
+  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const mask = (v: string) => hideBalance ? "••••••" : v;
 
   if (isLoading && !balance) {
     return (
@@ -181,12 +178,15 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   }
 
   return (
-    <div className="px-4 py-4 space-y-4 pb-32">
-      {/* Header */}
-      <div className="flex items-center justify-between pt-1">
+    <div className="px-4 pt-3 pb-32 space-y-5">
+      {/* Top bar */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-primary" />
+          <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/30">
+            <Bot className="w-5 h-5 text-primary-foreground" />
+            {isActive && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-background animate-pulse" />
+            )}
           </div>
           <div>
             <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">AI Trading</h1>
@@ -203,81 +203,151 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         </div>
       </div>
 
-      {/* Hero Balance — clean, single focal point */}
-      <div className="rounded-3xl border border-border/40 bg-card p-6">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Total Balance</p>
-          <div className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold",
-            tradingStatus?.trading_active
-              ? "bg-success/10 text-success"
-              : "bg-muted text-muted-foreground"
-          )}>
-            <span className={cn("w-1.5 h-1.5 rounded-full", tradingStatus?.trading_active ? "bg-success animate-pulse" : "bg-muted-foreground/60")} />
-            {tradingStatus?.trading_active ? "Trading" : "Paused"}
+      {/* Premium Hero Card */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-5 shadow-xl shadow-primary/5">
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-3xl" />
+
+        <div className="relative">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em]">Total Portfolio</p>
+            </div>
+            <button
+              onClick={() => setHideBalance(!hideBalance)}
+              className="w-7 h-7 rounded-lg bg-background/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+              aria-label="Toggle balance"
+            >
+              {hideBalance ? <EyeOff className="w-3.5 h-3.5 text-muted-foreground" /> : <Eye className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
           </div>
-        </div>
 
-        <p className="text-[38px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums mt-2">
-          ${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-[22px] font-bold text-muted-foreground/70">$</span>
+            <span className="text-[42px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
+              {mask(fmt(totalBalance))}
+            </span>
+          </div>
 
-        <div className={cn(
-          "inline-flex items-center gap-1 mt-3 text-[12px] font-semibold tabular-nums",
-          totalProfit >= 0 ? "text-success" : "text-destructive"
-        )}>
-          {totalProfit >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-          {totalProfit >= 0 ? "+" : ""}${Math.abs(totalProfit).toFixed(2)}
-          <span className="text-muted-foreground font-normal ml-1">all-time P&L</span>
-        </div>
+          <div className="flex items-center gap-2 mt-3">
+            <div className={cn(
+              "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold tabular-nums",
+              totalProfit >= 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+            )}>
+              {totalProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
+            </div>
+            <span className="text-[10px] text-muted-foreground font-medium">all-time P&L</span>
+          </div>
 
-        {/* Quick action row */}
-        <div className="grid grid-cols-3 gap-2 mt-5">
-          <ActionButton label="Deposit" icon={<ArrowDown className="w-4 h-4" />} onClick={() => navigate("/ai-trading/wallet?tab=deposit")} />
-          <ActionButton label="Withdraw" icon={<ArrowUpRight className="w-4 h-4" />} onClick={() => navigate("/ai-trading/wallet?tab=withdraw")} />
-          <ActionButton label="Live" icon={<Activity className="w-4 h-4" />} onClick={() => navigate("/live-trades")} live />
+          {/* Mini split: Available / Locked */}
+          <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-border/30">
+            <div>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1">Available</p>
+              <p className="text-[15px] font-bold font-mono text-foreground tabular-nums">${mask(fmt(availableBalance))}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1">In Trades</p>
+              <p className="text-[15px] font-bold font-mono text-muted-foreground tabular-nums">${mask(fmt(lockedBalance))}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Primary CTA — Start / Stop trading */}
-      <Button
-        onClick={handleToggle}
-        disabled={toggling}
-        className={cn(
-          "w-full h-14 rounded-2xl text-sm font-semibold",
-          tradingStatus?.trading_active
-            ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            : "bg-primary hover:bg-primary/90 text-primary-foreground"
-        )}
-      >
-        {toggling ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : tradingStatus?.trading_active ? (
-          <><Power className="w-4 h-4 mr-2" />Stop Trading</>
-        ) : (
-          <><Zap className="w-4 h-4 mr-2" />Start Trading</>
-        )}
-      </Button>
+      {/* Quick actions */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <ActionButton label="Deposit" icon={<ArrowDown className="w-4 h-4" />} onClick={() => navigate("/ai-trading/wallet?tab=deposit")} />
+        <ActionButton label="Withdraw" icon={<ArrowUpRight className="w-4 h-4" />} onClick={() => navigate("/ai-trading/wallet?tab=withdraw")} />
+        <ActionButton label="Live" icon={<Activity className="w-4 h-4" />} onClick={() => navigate("/live-trades")} live />
+      </div>
 
-      {/* Stat row — 3 compact tiles */}
-      <div className="grid grid-cols-3 gap-2">
-        <StatTile label="Available" value={availableBalance} />
-        <StatTile label="In Trades" value={balance?.locked_balance || 0} muted />
-        <StatTile label="7d Earnings" value={earningsTotal} highlight />
+      {/* Trading status + CTA card */}
+      <div className="rounded-2xl border border-border/40 bg-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className={cn(
+              "w-9 h-9 rounded-xl flex items-center justify-center",
+              isActive ? "bg-success/15" : "bg-muted"
+            )}>
+              <Power className={cn("w-4 h-4", isActive ? "text-success" : "text-muted-foreground")} />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-foreground">{isActive ? "Bot is Running" : "Bot is Idle"}</p>
+              <p className="text-[10px] text-muted-foreground font-medium">
+                {isActive ? "AI is actively trading on your behalf" : "Tap below to start automated trading"}
+              </p>
+            </div>
+          </div>
+          {isActive && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-success/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              <span className="text-[10px] font-bold text-success uppercase tracking-wider">Live</span>
+            </div>
+          )}
+        </div>
+
+        <Button
+          onClick={handleToggle}
+          disabled={toggling}
+          className={cn(
+            "w-full h-12 rounded-xl text-sm font-bold",
+            isActive
+              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+          )}
+        >
+          {toggling ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : isActive ? (
+            <><Power className="w-4 h-4 mr-2" />Stop Trading</>
+          ) : (
+            <><Zap className="w-4 h-4 mr-2" />Start Trading</>
+          )}
+        </Button>
+      </div>
+
+      {/* Earnings highlight */}
+      <div className="rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-card p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-success/15 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-success" />
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">7-day Earnings</p>
+            <p className={cn(
+              "text-[18px] font-bold font-mono tabular-nums",
+              earningsTotal > 0 ? "text-success" : "text-foreground"
+            )}>
+              {earningsTotal > 0 ? "+" : ""}${mask(fmt(earningsTotal))}
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-muted-foreground font-medium">Trades</p>
+          <p className="text-[15px] font-bold text-foreground tabular-nums">{tradeHistory.length}</p>
+        </div>
       </div>
 
       {/* Recent Trades */}
       <div>
         <div className="flex items-center justify-between px-1 mb-2.5">
-          <p className="text-[11px] text-foreground font-semibold uppercase tracking-wider">Recent Trades</p>
+          <p className="text-[11px] text-foreground font-bold uppercase tracking-wider">Recent Trades</p>
           {tradeHistory.length > 0 && (
-            <span className="text-[10px] text-muted-foreground font-medium tabular-nums">{tradeHistory.length} total</span>
+            <button
+              onClick={() => navigate("/live-trades")}
+              className="text-[11px] text-primary font-semibold active:opacity-60"
+            >
+              View all
+            </button>
           )}
         </div>
+
         <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
           {tradeHistory.length === 0 ? (
-            <div className="py-12 text-center px-4">
-              <div className="w-11 h-11 rounded-2xl bg-muted/40 flex items-center justify-center mx-auto mb-3">
+            <div className="py-14 text-center px-4">
+              <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center mx-auto mb-3">
                 <BarChart3 className="w-5 h-5 text-muted-foreground/60" />
               </div>
               <p className="text-[13px] font-semibold text-foreground">No trades yet</p>
@@ -289,7 +359,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
                 const pnl = trade.pnl || 0;
                 const isProfit = pnl >= 0;
                 return (
-                  <div key={trade.id || i} className="flex items-center justify-between py-3 px-4">
+                  <div key={trade.id || i} className="flex items-center justify-between py-3 px-4 active:bg-secondary/30">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={cn(
                         "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
@@ -308,7 +378,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
                         </p>
                       </div>
                     </div>
-                    <p className={cn("font-mono text-[13px] font-semibold tabular-nums", isProfit ? "text-success" : "text-destructive")}>
+                    <p className={cn("font-mono text-[13px] font-bold tabular-nums", isProfit ? "text-success" : "text-destructive")}>
                       {isProfit ? "+" : ""}${Math.abs(pnl).toFixed(2)}
                     </p>
                   </div>
@@ -329,7 +399,7 @@ const ActionButton = ({ label, icon, onClick, live }: {
 }) => (
   <button
     onClick={onClick}
-    className="relative flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-secondary/60 border border-border/40 hover:bg-secondary active:scale-[0.97] transition-all"
+    className="relative flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-card border border-border/40 hover:border-primary/30 active:scale-[0.97] transition-all"
   >
     {live && (
       <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
@@ -337,23 +407,14 @@ const ActionButton = ({ label, icon, onClick, live }: {
         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
       </span>
     )}
-    <div className="text-foreground">{icon}</div>
+    <div className={cn(
+      "w-8 h-8 rounded-xl flex items-center justify-center",
+      live ? "bg-success/10 text-success" : "bg-primary/10 text-primary"
+    )}>
+      {icon}
+    </div>
     <span className="text-[11px] font-semibold text-foreground">{label}</span>
   </button>
-);
-
-const StatTile = ({ label, value, muted, highlight }: {
-  label: string; value: number; muted?: boolean; highlight?: boolean;
-}) => (
-  <div className="rounded-2xl border border-border/40 bg-card p-3">
-    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">{label}</p>
-    <p className={cn(
-      "text-[15px] font-bold font-mono tabular-nums tracking-tight",
-      muted ? "text-muted-foreground" : highlight && value > 0 ? "text-success" : "text-foreground"
-    )}>
-      {highlight && value > 0 ? "+" : ""}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    </p>
-  </div>
 );
 
 /* ── Main Page ── */
