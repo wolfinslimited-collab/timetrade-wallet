@@ -2,68 +2,83 @@
 
 ## Goal
 
-Turn the `config` table flags into **per-platform** feature switches and have the bottom nav respect them. 12 keys total — 4 features × 3 platforms (iphone, android, web).
+Build a server-pushed notification system so you can send notifications to all users, or target by platform (iPhone / Android / Web). Users see them in their existing Notifications page, persisted across sessions.
 
-## The 12 config keys
+## How it works
 
-| Feature | iPhone | Android | Web |
-|---|---|---|---|
-| Staking tab | `show_staking_iphone` | `show_staking_android` | `show_staking_web` |
-| Swap action | `show_swap_iphone` | `show_swap_android` | `show_swap_web` |
-| Exchange | `exchange_enabled_iphone` | `exchange_enabled_android` | `exchange_enabled_web` |
-| AI Trade tab | `show_ai_trade_iphone` | `show_ai_trade_android` | `show_ai_trade_web` |
+1. You insert a row into a new `push_notifications` table (via Cloud table UI or a future admin panel)
+2. Each row has a `target_platform` field: `'all'`, `'iphone'`, `'android'`, or `'web'`
+3. The app polls for new notifications every 60 seconds (or on app focus) and shows them in the notification feed
+4. Users can dismiss/read them — tracked per-device in localStorage
 
-All defaults: `false` (matches current state — flip to `true` from the Cloud config UI when you want a feature live on a platform).
+## Database changes
 
-## Backend changes
+**New table: `push_notifications`**
 
-Single migration that:
-1. Deletes the 3 old non-platform rows (`show_staking`, `show_swap`, `exchange_enabled`).
-2. Inserts the 12 new rows with `false` defaults (uses `ON CONFLICT (key) DO NOTHING` so it's safe to re-run).
-3. Adds a `UNIQUE` constraint on `config.key` (currently missing — needed for upsert/conflict logic).
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid (PK) | auto-generated |
+| `type` | text | `'info'`, `'price_alert'`, `'transaction'`, `'security'` |
+| `title` | text | notification title |
+| `message` | text | notification body |
+| `icon` | text (nullable) | emoji or icon identifier |
+| `target_platform` | text | `'all'`, `'iphone'`, `'android'`, `'web'` |
+| `is_active` | boolean | default true (set false to hide) |
+| `expires_at` | timestamptz (nullable) | auto-hide after this time |
+| `created_at` | timestamptz | default now() |
 
-`config` table RLS already allows public SELECT — no changes there.
+RLS: public SELECT (read-only, same pattern as `config`). No INSERT/UPDATE/DELETE from client.
+
+**Add `platform` column to `wallet_users`**
+
+```sql
+ALTER TABLE wallet_users ADD COLUMN platform text DEFAULT 'web';
+```
+
+So you can see which platform each user registered from.
+
+## Edge function changes
+
+**`register-user`** — accept and store `platform` field from the client (uses `usePlatform()` value).
 
 ## Frontend changes
 
-**1. New hook `src/hooks/usePlatform.ts`**
-Returns `'iphone' | 'android' | 'web'` using `Capacitor.getPlatform()` (`'ios'` → `'iphone'`).
+**1. Update `register-user` calls** (WalletOnboarding + AccountSwitcherSheet)
+- Send `platform: usePlatform()` in the `device_info` body, and as a top-level field.
 
-**2. New hook `src/hooks/useFeatureFlags.ts`**
-- One React Query call fetching all 12 rows from `config` (5 min stale time).
-- Detects current platform via `usePlatform()`.
-- Returns a clean object:
-  ```ts
-  { showStaking, showSwap, exchangeEnabled, showAiTrade, isLoading }
-  ```
-  Each value already resolved to the current platform's flag. Defaults to `false` while loading or on error so hidden-by-default is the safe behavior.
+**2. New hook: `src/hooks/useServerNotifications.ts`**
+- On mount + every 60s + on window focus: fetch from `push_notifications` where `target_platform IN ('all', currentPlatform)` AND `is_active = true` AND (`expires_at IS NULL OR expires_at > now()`)
+- Track dismissed IDs in localStorage (`timetrade_dismissed_notifications`)
+- Filter out already-dismissed ones
+- Return array of server notifications
 
-**3. `src/pages/Index.tsx`** — feed flags into `hiddenTabs`:
-```ts
-const flags = useFeatureFlags();
-const hiddenTabs = useMemo<NavTab[]>(() => {
-  const hidden: NavTab[] = [];
-  if (!flags.showStaking) hidden.push("staking");
-  if (!flags.showAiTrade) hidden.push("trading");
-  return hidden;
-}, [flags.showStaking, flags.showAiTrade]);
+**3. Update `useNotifications.ts`**
+- Merge server notifications from `useServerNotifications` with local (in-app) notifications
+- Server notifications appear at the top, sorted by `created_at` desc
+- When user deletes a server notification, its ID is added to the dismissed list
+
+**4. No changes to NotificationsPage/NotificationCenter UI** — they already render from the notifications array.
+
+## How you send a notification
+
+Open Cloud -> Tables -> `push_notifications`, insert a row:
+
 ```
-Also gate the view-switch logic so a user can't land on a hidden tab via deeplink.
+title: "Maintenance tonight"
+message: "The app will be briefly offline at 2am UTC"
+type: "info"
+target_platform: "all"       -- or "iphone", "android", "web"
+is_active: true
+```
 
-**4. Swap/Exchange gating**
-- `showSwap` → hides Swap quick action button (currently the `/swap` route already renders `NotFound`, so we just hide the entry point).
-- `exchangeEnabled` → controls any exchange-related entry point. (Project is in wallet-only mode so there's no live exchange UI right now; the flag will be wired to the hook and ready for future use — no UI gating needed today, documented in the hook's JSDoc.)
+All matching users see it within 60 seconds.
 
 ## Files touched
 
-- `supabase/migrations/<timestamp>_platform_feature_flags.sql` (new)
-- `src/hooks/usePlatform.ts` (new)
-- `src/hooks/useFeatureFlags.ts` (new)
-- `src/pages/Index.tsx` (use flags for `hiddenTabs` + deeplink guard)
-- `src/components/QuickActions.tsx` (hide Swap button when `!showSwap`)
-- `.lovable/memory/index.md` + new `mem://features/platform-feature-flags.md`
-
-## How you control flags after migration
-
-Open Cloud → Tables → `config`, edit any row's `value` from `false` to `true`. Frontend picks it up within 5 min (or on next app reload). No code change needed to flip a feature on a single platform.
+- `supabase/migrations/<ts>_push_notifications.sql` (new table + platform column on wallet_users)
+- `supabase/functions/register-user/index.ts` (accept platform field)
+- `src/hooks/useServerNotifications.ts` (new — polling hook)
+- `src/hooks/useNotifications.ts` (merge server notifications)
+- `src/components/WalletOnboarding.tsx` (send platform)
+- `src/components/wallet/AccountSwitcherSheet.tsx` (send platform)
 
