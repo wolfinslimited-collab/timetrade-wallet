@@ -4,6 +4,7 @@ import { ChevronLeft, Delete, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { haptics } from "@/lib/haptics";
+import { KeypadButton } from "@/components/shared/KeypadButton";
 
 interface PinSetupStepProps {
   onComplete: (pin: string) => void;
@@ -209,47 +210,3 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
   );
 };
 
-/* ---------- Native-feel Keypad Button ---------- */
-interface KeypadButtonProps {
-  onPress: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}
-
-const KeypadButton = ({ onPress, disabled, children }: KeypadButtonProps) => {
-  const [pressed, setPressed] = useState(false);
-
-  // Use pointerdown for instant response (no 300ms click delay).
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (disabled) return;
-    e.preventDefault();
-    setPressed(true);
-    onPress();
-  };
-
-  const release = () => setPressed(false);
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onPointerDown={handlePointerDown}
-      onPointerUp={release}
-      onPointerLeave={release}
-      onPointerCancel={release}
-      className={cn(
-        "relative w-[72px] h-[72px] rounded-full mx-auto select-none",
-        "flex items-center justify-center",
-        "text-foreground",
-        "bg-white/[0.04] border border-white/[0.06]",
-        "transition-[transform,background-color] duration-75 ease-out",
-        "will-change-transform touch-manipulation",
-        pressed && !disabled && "bg-white/[0.16] scale-90",
-        disabled && "opacity-40"
-      )}
-      style={{ WebkitTapHighlightColor: "transparent" }}
-    >
-      {children}
-    </button>
-  );
-};

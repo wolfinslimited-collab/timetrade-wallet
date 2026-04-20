@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Fingerprint, AlertCircle } from "lucide-react";
+import { Fingerprint, AlertCircle, Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { LockScreenBackground } from "@/components/lock/LockScreenBackground";
-import { PinKeypad } from "@/components/lock/PinKeypad";
+import { KeypadButton } from "@/components/shared/KeypadButton";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { haptics } from "@/lib/haptics";
 
@@ -203,32 +203,36 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex gap-3 mb-6"
         >
-          {[0, 1, 2, 3, 4, 5].map((index) => (
-            <motion.div
-              key={index}
-              animate={
-                showError
-                  ? { x: [-4, 4, -4, 4, 0] }
-                  : index < pin.length
-                  ? { scale: [1, 1.2, 1] }
-                  : {}
-              }
-              transition={{ duration: 0.25 }}
-            >
-              <div
-                className={cn(
-                  "w-6 h-6 rounded-full transition-all duration-200",
-                  index < pin.length
-                    ? showError
-                      ? "bg-destructive"
-                      : "bg-foreground"
-                    : "bg-muted-foreground/30"
-                )}
-              />
-            </motion.div>
-          ))}
+          <motion.div
+            animate={showError ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : {}}
+            transition={{ duration: 0.45 }}
+            className="flex gap-3.5 mb-6"
+          >
+            {[0, 1, 2, 3, 4, 5].map((i) => {
+              const filled = i < pin.length;
+              return (
+                <motion.div
+                  key={i}
+                  animate={{
+                    scale: filled ? 1 : 0.85,
+                    backgroundColor: showError
+                      ? "hsl(var(--destructive))"
+                      : filled
+                      ? "hsl(var(--foreground))"
+                      : "transparent",
+                    borderColor: showError
+                      ? "hsl(var(--destructive))"
+                      : filled
+                      ? "hsl(var(--foreground))"
+                      : "hsl(var(--border))",
+                  }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  className="w-3.5 h-3.5 rounded-full border-2"
+                />
+              );
+            })}
+          </motion.div>
         </motion.div>
 
         {/* Prominent biometric pill */}
@@ -253,13 +257,30 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         )}
 
         {/* Keypad */}
-        <PinKeypad
-          isLocked={isLocked}
-          biometricAvailable={biometricReady}
-          onKeyPress={handleKeyPress}
-          onDelete={handleDelete}
-          onBiometric={handleBiometric}
-        />
+        <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+            <KeypadButton
+              key={digit}
+              onPress={() => handleKeyPress(String(digit))}
+              disabled={isLocked}
+            >
+              <span className="text-[30px] font-light leading-none">{digit}</span>
+            </KeypadButton>
+          ))}
+          <div />
+          <KeypadButton
+            onPress={() => handleKeyPress("0")}
+            disabled={isLocked}
+          >
+            <span className="text-[30px] font-light leading-none">0</span>
+          </KeypadButton>
+          <KeypadButton
+            onPress={handleDelete}
+            disabled={isLocked || pin.length === 0}
+          >
+            <Delete className="w-6 h-6 text-muted-foreground" strokeWidth={1.5} />
+          </KeypadButton>
+        </div>
       </div>
     </div>
   );

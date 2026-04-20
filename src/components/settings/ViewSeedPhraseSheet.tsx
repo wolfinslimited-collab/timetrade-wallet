@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Copy, AlertTriangle, Lock, Shield, Loader2, ChevronRight, Wallet } from "lucide-react";
+import { Eye, EyeOff, Copy, AlertTriangle, Shield, ChevronRight, Wallet } from "lucide-react";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
+import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
 
 interface ViewSeedPhraseSheetProps {
   open: boolean;
@@ -56,42 +57,30 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
     setStep("enter-pin");
   };
 
-  const handleKeyPress = async (digit: string) => {
-    if (pin.length >= 6) return;
-    const newPin = pin + digit;
-    setPin(newPin);
-    setError(null);
-
-    if (newPin.length === 6) {
-      if (newPin === storedPin) {
-        setIsDecrypting(true);
-        try {
-          if (selectedAccount?.encryptedSeedPhrase) {
-            const encryptedData: EncryptedData = JSON.parse(selectedAccount.encryptedSeedPhrase);
-            const decryptedPhrase = await decryptPrivateKey(encryptedData, newPin);
-            setSeedPhrase(decryptedPhrase.split(" "));
-            setStep("view-seed");
-          } else {
-            setError("No seed phrase found");
-            setPin("");
-          }
-        } catch {
-          setError("Failed to decrypt seed phrase");
-          setPin("");
-        } finally {
-          setIsDecrypting(false);
-        }
-      } else {
-        setError("Incorrect PIN");
-        setPin("");
-      }
+  const handlePinSubmit = useCallback(async (enteredPin: string): Promise<boolean> => {
+    if (enteredPin !== storedPin) {
+      setError("Incorrect PIN");
+      return false;
     }
-  };
-
-  const handleDelete = () => {
-    setPin(pin.slice(0, -1));
-    setError(null);
-  };
+    setIsDecrypting(true);
+    try {
+      if (selectedAccount?.encryptedSeedPhrase) {
+        const encryptedData: EncryptedData = JSON.parse(selectedAccount.encryptedSeedPhrase);
+        const decryptedPhrase = await decryptPrivateKey(encryptedData, enteredPin);
+        setSeedPhrase(decryptedPhrase.split(" "));
+        setStep("view-seed");
+        return true;
+      } else {
+        setError("No seed phrase found");
+        return false;
+      }
+    } catch {
+      setError("Failed to decrypt seed phrase");
+      return false;
+    } finally {
+      setIsDecrypting(false);
+    }
+  }, [storedPin, selectedAccount]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(seedPhrase.join(" "));
@@ -167,80 +156,17 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   // Step 2: PIN entry
   if (step === "enter-pin") {
     return (
-      <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[100dvh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
-          <SheetHeader className="px-6 pt-6 pb-2">
-            <div className="flex items-center gap-2">
-              <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                ← Back
-              </button>
-              <SheetTitle className="text-xl font-bold">Enter PIN</SheetTitle>
-            </div>
-          </SheetHeader>
-
-          <div className="flex flex-col px-6 pb-8">
-            <div className="flex flex-col items-center justify-center py-6">
-              {isDecrypting ? (
-                <>
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                  </div>
-                  <p className="text-muted-foreground text-center">Decrypting...</p>
-                </>
-              ) : (
-                <>
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4">
-                    <Lock className="w-8 h-8 text-primary" />
-                  </div>
-                  <p className="text-sm font-medium mb-1">{selectedAccount?.nickname}</p>
-                  <p className="text-muted-foreground text-center mb-6 max-w-xs text-sm">
-                    Enter your PIN to view the seed phrase
-                  </p>
-                  {error && <p className="text-destructive text-sm mb-4">{error}</p>}
-                  <div className="flex gap-4 mb-6">
-                    {[0, 1, 2, 3, 4, 5].map((index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          "w-4 h-4 rounded-full transition-all duration-200",
-                          index < pin.length
-                            ? error ? "bg-destructive" : "bg-primary scale-110"
-                            : "bg-muted border border-border"
-                        )}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 max-w-[260px] mx-auto">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-                <button
-                  key={digit}
-                  onClick={() => handleKeyPress(String(digit))}
-                  className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
-                >
-                  {digit}
-                </button>
-              ))}
-              <div />
-              <button
-                onClick={() => handleKeyPress("0")}
-                className="w-[76px] h-[76px] rounded-full bg-card border border-border text-xl font-semibold hover:bg-secondary active:scale-95 transition-all"
-              >
-                0
-              </button>
-              <button
-                onClick={handleDelete}
-                className="w-[76px] h-[76px] rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-all"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FullScreenPinModal
+        open={open}
+        onClose={handleClose}
+        title="Enter PIN"
+        subtitle={`Verify to view ${selectedAccount?.nickname}'s seed phrase`}
+        eyebrow="SECURITY"
+        onSubmit={handlePinSubmit}
+        error={error}
+        isLoading={isDecrypting}
+        showBackArrow
+      />
     );
   }
 
