@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { PnlChart } from "@/components/trading/PnlChart";
 
 /* ── Auth Screens ── */
 
@@ -330,6 +331,11 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           onClick={() => navigate("/live-trades")}
           live
         />
+      </div>
+
+      {/* P&L chart */}
+      <div className="mt-3">
+        <PnlChart trades={tradeHistory} />
       </div>
 
       {/* Recent activity */}
