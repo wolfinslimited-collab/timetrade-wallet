@@ -28,8 +28,15 @@ interface TradingStatus {
   mode: string;
 }
 
-interface EarningsSummary {
-  earnings: any[];
+export interface EarningPoint {
+  hour_bucket: string;
+  earning_usd: number;
+  earning_pct?: number;
+  balance_snapshot?: number;
+}
+
+export interface EarningsSummary {
+  earnings: EarningPoint[];
   total_usd: number;
   days: number;
 }
