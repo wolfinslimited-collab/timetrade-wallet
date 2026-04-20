@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { wallet_name, device_info } = await req.json();
+    const { wallet_name, device_info, platform } = await req.json();
 
     // Get IP from request headers
     const ip =
@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
       ip_address: ip,
       country,
       city,
+      platform: platform || "web",
     });
 
     if (error) throw error;
