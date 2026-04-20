@@ -78,7 +78,8 @@ export const VerifySeedStep = ({ seedPhrase, onComplete, onBack }: VerifySeedSte
   const allFilled = selectedWords.every(w => w !== null);
 
   return (
-    <div className="flex flex-col h-screen overflow-y-auto p-6">
+    <div className="flex flex-col h-screen">
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 shrink-0">
         <button 
