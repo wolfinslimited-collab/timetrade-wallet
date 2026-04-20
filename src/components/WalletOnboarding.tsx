@@ -31,19 +31,30 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
   const [encryptedSeedStr, setEncryptedSeedStr] = useState<string | null>(null);
+  const [postTour, setPostTour] = useState<"create" | "import">("create");
   const prevStepRef = useRef<OnboardingStep>("welcome");
 
   const direction = STEP_ORDER.indexOf(step) >= STEP_ORDER.indexOf(prevStepRef.current) ? 1 : -1;
   prevStepRef.current = step;
 
   const handleCreateWallet = () => {
-    const newSeedPhrase = generateSeedPhrase(12);
-    setSeedPhrase(newSeedPhrase);
-    setStep("security");
+    setPostTour("create");
+    setStep("tour");
   };
 
   const handleImportWallet = () => {
-    setStep("import");
+    setPostTour("import");
+    setStep("tour");
+  };
+
+  const handleTourContinue = () => {
+    if (postTour === "create") {
+      const newSeedPhrase = generateSeedPhrase(12);
+      setSeedPhrase(newSeedPhrase);
+      setStep("security");
+    } else {
+      setStep("import");
+    }
   };
 
   const handleImportComplete = (importedPhrase: string[]) => {
