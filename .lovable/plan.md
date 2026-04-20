@@ -1,48 +1,38 @@
 
 
-## Fix Push Notifications on Native (iOS/Android)
+## Fix App Splash Screen: Dark Background + App Logo
 
-Two problems:
+### Problem
+On app startup, a white screen with the default Capacitor logo appears. This happens because the CI build pipeline recreates the `ios` and `android` folders from scratch (`rm -rf ios && npx cap add ios`), which generates the default Capacitor LaunchScreen with a white background and Capacitor's blue icon.
 
-1. **"Not Supported" error in Settings**: The `useWebNotifications` hook checks `'Notification' in window`, which returns `false` inside Capacitor's WKWebView on iOS. The notification settings sheet then shows the "Not Supported" error. On native platforms, push notifications are handled by Firebase Cloud Messaging (FCM) via the native layer, not the browser Notification API -- so this check is wrong for native.
+### Solution
+Add CI steps in the `github-build` edge function to replace the default splash/launch screens on both iOS and Android with a dark background (#0E1116) and the app logo centered.
 
-2. **No permission prompt on app startup**: The `useFCMToken` hook calls `Notification.requestPermission()` which also fails silently inside WKWebView. On native iOS/Android, the permission prompt must go through Capacitor's native push notification plugin, not the browser API.
+### Changes
 
-### Plan
+**File: `supabase/functions/github-build/index.ts`**
 
-**Step 1: Update `useWebNotifications` to treat native platforms as supported**
+1. **iOS workflow** — Add a new step after "Sync Capacitor" called "Customize LaunchScreen":
+   - Use `sed` or a heredoc to replace the default `ios/App/App/Base.lproj/LaunchScreen.storyboard` with a custom storyboard XML that has:
+     - Background color set to #0E1116 (the app's dark background)
+     - An `ImageView` centered on screen displaying the app logo
+   - Copy `public/app-logo.png` into `ios/App/App/Assets.xcassets/` as a `Splash.imageset` with a scaled-down version (e.g., 200px) so it appears centered as a logo, not filling the screen
+   - The storyboard XML will reference this image asset
 
-In `src/hooks/useWebNotifications.ts`, import `Capacitor` and check `Capacitor.isNativePlatform()`. If native, set `isSupported = true` and skip the `'Notification' in window` check. For permission status on native, default to `'granted'` (since FCM handles the native permission flow separately).
+2. **Android workflow** — Add a new step after "Sync Capacitor" called "Customize splash screen":
+   - Replace `android/app/src/main/res/drawable/splash.png` with a generated dark-background splash image using ImageMagick (composite the app logo centered on a dark #0E1116 canvas)
+   - Update `android/app/src/main/res/values/styles.xml` to ensure the `AppTheme.NoActionBarLaunch` theme uses the dark background color
+   - Optionally create additional density drawable folders (drawable-hdpi, drawable-xhdpi, etc.) with appropriate sizes
 
-**Step 2: Update `NotificationSettingsSheet` for native context**
-
-In `src/components/settings/NotificationSettingsSheet.tsx`, detect native platform using `Capacitor.isNativePlatform()`. On native:
-- Skip the "Not Supported" and "Preview Mode" warnings entirely
-- Show the notification type toggles directly (price alerts, transactions, security)
-- The "Enable" button should use FCM token registration flow instead of browser `Notification.requestPermission()`
-
-**Step 3: Request native push permission on app startup**
-
-Update `src/hooks/useFCMToken.ts` to handle native platforms properly:
-- On native (Capacitor), use `@capacitor/push-notifications` plugin's `requestPermissions()` and `register()` methods to get the native APNs/FCM token
-- On web, keep the existing browser Notification API flow
-- Install `@capacitor/push-notifications` as a dependency
-- Call the native permission request early in the app lifecycle so the iOS permission dialog appears on first launch
-
-**Step 4: Update `useFCMToken` to register native tokens**
-
-When running on native:
-- Use `PushNotifications.requestPermissions()` then `PushNotifications.register()`
-- Listen for `registration` event to get the native device token
-- Upsert the native token to the `fcm_tokens` table with the correct platform
-- Listen for `pushNotificationReceived` (foreground) to show in-app toasts
-- Skip the Firebase web SDK messaging entirely on native (it does not work in WKWebView)
+3. **Also add a web-side loading screen** in `index.html`:
+   - Add inline CSS and HTML inside the `#root` div that shows the app logo centered on a dark background
+   - This will display immediately while React loads, then React replaces the content
+   - This covers the brief white flash before the JS bundle loads on native
 
 ### Technical Details
 
-- `@capacitor/push-notifications` provides the native bridge for APNs (iOS) and FCM (Android)
-- On iOS, the native token from APNs is automatically forwarded to FCM if `GoogleService-Info.plist` is configured (already present in the project)
-- On Android, `google-services.json` is already in the project
-- The `useFCMToken` hook already runs in `AnimatedRoutes` (App.tsx), so it will trigger on startup
-- The web Firebase SDK path (`firebase/messaging`) remains for browser-only usage
+- The iOS LaunchScreen.storyboard is an XML file that Xcode uses to render the launch screen. Capacitor generates a default one with a white background. We replace it with custom XML referencing our logo image asset.
+- Android uses `@drawable/splash` referenced in `styles.xml`. We replace the default splash.png with our branded version.
+- The `index.html` inline loading screen is the fastest way to eliminate the white flash between native splash dismiss and React mount.
+- No new dependencies required.
 
