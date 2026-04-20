@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Eye, EyeOff, ChevronLeft, Check, RefreshCw } from "lucide-react";
+import { Copy, Eye, EyeOff, ChevronLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -118,17 +118,6 @@ export const SeedPhraseStep = ({ seedPhrase, onContinue, onBack }: SeedPhraseSte
           </Button>
         </div>
       )}
-
-      {/* Warning Box */}
-      <div className="mt-6 p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
-        <div className="flex items-start gap-3">
-          <RefreshCw className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-          <p className="text-sm text-muted-foreground">
-            <strong className="text-destructive">Never share</strong> your seed phrase with anyone. 
-            Timetrade support will <strong>never</strong> ask for it.
-          </p>
-        </div>
-      </div>
 
       </div>
 
