@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { ChevronLeft, ArrowLeft } from "lucide-react";
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Delete, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { haptics } from "@/lib/haptics";
 
 interface PinSetupStepProps {
   onComplete: (pin: string) => void;
@@ -14,162 +15,241 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
   const [step, setStep] = useState<"create" | "confirm">("create");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  
+  const [error, setError] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const currentPin = step === "create" ? pin : confirmPin;
-  const setCurrentPin = step === "create" ? setPin : setConfirmPin;
 
+  const handleKeyPress = useCallback(
+    (digit: string) => {
+      if (success) return;
+      const active = step === "create" ? pin : confirmPin;
+      if (active.length >= 6) return;
 
-  const handleKeyPress = (digit: string) => {
-    if (currentPin.length >= 6) return;
-    
-    const newPin = currentPin + digit;
-    setCurrentPin(newPin);
+      haptics.selection();
+      const newPin = active + digit;
+      if (step === "create") setPin(newPin);
+      else setConfirmPin(newPin);
 
-    if (newPin.length === 6) {
-      if (step === "create") {
-        setTimeout(() => setStep("confirm"), 300);
-      } else {
-        if (newPin === pin) {
-          toast({
-            title: "PIN created successfully!",
-            description: "Your wallet is now secured",
-          });
-          onComplete(newPin);
+      if (newPin.length === 6) {
+        if (step === "create") {
+          setTimeout(() => {
+            haptics.impact("light");
+            setStep("confirm");
+          }, 220);
         } else {
-          toast({
-            title: "PINs don't match",
-            description: "Please try again",
-            variant: "destructive",
-          });
-          setConfirmPin("");
-          setPin("");
-          setStep("create");
+          if (newPin === pin) {
+            setSuccess(true);
+            haptics.impact("medium");
+            setTimeout(() => onComplete(newPin), 380);
+          } else {
+            haptics.impact("heavy");
+            setError(true);
+            setTimeout(() => {
+              setError(false);
+              setConfirmPin("");
+              toast({
+                title: "PINs don't match",
+                description: "Please try again",
+                variant: "destructive",
+              });
+            }, 450);
+          }
         }
       }
-    }
-  };
-
-  const handleDelete = () => {
-    setCurrentPin(currentPin.slice(0, -1));
-  };
-
-  const handleClear = () => {
-    setCurrentPin("");
-  };
-
-  const btnStyle = cn(
-    "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
-    "bg-white/[0.06]",
-    "border border-white/[0.08]",
-    "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
+    },
+    [step, pin, confirmPin, success, onComplete, toast]
   );
 
+  const handleDelete = useCallback(() => {
+    if (success) return;
+    haptics.selection();
+    if (step === "create") setPin((p) => p.slice(0, -1));
+    else setConfirmPin((p) => p.slice(0, -1));
+  }, [step, success]);
+
+  const handleReset = useCallback(() => {
+    haptics.selection();
+    setPin("");
+    setConfirmPin("");
+    setStep("create");
+  }, []);
+
   return (
-    <div className="flex flex-col min-h-screen p-6">
+    <div
+      className="flex flex-col h-[100dvh] overflow-hidden bg-background"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top), 12px)",
+        paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button 
-          onClick={onBack}
-          className="p-2 rounded-full bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] transition-colors"
+      <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
+        <button
+          onClick={step === "confirm" && !success ? handleReset : onBack}
+          className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.05] border border-white/[0.08] active:scale-90 transition-transform"
+          aria-label="Back"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Security Setup</p>
-          <h2 className="text-xl font-bold">
-            {step === "create" ? "Create PIN" : "Confirm PIN"}
-          </h2>
+        <div className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          {step === "create" ? "Step 1 of 2" : "Step 2 of 2"}
+        </div>
+        <div className="w-9 h-9" />
+      </div>
+
+      {/* Title + Subtitle */}
+      <div className="px-6 pt-6 pb-2 text-center shrink-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <h1 className="text-[26px] font-bold tracking-tight text-foreground">
+              {success
+                ? "PIN Confirmed"
+                : step === "create"
+                ? "Create your PIN"
+                : "Confirm your PIN"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1.5 max-w-[280px] mx-auto">
+              {step === "create"
+                ? "Enter a 6-digit PIN to secure your wallet"
+                : "Re-enter the same PIN to confirm"}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* PIN Dots */}
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <motion.div
+          animate={
+            error
+              ? { x: [0, -10, 10, -8, 8, -4, 4, 0] }
+              : success
+              ? { scale: [1, 1.08, 1] }
+              : {}
+          }
+          transition={{ duration: error ? 0.45 : 0.3 }}
+          className="flex gap-3.5"
+        >
+          {[0, 1, 2, 3, 4, 5].map((i) => {
+            const filled = i < currentPin.length;
+            return (
+              <motion.div
+                key={i}
+                animate={{
+                  scale: filled ? 1 : 0.85,
+                  backgroundColor: error
+                    ? "hsl(var(--destructive))"
+                    : success
+                    ? "hsl(var(--primary))"
+                    : filled
+                    ? "hsl(var(--foreground))"
+                    : "transparent",
+                  borderColor: error
+                    ? "hsl(var(--destructive))"
+                    : success
+                    ? "hsl(var(--primary))"
+                    : filled
+                    ? "hsl(var(--foreground))"
+                    : "hsl(var(--border))",
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 25,
+                }}
+                className="w-3.5 h-3.5 rounded-full border-2"
+              />
+            );
+          })}
+        </motion.div>
+      </div>
+
+      {/* Keypad */}
+      <div className="px-6 pb-4 shrink-0">
+        <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+            <KeypadButton
+              key={digit}
+              onPress={() => handleKeyPress(String(digit))}
+              disabled={success}
+            >
+              <span className="text-[30px] font-light leading-none">{digit}</span>
+            </KeypadButton>
+          ))}
+
+          {/* Bottom row */}
+          {success ? (
+            <KeypadButton onPress={() => {}} disabled>
+              <Check className="w-7 h-7 text-primary" />
+            </KeypadButton>
+          ) : (
+            <div />
+          )}
+
+          <KeypadButton onPress={() => handleKeyPress("0")} disabled={success}>
+            <span className="text-[30px] font-light leading-none">0</span>
+          </KeypadButton>
+
+          <KeypadButton
+            onPress={handleDelete}
+            disabled={success || currentPin.length === 0}
+          >
+            <Delete className="w-6 h-6 text-muted-foreground" strokeWidth={1.5} />
+          </KeypadButton>
         </div>
       </div>
-
-      {/* PIN Display */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <motion.p
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className="text-muted-foreground text-center mb-6 max-w-xs"
-        >
-          {step === "create" 
-            ? "Create a 6-digit PIN to secure your wallet" 
-            : "Re-enter your PIN to confirm"}
-        </motion.p>
-
-        {/* PIN Dots - same as lock screen */}
-        <motion.div
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="flex gap-3 mb-10"
-        >
-          {[0, 1, 2, 3, 4, 5].map((index) => (
-            <motion.div
-              key={index}
-              animate={
-                index < currentPin.length
-                  ? { scale: [1, 1.2, 1] }
-                  : {}
-              }
-              transition={{ duration: 0.25 }}
-            >
-              <div
-                className={cn(
-                  "w-6 h-6 rounded-full transition-all duration-200",
-                  index < currentPin.length
-                    ? "bg-foreground"
-                    : "bg-muted-foreground/30"
-                )}
-              />
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Keypad - matching lock screen embossed style */}
-        <motion.div
-          initial={{ y: 40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="grid grid-cols-3 gap-3 mx-auto w-fit">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-              <motion.button
-                key={digit}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => handleKeyPress(String(digit))}
-                className={btnStyle}
-              >
-                {digit}
-              </motion.button>
-            ))}
-
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={handleClear}
-              className={cn(btnStyle, "text-sm text-muted-foreground")}
-            >
-              Clear
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={() => handleKeyPress("0")}
-              className={btnStyle}
-            >
-              0
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={handleDelete}
-              className={btnStyle}
-            >
-              <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-            </motion.button>
-          </div>
-        </motion.div>
-      </div>
-
     </div>
+  );
+};
+
+/* ---------- Native-feel Keypad Button ---------- */
+interface KeypadButtonProps {
+  onPress: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+
+const KeypadButton = ({ onPress, disabled, children }: KeypadButtonProps) => {
+  const [pressed, setPressed] = useState(false);
+
+  // Use pointerdown for instant response (no 300ms click delay).
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (disabled) return;
+    e.preventDefault();
+    setPressed(true);
+    onPress();
+  };
+
+  const release = () => setPressed(false);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onPointerDown={handlePointerDown}
+      onPointerUp={release}
+      onPointerLeave={release}
+      onPointerCancel={release}
+      className={cn(
+        "relative w-[72px] h-[72px] rounded-full mx-auto select-none",
+        "flex items-center justify-center",
+        "text-foreground",
+        "bg-white/[0.04] border border-white/[0.06]",
+        "transition-[transform,background-color] duration-75 ease-out",
+        "will-change-transform touch-manipulation",
+        pressed && !disabled && "bg-white/[0.16] scale-90",
+        disabled && "opacity-40"
+      )}
+      style={{ WebkitTapHighlightColor: "transparent" }}
+    >
+      {children}
+    </button>
   );
 };
