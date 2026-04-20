@@ -1,47 +1,48 @@
 
 
-## Unify All PIN Screens to Match the FullScreenPinModal Style
+## Fix Push Notifications on Native (iOS/Android)
 
-The app currently has **3 different PIN keypad styles** across 5 files. The goal is to make every PIN screen match the style shown in screenshot 1 (the "Confirm Wallet Reset" screen from `FullScreenPinModal`).
+Two problems:
 
-### Current Problems
+1. **"Not Supported" error in Settings**: The `useWebNotifications` hook checks `'Notification' in window`, which returns `false` inside Capacitor's WKWebView on iOS. The notification settings sheet then shows the "Not Supported" error. On native platforms, push notifications are handled by Firebase Cloud Messaging (FCM) via the native layer, not the browser Notification API -- so this check is wrong for native.
 
-| Screen | File | Issue |
-|--------|------|-------|
-| **Lock Screen (app startup)** | `LockScreen.tsx` + `PinKeypad.tsx` | Uses old 76px embossed buttons with Framer Motion `whileTap`, different font weight |
-| **Change PIN** | `ChangePinSheet.tsx` | Uses a Sheet with old `bg-card border-border` 76px buttons, "Delete" text instead of icon |
-| **View Seed Phrase** | `ViewSeedPhraseSheet.tsx` | Same old Sheet style as Change PIN |
-
-### Target Style (from FullScreenPinModal)
-- 72px round buttons, `bg-white/[0.04] border border-white/[0.06]`
-- `text-[30px] font-light` for digits
-- `Delete` icon (lucide) for backspace, not text
-- PointerDown-based instant tap (no Framer Motion `whileTap`)
-- Press state: `bg-white/[0.16] scale-90`
+2. **No permission prompt on app startup**: The `useFCMToken` hook calls `Notification.requestPermission()` which also fails silently inside WKWebView. On native iOS/Android, the permission prompt must go through Capacitor's native push notification plugin, not the browser API.
 
 ### Plan
 
-**Step 1: Refactor LockScreen to use FullScreenPinModal style**
+**Step 1: Update `useWebNotifications` to treat native platforms as supported**
 
-Update `src/components/LockScreen.tsx` to replace the imported `PinKeypad` component with the same inline `KeypadButton` pattern and grid layout used in `FullScreenPinModal`. Match the 72px size, `text-[30px] font-light`, and `Delete` icon. The lock screen keeps its own layout (logo, blur background) but the keypad grid itself will be identical.
+In `src/hooks/useWebNotifications.ts`, import `Capacitor` and check `Capacitor.isNativePlatform()`. If native, set `isSupported = true` and skip the `'Notification' in window` check. For permission status on native, default to `'granted'` (since FCM handles the native permission flow separately).
 
-Alternatively, delete `src/components/lock/PinKeypad.tsx` entirely since it will no longer be used.
+**Step 2: Update `NotificationSettingsSheet` for native context**
 
-**Step 2: Convert ChangePinSheet to use FullScreenPinModal**
+In `src/components/settings/NotificationSettingsSheet.tsx`, detect native platform using `Capacitor.isNativePlatform()`. On native:
+- Skip the "Not Supported" and "Preview Mode" warnings entirely
+- Show the notification type toggles directly (price alerts, transactions, security)
+- The "Enable" button should use FCM token registration flow instead of browser `Notification.requestPermission()`
 
-Replace the Sheet-based UI in `src/components/settings/ChangePinSheet.tsx` with `FullScreenPinModal`. The 3-step flow (current -> new -> confirm) will use the modal's title/subtitle/eyebrow props, switching them per step. All re-encryption logic stays the same, just the UI wrapper changes.
+**Step 3: Request native push permission on app startup**
 
-**Step 3: Convert ViewSeedPhraseSheet PIN step to use FullScreenPinModal**
+Update `src/hooks/useFCMToken.ts` to handle native platforms properly:
+- On native (Capacitor), use `@capacitor/push-notifications` plugin's `requestPermissions()` and `register()` methods to get the native APNs/FCM token
+- On web, keep the existing browser Notification API flow
+- Install `@capacitor/push-notifications` as a dependency
+- Call the native permission request early in the app lifecycle so the iOS permission dialog appears on first launch
 
-Update `src/components/settings/ViewSeedPhraseSheet.tsx` to use `FullScreenPinModal` for its PIN verification step instead of the inline Sheet keypad.
+**Step 4: Update `useFCMToken` to register native tokens**
 
-**Step 4: Delete unused PinKeypad component**
-
-Remove `src/components/lock/PinKeypad.tsx` since no component will reference it after the LockScreen update.
+When running on native:
+- Use `PushNotifications.requestPermissions()` then `PushNotifications.register()`
+- Listen for `registration` event to get the native device token
+- Upsert the native token to the `fcm_tokens` table with the correct platform
+- Listen for `pushNotificationReceived` (foreground) to show in-app toasts
+- Skip the Firebase web SDK messaging entirely on native (it does not work in WKWebView)
 
 ### Technical Details
 
-- The `KeypadButton` component is duplicated in `FullScreenPinModal.tsx` and `PinSetupStep.tsx`. As part of this change, extract it into a shared file (e.g. `src/components/shared/KeypadButton.tsx`) so all PIN screens import the same component.
-- PIN dots styling will also be unified: `w-3.5 h-3.5 rounded-full border-2` with spring animations, matching FullScreenPinModal.
-- The LockScreen retains its unique frosted-glass background and biometric pill, but the keypad and dots will be visually identical to all other PIN screens.
+- `@capacitor/push-notifications` provides the native bridge for APNs (iOS) and FCM (Android)
+- On iOS, the native token from APNs is automatically forwarded to FCM if `GoogleService-Info.plist` is configured (already present in the project)
+- On Android, `google-services.json` is already in the project
+- The `useFCMToken` hook already runs in `AnimatedRoutes` (App.tsx), so it will trigger on startup
+- The web Firebase SDK path (`firebase/messaging`) remains for browser-only usage
 
