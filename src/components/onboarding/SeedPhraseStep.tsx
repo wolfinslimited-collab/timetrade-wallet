@@ -35,20 +35,23 @@ export const SeedPhraseStep = ({ seedPhrase, onContinue, onBack }: SeedPhraseSte
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6 shrink-0">
-        <button 
-          onClick={onBack}
-          className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Step 2 of 3</p>
-          <h2 className="text-xl font-bold">Your Seed Phrase</h2>
+      {/* Fixed header */}
+      <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border bg-background">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onBack}
+            className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Step 2 of 3</p>
+            <h2 className="text-xl font-bold">Your Seed Phrase</h2>
+          </div>
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
 
       <p className="text-sm text-muted-foreground mb-6">
         Write down these 12 words in order and store them safely. This is your wallet backup.
