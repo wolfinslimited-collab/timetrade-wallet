@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isValidBip39Word, getWordSuggestions } from "@/utils/seedPhrase";
 
@@ -79,15 +79,20 @@ export const SeedWordInput = ({
     <div className="relative">
       <div
         className={cn(
-          "flex items-center gap-1 rounded-xl border px-2.5 py-2 transition-all duration-200",
-          "bg-muted/20 border-border/30",
-          isFocused && "ring-1 ring-primary/50 border-primary/50 bg-muted/30",
-          isValid && !isFocused && "border-primary/30 bg-primary/[0.06]",
-          isInvalid && !isFocused && "border-destructive/30 bg-destructive/[0.06]"
+          "flex items-center gap-2 rounded-xl border h-[44px] pl-1.5 pr-2.5 transition-colors duration-150",
+          "bg-card/70 border-border/40",
+          isFocused && "border-primary bg-card",
+          isValid && !isFocused && "border-emerald-500/40 bg-emerald-500/[0.04]",
+          isInvalid && !isFocused && "border-destructive/40 bg-destructive/[0.04]"
         )}
       >
-        <span className="text-[10px] font-mono text-muted-foreground w-5 shrink-0 text-right mr-0.5">
-          {index + 1}.
+        <span
+          className={cn(
+            "shrink-0 w-6 h-7 rounded-md flex items-center justify-center text-[10px] font-bold tabular-nums transition-colors",
+            isFocused ? "bg-primary/15 text-primary" : "bg-muted/40 text-muted-foreground"
+          )}
+        >
+          {index + 1}
         </span>
         <input
           ref={inputRef}
@@ -102,28 +107,31 @@ export const SeedWordInput = ({
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="flex-1 bg-transparent text-[13px] font-mono outline-none placeholder:text-muted-foreground/40 min-w-0 text-foreground"
+          className="flex-1 bg-transparent text-[13.5px] font-medium outline-none placeholder:text-muted-foreground/35 min-w-0 text-foreground"
           placeholder="word"
         />
-        {isValid && <Check className="w-3 h-3 text-primary/60 shrink-0" />}
-        {isInvalid && <X className="w-3 h-3 text-destructive/50 shrink-0" />}
+        {isValid && (
+          <span className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+            <Check className="w-2.5 h-2.5 text-emerald-500" strokeWidth={3} />
+          </span>
+        )}
       </div>
 
       {/* Autocomplete Dropdown */}
       {showSuggestions && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-xl border border-border/30 rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1.5 bg-card/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl shadow-black/40 overflow-hidden">
           {suggestions.map((suggestion, idx) => (
             <button
               key={suggestion}
               type="button"
               onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(suggestion); }}
               className={cn(
-                "w-full px-3 py-1.5 text-left text-[12px] font-mono hover:bg-muted/30 transition-colors",
-                idx === selectedSuggestionIndex && "bg-muted/30"
+                "w-full px-3 py-2 text-left text-[12.5px] font-medium transition-colors",
+                idx === selectedSuggestionIndex ? "bg-primary/10" : "hover:bg-muted/30"
               )}
             >
-              <span className="text-primary/80">{value}</span>
-              <span className="text-foreground/60">{suggestion.slice(value.length)}</span>
+              <span className="text-primary">{value}</span>
+              <span className="text-foreground/70">{suggestion.slice(value.length)}</span>
             </button>
           ))}
         </div>
