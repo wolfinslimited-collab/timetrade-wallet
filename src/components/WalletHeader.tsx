@@ -34,7 +34,7 @@ export const WalletHeader = ({
           onClick={() => navigate("/ai-chat")}
           className="w-10 h-10 rounded-xl bg-card border border-border/50 flex items-center justify-center active:scale-95 active:opacity-80"
         >
-          <Sparkles className="w-[17px] h-[17px] text-primary" />
+          <Sparkles className="w-[20px] h-[20px] text-primary" />
         </button>
 
         {/* Wallet pill */}
