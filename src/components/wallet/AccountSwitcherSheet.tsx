@@ -20,6 +20,7 @@ import { decryptPrivateKey, encryptPrivateKey } from "@/utils/encryption";
 import { Wallet as EthersWallet } from "ethers";
 import { evmToTronAddress } from "@/utils/tronAddress";
 import { setAllAddresses, clearMnemonicSession, logWalletState, WALLET_STORAGE_KEYS, wipeAllWalletData, wipeIndexedDb, broadcastWalletResetSignal } from "@/utils/walletStorage";
+import { usePlatform } from "@/hooks/usePlatform";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -307,6 +308,7 @@ function useUserAccounts() {
 
 export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherSheetProps) {
   const { isLoadingAccounts, refreshAll } = useBlockchainContext();
+  const currentPlatform = usePlatform();
   
   const { accounts, activeAccountId, setActiveAccountId, addAccount, removeAccount, renameAccount } = useUserAccounts();
   const [addMode, setAddMode] = useState<AddAccountMode>(null);
@@ -622,6 +624,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         await supabase.functions.invoke("register-user", {
           body: {
             wallet_name: accountName,
+            platform: currentPlatform,
             device_info: {
               userAgent: navigator.userAgent,
               platform: navigator.platform,
@@ -729,6 +732,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
         await supabase.functions.invoke("register-user", {
           body: {
             wallet_name: accountName,
+            platform: currentPlatform,
             device_info: {
               userAgent: navigator.userAgent,
               platform: navigator.platform,

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWebNotifications } from "./useWebNotifications";
+import { useServerNotifications, dismissServerNotification, type ServerNotification } from "./useServerNotifications";
 
 export type NotificationType = "price_alert" | "transaction" | "security" | "info";
 
@@ -17,6 +18,7 @@ export interface Notification {
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications: serverNotifications } = useServerNotifications();
   const { 
     showPriceAlertNotification, 
     showTransactionNotification, 
@@ -24,7 +26,21 @@ export const useNotifications = () => {
     showNotification: showWebNotification,
   } = useWebNotifications();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Merge server notifications into the list
+  const mergedNotifications: Notification[] = [
+    ...serverNotifications.map((sn: ServerNotification): Notification => ({
+      id: `server_${sn.id}`,
+      type: (sn.type as NotificationType) || "info",
+      title: sn.title,
+      message: sn.message,
+      timestamp: new Date(sn.created_at),
+      read: false,
+      icon: sn.icon || undefined,
+    })),
+    ...notifications,
+  ];
+
+  const unreadCount = mergedNotifications.filter((n) => !n.read).length;
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((prev) =>
@@ -37,6 +53,9 @@ export const useNotifications = () => {
   }, []);
 
   const deleteNotification = useCallback((id: string) => {
+    if (id.startsWith("server_")) {
+      dismissServerNotification(id.replace("server_", ""));
+    }
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
@@ -145,7 +164,7 @@ export const useNotifications = () => {
   }, [addNotification, showTransactionNotification]);
 
   return {
-    notifications,
+    notifications: mergedNotifications,
     unreadCount,
     markAsRead,
     markAllAsRead,
