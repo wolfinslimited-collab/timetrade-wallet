@@ -328,5 +328,6 @@ export function useTradingApi() {
     fetchWalletData,
     withdraw,
     toggleTrading,
+    fetchEarnings,
   };
 }
