@@ -200,14 +200,14 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       <div className="shrink-0 px-5 pb-3 grid grid-cols-3 gap-2">
         <button
           onClick={handlePasteFromClipboard}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-border/40 text-[12.5px] font-semibold text-foreground/85 transition-transform duration-150 active:scale-[0.97]"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white/[0.08] border border-white/10 text-[12.5px] font-semibold text-foreground transition-transform duration-150 active:scale-[0.97]"
         >
           <Clipboard className="w-3.5 h-3.5 text-primary" />
           Paste
         </button>
         <button
           onClick={() => { haptics.selection(); setShowQRScanner(true); }}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-border/40 text-[12.5px] font-semibold text-foreground/85 transition-transform duration-150 active:scale-[0.97]"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white/[0.08] border border-white/10 text-[12.5px] font-semibold text-foreground transition-transform duration-150 active:scale-[0.97]"
         >
           <QrCode className="w-3.5 h-3.5 text-primary" />
           Scan
@@ -215,9 +215,9 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         <button
           onClick={handleClearAll}
           disabled={!hasAny}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-border/40 text-[12.5px] font-semibold text-foreground/85 transition-transform duration-150 active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white/[0.08] border border-white/10 text-[12.5px] font-semibold text-foreground transition-transform duration-150 active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
         >
-          <Trash2 className="w-3.5 h-3.5 text-destructive/80" />
+          <Trash2 className="w-3.5 h-3.5 text-destructive" />
           Clear
         </button>
       </div>
