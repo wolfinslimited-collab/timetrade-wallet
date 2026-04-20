@@ -39,8 +39,10 @@ jobs:
 
       - name: Restore GoogleService-Info.plist
         run: |
-          if [ -f "GoogleService-Info.plist" ]; then
-            cp GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
+          if [ -f "ios/App/App/GoogleService-Info.plist" ]; then
+            echo "GoogleService-Info.plist already in place"
+          elif [ -f "/tmp/GoogleService-Info.plist" ]; then
+            cp /tmp/GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
           fi
 
       - name: Prepare app icon source
