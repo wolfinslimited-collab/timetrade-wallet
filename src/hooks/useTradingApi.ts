@@ -287,6 +287,16 @@ export function useTradingApi() {
     await fetchDashboardData();
   }, [getToken, fetchDashboardData]);
 
+  const fetchEarnings = useCallback(async (days: number): Promise<EarningsSummary | null> => {
+    const token = getToken();
+    if (!token) return null;
+    try {
+      return await apiCall<EarningsSummary>(`/history/earnings?days=${days}`, { token });
+    } catch {
+      return null;
+    }
+  }, [getToken]);
+
   // Auto-fetch on auth
   useEffect(() => {
     if (isAuthenticated) fetchDashboardData();
