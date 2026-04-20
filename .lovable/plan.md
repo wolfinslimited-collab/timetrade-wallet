@@ -1,70 +1,101 @@
 
-
 ## Goal
-Replace the busy AI Trading dashboard with a **calm, premium, single-surface UI** inspired by Phantom / Robinhood / Coinbase — focused on one big number, one primary action, and quiet supporting data. No gradient blobs, no stacked colored cards, no decoration competing for attention.
+Redesign the AI Trading screen so it feels like a polished fintech product, not a basic placeholder. Keep all current behavior and data, but rebuild the visual hierarchy, spacing, and surfaces to match the app’s premium wallet style.
 
-## What's wrong with the current UI
-- Too many separate cards (hero + actions + status + earnings + trades) — feels fragmented.
-- Heavy gradient blobs and colored borders make it look like a demo, not a wallet.
-- Big primary button competes with a separate status card saying the same thing.
-- Inconsistent type sizes; too many uppercase micro-labels.
+## What I found
+The current `src/pages/AITradingPage.tsx` is technically clean but visually too plain:
+- Everything sits directly on the background with weak structure.
+- The page has no strong hero surface, so the balance feels unsupported.
+- The CTA/status row is functional but not premium.
+- Stats and activity sections look like default list blocks instead of a productized dashboard.
+- It does not match stronger screens already in the app like `AITradingWalletPage`, `AssetDetailPage`, and the wallet header patterns.
 
-## New Design
+## Redesign direction
+I’ll move the page to a more professional “premium wallet dashboard” layout:
 
 ```text
-┌──────────────────────────────┐
-│  ← AI Trading       ↻   ⎋   │   ← clean top bar
-├──────────────────────────────┤
-│                              │
-│   PORTFOLIO VALUE            │   ← tiny quiet label
-│   $12,480.55          👁     │   ← huge number, subtle eye
-│   ▲ +$245.10  ·  +2.0% 7d   │   ← single P&L line
-│                              │
-│   ┌────────┐  ● Bot active   │   ← status chip inline
-│   │  Stop  │                 │   ← single primary CTA
-│   └────────┘                 │
-│                              │
-├──────────────────────────────┤
-│  Available    In trades      │   ← 2-col quiet stats row
-│  $8,200.00    $4,280.55      │
-├──────────────────────────────┤
-│                              │
-│  [↓ Deposit] [↑ Withdraw] [⚡ Live]   ← 3 ghost pills
-│                              │
-├──────────────────────────────┤
-│  Recent activity    View all │
-│                              │
-│  ↗ BTC/USDT       +$12.40    │
-│  ↘ ETH/USDT        −$3.10    │
-│  ↗ SOL/USDT        +$8.22    │
-└──────────────────────────────┘
+Top header
+  AI Trading title + refined utility actions
+
+Primary hero surface
+  Large total balance
+  Privacy toggle
+  P&L summary
+  subtle secondary info
+  stronger spacing and container treatment
+
+Control section
+  Primary Start/Stop action
+  clean live status chip
+  short supporting description
+
+Portfolio breakdown row
+  Available
+  In trades
+  7d earnings
+
+Quick actions
+  Deposit
+  Withdraw
+  Live trades
+  styled as premium compact action tiles/pills
+
+Recent activity
+  proper section header
+  better row density
+  cleaner icon treatment
+  empty state that looks intentional
 ```
 
-### Key principles
-1. **One hero, no card** — the balance lives directly on the page background, not inside a gradient card. Big restrained typography does the work.
-2. **Status merged with CTA** — a single row: pill button + small live indicator. No duplicate "Bot is running" card.
-3. **Hairline dividers replace card borders** — separates sections without visual noise.
-4. **Quiet stats** — Available / In Trades shown as a simple 2-column inline row, not a colored gradient card.
-5. **Pill quick actions** — small, ghost-style horizontal pills (not big square tiles), like Phantom's swap/buy bar.
-6. **Activity list flat on background** — no card wrapper, just dividers; tighter rows.
-7. **Color discipline** — only success/destructive for P&L numbers; everything else is foreground/muted. No gradients, no shadow blobs.
-8. **Typography rhythm** — one display size (40–44px) for balance, one body size (14px), one micro size (11px muted). Mono only for numbers.
+## Implementation plan
+1. Rework `TradingDashboard` in `src/pages/AITradingPage.tsx`
+   - Replace the current flat single-surface layout with a clearer sectioned layout.
+   - Add one premium hero container using the project’s navy/blue visual language.
+   - Keep balance masking, refresh, logout, and navigation behavior unchanged.
 
-## Files to edit
+2. Upgrade the top section hierarchy
+   - Refine the header spacing and icon buttons to match the rest of the wallet UI.
+   - Make the title, subtitle, and balance area feel intentional and high-value.
+   - Improve typography contrast and numeric presentation.
 
-- **`src/pages/AITradingPage.tsx`** → replace the entire `TradingDashboard` component (lines ~145–393) and the `ActionButton` helper. Keep `TradingConnect` (auth) and the page wrapper untouched.
+3. Redesign the control/status area
+   - Convert the current mixed CTA row into a cleaner action block.
+   - Keep one dominant Start/Stop button.
+   - Add a more polished status chip and concise helper text.
 
-No new files, no CSS changes, no new dependencies.
+4. Rebuild supporting stats
+   - Present Available, In Trades, and 7d Earnings in a compact premium stat grid.
+   - Use better spacing, labels, and visual grouping.
+   - Keep muted colors except for positive/negative financial signals.
 
-## Behavior (unchanged)
-- Refresh / logout buttons still work.
-- Eye toggle still masks all $ values.
-- Start → navigates `/ai-trading/start`; Stop → `api.toggleTrading("stop")`.
-- Deposit/Withdraw → `/ai-trading/wallet?tab=…`; Live → `/live-trades`.
-- Recent trades list shows up to 6 from `tradeHistory`.
+5. Improve quick actions and activity list
+   - Restyle Deposit / Withdraw / Live so they feel more native and deliberate.
+   - Tighten recent activity rows with better spacing and icon balance.
+   - Improve the empty state so it feels designed rather than blank.
 
-<lov-actions>
-<lov-suggestion message="Open /?tab=trading and verify the redesigned AI Trading dashboard renders correctly with the new minimal layout, balance hero, single CTA, and activity list.">Verify the new UI</lov-suggestion>
-<lov-suggestion message="Apply the same minimal, no-gradient visual style to the AI Trading Wallet page (/ai-trading/wallet) so deposit and withdraw screens feel consistent.">Match Wallet page style</lov-suggestion>
-<lov-suggestion message="Add a subtle 7-day sparkline chart underneath the balance number on the AI Trading dashboard.">Add 7d sparkline</lov-suggestion>
-</lov-actions>
+## Technical details
+- File to update: `src/pages/AITradingPage.tsx`
+- No backend or database changes needed.
+- No new dependencies needed.
+- No behavior changes to:
+  - login/signup/forgot flow
+  - refresh/logout
+  - start/stop trading
+  - wallet and live-trades navigation
+  - balance masking
+  - recent activity data source
+- I will reuse existing patterns already present in:
+  - `src/pages/AITradingWalletPage.tsx`
+  - `src/pages/AssetDetailPage.tsx`
+  - `src/components/WalletHeader.tsx`
+  - project visual memory in `mem://style/visual-identity`
+
+## Expected result
+After implementation, the AI Trading page should feel:
+- premium
+- structured
+- native-mobile
+- financially focused
+- visually consistent with the rest of Timetrade Wallet
+
+It will still be simple, but no longer basic.
