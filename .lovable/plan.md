@@ -1,49 +1,69 @@
 
 
-## Unify Reset Wallet PIN UI
+## Goal
 
-The Reset Wallet flow in Settings still uses a small AlertDialog with a basic custom keypad. It needs to use the same full-screen native PIN modal (`FullScreenPinModal`) that powers onboarding, lock screen, biometric setup, and send-signing.
+Turn the `config` table flags into **per-platform** feature switches and have the bottom nav respect them. 12 keys total — 4 features × 3 platforms (iphone, android, web).
 
-### Changes
+## The 12 config keys
 
-**1. Refactor `src/components/settings/ResetWalletDialog.tsx`**
+| Feature | iPhone | Android | Web |
+|---|---|---|---|
+| Staking tab | `show_staking_iphone` | `show_staking_android` | `show_staking_web` |
+| Swap action | `show_swap_iphone` | `show_swap_android` | `show_swap_web` |
+| Exchange | `exchange_enabled_iphone` | `exchange_enabled_android` | `exchange_enabled_web` |
+| AI Trade tab | `show_ai_trade_iphone` | `show_ai_trade_android` | `show_ai_trade_web` |
 
-Keep the two-step flow but split the rendering:
-- **Step 1 — "Confirm" warning**: Keep the existing `AlertDialog` with the warning icon, copy, and the red "Yes, Reset Wallet" / "Cancel" buttons. This step does not change.
-- **Step 2 — "PIN entry"**: When the user taps "Yes, Reset Wallet", close the AlertDialog and open `FullScreenPinModal` instead of swapping content inside the small dialog.
+All defaults: `false` (matches current state — flip to `true` from the Cloud config UI when you want a feature live on a platform).
 
-**2. FullScreenPinModal configuration for the reset step**
+## Backend changes
 
-```tsx
-<FullScreenPinModal
-  open={pinOpen}
-  onClose={() => setPinOpen(false)}
-  eyebrow="Danger Zone"
-  title="Confirm Wallet Reset"
-  subtitle="Enter your 6-digit PIN to permanently delete this wallet from the device"
-  onSubmit={async (pin) => {
-    if (pin === localStorage.getItem("timetrade_pin")) {
-      onConfirm();
-      setPinOpen(false);
-      return true;
-    }
-    return false; // triggers shake + clear in modal
-  }}
-  error={error}
-/>
+Single migration that:
+1. Deletes the 3 old non-platform rows (`show_staking`, `show_swap`, `exchange_enabled`).
+2. Inserts the 12 new rows with `false` defaults (uses `ON CONFLICT (key) DO NOTHING` so it's safe to re-run).
+3. Adds a `UNIQUE` constraint on `config.key` (currently missing — needed for upsert/conflict logic).
+
+`config` table RLS already allows public SELECT — no changes there.
+
+## Frontend changes
+
+**1. New hook `src/hooks/usePlatform.ts`**
+Returns `'iphone' | 'android' | 'web'` using `Capacitor.getPlatform()` (`'ios'` → `'iphone'`).
+
+**2. New hook `src/hooks/useFeatureFlags.ts`**
+- One React Query call fetching all 12 rows from `config` (5 min stale time).
+- Detects current platform via `usePlatform()`.
+- Returns a clean object:
+  ```ts
+  { showStaking, showSwap, exchangeEnabled, showAiTrade, isLoading }
+  ```
+  Each value already resolved to the current platform's flag. Defaults to `false` while loading or on error so hidden-by-default is the safe behavior.
+
+**3. `src/pages/Index.tsx`** — feed flags into `hiddenTabs`:
+```ts
+const flags = useFeatureFlags();
+const hiddenTabs = useMemo<NavTab[]>(() => {
+  const hidden: NavTab[] = [];
+  if (!flags.showStaking) hidden.push("staking");
+  if (!flags.showAiTrade) hidden.push("trading");
+  return hidden;
+}, [flags.showStaking, flags.showAiTrade]);
 ```
+Also gate the view-switch logic so a user can't land on a hidden tab via deeplink.
 
-- Reuses the unified glassmorphic keypad, spring dot animations, instant `onPointerDown` taps, haptics, and the shake-on-error.
-- Renders at `z-[10000]` so it covers bottom nav, exactly like the other PIN prompts.
-- No biometric pill here (intentional — destructive action requires explicit PIN).
+**4. Swap/Exchange gating**
+- `showSwap` → hides Swap quick action button (currently the `/swap` route already renders `NotFound`, so we just hide the entry point).
+- `exchangeEnabled` → controls any exchange-related entry point. (Project is in wallet-only mode so there's no live exchange UI right now; the flag will be wired to the hook and ready for future use — no UI gating needed today, documented in the hook's JSDoc.)
 
-**3. Cleanup**
+## Files touched
 
-Remove the now-unused inline keypad code, `pin`/`showError`/`handleKeyPress`/`handleDelete`/`verifyPin` state from `ResetWalletDialog.tsx`. The error toast for incorrect PIN is replaced by the modal's built-in shake + error message (consistent with rest of app).
+- `supabase/migrations/<timestamp>_platform_feature_flags.sql` (new)
+- `src/hooks/usePlatform.ts` (new)
+- `src/hooks/useFeatureFlags.ts` (new)
+- `src/pages/Index.tsx` (use flags for `hiddenTabs` + deeplink guard)
+- `src/components/QuickActions.tsx` (hide Swap button when `!showSwap`)
+- `.lovable/memory/index.md` + new `mem://features/platform-feature-flags.md`
 
-### Files
-- `src/components/settings/ResetWalletDialog.tsx` — refactor to two-stage: AlertDialog warning → FullScreenPinModal
+## How you control flags after migration
 
-### Result
-Every PIN entry across the app (onboarding, lock, biometric setup, send signing, reset wallet) uses the identical full-screen native UI — no more small dialog with a different keypad.
+Open Cloud → Tables → `config`, edit any row's `value` from `false` to `true`. Frontend picks it up within 5 min (or on next app reload). No code change needed to flip a feature on a single platform.
 
