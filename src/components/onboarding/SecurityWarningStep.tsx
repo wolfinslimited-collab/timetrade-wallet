@@ -81,8 +81,8 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
         ))}
       </div>
 
-      {/* Acknowledgment */}
-      <div className="pt-6 pb-8 space-y-4">
+      {/* Acknowledgment - inside scrollable area */}
+      <div className="pt-6">
         <label 
           className={cn(
             "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
@@ -100,7 +100,11 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
             I understand that if I lose my seed phrase, I will <strong>permanently lose access</strong> to my wallet and all funds.
           </span>
         </label>
+      </div>
+      </div>
 
+      {/* Fixed bottom button */}
+      <div className="shrink-0 px-6 py-4 border-t border-border bg-background">
         <Button
           onClick={onContinue}
           disabled={!acknowledged}
