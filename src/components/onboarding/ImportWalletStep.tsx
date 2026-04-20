@@ -134,7 +134,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
   const hasAny = words.some(w => w.length > 0);
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-gradient-to-b from-[hsl(220_14%_12%)] via-[hsl(220_14%_9%)] to-background" onPaste={handlePaste}>
+    <div className="flex flex-col h-[100dvh] w-full bg-background" onPaste={handlePaste}>
       {/* ── Header ── */}
       <div
         className="shrink-0 px-5 pt-3 pb-3"
@@ -143,10 +143,10 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         <div className="flex items-center justify-between">
           <button
             onClick={() => { haptics.selection(); onBack(); }}
-            className="w-9 h-9 rounded-full bg-white/[0.08] border border-white/10 flex items-center justify-center transition-transform duration-150 active:scale-90"
+            className="w-9 h-9 rounded-full bg-card border border-border/40 flex items-center justify-center transition-transform duration-150 active:scale-90"
             aria-label="Back"
           >
-            <ChevronLeft className="w-5 h-5 text-foreground" />
+            <ChevronLeft className="w-5 h-5 text-foreground/80" />
           </button>
           <div className="flex flex-col items-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Import</p>
@@ -165,11 +165,11 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
             <span className="text-muted-foreground/60">/{wordCount}</span>
           </p>
         </div>
-        <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+        <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-300",
-              allValid ? "bg-emerald-400" : "bg-primary"
+              allValid ? "bg-emerald-500" : "bg-primary"
             )}
             style={{ width: `${progress * 100}%` }}
           />
@@ -178,7 +178,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
 
       {/* ── Segmented control: 12 / 24 ── */}
       <div className="shrink-0 px-5 pb-3">
-        <div className="flex p-1 rounded-xl bg-white/[0.06] border border-white/10">
+        <div className="flex p-1 rounded-xl bg-muted/30 border border-border/30">
           {([12, 24] as const).map(count => (
             <button
               key={count}
@@ -186,8 +186,8 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
               className={cn(
                 "flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200",
                 wordCount === count
-                  ? "bg-white/[0.12] text-foreground shadow-sm shadow-black/30"
-                  : "text-foreground/50"
+                  ? "bg-card text-foreground shadow-sm shadow-black/20"
+                  : "text-muted-foreground"
               )}
             >
               {count} words
@@ -200,14 +200,14 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       <div className="shrink-0 px-5 pb-3 grid grid-cols-3 gap-2">
         <button
           onClick={handlePasteFromClipboard}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white/[0.08] border border-white/10 text-[12.5px] font-semibold text-foreground transition-transform duration-150 active:scale-[0.97]"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-border/40 text-[12.5px] font-semibold text-foreground/85 transition-transform duration-150 active:scale-[0.97]"
         >
           <Clipboard className="w-3.5 h-3.5 text-primary" />
           Paste
         </button>
         <button
           onClick={() => { haptics.selection(); setShowQRScanner(true); }}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white/[0.08] border border-white/10 text-[12.5px] font-semibold text-foreground transition-transform duration-150 active:scale-[0.97]"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-border/40 text-[12.5px] font-semibold text-foreground/85 transition-transform duration-150 active:scale-[0.97]"
         >
           <QrCode className="w-3.5 h-3.5 text-primary" />
           Scan
@@ -215,9 +215,9 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         <button
           onClick={handleClearAll}
           disabled={!hasAny}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white/[0.08] border border-white/10 text-[12.5px] font-semibold text-foreground transition-transform duration-150 active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl bg-card border border-border/40 text-[12.5px] font-semibold text-foreground/85 transition-transform duration-150 active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
         >
-          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          <Trash2 className="w-3.5 h-3.5 text-destructive/80" />
           Clear
         </button>
       </div>
