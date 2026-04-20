@@ -145,29 +145,28 @@ const AIInsightsHero = () => {
 };
 
 const ChainsHero = () => {
-  // Pick 6 networks for a 3x2 hero grid (compact, no scroll)
-  const visible = NETWORKS.slice(0, 6);
+  // Show ALL supported networks in a compact 4-col grid (fits without scroll)
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-transparent blur-3xl" />
-      <div className="relative grid grid-cols-3 gap-x-5 gap-y-4">
-        {visible.map((n, i) => (
+      <div className="relative grid grid-cols-4 gap-x-3 gap-y-3.5 max-w-[300px]">
+        {NETWORKS.map((n, i) => (
           <motion.div
             key={n.id}
             initial={{ opacity: 0, scale: 0.7, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.08 + i * 0.05, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ delay: 0.06 + i * 0.04, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
             className="flex flex-col items-center gap-1.5"
           >
-            <div className="w-14 h-14 rounded-[18px] bg-card border border-border/40 flex items-center justify-center shadow-lg shadow-black/30">
+            <div className="w-12 h-12 rounded-[14px] bg-card border border-border/40 flex items-center justify-center shadow-lg shadow-black/30">
               <img
                 src={`https://api.elbstream.com/logos/crypto/${n.logoSymbol}`}
                 alt={n.name}
-                className="w-9 h-9 object-contain rounded-[6px]"
+                className="w-7 h-7 object-contain rounded-[5px]"
                 loading="lazy"
               />
             </div>
-            <span className="text-[10px] font-semibold text-foreground/70 leading-tight text-center max-w-[60px] truncate">
+            <span className="text-[9.5px] font-semibold text-foreground/70 leading-tight text-center w-full truncate">
               {n.name}
             </span>
           </motion.div>
