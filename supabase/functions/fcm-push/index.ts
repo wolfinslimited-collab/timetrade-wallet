@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { encode as base64url } from "https://deno.land/std@0.220.0/encoding/base64url.ts";
+import { encodeBase64Url } from "https://deno.land/std@0.220.0/encoding/base64url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,8 +54,8 @@ async function getAccessToken(): Promise<string> {
   };
 
   const enc = new TextEncoder();
-  const headerB64 = base64url(enc.encode(JSON.stringify(header)));
-  const payloadB64 = base64url(enc.encode(JSON.stringify(payload)));
+  const headerB64 = encodeBase64Url(enc.encode(JSON.stringify(header)));
+  const payloadB64 = encodeBase64Url(enc.encode(JSON.stringify(payload)));
   const unsignedToken = `${headerB64}.${payloadB64}`;
 
   // Import private key
@@ -78,7 +78,7 @@ async function getAccessToken(): Promise<string> {
     cryptoKey,
     enc.encode(unsignedToken)
   );
-  const signatureB64 = base64url(new Uint8Array(signature));
+  const signatureB64 = encodeBase64Url(new Uint8Array(signature));
   const jwt = `${unsignedToken}.${signatureB64}`;
 
   // Exchange JWT for access token
