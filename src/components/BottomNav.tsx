@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { haptics } from "@/lib/haptics";
 import { HomeIcon, TransactionHistoryIcon, UsdtIcon, AccountSettingsIcon, AITradingIcon } from "./icons/NavIcons";
 
 export type NavTab = "wallet" | "history" | "staking" | "trading" | "ai" | "settings";
@@ -44,9 +45,12 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
                 return (
                   <button
                     key={item.label}
-                    onClick={() => onTabChange?.(item.tab)}
+                    onClick={() => {
+                      if (!isActive) void haptics.selection();
+                      onTabChange?.(item.tab);
+                    }}
                     className={cn(
-                      "flex flex-col items-center gap-1 py-2 px-5 rounded-xl active:scale-95",
+                      "flex flex-col items-center gap-1 py-2 px-5 rounded-xl transition-transform duration-150 active:scale-90",
                       isActive ? "bg-primary/10" : "opacity-40"
                     )}
                   >

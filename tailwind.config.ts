@@ -108,6 +108,10 @@ export default {
           from: { transform: "translate3d(0,100%,0)" },
           to: { transform: "translate3d(0,0,0)" },
         },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translate3d(0,8px,0)" },
+          to: { opacity: "1", transform: "translate3d(0,0,0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -117,6 +121,7 @@ export default {
         "fade-in": "fade-in 0.2s ease-out",
         "scale-in": "scale-in 0.2s cubic-bezier(0.16,1,0.3,1)",
         "slide-in-bottom": "slide-in-bottom 0.3s cubic-bezier(0.16,1,0.3,1)",
+        "fade-in-up": "fade-in-up 0.32s cubic-bezier(0.32,0.72,0,1) both",
       },
     },
   },

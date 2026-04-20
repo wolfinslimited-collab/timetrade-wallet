@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { BlockchainProvider } from "@/contexts/BlockchainContext";
 import { WalletConnectProvider } from "@/contexts/WalletConnectContext";
 import Index from "./pages/Index";
@@ -31,11 +31,20 @@ const queryClient = new QueryClient({
   },
 });
 
-// Lightweight fade transition — no slide to reduce jank on mobile
-const pageVariants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.15 } },
-  exit: { opacity: 0, transition: { duration: 0.1 } },
+// iOS-style native page transition: subtle slide + fade, hardware-accelerated
+const easeIOS = [0.32, 0.72, 0, 1] as const;
+const pageVariants: Variants = {
+  initial: { opacity: 0, x: 12 },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.22, ease: easeIOS },
+  },
+  exit: {
+    opacity: 0,
+    x: -8,
+    transition: { duration: 0.16, ease: easeIOS },
+  },
 };
 
 

@@ -51,7 +51,7 @@
 - [Asset Detail Page](mem://features/asset-detail-page) — Live SVG charts, localized history feed, primary-styled transactional actions
 - [Blockchain Fetching Strategy](mem://technical/backend/blockchain-fetching-strategy) — Direct RPC/Blockscout calls for accurate ERC-20 tracking
 - [All Assets Page](mem://features/all-assets-page) — Full-screen filtered portfolio view with staggered list animations
-- [Motion Design System](mem://style/motion-design-system) — Zero-latency tactile tap feedback, explicitly removing CSS/Framer transitions
+- [Motion Design System](mem://style/motion-design-system) — Subtle iOS-style page/sheet/list motion + global haptics + native StatusBar/Splash init
 - [Send Crypto](mem://features/send-crypto) — Multi-step network grid, inline AI risk check, dynamic fee USD conversion
 - [Receive Crypto](mem://features/receive-crypto) — 3-column network selection layout with robust, strictly-branded QR code generation
 - [User Registration System](mem://features/user-registration-system) — Edge function for geolocation and metadata capture (zero keys stored)
