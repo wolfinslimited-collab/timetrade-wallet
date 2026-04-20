@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ChevronLeft, ShieldAlert, Trash2, QrCode, Clipboard, ArrowRight } from "lucide-react";
+import { ChevronLeft, Trash2, QrCode, Clipboard, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { validateSeedPhrase, isValidBip39Word } from "@/utils/seedPhrase";
@@ -238,24 +238,6 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
           ))}
         </div>
 
-        {/* Security notice */}
-        <div className="mt-4 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-destructive/[0.08] border border-destructive/20">
-          <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-          <p className="text-[11.5px] leading-snug text-foreground/75">
-            <span className="font-semibold text-destructive">Never share your seed phrase.</span>{" "}
-            Timetrade Wallet will never ask for it outside this screen.
-          </p>
-        </div>
-
-        {/* Tips */}
-        <div className="mt-3 space-y-1 px-1">
-          <p className="text-[11px] text-muted-foreground/80">
-            • Paste your full phrase to auto-fill all fields
-          </p>
-          <p className="text-[11px] text-muted-foreground/80">
-            • Tap or press Tab/Space to move between words
-          </p>
-        </div>
       </div>
 
       {/* ── Sticky CTA ── */}

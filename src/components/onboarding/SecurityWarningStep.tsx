@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldCheck, AlertTriangle, PenLine, EyeOff, Camera, ChevronLeft, Check } from "lucide-react";
+import { ShieldCheck, PenLine, EyeOff, Camera, ChevronLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -63,20 +63,6 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
         <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
           Your seed phrase is the master key to your funds. Read these guidelines carefully before continuing.
         </p>
-      </div>
-
-      {/* Critical Warning */}
-      <div className="relative overflow-hidden rounded-2xl border border-destructive/30 bg-destructive/5 p-4 mb-6">
-        <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
-        <div className="flex items-start gap-3 pl-2">
-          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-foreground text-sm mb-1">Lose it, lose everything</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Your seed phrase is the only way to recover your wallet. There is no password reset.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Security Rules */}
