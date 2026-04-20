@@ -246,7 +246,7 @@ jobs:
             sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = \$VERSION_STRING;/g" "\$PBXPROJ"
           fi
 
-      - name: Setup signing assets
+      - name: Set encryption export compliance
         run: |
           PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "\$PLIST" 2>/dev/null || true
