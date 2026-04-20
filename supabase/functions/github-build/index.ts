@@ -69,7 +69,8 @@ jobs:
             cp "\$TMP_PLIST" ios/App/App/GoogleService-Info.plist
           fi
 
-          test -f ios/App/Podfile
+          test -f ios/App/App.xcodeproj/project.pbxproj
+          test -f ios/App/CapApp-SPM/Package.swift
 
       - name: Sync Capacitor
         run: npx cap sync ios
