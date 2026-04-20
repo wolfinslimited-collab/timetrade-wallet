@@ -222,6 +222,14 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
             onBack={() => (postTour === "import" ? setStep("import") : setStep("verify"))}
           />
         );
+      case "biometric":
+        return (
+          <BiometricSetupStep
+            pin={pendingPin}
+            onComplete={handleBiometricComplete}
+            onSkip={handleBiometricSkip}
+          />
+        );
       case "success":
         return (
           <SuccessStep
