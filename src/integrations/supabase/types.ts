@@ -77,6 +77,33 @@ export type Database = {
         }
         Relationships: []
       }
+      fcm_tokens: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          platform?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_notifications: {
         Row: {
           created_at: string

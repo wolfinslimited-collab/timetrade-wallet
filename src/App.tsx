@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { BlockchainProvider } from "@/contexts/BlockchainContext";
 import { WalletConnectProvider } from "@/contexts/WalletConnectContext";
+import { useFCMToken } from "@/hooks/useFCMToken";
 import Index from "./pages/Index";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { AllAssetsPage } from "./pages/AllAssetsPage";
@@ -63,6 +64,7 @@ const KeyboardDismisser = () => {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
+  useFCMToken();
 
   return (
     <>
