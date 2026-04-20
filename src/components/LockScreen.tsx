@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Fingerprint, AlertCircle, ArrowLeft } from "lucide-react";
+import { Fingerprint, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { LockScreenBackground } from "@/components/lock/LockScreenBackground";
 import { PinKeypad } from "@/components/lock/PinKeypad";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
+import { haptics } from "@/lib/haptics";
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -12,29 +14,24 @@ interface LockScreenProps {
 
 export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const { toast } = useToast();
+  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric } =
+    useBiometricAuth();
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimer, setLockTimer] = useState(0);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [bioInProgress, setBioInProgress] = useState(false);
+  const autoPromptedRef = useRef(false);
 
   const storedPin = localStorage.getItem("timetrade_pin");
-  const biometricEnabled = localStorage.getItem("timetrade_biometric") === "true";
+  const biometricReady = isAvailable && isEnabled && isRegistered;
 
-  useEffect(() => {
-    const checkBiometric = async () => {
-      if (window.PublicKeyCredential) {
-        try {
-          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-          setBiometricAvailable(available && biometricEnabled);
-        } catch {
-          setBiometricAvailable(false);
-        }
-      }
-    };
-    checkBiometric();
-  }, [biometricEnabled]);
+  // Detect platform label
+  const isApple =
+    typeof navigator !== "undefined" &&
+    /iphone|ipad|ipod|mac/i.test(navigator.userAgent);
+  const bioLabel = isApple ? "Face ID" : "Fingerprint";
 
   useEffect(() => {
     if (lockTimer > 0) {
@@ -48,60 +45,107 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
     }
   }, [lockTimer, isLocked]);
 
-  const verifyPin = useCallback((enteredPin: string) => {
-    if (enteredPin === storedPin) {
-      window.dispatchEvent(
-        new CustomEvent("timetrade:unlocked", {
-          detail: { pin: enteredPin },
-        })
-      );
-      onUnlock();
-    } else {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      setShowError(true);
-      setPin("");
-
-      if (newAttempts >= 5) {
-        setIsLocked(true);
-        setLockTimer(30);
-        toast({
-          title: "Too many attempts",
-          description: "Please wait 30 seconds before trying again",
-          variant: "destructive",
-        });
+  const verifyPin = useCallback(
+    (enteredPin: string) => {
+      if (enteredPin === storedPin) {
+        haptics.impact("medium");
+        window.dispatchEvent(
+          new CustomEvent("timetrade:unlocked", {
+            detail: { pin: enteredPin },
+          })
+        );
+        onUnlock();
       } else {
-        toast({
-          title: "Incorrect PIN",
-          description: `${5 - newAttempts} attempts remaining`,
-          variant: "destructive",
-        });
+        haptics.impact("heavy");
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        setShowError(true);
+        setPin("");
+
+        if (newAttempts >= 5) {
+          setIsLocked(true);
+          setLockTimer(30);
+          toast({
+            title: "Too many attempts",
+            description: "Please wait 30 seconds before trying again",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Incorrect PIN",
+            description: `${5 - newAttempts} attempts remaining`,
+            variant: "destructive",
+          });
+        }
       }
-    }
-  }, [storedPin, attempts, onUnlock, toast]);
+    },
+    [storedPin, attempts, onUnlock, toast]
+  );
 
   const handleKeyPress = (digit: string) => {
     if (isLocked || pin.length >= 6) return;
-
+    haptics.selection();
     const newPin = pin + digit;
     setPin(newPin);
     setShowError(false);
 
     if (newPin.length === 6) {
-      setTimeout(() => verifyPin(newPin), 200);
+      setTimeout(() => verifyPin(newPin), 180);
     }
   };
 
   const handleDelete = () => {
     if (isLocked) return;
+    haptics.selection();
     setPin(pin.slice(0, -1));
     setShowError(false);
   };
 
-  const handleBiometric = async () => {
-    window.dispatchEvent(new CustomEvent("timetrade:unlocked"));
-    onUnlock();
-  };
+  const handleBiometric = useCallback(async () => {
+    if (!biometricReady || isLocked || bioInProgress) return;
+    setBioInProgress(true);
+    try {
+      const recoveredPin = await authenticateWithBiometric();
+      if (recoveredPin && recoveredPin === storedPin) {
+        haptics.impact("medium");
+        window.dispatchEvent(
+          new CustomEvent("timetrade:unlocked", {
+            detail: { pin: recoveredPin },
+          })
+        );
+        onUnlock();
+      } else if (recoveredPin) {
+        // PIN mismatch (rare — user changed PIN externally)
+        toast({
+          title: "Biometric expired",
+          description: "Please unlock with your PIN",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      // user cancelled or failed — silent
+    } finally {
+      setBioInProgress(false);
+    }
+  }, [
+    biometricReady,
+    isLocked,
+    bioInProgress,
+    authenticateWithBiometric,
+    storedPin,
+    onUnlock,
+    toast,
+  ]);
+
+  // Auto-prompt biometric once on mount if available
+  useEffect(() => {
+    if (biometricReady && !autoPromptedRef.current && !isLocked) {
+      autoPromptedRef.current = true;
+      // small delay so the lock screen is rendered before the system sheet
+      const t = setTimeout(() => handleBiometric(), 350);
+      return () => clearTimeout(t);
+    }
+  }, [biometricReady, isLocked, handleBiometric]);
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden relative">
@@ -132,7 +176,9 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           transition={{ delay: 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="text-center mb-6"
         >
-          <h1 className="text-lg font-bold tracking-tight text-foreground">Enter Your PIN</h1>
+          <h1 className="text-lg font-bold tracking-tight text-foreground">
+            Enter Your PIN
+          </h1>
         </motion.div>
 
         {/* Lock timer warning */}
@@ -145,7 +191,9 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/20 border border-destructive/30 mb-4"
             >
               <AlertCircle className="w-3.5 h-3.5 text-destructive" />
-              <span className="text-xs text-destructive font-medium">Try again in {lockTimer}s</span>
+              <span className="text-xs text-destructive font-medium">
+                Try again in {lockTimer}s
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -155,7 +203,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex gap-3 mb-8"
+          className="flex gap-3 mb-6"
         >
           {[0, 1, 2, 3, 4, 5].map((index) => (
             <motion.div
@@ -173,7 +221,9 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
                 className={cn(
                   "w-6 h-6 rounded-full transition-all duration-200",
                   index < pin.length
-                    ? (showError ? "bg-destructive" : "bg-foreground")
+                    ? showError
+                      ? "bg-destructive"
+                      : "bg-foreground"
                     : "bg-muted-foreground/30"
                 )}
               />
@@ -181,15 +231,35 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           ))}
         </motion.div>
 
+        {/* Prominent biometric pill */}
+        {biometricReady && !isLocked && (
+          <motion.button
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+            onClick={handleBiometric}
+            disabled={bioInProgress}
+            className={cn(
+              "mb-6 flex items-center gap-2 px-4 py-2 rounded-full",
+              "bg-primary/15 border border-primary/30 text-primary",
+              "text-[13px] font-semibold",
+              "active:scale-95 transition-transform",
+              "disabled:opacity-60"
+            )}
+          >
+            <Fingerprint className="w-4 h-4" />
+            {bioInProgress ? "Verifying…" : `Unlock with ${bioLabel}`}
+          </motion.button>
+        )}
+
         {/* Keypad */}
         <PinKeypad
           isLocked={isLocked}
-          biometricAvailable={biometricAvailable}
+          biometricAvailable={biometricReady}
           onKeyPress={handleKeyPress}
           onDelete={handleDelete}
           onBiometric={handleBiometric}
         />
-
       </div>
     </div>
   );
