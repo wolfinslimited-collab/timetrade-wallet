@@ -138,7 +138,8 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
           return (
             <button
               key={`${token.chain}-${token.symbol}-${token.contractAddress || 'native'}-${index}`}
-              className="w-full flex items-center justify-between py-3.5 px-2 rounded-2xl active:bg-secondary/50"
+              className="w-full flex items-center justify-between py-3.5 px-2 rounded-2xl transition-transform duration-150 active:scale-[0.98] active:bg-secondary/50 animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}
               onClick={() => handleAssetClick(token)}
             >
               <div className="flex items-center gap-3.5">
