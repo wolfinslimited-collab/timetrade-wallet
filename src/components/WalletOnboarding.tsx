@@ -16,13 +16,13 @@ import { deriveMultipleAccounts } from "@/utils/walletDerivation";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
+export type OnboardingStep = "welcome" | "tour" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
 interface WalletOnboardingProps {
   onComplete: () => void;
 }
 
-const STEP_ORDER: OnboardingStep[] = ["welcome", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
+const STEP_ORDER: OnboardingStep[] = ["welcome", "tour", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
 
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
