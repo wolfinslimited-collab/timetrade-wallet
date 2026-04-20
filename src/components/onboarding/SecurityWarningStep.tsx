@@ -31,7 +31,9 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
   const [acknowledged, setAcknowledged] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen overflow-y-auto p-6">
+    <div className="flex flex-col h-screen">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8 shrink-0">
         <button 
