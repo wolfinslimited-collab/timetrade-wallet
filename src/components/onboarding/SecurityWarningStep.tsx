@@ -51,34 +51,50 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
 
-      {/* Warning Banner */}
-      <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-full bg-accent/20 shrink-0">
-            <AlertTriangle className="w-5 h-5 text-accent" />
+      {/* Hero icon + intro */}
+      <div className="flex flex-col items-center text-center mb-8">
+        <div className="relative mb-5">
+          <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+          <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center">
+            <ShieldCheck className="w-10 h-10 text-primary" strokeWidth={1.8} />
           </div>
+        </div>
+        <h3 className="text-2xl font-bold mb-2">Protect your wallet</h3>
+        <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+          Your seed phrase is the master key to your funds. Read these guidelines carefully before continuing.
+        </p>
+      </div>
+
+      {/* Critical Warning */}
+      <div className="relative overflow-hidden rounded-2xl border border-destructive/30 bg-destructive/5 p-4 mb-6">
+        <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
+        <div className="flex items-start gap-3 pl-2">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-accent mb-1">Important Security Notice</h3>
-            <p className="text-sm text-muted-foreground">
-              Your seed phrase is the <strong>only way</strong> to recover your wallet. If you lose it, your funds are gone forever.
+            <h3 className="font-semibold text-foreground text-sm mb-1">Lose it, lose everything</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Your seed phrase is the only way to recover your wallet. There is no password reset.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Security Tips */}
-      <div className="flex-1 space-y-4">
+      {/* Security Rules */}
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+        Security Rules
+      </p>
+      <div className="space-y-2 mb-2">
         {securityTips.map((tip, index) => (
           <div 
             key={index}
-            className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border"
+            className="group flex items-start gap-3 p-3.5 bg-card/50 rounded-xl border border-border/60 hover:border-border transition-colors"
           >
-            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-              <tip.icon className="w-5 h-5 text-primary" />
+            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 shrink-0 flex items-center justify-center">
+              <tip.icon className="w-4 h-4 text-primary" strokeWidth={2} />
             </div>
-            <div>
-              <h4 className="font-medium mb-1">{tip.title}</h4>
-              <p className="text-sm text-muted-foreground">{tip.description}</p>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-sm mb-0.5">{tip.title}</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">{tip.description}</p>
             </div>
           </div>
         ))}
