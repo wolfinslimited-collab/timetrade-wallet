@@ -55,8 +55,9 @@ export function useWebNotifications() {
       // Native platforms use Capacitor push notifications, not browser API
       setIsSupported(true);
       setIsIframe(false);
-      // Permission is managed by native FCM flow; default to granted if enabled in settings
-      setPermission('granted');
+      // Permission is managed by native FCM flow; don't pretend it's granted
+      // Actual status comes from useFCMToken
+      setPermission('default');
     } else {
       const supported = 'Notification' in window;
       setIsSupported(supported);
