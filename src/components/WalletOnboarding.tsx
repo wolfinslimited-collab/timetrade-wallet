@@ -70,8 +70,11 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     setStep("pin");
   };
 
+  const [pendingPin, setPendingPin] = useState<string>("");
+
   const handlePinComplete = async (pin: string) => {
     localStorage.setItem("timetrade_pin", pin);
+    setPendingPin(pin);
 
     try {
       const phraseString = seedPhrase.join(" ");
@@ -110,11 +113,16 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       return;
     }
 
-    setStep("success");
+    setStep("biometric");
   };
 
   const handleBiometricComplete = (enabled: boolean) => {
     localStorage.setItem("timetrade_biometric", enabled ? "true" : "false");
+    setStep("success");
+  };
+
+  const handleBiometricSkip = () => {
+    localStorage.setItem("timetrade_biometric", "false");
     setStep("success");
   };
 
