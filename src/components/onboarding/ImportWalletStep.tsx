@@ -178,7 +178,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
 
       {/* ── Segmented control: 12 / 24 ── */}
       <div className="shrink-0 px-5 pb-3">
-        <div className="flex p-1 rounded-xl bg-muted/30 border border-border/30">
+        <div className="flex p-1 rounded-xl bg-white/[0.06] border border-white/10">
           {([12, 24] as const).map(count => (
             <button
               key={count}
@@ -186,8 +186,8 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
               className={cn(
                 "flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200",
                 wordCount === count
-                  ? "bg-card text-foreground shadow-sm shadow-black/20"
-                  : "text-muted-foreground"
+                  ? "bg-white/[0.12] text-foreground shadow-sm shadow-black/30"
+                  : "text-foreground/50"
               )}
             >
               {count} words
