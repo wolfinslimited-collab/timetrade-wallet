@@ -54,7 +54,6 @@ async function getAccessToken(): Promise<string> {
   };
 
   const enc = new TextEncoder();
-  const headerB64 = base64url(enc.encode(JSON.stringify(header)));
   const headerB64 = encodeBase64Url(enc.encode(JSON.stringify(header)));
   const payloadB64 = encodeBase64Url(enc.encode(JSON.stringify(payload)));
   const unsignedToken = `${headerB64}.${payloadB64}`;
