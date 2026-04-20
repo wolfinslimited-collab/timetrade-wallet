@@ -16,45 +16,41 @@ import { deriveMultipleAccounts } from "@/utils/walletDerivation";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export type OnboardingStep = "welcome" | "tour" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
+export type OnboardingStep = "tour" | "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
 interface WalletOnboardingProps {
   onComplete: () => void;
 }
 
-const STEP_ORDER: OnboardingStep[] = ["welcome", "tour", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
+const STEP_ORDER: OnboardingStep[] = ["tour", "welcome", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
 
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
   const { toast } = useToast();
-  const [step, setStep] = useState<OnboardingStep>("welcome");
+  const [step, setStep] = useState<OnboardingStep>("tour");
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
   const [encryptedSeedStr, setEncryptedSeedStr] = useState<string | null>(null);
   const [postTour, setPostTour] = useState<"create" | "import">("create");
-  const prevStepRef = useRef<OnboardingStep>("welcome");
+  const prevStepRef = useRef<OnboardingStep>("tour");
 
   const direction = STEP_ORDER.indexOf(step) >= STEP_ORDER.indexOf(prevStepRef.current) ? 1 : -1;
   prevStepRef.current = step;
 
   const handleCreateWallet = () => {
     setPostTour("create");
-    setStep("tour");
+    const newSeedPhrase = generateSeedPhrase(12);
+    setSeedPhrase(newSeedPhrase);
+    setStep("security");
   };
 
   const handleImportWallet = () => {
     setPostTour("import");
-    setStep("tour");
+    setStep("import");
   };
 
   const handleTourContinue = () => {
-    if (postTour === "create") {
-      const newSeedPhrase = generateSeedPhrase(12);
-      setSeedPhrase(newSeedPhrase);
-      setStep("security");
-    } else {
-      setStep("import");
-    }
+    setStep("welcome");
   };
 
   const handleImportComplete = (importedPhrase: string[]) => {
@@ -76,7 +72,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
 
   const handlePinComplete = async (pin: string) => {
     localStorage.setItem("timetrade_pin", pin);
-    
+
     try {
       const phraseString = seedPhrase.join(" ");
       const encryptedData = await encryptPrivateKey(phraseString, pin);
@@ -113,7 +109,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       });
       return;
     }
-    
+
     setStep("success");
   };
 
@@ -124,11 +120,11 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
 
   const handleFinish = async () => {
     localStorage.setItem("timetrade_wallet_name", walletName);
-    
+
     const evmAddress = localStorage.getItem("timetrade_wallet_address_evm") || undefined;
     const solanaAddress = localStorage.getItem("timetrade_wallet_address_solana") || undefined;
     const tronAddress = localStorage.getItem("timetrade_wallet_address_tron") || undefined;
-    
+
     const mainAccount = {
       id: "main",
       name: walletName || "Main Wallet",
@@ -159,12 +155,19 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     } catch (e) {
       console.error("Failed to save user record:", e);
     }
-    
+
     onComplete();
   };
 
   const renderStep = () => {
     switch (step) {
+      case "tour":
+        return (
+          <FeatureTourStep
+            onContinue={handleTourContinue}
+            onBack={handleTourContinue}
+          />
+        );
       case "welcome":
         return (
           <WelcomeStep
@@ -172,13 +175,6 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
             onImportWallet={handleImportWallet}
             walletName={walletName}
             setWalletName={setWalletName}
-          />
-        );
-      case "tour":
-        return (
-          <FeatureTourStep
-            onContinue={handleTourContinue}
-            onBack={() => setStep("welcome")}
           />
         );
       case "security":
@@ -215,7 +211,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
         return (
           <PinSetupStep
             onComplete={handlePinComplete}
-            onBack={() => setStep("verify")}
+            onBack={() => (postTour === "import" ? setStep("import") : setStep("verify"))}
           />
         );
       case "success":
