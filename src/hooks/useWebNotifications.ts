@@ -33,6 +33,7 @@ const defaultSettings: PushSettings = {
 export function useWebNotifications() {
   const [permission, setPermission] = useState<WebNotificationPermission>('default');
   const [isSupported, setIsSupported] = useState(false);
+  const [isIframe, setIsIframe] = useState(false);
   const [settings, setSettings] = useState<PushSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -49,6 +50,7 @@ export function useWebNotifications() {
   useEffect(() => {
     const supported = 'Notification' in window;
     setIsSupported(supported);
+    setIsIframe(window.self !== window.top);
     
     if (supported) {
       setPermission(Notification.permission as WebNotificationPermission);
@@ -65,7 +67,10 @@ export function useWebNotifications() {
    */
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
-      console.warn('Web Notifications are not supported in this browser');
+      return false;
+    }
+
+    if (isIframe) {
       return false;
     }
 
@@ -82,7 +87,7 @@ export function useWebNotifications() {
       console.error('Failed to request notification permission:', error);
       return false;
     }
-  }, [isSupported]);
+  }, [isSupported, isIframe]);
 
   /**
    * Show a web notification
@@ -229,6 +234,7 @@ export function useWebNotifications() {
 
   return {
     isSupported,
+    isIframe,
     permission,
     settings,
     requestPermission,
