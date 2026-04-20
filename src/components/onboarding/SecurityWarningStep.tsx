@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, AlertTriangle, Eye, EyeOff, Lock, ChevronLeft, Check } from "lucide-react";
+import { ShieldCheck, AlertTriangle, PenLine, EyeOff, Camera, ChevronLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -11,19 +11,19 @@ interface SecurityWarningStepProps {
 
 const securityTips = [
   {
-    icon: Eye,
+    icon: PenLine,
     title: "Write it down",
-    description: "Write your seed phrase on paper and store it in a secure location. Never save it digitally.",
+    description: "Store your seed phrase on paper in a secure, offline location.",
   },
   {
-    icon: Lock,
-    title: "Keep it secret",
-    description: "Never share your seed phrase with anyone. Timetrade will never ask for it.",
+    icon: EyeOff,
+    title: "Keep it private",
+    description: "Never share your phrase. Timetrade will never ask for it.",
   },
   {
-    icon: Shield,
+    icon: Camera,
     title: "No screenshots",
-    description: "Never take screenshots or photos of your seed phrase. This compromises security.",
+    description: "Avoid digital copies — they can be stolen by malware.",
   },
 ];
 
