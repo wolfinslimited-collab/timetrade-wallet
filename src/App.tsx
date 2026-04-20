@@ -31,11 +31,19 @@ const queryClient = new QueryClient({
   },
 });
 
-// Lightweight fade transition — no slide to reduce jank on mobile
+// iOS-style native page transition: subtle slide + fade, hardware-accelerated
 const pageVariants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.15 } },
-  exit: { opacity: 0, transition: { duration: 0.1 } },
+  initial: { opacity: 0, x: 12 },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.22, ease: [0.32, 0.72, 0, 1] },
+  },
+  exit: {
+    opacity: 0,
+    x: -8,
+    transition: { duration: 0.16, ease: [0.32, 0.72, 0, 1] },
+  },
 };
 
 
