@@ -174,6 +174,13 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
             setWalletName={setWalletName}
           />
         );
+      case "tour":
+        return (
+          <FeatureTourStep
+            onContinue={handleTourContinue}
+            onBack={() => setStep("welcome")}
+          />
+        );
       case "security":
         return (
           <SecurityWarningStep
