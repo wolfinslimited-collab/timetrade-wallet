@@ -134,7 +134,7 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
   const hasAny = words.some(w => w.length > 0);
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-background" onPaste={handlePaste}>
+    <div className="flex flex-col h-[100dvh] w-full bg-gradient-to-b from-[hsl(220_14%_12%)] via-[hsl(220_14%_9%)] to-background" onPaste={handlePaste}>
       {/* ── Header ── */}
       <div
         className="shrink-0 px-5 pt-3 pb-3"
