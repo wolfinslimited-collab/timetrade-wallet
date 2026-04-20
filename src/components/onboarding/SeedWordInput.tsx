@@ -80,16 +80,16 @@ export const SeedWordInput = ({
       <div
         className={cn(
           "flex items-center gap-2 rounded-xl border h-[44px] pl-1.5 pr-2.5 transition-colors duration-150",
-          "bg-card/70 border-border/40",
-          isFocused && "border-primary bg-card",
-          isValid && !isFocused && "border-emerald-500/40 bg-emerald-500/[0.04]",
-          isInvalid && !isFocused && "border-destructive/40 bg-destructive/[0.04]"
+          "bg-white/[0.06] border-white/10",
+          isFocused && "border-primary/70 bg-white/[0.10]",
+          isValid && !isFocused && "border-emerald-400/50 bg-emerald-400/[0.08]",
+          isInvalid && !isFocused && "border-destructive/50 bg-destructive/[0.08]"
         )}
       >
         <span
           className={cn(
             "shrink-0 w-6 h-7 rounded-md flex items-center justify-center text-[10px] font-bold tabular-nums transition-colors",
-            isFocused ? "bg-primary/15 text-primary" : "bg-muted/40 text-muted-foreground"
+            isFocused ? "bg-primary/25 text-primary-foreground" : "bg-white/10 text-foreground/70"
           )}
         >
           {index + 1}
