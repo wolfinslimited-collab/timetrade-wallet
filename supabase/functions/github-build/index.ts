@@ -75,6 +75,73 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
+      - name: Customize LaunchScreen (dark + logo)
+        run: |
+          SPLASH_DIR="ios/App/App/Assets.xcassets/Splash.imageset"
+          mkdir -p "\$SPLASH_DIR"
+
+          if [ -f public/app-logo.png ]; then
+            LOGO_SRC="public/app-logo.png"
+          elif [ -f public/app-logo.jpg ]; then
+            LOGO_SRC="public/app-logo.jpg"
+          else
+            echo "No app logo found, skipping splash customization"
+            exit 0
+          fi
+
+          sips -z 200 200 "\$LOGO_SRC" --out "\$SPLASH_DIR/splash-logo.png" 2>/dev/null || cp "\$LOGO_SRC" "\$SPLASH_DIR/splash-logo.png"
+          sips -z 400 400 "\$LOGO_SRC" --out "\$SPLASH_DIR/splash-logo@2x.png" 2>/dev/null || cp "\$LOGO_SRC" "\$SPLASH_DIR/splash-logo@2x.png"
+          sips -z 600 600 "\$LOGO_SRC" --out "\$SPLASH_DIR/splash-logo@3x.png" 2>/dev/null || cp "\$LOGO_SRC" "\$SPLASH_DIR/splash-logo@3x.png"
+
+          cat > "\$SPLASH_DIR/Contents.json" << 'SPLASHJSON'
+          {
+            "images": [
+              {"filename": "splash-logo.png", "idiom": "universal", "scale": "1x"},
+              {"filename": "splash-logo@2x.png", "idiom": "universal", "scale": "2x"},
+              {"filename": "splash-logo@3x.png", "idiom": "universal", "scale": "3x"}
+            ],
+            "info": {"author": "xcode", "version": 1}
+          }
+          SPLASHJSON
+
+          cat > ios/App/App/Base.lproj/LaunchScreen.storyboard << 'STORYEOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="17701" targetRuntime="AppleSDK" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+              <scenes>
+                  <scene sceneID="EHf-IW-A2E">
+                      <objects>
+                          <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                              <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                                  <rect key="frame" x="0" y="0" width="414" height="896"/>
+                                  <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                  <subviews>
+                                      <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="Splash" translatesAutoresizingMaskIntoConstraints="NO" id="img-splash">
+                                          <rect key="frame" x="137" y="378" width="140" height="140"/>
+                                          <constraints>
+                                              <constraint firstAttribute="width" constant="140" id="w-splash"/>
+                                              <constraint firstAttribute="height" constant="140" id="h-splash"/>
+                                          </constraints>
+                                      </imageView>
+                                  </subviews>
+                                  <color key="backgroundColor" red="0.054901960784" green="0.066666666667" blue="0.086274509804" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                  <constraints>
+                                      <constraint firstItem="img-splash" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx-splash"/>
+                                      <constraint firstItem="img-splash" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cy-splash"/>
+                                  </constraints>
+                              </view>
+                          </viewController>
+                          <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                      </objects>
+                      <point key="canvasLocation" x="52" y="374.66517857142856"/>
+                  </scene>
+              </scenes>
+              <resources>
+                  <image name="Splash" width="200" height="200"/>
+              </resources>
+          </document>
+          STORYEOF
+          echo "iOS LaunchScreen customized with dark background and app logo"
+
       - name: Prepare app icon source
         run: |
           mkdir -p assets
@@ -513,6 +580,43 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Customize splash screen (dark + logo)
+        run: |
+          if [ -f public/app-logo.png ]; then
+            LOGO_SRC="public/app-logo.png"
+          elif [ -f public/app-logo.jpg ]; then
+            LOGO_SRC="public/app-logo.jpg"
+          else
+            echo "No app logo found, skipping splash customization"
+            exit 0
+          fi
+
+          if ! command -v convert &>/dev/null && ! command -v magick &>/dev/null; then
+            sudo apt-get update && sudo apt-get install -y imagemagick
+          fi
+          MAGICK_CMD="convert"
+          command -v magick &>/dev/null && MAGICK_CMD="magick"
+
+          for SIZE_DIR in "drawable-mdpi 480x800" "drawable-hdpi 720x1280" "drawable-xhdpi 1080x1920" "drawable-xxhdpi 1440x2560" "drawable-xxxhdpi 1920x3200"; do
+            DIR_NAME="\${SIZE_DIR%% *}"
+            DIMENSIONS="\${SIZE_DIR#* }"
+            W="\${DIMENSIONS%x*}"
+            H="\${DIMENSIONS#*x}"
+            LOGO_SIZE=\$((W / 4))
+            RES_DIR="android/app/src/main/res/\$DIR_NAME"
+            mkdir -p "\$RES_DIR"
+            \$MAGICK_CMD -size \${W}x\${H} "xc:#0E1116" "\$RUNNER_TEMP/bg_\$DIR_NAME.png"
+            \$MAGICK_CMD "\$LOGO_SRC" -resize \${LOGO_SIZE}x\${LOGO_SIZE} "\$RUNNER_TEMP/logo_\$DIR_NAME.png"
+            \$MAGICK_CMD "\$RUNNER_TEMP/bg_\$DIR_NAME.png" "\$RUNNER_TEMP/logo_\$DIR_NAME.png" -gravity center -composite "\$RES_DIR/splash.png"
+          done
+
+          STYLES="android/app/src/main/res/values/styles.xml"
+          if [ -f "\$STYLES" ]; then
+            sed -i 's|<item name="android:background">@drawable/splash</item>|<item name="android:background">#0E1116</item>|g' "\$STYLES"
+            sed -i 's|<item name="android:background">@null</item>|<item name="android:background">#0E1116</item>|g' "\$STYLES"
+          fi
+          echo "Android splash customized with dark background and app logo"
 
       - name: Set Android build number
         run: |

@@ -21,6 +21,14 @@
 
   <body>
     <div id="root"></div>
+    <style>
+      #app-loading{position:fixed;top:0;left:0;width:100%;height:100%;background:#0E1116;display:flex;align-items:center;justify-content:center;z-index:99999}
+      #app-loading img{width:80px;height:80px;border-radius:16px}
+    </style>
+    <div id="app-loading"><img src="/app-logo.png" alt="" /></div>
+    <script>
+      (function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){var l=document.getElementById('app-loading');if(l)l.remove();o.disconnect()}});o.observe(r,{childList:true})})();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
