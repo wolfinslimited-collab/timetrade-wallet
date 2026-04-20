@@ -308,6 +308,7 @@ function useUserAccounts() {
 
 export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherSheetProps) {
   const { isLoadingAccounts, refreshAll } = useBlockchainContext();
+  const currentPlatform = usePlatform();
   
   const { accounts, activeAccountId, setActiveAccountId, addAccount, removeAccount, renameAccount } = useUserAccounts();
   const [addMode, setAddMode] = useState<AddAccountMode>(null);
