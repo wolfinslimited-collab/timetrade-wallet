@@ -21,6 +21,8 @@ interface WalletOnboardingProps {
   onComplete: () => void;
 }
 
+const STEP_ORDER: OnboardingStep[] = ["welcome", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
+
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
   const { toast } = useToast();
@@ -28,6 +30,10 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
   const [encryptedSeedStr, setEncryptedSeedStr] = useState<string | null>(null);
+  const prevStepRef = useRef<OnboardingStep>("welcome");
+
+  const direction = STEP_ORDER.indexOf(step) >= STEP_ORDER.indexOf(prevStepRef.current) ? 1 : -1;
+  prevStepRef.current = step;
 
   const handleCreateWallet = () => {
     const newSeedPhrase = generateSeedPhrase(12);
