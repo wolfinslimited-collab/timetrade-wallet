@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
 import { SecurityWarningStep } from "./onboarding/SecurityWarningStep";
 import { SeedPhraseStep } from "./onboarding/SeedPhraseStep";
@@ -20,6 +21,8 @@ interface WalletOnboardingProps {
   onComplete: () => void;
 }
 
+const STEP_ORDER: OnboardingStep[] = ["welcome", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
+
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
   const { toast } = useToast();
@@ -27,6 +30,10 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
   const [encryptedSeedStr, setEncryptedSeedStr] = useState<string | null>(null);
+  const prevStepRef = useRef<OnboardingStep>("welcome");
+
+  const direction = STEP_ORDER.indexOf(step) >= STEP_ORDER.indexOf(prevStepRef.current) ? 1 : -1;
+  prevStepRef.current = step;
 
   const handleCreateWallet = () => {
     const newSeedPhrase = generateSeedPhrase(12);
@@ -205,9 +212,21 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        {renderStep()}
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-background">
+      <div className="flex-1 relative overflow-hidden">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
+            key={step}
+            custom={direction}
+            initial={{ x: direction > 0 ? "100%" : "-25%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction > 0 ? "-25%" : "100%", opacity: 0 }}
+            transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            className="absolute inset-0 will-change-transform"
+          >
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

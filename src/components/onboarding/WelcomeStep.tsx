@@ -1,4 +1,5 @@
 import { Globe, Shield, Fingerprint, ArrowRight, Wallet, Download } from "lucide-react";
+import { haptics } from "@/lib/haptics";
 
 interface WelcomeStepProps {
   onCreateWallet: () => void;
@@ -45,8 +46,8 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
       {/* Bottom actions */}
       <div className="px-6 pb-10 space-y-3" style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <button
-          onClick={onCreateWallet}
-          className="w-full flex items-center gap-4 rounded-2xl bg-primary px-5 py-[18px] active:opacity-90"
+          onClick={() => { haptics.impact("medium"); onCreateWallet(); }}
+          className="w-full flex items-center gap-4 rounded-2xl bg-primary px-5 py-[18px] transition-transform duration-150 active:scale-[0.98]"
         >
           <div className="w-12 h-12 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0">
             <Wallet className="w-5 h-5 text-primary-foreground" />
@@ -59,8 +60,8 @@ export const WelcomeStep = ({ onCreateWallet, onImportWallet }: WelcomeStepProps
         </button>
 
         <button
-          onClick={onImportWallet}
-          className="w-full flex items-center gap-4 rounded-2xl bg-card border border-border/40 px-5 py-[18px] active:opacity-90"
+          onClick={() => { haptics.impact("light"); onImportWallet(); }}
+          className="w-full flex items-center gap-4 rounded-2xl bg-card border border-border/40 px-5 py-[18px] transition-transform duration-150 active:scale-[0.98]"
         >
           <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0">
             <Download className="w-5 h-5 text-foreground/60" />
