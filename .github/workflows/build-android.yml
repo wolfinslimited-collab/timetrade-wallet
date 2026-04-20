@@ -36,10 +36,23 @@ jobs:
         run: npm run build
 
       - name: Add Android platform
-        run: npx cap add android || true
+        run: |
+          # Save google-services.json before recreating android/
+          if [ -f "android/app/google-services.json" ]; then
+            cp android/app/google-services.json /tmp/google-services.json
+          fi
+          rm -rf android
+          npx cap add android
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Restore google-services.json
+        run: |
+          if [ -f "/tmp/google-services.json" ]; then
+            cp /tmp/google-services.json android/app/google-services.json
+            echo "google-services.json restored"
+          fi
 
       - name: Set Android build number
         run: |
