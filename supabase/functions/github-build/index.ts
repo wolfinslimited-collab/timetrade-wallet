@@ -388,6 +388,30 @@ jobs:
           </plist>
           EXPORTEOF
 
+      - name: Add push notification entitlements
+        run: |
+          cat > ios/App/App/App.entitlements << 'ENTEOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>aps-environment</key>
+            <string>production</string>
+          </dict>
+          </plist>
+          ENTEOF
+
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          if [ -f "\$PBXPROJ" ]; then
+            if ! grep -q "CODE_SIGN_ENTITLEMENTS" "\$PBXPROJ"; then
+              sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\\n\\t\\t\\t\\tCODE_SIGN_ENTITLEMENTS = App\\/App.entitlements;/g" "\$PBXPROJ"
+            fi
+          fi
+
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" ios/App/App/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" ios/App/App/Info.plist 2>/dev/null || true
+          echo "Push notification entitlements and background modes added"
+
       - name: Build Xcode archive
         run: |
           cd ios/App
