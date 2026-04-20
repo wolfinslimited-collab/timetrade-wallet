@@ -15,6 +15,7 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { deriveMultipleAccounts } from "@/utils/walletDerivation";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { usePlatform } from "@/hooks/usePlatform";
 
 export type OnboardingStep = "tour" | "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
@@ -27,6 +28,7 @@ const STEP_ORDER: OnboardingStep[] = ["tour", "welcome", "security", "seedphrase
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
   const { toast } = useToast();
+  const platform = usePlatform();
   const [step, setStep] = useState<OnboardingStep>("tour");
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
@@ -151,6 +153,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       await supabase.functions.invoke("register-user", {
         body: {
           wallet_name: walletName || "Main Wallet",
+          platform,
           device_info: {
             userAgent: navigator.userAgent,
             platform: navigator.platform,
