@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
+import { FeatureTourStep } from "./onboarding/FeatureTourStep";
 import { SecurityWarningStep } from "./onboarding/SecurityWarningStep";
 import { SeedPhraseStep } from "./onboarding/SeedPhraseStep";
 import { VerifySeedStep } from "./onboarding/VerifySeedStep";
@@ -15,13 +16,13 @@ import { deriveMultipleAccounts } from "@/utils/walletDerivation";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export type OnboardingStep = "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
+export type OnboardingStep = "welcome" | "tour" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
 
 interface WalletOnboardingProps {
   onComplete: () => void;
 }
 
-const STEP_ORDER: OnboardingStep[] = ["welcome", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
+const STEP_ORDER: OnboardingStep[] = ["welcome", "tour", "security", "seedphrase", "verify", "import", "pin", "biometric", "success"];
 
 export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const { connectWallet, setSelectedChain } = useBlockchainContext();
@@ -30,19 +31,30 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [walletName, setWalletName] = useState("Main Wallet");
   const [encryptedSeedStr, setEncryptedSeedStr] = useState<string | null>(null);
+  const [postTour, setPostTour] = useState<"create" | "import">("create");
   const prevStepRef = useRef<OnboardingStep>("welcome");
 
   const direction = STEP_ORDER.indexOf(step) >= STEP_ORDER.indexOf(prevStepRef.current) ? 1 : -1;
   prevStepRef.current = step;
 
   const handleCreateWallet = () => {
-    const newSeedPhrase = generateSeedPhrase(12);
-    setSeedPhrase(newSeedPhrase);
-    setStep("security");
+    setPostTour("create");
+    setStep("tour");
   };
 
   const handleImportWallet = () => {
-    setStep("import");
+    setPostTour("import");
+    setStep("tour");
+  };
+
+  const handleTourContinue = () => {
+    if (postTour === "create") {
+      const newSeedPhrase = generateSeedPhrase(12);
+      setSeedPhrase(newSeedPhrase);
+      setStep("security");
+    } else {
+      setStep("import");
+    }
   };
 
   const handleImportComplete = (importedPhrase: string[]) => {
@@ -160,6 +172,13 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
             onImportWallet={handleImportWallet}
             walletName={walletName}
             setWalletName={setWalletName}
+          />
+        );
+      case "tour":
+        return (
+          <FeatureTourStep
+            onContinue={handleTourContinue}
+            onBack={() => setStep("welcome")}
           />
         );
       case "security":
