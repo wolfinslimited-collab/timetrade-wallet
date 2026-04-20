@@ -246,6 +246,14 @@ jobs:
             sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = \$VERSION_STRING;/g" "\$PBXPROJ"
           fi
 
+      - name: Set encryption export compliance
+        run: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "\$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool true" "\$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :ITSEncryptionExportComplianceCode" "\$PLIST" 2>/dev/null || true
+          echo "Export compliance key set"
+
       - name: Setup signing assets
         env:
           BUILD_CERTIFICATE_BASE64: \${{ secrets.BUILD_CERTIFICATE_BASE64 }}
