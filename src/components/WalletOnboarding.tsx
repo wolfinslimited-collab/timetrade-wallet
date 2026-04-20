@@ -212,9 +212,21 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        {renderStep()}
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-background">
+      <div className="flex-1 relative overflow-hidden">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
+            key={step}
+            custom={direction}
+            initial={{ x: direction > 0 ? "100%" : "-25%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction > 0 ? "-25%" : "100%", opacity: 0 }}
+            transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            className="absolute inset-0 will-change-transform"
+          >
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
