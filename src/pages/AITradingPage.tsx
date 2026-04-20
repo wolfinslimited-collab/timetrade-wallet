@@ -4,8 +4,8 @@ import { useTradingApi } from "@/hooks/useTradingApi";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, TrendingUp, TrendingDown, Bot, LogOut, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Activity, Zap, BarChart3,
-  ArrowDown, Power, Sparkles, Eye, EyeOff,
+  ArrowUpRight, ArrowDownRight, Activity, Zap,
+  ArrowDown, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -178,215 +178,180 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   }
 
   return (
-    <div className="px-4 pt-3 pb-32 space-y-5">
+    <div className="px-5 pt-3 pb-32">
       {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/30">
-            <Bot className="w-5 h-5 text-primary-foreground" />
-            {isActive && (
-              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-background animate-pulse" />
-            )}
-          </div>
-          <div>
-            <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight">AI Trading</h1>
-            <p className="text-[10px] text-muted-foreground font-medium">{format(new Date(), "EEE, MMM d • HH:mm")}</p>
-          </div>
+      <div className="flex items-center justify-between h-12">
+        <div className="flex items-center gap-2">
+          <Bot className="w-4 h-4 text-muted-foreground" />
+          <h1 className="text-[15px] font-semibold text-foreground tracking-tight">AI Trading</h1>
         </div>
-        <div className="flex gap-1.5">
-          <button onClick={fetchDashboardData} className="w-9 h-9 rounded-xl bg-card border border-border/40 flex items-center justify-center active:scale-95 transition-transform" aria-label="Refresh">
-            <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", isLoading && "animate-spin")} />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={fetchDashboardData}
+            className="w-9 h-9 rounded-full flex items-center justify-center active:bg-secondary/60"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={cn("w-4 h-4 text-muted-foreground", isLoading && "animate-spin")} />
           </button>
-          <button onClick={logout} className="w-9 h-9 rounded-xl bg-card border border-border/40 flex items-center justify-center active:scale-95 transition-transform" aria-label="Sign out">
-            <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
+          <button
+            onClick={logout}
+            className="w-9 h-9 rounded-full flex items-center justify-center active:bg-secondary/60"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
       </div>
 
-      {/* Premium Hero Card */}
-      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-5 shadow-xl shadow-primary/5">
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-3xl" />
-
-        <div className="relative">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-primary" />
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em]">Total Portfolio</p>
-            </div>
-            <button
-              onClick={() => setHideBalance(!hideBalance)}
-              className="w-7 h-7 rounded-lg bg-background/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
-              aria-label="Toggle balance"
-            >
-              {hideBalance ? <EyeOff className="w-3.5 h-3.5 text-muted-foreground" /> : <Eye className="w-3.5 h-3.5 text-muted-foreground" />}
-            </button>
-          </div>
-
-          <div className="flex items-baseline gap-1">
-            <span className="text-[22px] font-bold text-muted-foreground/70">$</span>
-            <span className="text-[42px] font-bold font-mono text-foreground tracking-tighter leading-none tabular-nums">
+      {/* Hero — balance on background, no card */}
+      <div className="pt-10 pb-8 flex flex-col items-center text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">
+          Portfolio Value
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-baseline">
+            <span className="text-[24px] font-semibold text-muted-foreground/80 mr-0.5">$</span>
+            <span className="text-[44px] font-semibold font-mono text-foreground tracking-tight leading-none tabular-nums">
               {mask(fmt(totalBalance))}
             </span>
           </div>
-
-          <div className="flex items-center gap-2 mt-3">
-            <div className={cn(
-              "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold tabular-nums",
-              totalProfit >= 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
-            )}>
-              {totalProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
-            </div>
-            <span className="text-[10px] text-muted-foreground font-medium">all-time P&L</span>
-          </div>
-
-          {/* Mini split: Available / Locked */}
-          <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-border/30">
-            <div>
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1">Available</p>
-              <p className="text-[15px] font-bold font-mono text-foreground tabular-nums">${mask(fmt(availableBalance))}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1">In Trades</p>
-              <p className="text-[15px] font-bold font-mono text-muted-foreground tabular-nums">${mask(fmt(lockedBalance))}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick actions */}
-      <div className="grid grid-cols-3 gap-2.5">
-        <ActionButton label="Deposit" icon={<ArrowDown className="w-4 h-4" />} onClick={() => navigate("/ai-trading/wallet?tab=deposit")} />
-        <ActionButton label="Withdraw" icon={<ArrowUpRight className="w-4 h-4" />} onClick={() => navigate("/ai-trading/wallet?tab=withdraw")} />
-        <ActionButton label="Live" icon={<Activity className="w-4 h-4" />} onClick={() => navigate("/live-trades")} live />
-      </div>
-
-      {/* Trading status + CTA card */}
-      <div className="rounded-2xl border border-border/40 bg-card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className={cn(
-              "w-9 h-9 rounded-xl flex items-center justify-center",
-              isActive ? "bg-success/15" : "bg-muted"
-            )}>
-              <Power className={cn("w-4 h-4", isActive ? "text-success" : "text-muted-foreground")} />
-            </div>
-            <div>
-              <p className="text-[13px] font-bold text-foreground">{isActive ? "Bot is Running" : "Bot is Idle"}</p>
-              <p className="text-[10px] text-muted-foreground font-medium">
-                {isActive ? "AI is actively trading on your behalf" : "Tap below to start automated trading"}
-              </p>
-            </div>
-          </div>
-          {isActive && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-success/10">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              <span className="text-[10px] font-bold text-success uppercase tracking-wider">Live</span>
-            </div>
-          )}
+          <button
+            onClick={() => setHideBalance(!hideBalance)}
+            className="text-muted-foreground/60 active:text-foreground"
+            aria-label="Toggle balance"
+          >
+            {hideBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
 
-        <Button
-          onClick={handleToggle}
-          disabled={toggling}
-          className={cn(
-            "w-full h-12 rounded-xl text-sm font-bold",
-            isActive
-              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
-          )}
-        >
-          {toggling ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : isActive ? (
-            <><Power className="w-4 h-4 mr-2" />Stop Trading</>
+        {/* Single P&L line */}
+        <div className="mt-3 flex items-center gap-1.5 text-[12px] font-medium tabular-nums">
+          {totalProfit >= 0 ? (
+            <TrendingUp className="w-3.5 h-3.5 text-success" />
           ) : (
-            <><Zap className="w-4 h-4 mr-2" />Start Trading</>
+            <TrendingDown className="w-3.5 h-3.5 text-destructive" />
           )}
-        </Button>
-      </div>
+          <span className={cn("font-semibold", totalProfit >= 0 ? "text-success" : "text-destructive")}>
+            {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
+          </span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-muted-foreground">all-time</span>
+        </div>
 
-      {/* Earnings highlight */}
-      <div className="rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-card p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-success/15 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-success" />
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">7-day Earnings</p>
-            <p className={cn(
-              "text-[18px] font-bold font-mono tabular-nums",
-              earningsTotal > 0 ? "text-success" : "text-foreground"
-            )}>
-              {earningsTotal > 0 ? "+" : ""}${mask(fmt(earningsTotal))}
-            </p>
+        {/* Status merged with CTA */}
+        <div className="mt-7 flex items-center gap-3">
+          <Button
+            onClick={handleToggle}
+            disabled={toggling}
+            className={cn(
+              "h-11 px-7 rounded-full text-[13px] font-semibold",
+              isActive
+                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                : "bg-primary hover:bg-primary/90 text-primary-foreground"
+            )}
+          >
+            {toggling ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isActive ? (
+              "Stop Trading"
+            ) : (
+              <><Zap className="w-4 h-4 mr-1.5" />Start Trading</>
+            )}
+          </Button>
+          <div className="flex items-center gap-1.5">
+            <span className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              isActive ? "bg-success animate-pulse" : "bg-muted-foreground/40"
+            )} />
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {isActive ? "Bot active" : "Bot idle"}
+            </span>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] text-muted-foreground font-medium">Trades</p>
-          <p className="text-[15px] font-bold text-foreground tabular-nums">{tradeHistory.length}</p>
+      </div>
+
+      {/* Quiet stats row */}
+      <div className="grid grid-cols-2 border-t border-border/40">
+        <div className="py-4 pr-4 border-r border-border/40">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">Available</p>
+          <p className="text-[15px] font-semibold font-mono text-foreground tabular-nums">
+            ${mask(fmt(availableBalance))}
+          </p>
+        </div>
+        <div className="py-4 pl-4">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">In trades</p>
+          <p className="text-[15px] font-semibold font-mono text-foreground tabular-nums">
+            ${mask(fmt(lockedBalance))}
+          </p>
         </div>
       </div>
 
-      {/* Recent Trades */}
-      <div>
-        <div className="flex items-center justify-between px-1 mb-2.5">
-          <p className="text-[11px] text-foreground font-bold uppercase tracking-wider">Recent Trades</p>
+      {/* Pill quick actions */}
+      <div className="flex items-center justify-center gap-2 py-5 border-t border-border/40">
+        <PillButton label="Deposit" icon={<ArrowDown className="w-3.5 h-3.5" />} onClick={() => navigate("/ai-trading/wallet?tab=deposit")} />
+        <PillButton label="Withdraw" icon={<ArrowUpRight className="w-3.5 h-3.5" />} onClick={() => navigate("/ai-trading/wallet?tab=withdraw")} />
+        <PillButton label="Live" icon={<Activity className="w-3.5 h-3.5" />} onClick={() => navigate("/live-trades")} live />
+      </div>
+
+      {/* Recent activity — flat on background */}
+      <div className="border-t border-border/40 pt-4">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[12px] font-semibold text-foreground">Recent activity</p>
           {tradeHistory.length > 0 && (
             <button
               onClick={() => navigate("/live-trades")}
-              className="text-[11px] text-primary font-semibold active:opacity-60"
+              className="text-[11px] text-muted-foreground font-medium active:text-foreground"
             >
               View all
             </button>
           )}
         </div>
 
-        <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
-          {tradeHistory.length === 0 ? (
-            <div className="py-14 text-center px-4">
-              <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center mx-auto mb-3">
-                <BarChart3 className="w-5 h-5 text-muted-foreground/60" />
-              </div>
-              <p className="text-[13px] font-semibold text-foreground">No trades yet</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Start trading to see your activity here</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/30">
-              {tradeHistory.slice(0, 6).map((trade, i) => {
-                const pnl = trade.pnl || 0;
-                const isProfit = pnl >= 0;
-                return (
-                  <div key={trade.id || i} className="flex items-center justify-between py-3 px-4 active:bg-secondary/30">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                        isProfit ? "bg-success/10" : "bg-destructive/10"
-                      )}>
-                        {isProfit
-                          ? <ArrowUpRight className="w-4 h-4 text-success" />
-                          : <ArrowDownRight className="w-4 h-4 text-destructive" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-foreground truncate">
-                          {trade.pair || trade.symbol || "Trade"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground font-medium">
-                          {trade.closed_at ? format(new Date(trade.closed_at), "MMM d • HH:mm") : "Pending"}
-                        </p>
-                      </div>
+        {tradeHistory.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-[12px] text-muted-foreground">No activity yet</p>
+            {earningsTotal > 0 && (
+              <p className="text-[11px] text-success mt-2 font-medium tabular-nums">
+                +${fmt(earningsTotal)} earned in 7d
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30">
+            {tradeHistory.slice(0, 6).map((trade, i) => {
+              const pnl = trade.pnl || 0;
+              const isProfit = pnl >= 0;
+              return (
+                <div
+                  key={trade.id || i}
+                  className="flex items-center justify-between py-3 active:bg-secondary/30 -mx-2 px-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {isProfit ? (
+                      <ArrowUpRight className="w-4 h-4 text-success shrink-0" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4 text-destructive shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">
+                        {trade.pair || trade.symbol || "Trade"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {trade.closed_at ? format(new Date(trade.closed_at), "MMM d • HH:mm") : "Pending"}
+                      </p>
                     </div>
-                    <p className={cn("font-mono text-[13px] font-bold tabular-nums", isProfit ? "text-success" : "text-destructive")}>
-                      {isProfit ? "+" : ""}${Math.abs(pnl).toFixed(2)}
-                    </p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <p className={cn(
+                    "font-mono text-[13px] font-semibold tabular-nums",
+                    isProfit ? "text-success" : "text-destructive"
+                  )}>
+                    {isProfit ? "+" : "-"}${Math.abs(pnl).toFixed(2)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -394,26 +359,21 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
 /* ── Reusable Pieces ── */
 
-const ActionButton = ({ label, icon, onClick, live }: {
+const PillButton = ({ label, icon, onClick, live }: {
   label: string; icon: React.ReactNode; onClick: () => void; live?: boolean;
 }) => (
   <button
     onClick={onClick}
-    className="relative flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-card border border-border/40 hover:border-primary/30 active:scale-[0.97] transition-all"
+    className="relative inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-secondary/50 border border-border/40 text-foreground active:bg-secondary"
   >
     {live && (
-      <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
+      <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
         <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
       </span>
     )}
-    <div className={cn(
-      "w-8 h-8 rounded-xl flex items-center justify-center",
-      live ? "bg-success/10 text-success" : "bg-primary/10 text-primary"
-    )}>
-      {icon}
-    </div>
-    <span className="text-[11px] font-semibold text-foreground">{label}</span>
+    <span className="text-muted-foreground">{icon}</span>
+    <span className="text-[12px] font-semibold">{label}</span>
   </button>
 );
 
