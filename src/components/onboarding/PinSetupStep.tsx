@@ -4,6 +4,7 @@ import { ChevronLeft, Delete, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { haptics } from "@/lib/haptics";
+import { KeypadButton } from "@/components/shared/KeypadButton";
 
 interface PinSetupStepProps {
   onComplete: (pin: string) => void;
@@ -209,4 +210,3 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
   );
 };
 
-// KeypadButton is now shared
