@@ -37,7 +37,7 @@ export async function requestFCMToken(): Promise<string | null> {
 
   try {
     const token = await getToken(m, {
-      vapidKey: "", // Will be set after generating VAPID key
+      vapidKey: "BE1t5y5jSRQ3pDDzk0vbKcCdrMI-iz9ZmYv9YSjJXpQ-4c_Em-U66zu4XMXjHdJB-8gOW2m7Y7AzsUWKAeCyudg",
     });
     return token || null;
   } catch (err) {
