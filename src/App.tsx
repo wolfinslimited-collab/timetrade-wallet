@@ -13,6 +13,7 @@ import { AllAssetsPage } from "./pages/AllAssetsPage";
 import AIChatPageRoute from "./pages/AIChatPage";
 import NotFound from "./pages/NotFound";
 import SendPage from "./pages/SendPage";
+import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import ReceivePage from "./pages/ReceivePage";
 import Build from "./pages/Build";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
@@ -89,6 +90,7 @@ const AnimatedRoutes = () => {
             <Route path="/live-trades" element={<LiveTradesPage />} />
             <Route path="/ai-trading/start" element={<AITradingOnboardingPage />} />
             <Route path="/ai-trading/wallet" element={<AITradingWalletPage />} />
+            <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </motion.div>
