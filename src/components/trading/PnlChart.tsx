@@ -1,20 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from "recharts";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTradingApi, type EarningPoint } from "@/hooks/useTradingApi";
 
 type Range = "hourly" | "monthly";
 
-interface Trade {
-  id?: string;
-  pnl?: number;
-  closed_at?: string;
-  created_at?: string;
-  [key: string]: any;
-}
-
 interface PnlChartProps {
-  trades: Trade[];
+  // kept for backward compat; no longer used (we fetch real earnings)
+  trades?: any[];
 }
 
 function fmt(n: number) {
@@ -23,12 +17,12 @@ function fmt(n: number) {
   return `${n < 0 ? "-" : ""}$${abs.toFixed(decimals)}`;
 }
 
-function aggregate(trades: Trade[], range: Range) {
+function aggregate(points: EarningPoint[], range: Range) {
   const now = new Date();
   const buckets = new Map<string, { label: string; sortKey: number; pnl: number }>();
 
   if (range === "hourly") {
-    // Last 24 hours, bucket by hour
+    // Last 24 hours bucketed by hour
     for (let i = 23; i >= 0; i--) {
       const d = new Date(now);
       d.setMinutes(0, 0, 0);
@@ -38,42 +32,72 @@ function aggregate(trades: Trade[], range: Range) {
       buckets.set(key, { label, sortKey: d.getTime(), pnl: 0 });
     }
     const cutoff = now.getTime() - 24 * 60 * 60 * 1000;
-    for (const t of trades) {
-      const ts = t.closed_at || t.created_at;
-      if (!ts) continue;
-      const d = new Date(ts);
-      if (d.getTime() < cutoff) continue;
+    for (const p of points) {
+      const d = new Date(p.hour_bucket);
+      if (isNaN(d.getTime()) || d.getTime() < cutoff) continue;
       d.setMinutes(0, 0, 0);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`;
       const b = buckets.get(key);
-      if (b) b.pnl += t.pnl || 0;
+      if (b) b.pnl += p.earning_usd || 0;
     }
   } else {
-    // Last 12 months, bucket by month
+    // Last 12 months bucketed by month
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       const label = d.toLocaleDateString("en-US", { month: "short" });
       buckets.set(key, { label, sortKey: d.getTime(), pnl: 0 });
     }
-    for (const t of trades) {
-      const ts = t.closed_at || t.created_at;
-      if (!ts) continue;
-      const d = new Date(ts);
+    for (const p of points) {
+      const d = new Date(p.hour_bucket);
+      if (isNaN(d.getTime())) continue;
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       const b = buckets.get(key);
-      if (b) b.pnl += t.pnl || 0;
+      if (b) b.pnl += p.earning_usd || 0;
     }
   }
 
   return Array.from(buckets.values()).sort((a, b) => a.sortKey - b.sortKey);
 }
 
-export function PnlChart({ trades }: PnlChartProps) {
+export function PnlChart(_props: PnlChartProps) {
+  const { fetchEarnings, isAuthenticated } = useTradingApi();
   const [range, setRange] = useState<Range>("hourly");
+  const [points, setPoints] = useState<EarningPoint[]>([]);
+  const [totalApi, setTotalApi] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
 
-  const data = useMemo(() => aggregate(trades || [], range), [trades, range]);
-  const total = useMemo(() => data.reduce((s, d) => s + d.pnl, 0), [data]);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let alive = true;
+    setLoading(true);
+    const days = range === "hourly" ? 1 : 365;
+    fetchEarnings(days).then((res) => {
+      if (!alive) return;
+      setPoints(Array.isArray(res?.earnings) ? res!.earnings : []);
+      setTotalApi(res?.total_usd ?? 0);
+      setLoading(false);
+    });
+
+    // Light polling per spec (30s for chart)
+    const id = setInterval(() => {
+      fetchEarnings(days).then((res) => {
+        if (!alive) return;
+        setPoints(Array.isArray(res?.earnings) ? res!.earnings : []);
+        setTotalApi(res?.total_usd ?? 0);
+      });
+    }, 30_000);
+
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [range, isAuthenticated, fetchEarnings]);
+
+  const data = useMemo(() => aggregate(points, range), [points, range]);
+  const totalLocal = useMemo(() => data.reduce((s, d) => s + d.pnl, 0), [data]);
+  // Prefer API total when available, fall back to bucket sum
+  const total = totalApi || totalLocal;
   const hasData = data.some((d) => d.pnl !== 0);
 
   return (
@@ -124,7 +148,11 @@ export function PnlChart({ trades }: PnlChartProps) {
 
       {/* Chart */}
       <div className="h-32 w-full px-1 pb-2">
-        {hasData ? (
+        {loading && !hasData ? (
+          <div className="h-full flex items-center justify-center">
+            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+          </div>
+        ) : hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.25} vertical={false} />
@@ -179,7 +207,7 @@ export function PnlChart({ trades }: PnlChartProps) {
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
             <p className="text-[11.5px] font-semibold text-foreground">No P&amp;L data yet</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              Closed trades will appear here {range === "hourly" ? "by the hour" : "by the month"}.
+              Realized earnings will appear here {range === "hourly" ? "by the hour" : "by the month"}.
             </p>
           </div>
         )}

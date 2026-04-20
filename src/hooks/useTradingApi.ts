@@ -28,8 +28,15 @@ interface TradingStatus {
   mode: string;
 }
 
-interface EarningsSummary {
-  earnings: any[];
+export interface EarningPoint {
+  hour_bucket: string;
+  earning_usd: number;
+  earning_pct?: number;
+  balance_snapshot?: number;
+}
+
+export interface EarningsSummary {
+  earnings: EarningPoint[];
   total_usd: number;
   days: number;
 }
@@ -280,6 +287,16 @@ export function useTradingApi() {
     await fetchDashboardData();
   }, [getToken, fetchDashboardData]);
 
+  const fetchEarnings = useCallback(async (days: number): Promise<EarningsSummary | null> => {
+    const token = getToken();
+    if (!token) return null;
+    try {
+      return await apiCall<EarningsSummary>(`/history/earnings?days=${days}`, { token });
+    } catch {
+      return null;
+    }
+  }, [getToken]);
+
   // Auto-fetch on auth
   useEffect(() => {
     if (isAuthenticated) fetchDashboardData();
@@ -311,5 +328,6 @@ export function useTradingApi() {
     fetchWalletData,
     withdraw,
     toggleTrading,
+    fetchEarnings,
   };
 }
