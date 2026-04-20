@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +25,7 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
   } = useWebNotifications();
 
   const [isRequesting, setIsRequesting] = useState(false);
+  const isNative = Capacitor.isNativePlatform();
 
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
@@ -48,6 +50,11 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
 
   const isEnabled = permission === 'granted' && settings.enabled;
   const isDenied = permission === 'denied';
+  // On native, notifications are always supported and iframe doesn't apply
+  const showNotSupported = !isSupported && !isNative;
+  const showIframeWarning = isIframe && !isNative;
+  const showDenied = isSupported && isDenied && !isNative;
+  const showEnableButton = (isSupported || isNative) && !isDenied && !isEnabled && !isIframe;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -61,7 +68,7 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
 
         <div className="space-y-6 overflow-y-auto max-h-[calc(75vh-120px)] pb-4">
           {/* Iframe Warning */}
-          {isIframe && (
+          {showIframeWarning && (
             <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
               <div className="flex gap-3">
                 <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -84,7 +91,7 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
           )}
 
           {/* Browser Support Check */}
-          {!isSupported && (
+          {showNotSupported && (
             <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
               <div className="flex gap-3">
                 <BellOff className="w-5 h-5 text-destructive flex-shrink-0" />
@@ -99,7 +106,7 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
           )}
 
           {/* Permission Denied */}
-          {isSupported && isDenied && (
+          {showDenied && (
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
               <div className="flex gap-3">
                 <X className="w-5 h-5 text-amber-500 flex-shrink-0" />
@@ -114,7 +121,7 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
           )}
 
           {/* Enable Button - hide in iframe */}
-          {isSupported && !isDenied && !isEnabled && !isIframe && (
+          {showEnableButton && (
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
               <div className="flex flex-col items-center text-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
