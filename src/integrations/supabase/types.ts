@@ -77,6 +77,42 @@ export type Database = {
         }
         Relationships: []
       }
+      push_notifications: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          message: string
+          target_platform: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          target_platform?: string
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          target_platform?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       stake_wallets: {
         Row: {
           chain: string
@@ -163,6 +199,7 @@ export type Database = {
           device_info: Json | null
           id: string
           ip_address: string | null
+          platform: string | null
           updated_at: string
           wallet_name: string
         }
@@ -173,6 +210,7 @@ export type Database = {
           device_info?: Json | null
           id?: string
           ip_address?: string | null
+          platform?: string | null
           updated_at?: string
           wallet_name?: string
         }
@@ -183,6 +221,7 @@ export type Database = {
           device_info?: Json | null
           id?: string
           ip_address?: string | null
+          platform?: string | null
           updated_at?: string
           wallet_name?: string
         }
