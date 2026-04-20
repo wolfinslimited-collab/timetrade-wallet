@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState, useEffect, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Lock, ArrowLeft, Key, Fingerprint } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Key } from "lucide-react";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
+import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
 
 interface PinUnlockModalProps {
   open: boolean;
@@ -16,51 +14,37 @@ interface PinUnlockModalProps {
   error?: string | null;
 }
 
-export const PinUnlockModal = ({ 
-  open, 
-  onOpenChange, 
+export const PinUnlockModal = ({
+  open,
+  onOpenChange,
   onSubmit,
   onUsePrivateKey,
   isLoading,
   walletAddress,
   error,
 }: PinUnlockModalProps) => {
-  const [pin, setPin] = useState("");
   const [biometricError, setBiometricError] = useState<string | null>(null);
-  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric, refreshStatus } = useBiometricAuth();
+  const {
+    isAvailable,
+    isEnabled,
+    isRegistered,
+    authenticateWithBiometric,
+    refreshStatus,
+  } = useBiometricAuth();
 
   const canUseBiometric = isAvailable && isEnabled && isRegistered;
 
-  // Refresh biometric status when modal opens
   useEffect(() => {
     if (open) {
       refreshStatus();
-      setPin("");
       setBiometricError(null);
     }
   }, [open, refreshStatus]);
 
-  const handleKeyPress = (digit: string) => {
-    if (pin.length >= 6) return;
-    
-    const newPin = pin + digit;
-    setPin(newPin);
-
-    if (newPin.length === 6) {
-      onSubmit(newPin);
-    }
-  };
-
-  const handleBackspace = () => {
-    setPin(pin.slice(0, -1));
-  };
-
-  const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setPin("");
-      setBiometricError(null);
-      onOpenChange(false);
-    }
+  const handleSubmit = (pin: string) => {
+    onSubmit(pin);
+    // PIN verification happens upstream — return undefined so modal stays open
+    // until parent closes it (after sign succeeds/fails).
   };
 
   const handleBiometricAuth = async () => {
@@ -72,152 +56,50 @@ export const PinUnlockModal = ({
       } else {
         setBiometricError("Biometric authentication failed");
       }
-    } catch (err) {
+    } catch {
       setBiometricError("Biometric authentication failed");
     }
   };
 
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
+  const formatAddress = (addr: string) =>
+    `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
+  const subtitle: ReactNode = walletAddress ? (
+    <>
+      Authenticate to sign with{" "}
+      <span className="font-mono text-xs text-foreground/80">
+        {formatAddress(walletAddress)}
+      </span>
+    </>
+  ) : (
+    "Authenticate to sign this transaction"
+  );
+
+  const footer = onUsePrivateKey ? (
+    <Button
+      variant="ghost"
+      onClick={onUsePrivateKey}
+      disabled={isLoading}
+      className="w-full text-muted-foreground"
+    >
+      <Key className="w-4 h-4 mr-2" />
+      Use Private Key Instead
+    </Button>
+  ) : null;
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Lock className="w-5 h-5 text-primary" />
-            Unlock to Sign
-          </DialogTitle>
-          <DialogDescription>
-            {walletAddress ? (
-              <>Authenticate to sign with <span className="font-mono text-xs">{formatAddress(walletAddress)}</span></>
-            ) : (
-              "Authenticate to sign this transaction with your stored key."
-            )}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-6">
-          {/* Biometric Button */}
-          {canUseBiometric && (
-            <div className="mb-6">
-              <Button
-                variant="outline"
-                onClick={handleBiometricAuth}
-                disabled={isLoading}
-                className="w-full h-16 text-lg gap-3 border-primary/30 hover:border-primary hover:bg-primary/5"
-              >
-                <Fingerprint className="w-8 h-8 text-primary" />
-                Use Face ID / Fingerprint
-              </Button>
-              {biometricError && (
-                <p className="text-center text-sm text-destructive mt-2">{biometricError}</p>
-              )}
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">or enter PIN</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-            </div>
-          )}
-
-          {/* PIN Dots - matching lock screen */}
-          <div className="flex justify-center gap-3 mb-8">
-            {[...Array(6)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={i < pin.length ? { scale: [1, 1.2, 1] } : {}}
-                transition={{ duration: 0.25 }}
-              >
-                <div
-                  className={cn(
-                    "w-6 h-6 rounded-full transition-all duration-200",
-                    i < pin.length
-                      ? "bg-foreground"
-                      : "bg-muted-foreground/30"
-                  )}
-                />
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <p className="text-center text-sm text-destructive mb-4">{error}</p>
-          )}
-
-          {/* Number Pad - matching lock screen embossed style */}
-          <div className="grid grid-cols-3 gap-3 mx-auto w-fit">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-              <motion.button
-                key={num}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => handleKeyPress(num.toString())}
-                disabled={isLoading}
-                className={cn(
-                  "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
-                  "bg-white/[0.06] border border-white/[0.08]",
-                  "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
-                  isLoading && "opacity-25 cursor-not-allowed"
-                )}
-              >
-                {num}
-              </motion.button>
-            ))}
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={handleBackspace}
-              disabled={isLoading}
-              className={cn(
-                "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
-                "bg-white/[0.06] border border-white/[0.08]",
-                "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
-                isLoading && "opacity-25 cursor-not-allowed"
-              )}
-            >
-              <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={() => handleKeyPress("0")}
-              disabled={isLoading}
-              className={cn(
-                "w-[76px] h-[76px] rounded-full flex items-center justify-center text-2xl font-semibold text-foreground/90 transition-all duration-100",
-                "bg-white/[0.06] border border-white/[0.08]",
-                "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3)]",
-                isLoading && "opacity-25 cursor-not-allowed"
-              )}
-            >
-              0
-            </motion.button>
-            <div />
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center gap-2 py-2">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-muted-foreground">Signing transaction...</span>
-          </div>
-        )}
-
-        {/* Use Private Key Instead - only show if handler provided */}
-        {onUsePrivateKey && (
-          <div className="border-t border-border pt-4">
-            <Button
-              variant="ghost"
-              onClick={onUsePrivateKey}
-              disabled={isLoading}
-              className="w-full text-muted-foreground"
-            >
-              <Key className="w-4 h-4 mr-2" />
-              Use Private Key Instead
-            </Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <FullScreenPinModal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      eyebrow="Security"
+      title="Unlock to Sign"
+      subtitle={subtitle}
+      onSubmit={handleSubmit}
+      onBiometric={canUseBiometric ? handleBiometricAuth : undefined}
+      biometricAvailable={canUseBiometric}
+      isLoading={isLoading}
+      error={error || biometricError}
+      footer={footer}
+    />
   );
 };
