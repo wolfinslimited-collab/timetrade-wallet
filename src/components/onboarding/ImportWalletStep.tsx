@@ -143,10 +143,10 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         <div className="flex items-center justify-between">
           <button
             onClick={() => { haptics.selection(); onBack(); }}
-            className="w-9 h-9 rounded-full bg-card border border-border/40 flex items-center justify-center transition-transform duration-150 active:scale-90"
+            className="w-9 h-9 rounded-full bg-white/[0.08] border border-white/10 flex items-center justify-center transition-transform duration-150 active:scale-90"
             aria-label="Back"
           >
-            <ChevronLeft className="w-5 h-5 text-foreground/80" />
+            <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex flex-col items-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Import</p>
