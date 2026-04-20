@@ -3,8 +3,9 @@ import { Capacitor } from "@capacitor/core";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bell, BellOff, TrendingUp, ArrowRightLeft, Shield, Check, X, ExternalLink, Info } from "lucide-react";
+import { Bell, BellOff, TrendingUp, ArrowRightLeft, Shield, Check, X, ExternalLink, Info, AlertTriangle, Loader2 } from "lucide-react";
 import { useWebNotifications } from "@/hooks/useWebNotifications";
+import { useFCMToken } from "@/hooks/useFCMToken";
 import { cn } from "@/lib/utils";
 
 interface NotificationSettingsSheetProps {
@@ -23,6 +24,8 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     showNotification,
     isIframe,
   } = useWebNotifications();
+
+  const { status: fcmStatus, errorMessage: fcmError } = useFCMToken();
 
   const [isRequesting, setIsRequesting] = useState(false);
   const isNative = Capacitor.isNativePlatform();
@@ -48,13 +51,17 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     });
   };
 
-  const isEnabled = permission === 'granted' && settings.enabled;
+  const isEnabled = isNative
+    ? fcmStatus === 'registered'
+    : permission === 'granted' && settings.enabled;
   const isDenied = permission === 'denied';
   // On native, notifications are always supported and iframe doesn't apply
   const showNotSupported = !isSupported && !isNative;
   const showIframeWarning = isIframe && !isNative;
-  const showDenied = isSupported && isDenied && !isNative;
-  const showEnableButton = (isSupported || isNative) && !isDenied && !isEnabled && !isIframe;
+  const showDenied = isNative ? fcmStatus === 'denied' : (isSupported && isDenied);
+  const showFcmError = fcmStatus === 'error';
+  const showFcmRequesting = fcmStatus === 'requesting';
+  const showEnableButton = !isEnabled && !showDenied && !showFcmError && !showFcmRequesting && !showIframeWarning && (isSupported || isNative);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -113,8 +120,38 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
                 <div>
                   <p className="font-medium text-amber-500">Permission Denied</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    You've blocked notifications. To enable them, update your browser settings for this site.
+                    {isNative
+                      ? "You've denied notification permission. Go to your device Settings to enable them for this app."
+                      : "You've blocked notifications. To enable them, update your browser settings for this site."}
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FCM Error */}
+          {showFcmError && (
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+              <div className="flex gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-destructive">Registration Failed</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {fcmError || 'Push notification registration failed. Please restart the app and try again.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FCM Requesting */}
+          {showFcmRequesting && (
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 text-primary animate-spin flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Setting up notifications...</p>
+                  <p className="text-sm text-muted-foreground">Registering your device for push notifications.</p>
                 </div>
               </div>
             </div>
