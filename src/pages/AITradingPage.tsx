@@ -166,8 +166,10 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
     navigate("/ai-trading/start");
   };
 
-  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const mask = (v: string) => hideBalance ? "••••••" : v;
+  const fmt = (n: number) =>
+    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const mask = (v: string) => (hideBalance ? "••••••" : v);
+  const pnlPct = totalBalance > 0 ? (totalProfit / totalBalance) * 100 : 0;
 
   if (isLoading && !balance) {
     return (
@@ -178,180 +180,234 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   }
 
   return (
-    <div className="px-5 pt-3 pb-32">
-      {/* Top bar */}
-      <div className="flex items-center justify-between h-12">
-        <div className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-muted-foreground" />
-          <h1 className="text-[15px] font-semibold text-foreground tracking-tight">AI Trading</h1>
+    <div className="px-4 pt-2 pb-32">
+      {/* Top header */}
+      <div className="flex items-center justify-between h-12 mb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-primary" />
+          </div>
+          <div className="leading-tight">
+            <h1 className="text-[15px] font-semibold text-foreground tracking-tight">AI Trading</h1>
+            <p className="text-[10px] text-muted-foreground font-medium">Autonomous portfolio bot</p>
+          </div>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={fetchDashboardData}
-            className="w-9 h-9 rounded-full flex items-center justify-center active:bg-secondary/60"
-            aria-label="Refresh"
-          >
+          <IconBtn onClick={fetchDashboardData} ariaLabel="Refresh">
             <RefreshCw className={cn("w-4 h-4 text-muted-foreground", isLoading && "animate-spin")} />
-          </button>
-          <button
-            onClick={logout}
-            className="w-9 h-9 rounded-full flex items-center justify-center active:bg-secondary/60"
-            aria-label="Sign out"
-          >
+          </IconBtn>
+          <IconBtn onClick={logout} ariaLabel="Sign out">
             <LogOut className="w-4 h-4 text-muted-foreground" />
-          </button>
+          </IconBtn>
         </div>
       </div>
 
-      {/* Hero — balance on background, no card */}
-      <div className="pt-10 pb-8 flex flex-col items-center text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">
-          Portfolio Value
-        </p>
-        <div className="flex items-center gap-3">
-          <div className="flex items-baseline">
-            <span className="text-[24px] font-semibold text-muted-foreground/80 mr-0.5">$</span>
-            <span className="text-[44px] font-semibold font-mono text-foreground tracking-tight leading-none tabular-nums">
+      {/* Premium hero surface */}
+      <div className="relative overflow-hidden rounded-[28px] border border-border/50 bg-gradient-to-br from-primary/[0.08] via-card to-card p-6">
+        {/* soft glow */}
+        <div className="pointer-events-none absolute -top-24 -right-20 w-72 h-72 rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-16 w-56 h-56 rounded-full bg-primary/10 blur-3xl" />
+
+        <div className="relative">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Total Portfolio
+            </p>
+            <button
+              onClick={() => setHideBalance(!hideBalance)}
+              className="w-7 h-7 rounded-full flex items-center justify-center bg-background/40 border border-border/40 text-muted-foreground active:bg-background/70"
+              aria-label="Toggle balance"
+            >
+              {hideBalance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+
+          <div className="mt-3 flex items-baseline">
+            <span className="text-[22px] font-semibold text-foreground/70 mr-1">$</span>
+            <span className="text-[42px] font-bold font-mono text-foreground tracking-tight leading-none tabular-nums">
               {mask(fmt(totalBalance))}
             </span>
           </div>
-          <button
-            onClick={() => setHideBalance(!hideBalance)}
-            className="text-muted-foreground/60 active:text-foreground"
-            aria-label="Toggle balance"
-          >
-            {hideBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
 
-        {/* Single P&L line */}
-        <div className="mt-3 flex items-center gap-1.5 text-[12px] font-medium tabular-nums">
-          {totalProfit >= 0 ? (
-            <TrendingUp className="w-3.5 h-3.5 text-success" />
-          ) : (
-            <TrendingDown className="w-3.5 h-3.5 text-destructive" />
-          )}
-          <span className={cn("font-semibold", totalProfit >= 0 ? "text-success" : "text-destructive")}>
-            {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
-          </span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">all-time</span>
-        </div>
-
-        {/* Status merged with CTA */}
-        <div className="mt-7 flex items-center gap-3">
-          <Button
-            onClick={handleToggle}
-            disabled={toggling}
-            className={cn(
-              "h-11 px-7 rounded-full text-[13px] font-semibold",
-              isActive
-                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                : "bg-primary hover:bg-primary/90 text-primary-foreground"
-            )}
-          >
-            {toggling ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isActive ? (
-              "Stop Trading"
-            ) : (
-              <><Zap className="w-4 h-4 mr-1.5" />Start Trading</>
-            )}
-          </Button>
-          <div className="flex items-center gap-1.5">
-            <span className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              isActive ? "bg-success animate-pulse" : "bg-muted-foreground/40"
-            )} />
-            <span className="text-[11px] font-medium text-muted-foreground">
-              {isActive ? "Bot active" : "Bot idle"}
+          <div className="mt-3 flex items-center gap-2">
+            <div
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold tabular-nums",
+                totalProfit >= 0
+                  ? "bg-success/10 text-success"
+                  : "bg-destructive/10 text-destructive"
+              )}
+            >
+              {totalProfit >= 0 ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : (
+                <TrendingDown className="w-3 h-3" />
+              )}
+              {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
+            </div>
+            <span className="text-[11px] text-muted-foreground font-medium tabular-nums">
+              {totalProfit >= 0 ? "+" : ""}
+              {pnlPct.toFixed(2)}% all-time
             </span>
+          </div>
+
+          {/* Control row */}
+          <div className="mt-6 flex items-center gap-3">
+            <Button
+              onClick={handleToggle}
+              disabled={toggling}
+              className={cn(
+                "h-12 flex-1 rounded-2xl text-[14px] font-semibold shadow-lg",
+                isActive
+                  ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
+                  : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+              )}
+            >
+              {toggling ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isActive ? (
+                "Stop Trading"
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-1.5" />
+                  Start Trading
+                </>
+              )}
+            </Button>
+            <div
+              className={cn(
+                "h-12 px-3.5 rounded-2xl flex items-center gap-2 border",
+                isActive
+                  ? "bg-success/10 border-success/30"
+                  : "bg-secondary/40 border-border/50"
+              )}
+            >
+              <span
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  isActive ? "bg-success animate-pulse" : "bg-muted-foreground/40"
+                )}
+              />
+              <span
+                className={cn(
+                  "text-[11px] font-semibold",
+                  isActive ? "text-success" : "text-muted-foreground"
+                )}
+              >
+                {isActive ? "LIVE" : "IDLE"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Quiet stats row */}
-      <div className="grid grid-cols-2 border-t border-border/40">
-        <div className="py-4 pr-4 border-r border-border/40">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">Available</p>
-          <p className="text-[15px] font-semibold font-mono text-foreground tabular-nums">
-            ${mask(fmt(availableBalance))}
-          </p>
-        </div>
-        <div className="py-4 pl-4">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">In trades</p>
-          <p className="text-[15px] font-semibold font-mono text-foreground tabular-nums">
-            ${mask(fmt(lockedBalance))}
-          </p>
-        </div>
+      {/* Stat grid */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <StatCard label="Available" value={`$${mask(fmt(availableBalance))}`} />
+        <StatCard label="In Trades" value={`$${mask(fmt(lockedBalance))}`} />
+        <StatCard
+          label="7d Earnings"
+          value={`${earningsTotal >= 0 ? "+" : "-"}$${mask(fmt(Math.abs(earningsTotal)))}`}
+          accent={earningsTotal > 0 ? "success" : earningsTotal < 0 ? "destructive" : undefined}
+        />
       </div>
 
-      {/* Pill quick actions */}
-      <div className="flex items-center justify-center gap-2 py-5 border-t border-border/40">
-        <PillButton label="Deposit" icon={<ArrowDown className="w-3.5 h-3.5" />} onClick={() => navigate("/ai-trading/wallet?tab=deposit")} />
-        <PillButton label="Withdraw" icon={<ArrowUpRight className="w-3.5 h-3.5" />} onClick={() => navigate("/ai-trading/wallet?tab=withdraw")} />
-        <PillButton label="Live" icon={<Activity className="w-3.5 h-3.5" />} onClick={() => navigate("/live-trades")} live />
+      {/* Quick actions */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ActionTile
+          label="Deposit"
+          icon={<ArrowDown className="w-4 h-4" />}
+          onClick={() => navigate("/ai-trading/wallet?tab=deposit")}
+        />
+        <ActionTile
+          label="Withdraw"
+          icon={<ArrowUpRight className="w-4 h-4" />}
+          onClick={() => navigate("/ai-trading/wallet?tab=withdraw")}
+        />
+        <ActionTile
+          label="Live"
+          icon={<Activity className="w-4 h-4" />}
+          onClick={() => navigate("/live-trades")}
+          live
+        />
       </div>
 
-      {/* Recent activity — flat on background */}
-      <div className="border-t border-border/40 pt-4">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[12px] font-semibold text-foreground">Recent activity</p>
+      {/* Recent activity */}
+      <div className="mt-5">
+        <div className="flex items-center justify-between px-1 mb-2">
+          <div>
+            <p className="text-[13px] font-semibold text-foreground">Recent Activity</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Latest bot trades</p>
+          </div>
           {tradeHistory.length > 0 && (
             <button
               onClick={() => navigate("/live-trades")}
-              className="text-[11px] text-muted-foreground font-medium active:text-foreground"
+              className="text-[11px] text-primary font-semibold active:text-primary/70"
             >
               View all
             </button>
           )}
         </div>
 
-        {tradeHistory.length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-[12px] text-muted-foreground">No activity yet</p>
-            {earningsTotal > 0 && (
-              <p className="text-[11px] text-success mt-2 font-medium tabular-nums">
-                +${fmt(earningsTotal)} earned in 7d
+        <div className="rounded-2xl border border-border/40 bg-card/40 overflow-hidden">
+          {tradeHistory.length === 0 ? (
+            <div className="py-12 px-4 flex flex-col items-center text-center">
+              <div className="w-11 h-11 rounded-full bg-secondary/60 flex items-center justify-center mb-3">
+                <Activity className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <p className="text-[13px] font-semibold text-foreground">No trades yet</p>
+              <p className="text-[11px] text-muted-foreground mt-1 max-w-[220px]">
+                Start the bot to see your AI-executed trades appear here.
               </p>
-            )}
-          </div>
-        ) : (
-          <div className="divide-y divide-border/30">
-            {tradeHistory.slice(0, 6).map((trade, i) => {
-              const pnl = trade.pnl || 0;
-              const isProfit = pnl >= 0;
-              return (
-                <div
-                  key={trade.id || i}
-                  className="flex items-center justify-between py-3 active:bg-secondary/30 -mx-2 px-2 rounded-lg"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {isProfit ? (
-                      <ArrowUpRight className="w-4 h-4 text-success shrink-0" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-destructive shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-foreground truncate">
-                        {trade.pair || trade.symbol || "Trade"}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {trade.closed_at ? format(new Date(trade.closed_at), "MMM d • HH:mm") : "Pending"}
-                      </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/30">
+              {tradeHistory.slice(0, 6).map((trade, i) => {
+                const pnl = trade.pnl || 0;
+                const isProfit = pnl >= 0;
+                return (
+                  <div
+                    key={trade.id || i}
+                    className="flex items-center justify-between px-3.5 py-3 active:bg-secondary/40"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={cn(
+                          "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                          isProfit ? "bg-success/10" : "bg-destructive/10"
+                        )}
+                      >
+                        {isProfit ? (
+                          <ArrowUpRight className="w-4 h-4 text-success" />
+                        ) : (
+                          <ArrowDownRight className="w-4 h-4 text-destructive" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-foreground truncate">
+                          {trade.pair || trade.symbol || "Trade"}
+                        </p>
+                        <p className="text-[10.5px] text-muted-foreground font-medium">
+                          {trade.closed_at
+                            ? format(new Date(trade.closed_at), "MMM d • HH:mm")
+                            : "Pending"}
+                        </p>
+                      </div>
                     </div>
+                    <p
+                      className={cn(
+                        "font-mono text-[13px] font-bold tabular-nums",
+                        isProfit ? "text-success" : "text-destructive"
+                      )}
+                    >
+                      {isProfit ? "+" : "-"}${Math.abs(pnl).toFixed(2)}
+                    </p>
                   </div>
-                  <p className={cn(
-                    "font-mono text-[13px] font-semibold tabular-nums",
-                    isProfit ? "text-success" : "text-destructive"
-                  )}>
-                    {isProfit ? "+" : "-"}${Math.abs(pnl).toFixed(2)}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -359,21 +415,75 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
 /* ── Reusable Pieces ── */
 
-const PillButton = ({ label, icon, onClick, live }: {
-  label: string; icon: React.ReactNode; onClick: () => void; live?: boolean;
+const IconBtn = ({
+  children,
+  onClick,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  ariaLabel: string;
 }) => (
   <button
     onClick={onClick}
-    className="relative inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-secondary/50 border border-border/40 text-foreground active:bg-secondary"
+    aria-label={ariaLabel}
+    className="w-9 h-9 rounded-full flex items-center justify-center bg-secondary/40 border border-border/40 active:bg-secondary"
+  >
+    {children}
+  </button>
+);
+
+const StatCard = ({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: "success" | "destructive";
+}) => (
+  <div className="rounded-2xl border border-border/40 bg-card/40 px-3 py-3">
+    <p className="text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+      {label}
+    </p>
+    <p
+      className={cn(
+        "text-[13px] font-bold font-mono tabular-nums truncate",
+        accent === "success" && "text-success",
+        accent === "destructive" && "text-destructive",
+        !accent && "text-foreground"
+      )}
+    >
+      {value}
+    </p>
+  </div>
+);
+
+const ActionTile = ({
+  label,
+  icon,
+  onClick,
+  live,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  live?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className="relative flex flex-col items-center justify-center gap-1.5 h-[68px] rounded-2xl bg-card/60 border border-border/40 active:bg-secondary/60"
   >
     {live && (
-      <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+      <span className="absolute top-2 right-2 flex h-2 w-2">
         <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
       </span>
     )}
-    <span className="text-muted-foreground">{icon}</span>
-    <span className="text-[12px] font-semibold">{label}</span>
+    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+      {icon}
+    </div>
+    <span className="text-[11px] font-semibold text-foreground">{label}</span>
   </button>
 );
 
