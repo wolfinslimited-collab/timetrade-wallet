@@ -165,11 +165,11 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
             <span className="text-muted-foreground/60">/{wordCount}</span>
           </p>
         </div>
-        <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
+        <div className="h-1 rounded-full bg-white/10 overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-300",
-              allValid ? "bg-emerald-500" : "bg-primary"
+              allValid ? "bg-emerald-400" : "bg-primary"
             )}
             style={{ width: `${progress * 100}%` }}
           />
