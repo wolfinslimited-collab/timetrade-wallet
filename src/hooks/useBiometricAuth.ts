@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 const BIOMETRIC_CREDENTIAL_KEY = 'timetrade_biometric_credential';
 const BIOMETRIC_PIN_KEY = 'timetrade_biometric_pin';
@@ -23,7 +24,17 @@ export function useBiometricAuth() {
   const checkBiometricStatus = useCallback(async () => {
     let isAvailable = false;
     
-    if (window.PublicKeyCredential) {
+    // In native Capacitor apps, WebAuthn platform authenticator detection
+    // often returns false in WKWebView/Android WebView even though
+    // the device supports Face ID / Touch ID / Fingerprint.
+    // Assume available on native platforms and let the actual registration fail gracefully.
+    const isNative = (() => {
+      try { return Capacitor.isNativePlatform(); } catch { return false; }
+    })();
+
+    if (isNative) {
+      isAvailable = true;
+    } else if (window.PublicKeyCredential) {
       try {
         isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       } catch {
