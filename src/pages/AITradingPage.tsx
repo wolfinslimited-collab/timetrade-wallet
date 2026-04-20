@@ -4,8 +4,8 @@ import { useTradingApi } from "@/hooks/useTradingApi";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, TrendingUp, TrendingDown, Bot, LogOut, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Activity, Zap, BarChart3,
-  ArrowDown, Power, Sparkles, Eye, EyeOff,
+  ArrowUpRight, ArrowDownRight, Activity, Zap,
+  ArrowDown, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
