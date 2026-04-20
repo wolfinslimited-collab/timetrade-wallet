@@ -22,6 +22,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 import { supabase } from "@/integrations/supabase/client";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const Index = () => {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -40,12 +41,18 @@ const Index = () => {
   } = useNotifications();
   
   const { isConnected, totalBalanceUsd, isLoadingBalance, isLoadingAccounts, prices, refreshAll } = useBlockchainContext();
+  const flags = useFeatureFlags();
 
   const displayBalance = totalBalanceUsd || 0;
   const percentChange = prices?.length ? prices.reduce((sum, p) => sum + (p.change24h || 0), 0) / prices.length : 0;
   const dollarChange = displayBalance * (percentChange / 100);
   const isPositive = percentChange >= 0;
-  const hiddenTabs = useMemo<NavTab[]>(() => [], []);
+  const hiddenTabs = useMemo<NavTab[]>(() => {
+    const hidden: NavTab[] = [];
+    if (!flags.showStaking) hidden.push("staking");
+    if (!flags.showAiTrade) hidden.push("trading");
+    return hidden;
+  }, [flags.showStaking, flags.showAiTrade]);
 
   useEffect(() => {
     const walletCreated = localStorage.getItem("timetrade_wallet_created");
@@ -141,9 +148,18 @@ const Index = () => {
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
     const allowedTabs: NavTab[] = ["wallet", "history", "staking", "trading", "ai", "settings"];
-    if (tab && allowedTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
+    // Block deeplinks to hidden tabs (per-platform feature flags)
+    if (tab && allowedTabs.includes(tab) && !hiddenTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
+    if (tab && hiddenTabs.includes(tab as NavTab)) {
+      setActiveTab("wallet");
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("tab");
+        return next;
+      }, { replace: true });
+    }
     if (!tab && activeTab !== "wallet") setActiveTab("wallet");
-  }, [searchParams, activeTab]);
+  }, [searchParams, activeTab, hiddenTabs, setSearchParams]);
 
   const handleOnboardingComplete = () => {
     localStorage.setItem("timetrade_wallet_created", "true");
