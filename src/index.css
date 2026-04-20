@@ -174,4 +174,17 @@
   .pb-nav-safe {
     padding-bottom: calc(5rem + 5px + env(safe-area-inset-bottom, 0px));
   }
+
+  /**
+   * Global asset/network logo polish.
+   * The logo CDN (elbstream) returns square PNGs — apply a subtle
+   * rounded corner so all asset/coin logos look consistent across the app.
+   * Components that wrap the img in a rounded-full container will visually
+   * mask this — the radius only shows on bare/square logos.
+   */
+  img[src*="elbstream.com/logos/"],
+  img[src*="cryptocurrency-icons"],
+  img[src*="coingecko.com"] {
+    border-radius: 4px;
+  }
 }
