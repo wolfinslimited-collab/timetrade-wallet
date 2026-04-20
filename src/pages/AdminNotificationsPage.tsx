@@ -44,6 +44,11 @@ export default function AdminNotificationsPage() {
         body: { title, message, type, icon: icon || null, target_platform: targetPlatform },
       });
 
+      // Also send real FCM push
+      await supabase.functions.invoke("fcm-push", {
+        body: { title, message, type, icon: icon || null, target_platform: targetPlatform },
+      });
+
       if (error) throw error;
 
       toast.success("Notification sent!");
