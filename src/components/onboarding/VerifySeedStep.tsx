@@ -164,8 +164,10 @@ export const VerifySeedStep = ({ seedPhrase, onComplete, onBack }: VerifySeedSte
         </div>
       </div>
 
-      {/* Verify Button */}
-      <div className="pt-6 pb-8">
+      </div>
+
+      {/* Fixed bottom button */}
+      <div className="shrink-0 px-6 py-4 border-t border-border bg-background">
         <Button
           onClick={handleVerify}
           disabled={!allFilled}
