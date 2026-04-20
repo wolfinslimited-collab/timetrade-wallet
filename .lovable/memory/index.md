@@ -98,3 +98,4 @@
 - [Android CI Versioning Logic](mem://technical/ci-cd/android-versioning-logic) — Auto-incrementing Android version code derived from GitHub run metadata
 - [Project A Reference](mem://references/project-a) — External Timetrade trading backend (svhgjaadzthgnfdrbklt) powering the AI Trade tab
 - [AI Trading Tab](mem://features/ai-trading-tab) — Bottom nav AI Trading tab with Ed25519 wallet auth and external mobile API dashboard
+- [Platform Feature Flags](mem://features/platform-feature-flags) — Per-platform (iphone/android/web) config table toggles for Staking, Swap, Exchange, AI Trade
