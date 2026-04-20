@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
+import { FeatureTourStep } from "./onboarding/FeatureTourStep";
 import { SecurityWarningStep } from "./onboarding/SecurityWarningStep";
 import { SeedPhraseStep } from "./onboarding/SeedPhraseStep";
 import { VerifySeedStep } from "./onboarding/VerifySeedStep";
