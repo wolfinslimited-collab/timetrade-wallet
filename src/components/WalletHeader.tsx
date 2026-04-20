@@ -54,7 +54,7 @@ export const WalletHeader = ({
           onClick={() => navigate("/notifications")}
           className="relative w-10 h-10 rounded-xl bg-card border border-border/50 flex items-center justify-center active:scale-95 active:opacity-80"
         >
-          <Bell className="w-[17px] h-[17px] text-foreground/70" />
+          <Bell className="w-[20px] h-[20px] text-foreground/70" />
           {unreadCount > 0 && (
             <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary rounded-full flex items-center justify-center px-1">
               <span className="text-[10px] font-bold text-primary-foreground">
