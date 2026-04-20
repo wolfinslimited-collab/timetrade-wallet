@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 export type WebNotificationPermission = 'granted' | 'denied' | 'default';
 
@@ -48,12 +49,22 @@ export function useWebNotifications() {
 
   // Check support and current permission on mount
   useEffect(() => {
-    const supported = 'Notification' in window;
-    setIsSupported(supported);
-    setIsIframe(window.self !== window.top);
+    const isNative = Capacitor.isNativePlatform();
     
-    if (supported) {
-      setPermission(Notification.permission as WebNotificationPermission);
+    if (isNative) {
+      // Native platforms use Capacitor push notifications, not browser API
+      setIsSupported(true);
+      setIsIframe(false);
+      // Permission is managed by native FCM flow; default to granted if enabled in settings
+      setPermission('granted');
+    } else {
+      const supported = 'Notification' in window;
+      setIsSupported(supported);
+      setIsIframe(window.self !== window.top);
+      
+      if (supported) {
+        setPermission(Notification.permission as WebNotificationPermission);
+      }
     }
   }, []);
 
@@ -68,6 +79,13 @@ export function useWebNotifications() {
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
       return false;
+    }
+
+    // On native, permission is handled by Capacitor push notifications plugin
+    if (Capacitor.isNativePlatform()) {
+      setPermission('granted');
+      setSettings(prev => ({ ...prev, enabled: true }));
+      return true;
     }
 
     if (isIframe) {
