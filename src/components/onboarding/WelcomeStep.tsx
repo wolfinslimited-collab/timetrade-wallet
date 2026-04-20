@@ -1,4 +1,5 @@
 import { Globe, Shield, Fingerprint, ArrowRight, Wallet, Download } from "lucide-react";
+import { haptics } from "@/lib/haptics";
 
 interface WelcomeStepProps {
   onCreateWallet: () => void;
