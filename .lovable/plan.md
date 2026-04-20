@@ -1,38 +1,74 @@
 
+Fix notification delivery by addressing the receiver side, not the sender side.
 
-## Fix App Splash Screen: Dark Background + App Logo
+What’s happening now
 
-### Problem
-On app startup, a white screen with the default Capacitor logo appears. This happens because the CI build pipeline recreates the `ios` and `android` folders from scratch (`rm -rf ios && npx cap add ios`), which generates the default Capacitor LaunchScreen with a white background and Capacitor's blue icon.
+- The backend sender is working: test sends return success and report sent: 1.
+- The database currently has only 1 registered push token, and it is platform = web.
+- There are no iPhone tokens registered, so iOS devices cannot receive anything yet.
+- The current web preview runs inside an iframe, which cannot properly enable browser push notifications, so sending from preview does not prove web push is working for the active session.
+- Native notification state is currently misleading: the app marks native notifications as granted before confirming real OS permission and token registration.
+- The iOS build pipeline recreates the native iOS project on every build, but it only restores the Google config file; it does not explicitly preserve or enforce push entitlements/capabilities each time.
 
-### Solution
-Add CI steps in the `github-build` edge function to replace the default splash/launch screens on both iOS and Android with a dark background (#0E1116) and the app logo centered.
+Implementation plan
 
-### Changes
+1. Make push registration state real and visible
+- Refactor `useFCMToken` so it exposes actual states: `idle`, `requesting`, `granted`, `denied`, `registered`, `error`.
+- Only mark notifications as enabled after a token is successfully received and saved.
+- Add native listeners for `registrationError` and surface the real error instead of silently failing.
 
-**File: `supabase/functions/github-build/index.ts`**
+2. Fix the native notification settings flow
+- Update `useWebNotifications` so native no longer pretends permission is granted by default.
+- Update `NotificationSettingsSheet` to show true native status:
+  - waiting for permission
+  - permission denied
+  - token registered
+  - registration failed
+- Keep web preview clearly labeled as preview-only so users understand why browser push is not available there.
 
-1. **iOS workflow** — Add a new step after "Sync Capacitor" called "Customize LaunchScreen":
-   - Use `sed` or a heredoc to replace the default `ios/App/App/Base.lproj/LaunchScreen.storyboard` with a custom storyboard XML that has:
-     - Background color set to #0E1116 (the app's dark background)
-     - An `ImageView` centered on screen displaying the app logo
-   - Copy `public/app-logo.png` into `ios/App/App/Assets.xcassets/` as a `Splash.imageset` with a scaled-down version (e.g., 200px) so it appears centered as a logo, not filling the screen
-   - The storyboard XML will reference this image asset
+3. Fix web push behavior
+- Prevent the app from treating iframe preview as a valid push environment.
+- Keep browser permission + FCM token registration only for published/real browser contexts.
+- Ensure foreground web messages still show an in-app toast, while background messages continue through `firebase-messaging-sw.js`.
+- Add clearer UI feedback when the current browser session has no registered token.
 
-2. **Android workflow** — Add a new step after "Sync Capacitor" called "Customize splash screen":
-   - Replace `android/app/src/main/res/drawable/splash.png` with a generated dark-background splash image using ImageMagick (composite the app logo centered on a dark #0E1116 canvas)
-   - Update `android/app/src/main/res/values/styles.xml` to ensure the `AppTheme.NoActionBarLaunch` theme uses the dark background color
-   - Optionally create additional density drawable folders (drawable-hdpi, drawable-xhdpi, etc.) with appropriate sizes
+4. Fix iOS native registration path
+- Harden `useFCMToken` native flow to:
+  - call native permission APIs
+  - register with the native plugin
+  - save the returned token
+  - report failures in UI
+- Verify platform mapping stays consistent with backend filtering (`iphone`).
 
-3. **Also add a web-side loading screen** in `index.html`:
-   - Add inline CSS and HTML inside the `#root` div that shows the app logo centered on a dark background
-   - This will display immediately while React loads, then React replaces the content
-   - This covers the brief white flash before the JS bundle loads on native
+5. Make the iOS build pipeline preserve push capability on every build
+- Update `supabase/functions/github-build/index.ts` so the recreated iOS project also gets:
+  - an entitlements file with APNs capability
+  - Xcode project wiring for `CODE_SIGN_ENTITLEMENTS`
+  - required `Info.plist` push/background entries where needed
+- Keep this automated because the CI job deletes and recreates `ios/` every build.
 
-### Technical Details
+6. Add delivery diagnostics to the sender
+- Improve `supabase/functions/fcm-push/index.ts` logging so each send records:
+  - token count by platform
+  - success/failure totals
+  - provider error payloads for failed tokens
+- Move the embedded Firebase service account out of source code and into backend secrets.
 
-- The iOS LaunchScreen.storyboard is an XML file that Xcode uses to render the launch screen. Capacitor generates a default one with a white background. We replace it with custom XML referencing our logo image asset.
-- Android uses `@drawable/splash` referenced in `styles.xml`. We replace the default splash.png with our branded version.
-- The `index.html` inline loading screen is the fastest way to eliminate the white flash between native splash dismiss and React mount.
-- No new dependencies required.
+7. End-to-end verification
+- Web:
+  - open the published app
+  - enable notifications there
+  - confirm a `web` token exists for the current session
+  - send a test notification and verify foreground/background behavior
+- iOS:
+  - install a fresh native build
+  - confirm permission prompt appears on first run
+  - confirm an `iphone` token is inserted into `fcm_tokens`
+  - send a test notification with the app backgrounded and verify delivery
 
+Technical notes
+
+- The main failure is client registration, not the send endpoint.
+- Preview push on web is expected to fail because the app is running inside an iframe.
+- iOS currently shows no registered token in the database, which means either permission, native registration, or build-time APNs setup is failing before token save.
+- The current hardcoded Firebase private key in `fcm-push` is a security risk and should be replaced with secrets during the fix.
