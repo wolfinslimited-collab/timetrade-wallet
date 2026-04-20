@@ -95,7 +95,7 @@ const ReceivePage = () => {
                     <img
                       src={getNetworkLogoUrl(net.id)}
                       alt={net.name}
-                      className="w-8 h-8 object-contain"
+                      className="w-8 h-8 object-contain rounded-[4px]"
                     />
                   </div>
                   <div className="text-center">
