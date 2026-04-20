@@ -54,8 +54,22 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Add iOS platform
-        run: npx cap add ios || true
+      - name: Recreate iOS platform
+        run: |
+          TMP_PLIST="\$RUNNER_TEMP/GoogleService-Info.plist"
+          if [ -f ios/App/App/GoogleService-Info.plist ]; then
+            cp ios/App/App/GoogleService-Info.plist "\$TMP_PLIST"
+          fi
+
+          rm -rf ios
+          npx cap add ios
+
+          if [ -f "\$TMP_PLIST" ]; then
+            mkdir -p ios/App/App
+            cp "\$TMP_PLIST" ios/App/App/GoogleService-Info.plist
+          fi
+
+          test -f ios/App/Podfile
 
       - name: Sync Capacitor
         run: npx cap sync ios
@@ -473,8 +487,20 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Add Android platform
-        run: npx cap add android || true
+      - name: Recreate Android platform
+        run: |
+          TMP_GOOGLE_SERVICES="\$RUNNER_TEMP/google-services.json"
+          if [ -f android/app/google-services.json ]; then
+            cp android/app/google-services.json "\$TMP_GOOGLE_SERVICES"
+          fi
+
+          rm -rf android
+          npx cap add android
+
+          if [ -f "\$TMP_GOOGLE_SERVICES" ]; then
+            mkdir -p android/app
+            cp "\$TMP_GOOGLE_SERVICES" android/app/google-services.json
+          fi
 
       - name: Sync Capacitor
         run: npx cap sync android
