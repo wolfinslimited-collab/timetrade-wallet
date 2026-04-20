@@ -30,23 +30,10 @@ jobs:
         run: npm run build
 
       - name: Add iOS platform
-        run: |
-          # Save GoogleService-Info.plist before removing ios/
-          if [ -f "ios/App/App/GoogleService-Info.plist" ]; then
-            cp ios/App/App/GoogleService-Info.plist /tmp/GoogleService-Info.plist
-          fi
-          rm -rf ios
-          npx cap add ios
+        run: npx cap add ios || true
 
       - name: Sync Capacitor
         run: npx cap sync ios
-
-      - name: Restore GoogleService-Info.plist
-        run: |
-          if [ -f "/tmp/GoogleService-Info.plist" ]; then
-            cp /tmp/GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
-            echo "GoogleService-Info.plist restored"
-          fi
 
       - name: Prepare app icon source
         run: |
