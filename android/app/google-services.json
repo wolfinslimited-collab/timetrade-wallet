@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "166449318661",
+    "project_id": "timetrade-81620",
+    "storage_bucket": "timetrade-81620.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:166449318661:android:15e82a51fd763480bdc56c",
+        "android_client_info": {
+          "package_name": "com.wallet.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEd9VDtft-w6LYi7kKwtIB5Ndj5HSGzx0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
