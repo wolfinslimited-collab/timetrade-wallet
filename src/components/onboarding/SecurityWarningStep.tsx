@@ -31,9 +31,9 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
   const [acknowledged, setAcknowledged] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-screen p-6">
+    <div className="flex flex-col h-screen overflow-y-auto p-6">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-8 shrink-0">
         <button 
           onClick={onBack}
           className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
