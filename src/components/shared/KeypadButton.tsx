@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export interface KeypadButtonProps {
@@ -9,14 +9,19 @@ export interface KeypadButtonProps {
 
 export const KeypadButton = ({ onPress, disabled, children }: KeypadButtonProps) => {
   const [pressed, setPressed] = useState(false);
+  const firedRef = useRef(false);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
     e.preventDefault();
+    firedRef.current = true;
     setPressed(true);
     onPress();
   };
-  const release = () => setPressed(false);
+  const release = () => {
+    setPressed(false);
+    firedRef.current = false;
+  };
 
   return (
     <button
@@ -26,20 +31,22 @@ export const KeypadButton = ({ onPress, disabled, children }: KeypadButtonProps)
       onPointerUp={release}
       onPointerLeave={release}
       onPointerCancel={release}
-      onClick={(e) => {
-        // Fallback for environments where pointerdown doesn't fire (iOS WKWebView edge cases)
-        if (disabled) return;
-        e.stopPropagation();
-      }}
       onTouchStart={(e) => {
-        // Ensure touch events aren't swallowed on iOS Capacitor
-        if (disabled) return;
-        if (!pressed) {
-          setPressed(true);
-          onPress();
-        }
+        // Fallback: if pointerdown didn't fire (iOS WKWebView edge cases)
+        if (disabled || firedRef.current) return;
+        firedRef.current = true;
+        setPressed(true);
+        onPress();
       }}
       onTouchEnd={release}
+      onClick={() => {
+        // Last-resort fallback for click-only environments
+        if (disabled || firedRef.current) return;
+        firedRef.current = true;
+        setPressed(true);
+        onPress();
+        setTimeout(release, 100);
+      }}
       className={cn(
         "relative w-[72px] h-[72px] rounded-full mx-auto select-none",
         "flex items-center justify-center text-foreground",
