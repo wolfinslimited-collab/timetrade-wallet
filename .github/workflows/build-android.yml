@@ -151,7 +151,7 @@ jobs:
 
             echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
             cat > android/key.properties << KEYEOF
-          storeFile=release.keystore
+          storeFile=app/release.keystore
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
