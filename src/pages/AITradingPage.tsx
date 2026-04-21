@@ -215,7 +215,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           <div className="mt-3 flex items-baseline">
             <span className="text-[22px] font-semibold text-foreground/70 mr-1">$</span>
             <span className="text-[42px] font-bold font-mono text-foreground tracking-tight leading-none tabular-nums">
-              {mask(fmt(totalBalance))}
+              {fmt(totalBalance)}
             </span>
           </div>
 
@@ -233,7 +233,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               ) : (
                 <TrendingDown className="w-3 h-3" />
               )}
-              {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
+              {totalProfit >= 0 ? "+" : "-"}${fmt(Math.abs(totalProfit))}
             </div>
             <span className="text-[11px] text-muted-foreground font-medium tabular-nums">
               {totalProfit >= 0 ? "+" : ""}
@@ -293,11 +293,11 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
       {/* Stat grid */}
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <StatCard label="Available" value={`$${mask(fmt(availableBalance))}`} />
-        <StatCard label="In Trades" value={`$${mask(fmt(lockedBalance))}`} />
+        <StatCard label="Available" value={`$${fmt(availableBalance)}`} />
+        <StatCard label="In Trades" value={`$${fmt(lockedBalance)}`} />
         <StatCard
           label="7d Earnings"
-          value={`${earningsTotal >= 0 ? "+" : "-"}$${mask(fmt(Math.abs(earningsTotal)))}`}
+          value={`${earningsTotal >= 0 ? "+" : "-"}$${fmt(Math.abs(earningsTotal))}`}
           accent={earningsTotal > 0 ? "success" : earningsTotal < 0 ? "destructive" : undefined}
         />
       </div>
