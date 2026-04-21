@@ -153,6 +153,78 @@ jobs:
             echo "No signing secrets provided, building debug APK"
           fi
 
+      - name: Patch build.gradle for release signing
+        run: |
+          if [ ! -f android/key.properties ]; then
+            echo "No key.properties found, skipping signing patch"
+            exit 0
+          fi
+          if [ ! -f android/app/release.keystore ]; then
+            echo "FATAL: key.properties exists but release.keystore is missing"
+            exit 1
+          fi
+          python3 << 'PYEOF'
+import re, sys
+from pathlib import Path
+
+gradle = Path("android/app/build.gradle")
+if not gradle.exists():
+    print("FATAL: android/app/build.gradle not found"); sys.exit(1)
+
+src = gradle.read_text()
+
+# Skip if already patched
+if "signingConfig signingConfigs.release" in src:
+    print("build.gradle already contains signing config, skipping"); sys.exit(0)
+
+# 1) Inject keystore properties loader before "apply plugin" or "android {"
+loader = '''def keystorePropertiesFile = rootProject.file('key.properties')
+def keystoreProperties = new Properties()
+def hasReleaseSigning = keystorePropertiesFile.exists()
+if (hasReleaseSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+'''
+if "def keystorePropertiesFile" not in src:
+    if "android {" in src:
+        src = src.replace("android {", loader + "android {", 1)
+    else:
+        print("FATAL: 'android {' block not found"); sys.exit(1)
+
+# 2) Inject signingConfigs block before buildTypes
+signing_block = '''    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+'''
+if "signingConfigs {" not in src:
+    if "    buildTypes {" in src:
+        src = src.replace("    buildTypes {", signing_block + "    buildTypes {", 1)
+    else:
+        print("FATAL: 'buildTypes' block not found"); sys.exit(1)
+
+# 3) Inject signingConfig assignment inside release buildType
+# Find "buildTypes {\n        release {\n" and add signingConfig after it
+release_pattern = "    buildTypes {\n        release {\n"
+if release_pattern in src and "signingConfig signingConfigs.release" not in src:
+    inject = "            if (hasReleaseSigning) {\n                signingConfig signingConfigs.release\n            }\n"
+    src = src.replace(release_pattern, release_pattern + inject, 1)
+
+gradle.write_text(src)
+print("Successfully patched android/app/build.gradle for release signing")
+PYEOF
+          echo "--- Signing verification ---"
+          grep -n "keystorePropertiesFile\|signingConfigs\|signingConfig " android/app/build.gradle
+          grep -q "signingConfig signingConfigs.release" android/app/build.gradle || { echo "FATAL: signing patch failed"; exit 1; }
+          echo "--- Signing patch verified ---"
+
       - name: Build APK
         run: |
           cd android
