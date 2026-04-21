@@ -1,55 +1,15 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { BrowserProvider, JsonRpcSigner, parseEther, parseUnits } from 'ethers';
-import { Capacitor } from '@capacitor/core';
 
-// WalletConnect is optional - we'll try to initialize it but gracefully handle failures
-let appKitInitialized = false;
-let useAppKit: any = () => ({ open: () => console.warn('WalletConnect not available') });
-let useAppKitAccount: any = () => ({ address: undefined, isConnected: false });
-let useAppKitProvider: any = () => ({ walletProvider: null });
-
-// Try to initialize WalletConnect/AppKit
-if (!Capacitor.isNativePlatform()) {
-  try {
-    const appkit = require('@reown/appkit/react');
-    const ethersAdapter = require('@reown/appkit-adapter-ethers');
-    const networks = require('@reown/appkit/networks');
-
-    const projectId = 'f6fa3c95d1ee89fa25fbb3eb50fe5e03';
-    
-    const metadata = {
-      name: 'Timetrade Wallet',
-      description: 'Secure crypto wallet with WalletConnect support',
-      url: typeof window !== 'undefined' ? window.location.origin : '',
-      icons: ['https://avatars.githubusercontent.com/u/37784886']
-    };
-
-    const adapter = new ethersAdapter.EthersAdapter();
-
-    appkit.createAppKit({
-      adapters: [adapter],
-      networks: [networks.mainnet, networks.sepolia, networks.polygon, networks.polygonAmoy],
-      metadata,
-      projectId,
-      features: {
-        analytics: false,
-      }
-    });
-
-    useAppKit = appkit.useAppKit;
-    useAppKitAccount = appkit.useAppKitAccount;
-    useAppKitProvider = appkit.useAppKitProvider;
-    appKitInitialized = true;
-  } catch (error) {
-    console.warn('WalletConnect initialization failed:', error);
-  }
-}
+// WalletConnect is permanently disabled in this app (imported mnemonic only).
+// This stub exists so existing imports continue to compile, but it never
+// loads any WalletConnect / @reown/appkit code. That keeps iOS from crashing
+// on browser-only APIs (WebSocket / IndexedDB / window globals) at startup.
 
 interface WalletConnectTransaction {
   to: string;
-  value: string; // In ether
+  value: string;
   gasLimit?: bigint;
-  gasPrice?: string; // In gwei
+  gasPrice?: string;
   data?: string;
 }
 
@@ -59,16 +19,11 @@ interface SignedTransactionResult {
 }
 
 interface WalletConnectContextType {
-  // Connection state
   isWalletConnectConnected: boolean;
   wcAddress: string | undefined;
-  
-  // Actions
   openWalletConnectModal: () => void;
   disconnectWalletConnect: () => void;
   signTransactionWithWalletConnect: (tx: WalletConnectTransaction) => Promise<SignedTransactionResult>;
-  
-  // State
   isSigningWithWC: boolean;
   wcError: string | null;
   clearWcError: () => void;
@@ -81,101 +36,28 @@ interface WalletConnectProviderProps {
 }
 
 export function WalletConnectProvider({ children }: WalletConnectProviderProps) {
-  // Safely call hooks - they'll return defaults if AppKit isn't initialized
-  const appKit = useAppKit();
-  const account = useAppKitAccount();
-  const provider = useAppKitProvider('eip155');
-  
-  const open = appKit?.open;
-  const address = account?.address;
-  const isConnected = account?.isConnected ?? false;
-  const walletProvider = provider?.walletProvider;
-  
-  const [isSigningWithWC, setIsSigningWithWC] = useState(false);
   const [wcError, setWcError] = useState<string | null>(null);
+  const [isSigningWithWC] = useState(false);
 
   const clearWcError = useCallback(() => setWcError(null), []);
 
   const openWalletConnectModal = useCallback(() => {
-    if (!appKitInitialized) {
-      setWcError('WalletConnect is not available. Please use the built-in wallet.');
-      return;
-    }
-    try {
-      open?.();
-    } catch (error) {
-      console.error('Failed to open WalletConnect modal:', error);
-      setWcError('Failed to open wallet connection. Please try again.');
-    }
-  }, [open]);
+    setWcError('WalletConnect is not available. Please use the built-in wallet.');
+  }, []);
 
   const disconnectWalletConnect = useCallback(async () => {
-    try {
-      open?.({ view: 'Account' });
-    } catch (error) {
-      console.error('Failed to disconnect:', error);
-    }
-  }, [open]);
+    /* no-op */
+  }, []);
 
   const signTransactionWithWalletConnect = useCallback(async (
-    tx: WalletConnectTransaction
+    _tx: WalletConnectTransaction
   ): Promise<SignedTransactionResult> => {
-    if (!walletProvider) {
-      throw new Error('WalletConnect provider not available. Please connect your wallet first.');
-    }
-
-    if (!address) {
-      throw new Error('No wallet address available. Please connect your wallet.');
-    }
-
-    setIsSigningWithWC(true);
-    setWcError(null);
-
-    try {
-      // Create ethers provider from WalletConnect provider
-      const provider = new BrowserProvider(walletProvider as any);
-      const signer = await provider.getSigner() as JsonRpcSigner;
-
-      // Build transaction
-      const transaction = {
-        to: tx.to,
-        value: parseEther(tx.value),
-        gasLimit: tx.gasLimit || BigInt(21000),
-        ...(tx.data && { data: tx.data }),
-      };
-
-      // If gas price is provided, add it
-      if (tx.gasPrice) {
-        const gasPriceWei = parseUnits(tx.gasPrice, 'gwei');
-        Object.assign(transaction, {
-          maxFeePerGas: gasPriceWei,
-          maxPriorityFeePerGas: gasPriceWei / BigInt(2),
-        });
-      }
-
-      console.log('Sending transaction via WalletConnect:', transaction);
-
-      // Send transaction - this will trigger the wallet popup for user approval
-      const txResponse = await signer.sendTransaction(transaction);
-      
-      console.log('Transaction sent:', txResponse.hash);
-
-      return {
-        signedTx: '', // WalletConnect sends directly, no raw signed tx available
-        txHash: txResponse.hash,
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to sign transaction with WalletConnect';
-      setWcError(message);
-      throw error;
-    } finally {
-      setIsSigningWithWC(false);
-    }
-  }, [walletProvider, address]);
+    throw new Error('WalletConnect is not available in this app.');
+  }, []);
 
   const value: WalletConnectContextType = {
-    isWalletConnectConnected: isConnected,
-    wcAddress: address,
+    isWalletConnectConnected: false,
+    wcAddress: undefined,
     openWalletConnectModal,
     disconnectWalletConnect,
     signTransactionWithWalletConnect,
