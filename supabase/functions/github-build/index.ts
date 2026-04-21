@@ -373,15 +373,7 @@ jobs:
             sed -i '' 's|CODE_SIGN_IDENTITY = "iPhone Developer";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "\$PBXPROJ"
             sed -i '' 's|CODE_SIGN_IDENTITY = "iPhone Distribution";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "\$PBXPROJ"
             sed -i '' 's|CODE_SIGN_IDENTITY = "Apple Development";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "\$PBXPROJ"
-            python3 - <<'PYEOF'
-            import re
-            from pathlib import Path
-            p = Path("ios/App/App.xcodeproj/project.pbxproj")
-            text = p.read_text()
-            text = re.sub(r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*?\]"\s*=\s*"[^"]*";', '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";', text)
-            p.write_text(text)
-            print("Forced Apple Distribution on all sdk-scoped CODE_SIGN_IDENTITY entries")
-            PYEOF
+            sed -i '' 's|"CODE_SIGN_IDENTITY\\[sdk=iphoneos\\*\\]" = "[^"]*";|"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";|g' "\$PBXPROJ"
             echo "=== Final CODE_SIGN settings in pbxproj ==="
             grep -E "CODE_SIGN|DEVELOPMENT_TEAM|PROVISIONING_PROFILE" "\$PBXPROJ" | sort -u
           fi
