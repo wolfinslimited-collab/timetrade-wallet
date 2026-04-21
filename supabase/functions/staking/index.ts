@@ -178,9 +178,38 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Calculate earned rewards
+      const stakedAt = new Date(position.staked_at).getTime();
+      const now = Date.now();
+      const daysStaked = (now - stakedAt) / (1000 * 60 * 60 * 24);
+      const dailyRate = position.apy_rate / 30 / 100;
+      const earnedRewards = position.amount * dailyRate * daysStaked;
+
+      // Create unstake request record
+      const { error: reqError } = await supabaseAdmin
+        .from("unstake_requests")
+        .insert({
+          position_id,
+          wallet_address: wallet_address.toLowerCase(),
+          token_symbol: position.token_symbol,
+          chain: position.chain,
+          staked_amount: position.amount,
+          earned_rewards: parseFloat(earnedRewards.toFixed(6)),
+          status: "pending",
+        });
+
+      if (reqError) {
+        console.error("Unstake request insert error:", reqError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create unstake request" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Deactivate the staking position
       const { error } = await supabaseAdmin
         .from("staking_positions")
-        .update({ is_active: false })
+        .update({ is_active: false, earned_rewards: parseFloat(earnedRewards.toFixed(6)) })
         .eq("id", position_id)
         .eq("wallet_address", wallet_address.toLowerCase());
 
@@ -193,7 +222,36 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, earned_rewards: parseFloat(earnedRewards.toFixed(6)) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "get-unstake-requests") {
+      const { wallet_address } = params;
+      if (!wallet_address || typeof wallet_address !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Missing wallet_address" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("unstake_requests")
+        .select("*")
+        .eq("wallet_address", wallet_address.toLowerCase())
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Fetch unstake requests error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch unstake requests" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ data: data || [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
