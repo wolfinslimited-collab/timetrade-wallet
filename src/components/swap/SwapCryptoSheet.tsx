@@ -376,7 +376,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
                 transition={{ delay: 0.5, duration: 0.5 }}
                 className="w-full"
               >
-                <div className="relative rounded-2xl border border-border/50 bg-card/40 backdrop-blur-md p-6">
+                <div className="relative rounded-2xl border border-border/50 bg-card/60 p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col items-center gap-2 flex-1">
                       <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden ring-2 ring-border/30">
