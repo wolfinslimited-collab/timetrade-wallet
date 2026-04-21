@@ -1,59 +1,65 @@
 
 
-# Improve Animations and Performance Across the App
+# Replace Spinners with Skeleton Shimmer Loaders
 
-## Problem
-The app has a heavy-handed CSS rule that forces `will-change: transform, opacity` and `translateZ(0)` on every element matching `[class*="animate-"]`, `[class*="transition-"]`, or `[data-state]`. This creates excessive GPU layer promotion and causes lag. Additionally, tab switching (both bottom nav and wallet tabs) lacks smooth transitions, making the app feel abrupt.
+## Overview
+Replace full-page and section-level `Loader2 animate-spin` spinners with polished skeleton shimmer placeholders that match the layout of the content being loaded. Button-level spinners (e.g. "Swapping...", "Start Trading") stay as-is since they are contextual action indicators.
 
 ## Changes
 
-### 1. Fix the global GPU compositing rule in `src/index.css`
-Remove the overly broad `will-change` and `backface-visibility` rule that targets all animated/transitioning elements. This single change will significantly reduce GPU memory pressure and jank. Replace with targeted compositing only on elements that truly need it (sheets, page transitions).
+### 1. Create reusable skeleton components (`src/components/ui/loading-skeletons.tsx`)
+Build a set of purpose-built skeleton loaders using the existing `Skeleton` component:
+- **PortfolioSkeleton** -- mimics the balance card + token list (used on Index page)
+- **TransactionListSkeleton** -- mimics transaction rows (used on History page)
+- **StakingPageSkeleton** -- mimics staking balance card + positions list
+- **TradingDashboardSkeleton** -- mimics the AI trading dashboard layout
+- **ChartSkeleton** -- mimics PnL chart area
+- **GenericCardSkeleton** -- reusable card-shaped placeholder
 
-### 2. Add animated active indicator to `src/components/BottomNav.tsx`
-- Add a `motion.div` with `layoutId="bottom-nav-indicator"` behind the active tab button for a smooth sliding highlight
-- Use the same iOS cubic-bezier easing (`[0.32, 0.72, 0, 1]`) as the rest of the app
-- The indicator is a subtle `bg-primary/15` rounded pill that slides between tabs
+Each skeleton uses `Skeleton` with rounded shapes and staggered widths to look realistic.
 
-### 3. Add tab content transition in `src/pages/Index.tsx`
-- Wrap the tab content area with `AnimatePresence` and `motion.div` keyed by `currentView`
-- Use a quick fade + subtle vertical shift (opacity 0 to 1, y 6px to 0, 180ms) for tab switches
-- Keeps the feel instant while adding polish
+### 2. Replace spinners in page-level loading states
 
-### 4. Improve WalletTabs transition in `src/components/WalletTabs.tsx`
-- Already has Framer Motion transitions -- minor tuning to match the unified easing
+**`src/pages/Index.tsx`** -- Replace the "Loading portfolio..." spinner with `PortfolioSkeleton`
 
-### 5. Add CSS transition utility for tab content fade
-- Add a `tab-fade-in` keyframe to `tailwind.config.ts` (150ms opacity + translateY) for use in non-Framer contexts
+**`src/pages/StakingPage.tsx`** -- Replace 3 spinner instances:
+- Balance loading spinner → skeleton cards
+- Positions loading spinner → skeleton list rows
+- Unstake balance loading → skeleton card
+
+**`src/pages/AITradingWalletPage.tsx`** -- Replace 3 spinner instances:
+- Initial auth check → `TradingDashboardSkeleton`
+- Dashboard loading → `TradingDashboardSkeleton`
+- Wallet balances loading → skeleton rows
+
+**`src/pages/AITradingOnboardingPage.tsx`** -- Replace full-page spinner with skeleton card
+
+**`src/pages/TransactionHistoryPage.tsx`** -- Replace "Loading transactions..." spinner with `TransactionListSkeleton`
+
+### 3. Replace spinners in component-level loading states
+
+**`src/components/trading/PnlChart.tsx`** -- Replace chart spinner with `ChartSkeleton`
+
+**`src/components/ai/AIPortfolioInsights.tsx`** -- Replace "Analyzing portfolio..." spinner with a skeleton gauge layout
+
+### 4. Keep spinners where appropriate (no changes)
+- Button loading states (Swap, Stake, Withdraw, Send Test Push)
+- Inline indicators (DEX search, build status, live refresh)
+- Small contextual spinners (quote loading, risk analysis)
 
 ## Technical Details
-
-**Performance fix (index.css):**
-```css
-/* REMOVE this entire block: */
-[class*="animate-"],
-[class*="transition-"],
-[data-state="open"],
-[data-state="closed"] {
-  will-change: transform, opacity;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-}
-```
-
-**BottomNav indicator:**
-- Uses Framer Motion `layoutId` for automatic FLIP animation between positions
-- Spring transition: `type: "spring", stiffness: 500, damping: 35` for snappy native feel
-- Haptics already fires on tab change (existing code)
-
-**Tab content transition:**
-- `AnimatePresence mode="wait"` with 150ms fade + 6px y-shift
-- Hardware-accelerated (transform + opacity only)
+- All skeletons use the existing `Skeleton` component from `src/components/ui/skeleton.tsx`
+- Shimmer effect comes from `animate-pulse` already built into the Skeleton component
+- Skeleton shapes match the actual content dimensions for seamless transition
+- Wrapped in `motion.div` with fade-out when content loads
 
 ## Files Modified
-- `src/index.css` -- remove blanket GPU compositing rule
-- `src/components/BottomNav.tsx` -- add sliding active indicator with layoutId
-- `src/pages/Index.tsx` -- wrap tab content in AnimatePresence for smooth switching
-- `tailwind.config.ts` -- add `tab-fade` animation keyframe
+- `src/components/ui/loading-skeletons.tsx` -- new file with all skeleton variants
+- `src/pages/Index.tsx` -- swap spinner for PortfolioSkeleton
+- `src/pages/StakingPage.tsx` -- swap 3 spinners for skeleton layouts
+- `src/pages/AITradingWalletPage.tsx` -- swap 3 spinners for skeleton layouts
+- `src/pages/AITradingOnboardingPage.tsx` -- swap spinner for skeleton card
+- `src/pages/TransactionHistoryPage.tsx` -- swap spinner for TransactionListSkeleton
+- `src/components/trading/PnlChart.tsx` -- swap spinner for ChartSkeleton
+- `src/components/ai/AIPortfolioInsights.tsx` -- swap spinner for skeleton gauge
 
