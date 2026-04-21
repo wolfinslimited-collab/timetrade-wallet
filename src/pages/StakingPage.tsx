@@ -134,6 +134,8 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const [isStaking, setIsStaking] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [unstakeRequests, setUnstakeRequests] = useState<UnstakeRequest[]>([]);
+  const [minStakeAmount, setMinStakeAmount] = useState(10);
   const { toast } = useToast();
 
   // Stake transfer hook for real on-chain transfers
