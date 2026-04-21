@@ -92,13 +92,6 @@ jobs:
           PROGUARDEOF
           echo "Proguard rules injected"
 
-          GRADLE="android/app/build.gradle"
-          if [ -f "$GRADLE" ]; then
-            sed -i "s/versionCode 1/versionCode ${ANDROID_VERSION_CODE:-1}/" "$GRADLE"
-            sed -i "s/versionName \"1.0\"/versionName \"${ANDROID_VERSION_NAME:-1.0.0}\"/" "$GRADLE"
-            echo "build.gradle patched with versionCode=${ANDROID_VERSION_CODE:-1} versionName=${ANDROID_VERSION_NAME:-1.0.0}"
-          fi
-
       - name: Customize splash screen (dark + logo)
         run: |
           if [ -f public/app-logo.png ]; then
@@ -144,6 +137,12 @@ jobs:
           echo "ANDROID_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "Android versionCode: $VERSION_CODE"
           echo "Android versionName: $VERSION_NAME"
+          GRADLE="android/app/build.gradle"
+          if [ -f "$GRADLE" ]; then
+            sed -i "s/versionCode 1/versionCode $VERSION_CODE/" "$GRADLE"
+            sed -i "s/versionName \"1.0\"/versionName \"$VERSION_NAME\"/" "$GRADLE"
+            echo "build.gradle patched with versionCode=$VERSION_CODE versionName=$VERSION_NAME"
+          fi
 
       - name: Prepare app icon source
         run: |
