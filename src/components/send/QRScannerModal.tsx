@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Camera } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Html5Qrcode } from "html5-qrcode";
+import { Capacitor } from "@capacitor/core";
 
 interface QRScannerModalProps {
   open: boolean;
@@ -10,6 +10,8 @@ interface QRScannerModalProps {
 }
 
 const SCANNER_ID = "qr-reader";
+
+let Html5QrcodeModule: typeof import("html5-qrcode") | null = null;
 
 function extractAddress(raw: string): string {
   // Handle ethereum:0x... or bitcoin:bc1... URI schemes
@@ -25,10 +27,11 @@ function extractAddress(raw: string): string {
 
 export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) => {
   const [error, setError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const scannedRef = useRef(false);
+  const isNative = Capacitor.isNativePlatform();
 
-  const stopScanner = useCallback(async () => {
+  const stopWebScanner = useCallback(async () => {
     try {
       const scanner = scannerRef.current;
       if (scanner) {
@@ -45,16 +48,74 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
     scannerRef.current = null;
   }, []);
 
+  const stopNativeScanner = useCallback(async () => {
+    try {
+      const { BarcodeScanner } = await import("@capacitor-community/barcode-scanner");
+      await BarcodeScanner.stopScan();
+      document.querySelector("body")?.classList.remove("scanner-active");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Native scanner flow
   useEffect(() => {
-    if (!open) return;
+    if (!open || !isNative) return;
 
     scannedRef.current = false;
     setError(null);
 
-    // Small delay to let the DOM element render
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { BarcodeScanner } = await import("@capacitor-community/barcode-scanner");
+
+        const status = await BarcodeScanner.checkPermission({ force: true });
+        if (!status.granted) {
+          setError("Camera permission denied. Please allow camera access in your device settings.");
+          return;
+        }
+
+        document.querySelector("body")?.classList.add("scanner-active");
+        await BarcodeScanner.hideBackground();
+
+        const result = await BarcodeScanner.startScan();
+        if (cancelled) return;
+
+        if (result.hasContent && result.content) {
+          scannedRef.current = true;
+          const address = extractAddress(result.content);
+          onScan(address);
+        }
+
+        document.querySelector("body")?.classList.remove("scanner-active");
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError("Could not start scanner. " + (err instanceof Error ? err.message : String(err)));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      stopNativeScanner();
+    };
+  }, [open, isNative, onScan, stopNativeScanner]);
+
+  // Web scanner flow
+  useEffect(() => {
+    if (!open || isNative) return;
+
+    scannedRef.current = false;
+    setError(null);
+
     const timeout = setTimeout(async () => {
       try {
-        const scanner = new Html5Qrcode(SCANNER_ID);
+        if (!Html5QrcodeModule) {
+          Html5QrcodeModule = await import("html5-qrcode");
+        }
+        const scanner = new Html5QrcodeModule.Html5Qrcode(SCANNER_ID);
         scannerRef.current = scanner;
 
         await scanner.start(
@@ -65,11 +126,9 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
             scannedRef.current = true;
             const address = extractAddress(decodedText);
             onScan(address);
-            stopScanner();
+            stopWebScanner();
           },
-          () => {
-            // ignore non-match frames
-          }
+          () => {}
         );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -87,18 +146,22 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
 
     return () => {
       clearTimeout(timeout);
-      stopScanner();
+      stopWebScanner();
     };
-  }, [open, onScan, stopScanner]);
+  }, [open, isNative, onScan, stopWebScanner]);
 
   const handleClose = () => {
-    stopScanner();
+    if (isNative) {
+      stopNativeScanner();
+    } else {
+      stopWebScanner();
+    }
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md p-0 bg-background border-border overflow-hidden">
+      <DialogContent hideClose className="sm:max-w-md p-0 bg-background border-border overflow-hidden">
         <div className="relative">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
