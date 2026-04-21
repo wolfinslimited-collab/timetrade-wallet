@@ -175,7 +175,7 @@ export const AmountInputStep = ({
       </div>
 
       {/* Continue Button */}
-      <div className="mt-auto pt-6">
+      <div className="mt-auto pt-6" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
         <Button
           onClick={handleSubmit}
           disabled={!amount || !!error}

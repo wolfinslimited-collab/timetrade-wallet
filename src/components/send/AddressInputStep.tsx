@@ -286,7 +286,7 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
       )}
 
       {/* Continue Button */}
-      <div className="pt-4">
+      <div className="pt-4" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
         <Button
           onClick={handleSubmit}
           disabled={!address.trim()}

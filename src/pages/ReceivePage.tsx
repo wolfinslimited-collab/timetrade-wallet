@@ -157,7 +157,7 @@ const ReceivePage = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-6" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
               <Button onClick={handleCopy} variant="outline" disabled={!currentAddress} className="flex-1 h-14 border-border bg-card active:bg-secondary">
                 {copied ? (<><Check className="w-5 h-5 mr-2 text-primary" />Copied!</>) : (<><Copy className="w-5 h-5 mr-2" />Copy Address</>)}
               </Button>
