@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { BrowserProvider, JsonRpcSigner, parseEther, parseUnits } from 'ethers';
+import { Capacitor } from '@capacitor/core';
 
 // WalletConnect is optional - we'll try to initialize it but gracefully handle failures
 let appKitInitialized = false;
@@ -8,38 +9,40 @@ let useAppKitAccount: any = () => ({ address: undefined, isConnected: false });
 let useAppKitProvider: any = () => ({ walletProvider: null });
 
 // Try to initialize WalletConnect/AppKit
-try {
-  const appkit = require('@reown/appkit/react');
-  const ethersAdapter = require('@reown/appkit-adapter-ethers');
-  const networks = require('@reown/appkit/networks');
+if (!Capacitor.isNativePlatform()) {
+  try {
+    const appkit = require('@reown/appkit/react');
+    const ethersAdapter = require('@reown/appkit-adapter-ethers');
+    const networks = require('@reown/appkit/networks');
 
-  const projectId = 'f6fa3c95d1ee89fa25fbb3eb50fe5e03';
-  
-  const metadata = {
-    name: 'Timetrade Wallet',
-    description: 'Secure crypto wallet with WalletConnect support',
-    url: typeof window !== 'undefined' ? window.location.origin : '',
-    icons: ['https://avatars.githubusercontent.com/u/37784886']
-  };
+    const projectId = 'f6fa3c95d1ee89fa25fbb3eb50fe5e03';
+    
+    const metadata = {
+      name: 'Timetrade Wallet',
+      description: 'Secure crypto wallet with WalletConnect support',
+      url: typeof window !== 'undefined' ? window.location.origin : '',
+      icons: ['https://avatars.githubusercontent.com/u/37784886']
+    };
 
-  const adapter = new ethersAdapter.EthersAdapter();
+    const adapter = new ethersAdapter.EthersAdapter();
 
-  appkit.createAppKit({
-    adapters: [adapter],
-    networks: [networks.mainnet, networks.sepolia, networks.polygon, networks.polygonAmoy],
-    metadata,
-    projectId,
-    features: {
-      analytics: false,
-    }
-  });
+    appkit.createAppKit({
+      adapters: [adapter],
+      networks: [networks.mainnet, networks.sepolia, networks.polygon, networks.polygonAmoy],
+      metadata,
+      projectId,
+      features: {
+        analytics: false,
+      }
+    });
 
-  useAppKit = appkit.useAppKit;
-  useAppKitAccount = appkit.useAppKitAccount;
-  useAppKitProvider = appkit.useAppKitProvider;
-  appKitInitialized = true;
-} catch (error) {
-  console.warn('WalletConnect initialization failed:', error);
+    useAppKit = appkit.useAppKit;
+    useAppKitAccount = appkit.useAppKitAccount;
+    useAppKitProvider = appkit.useAppKitProvider;
+    appKitInitialized = true;
+  } catch (error) {
+    console.warn('WalletConnect initialization failed:', error);
+  }
 }
 
 interface WalletConnectTransaction {
