@@ -190,86 +190,86 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           </h1>
         </motion.div>
 
-        {/* Lock timer warning */}
-        <AnimatePresence>
-          {isLocked && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/20 border border-destructive/30 mb-4"
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-destructive" />
-              <span className="text-xs text-destructive font-medium">
-                Try again in {lockTimer}s
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* PIN Dots */}
-        <motion.div
-          initial={{ y: 16, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <motion.div
-            animate={showError ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : {}}
-            transition={{ duration: 0.45 }}
-            className="flex gap-3.5"
-          >
-            {[0, 1, 2, 3, 4, 5].map((i) => {
-              const filled = i < pin.length;
-              return (
-                <motion.div
-                  key={i}
-                  animate={{
-                    scale: filled ? 1 : 0.85,
-                    backgroundColor: showError
-                      ? "hsl(var(--destructive))"
-                      : filled
-                      ? "hsl(var(--foreground))"
-                      : "transparent",
-                    borderColor: showError
-                      ? "hsl(var(--destructive))"
-                      : filled
-                      ? "hsl(var(--foreground))"
-                      : "hsl(var(--border))",
-                  }}
-                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className="w-3.5 h-3.5 rounded-full border-2"
-                />
-              );
-            })}
-          </motion.div>
-        </motion.div>
-
-        {/* Flex spacer pushes keypad to bottom */}
-        <div className="flex-1" />
-
-        {/* Prominent biometric pill */}
-        {biometricReady && !isLocked && (
-          <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-            onClick={handleBiometric}
-            disabled={bioInProgress}
-            className={cn(
-              "mb-6 flex items-center gap-2 px-4 py-2 rounded-full",
-              "bg-primary/15 border border-primary/30 text-primary",
-              "text-[13px] font-semibold",
-              "active:scale-95 transition-transform",
-              "disabled:opacity-60"
+        {/* PIN dots + biometric — vertically centered */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+          {/* Lock timer warning */}
+          <AnimatePresence>
+            {isLocked && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/20 border border-destructive/30 mb-4"
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-destructive" />
+                <span className="text-xs text-destructive font-medium">
+                  Try again in {lockTimer}s
+                </span>
+              </motion.div>
             )}
+          </AnimatePresence>
+
+          {/* PIN Dots */}
+          <motion.div
+            initial={{ y: 16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           >
-            <Fingerprint className="w-4 h-4" />
-            {bioInProgress ? "Verifying…" : `Unlock with ${bioLabel}`}
-          </motion.button>
-        )}
+            <motion.div
+              animate={showError ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : {}}
+              transition={{ duration: 0.45 }}
+              className="flex gap-3.5"
+            >
+              {[0, 1, 2, 3, 4, 5].map((i) => {
+                const filled = i < pin.length;
+                return (
+                  <motion.div
+                    key={i}
+                    animate={{
+                      scale: filled ? 1 : 0.85,
+                      backgroundColor: showError
+                        ? "hsl(var(--destructive))"
+                        : filled
+                        ? "hsl(var(--foreground))"
+                        : "transparent",
+                      borderColor: showError
+                        ? "hsl(var(--destructive))"
+                        : filled
+                        ? "hsl(var(--foreground))"
+                        : "hsl(var(--border))",
+                    }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                    className="w-3.5 h-3.5 rounded-full border-2"
+                  />
+                );
+              })}
+            </motion.div>
+          </motion.div>
+
+          {/* Prominent biometric pill */}
+          {biometricReady && !isLocked && (
+            <motion.button
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              onClick={handleBiometric}
+              disabled={bioInProgress}
+              className={cn(
+                "mt-6 flex items-center gap-2 px-4 py-2 rounded-full",
+                "bg-primary/15 border border-primary/30 text-primary",
+                "text-[13px] font-semibold",
+                "active:scale-95 transition-transform",
+                "disabled:opacity-60"
+              )}
+            >
+              <Fingerprint className="w-4 h-4" />
+              {bioInProgress ? "Verifying…" : `Unlock with ${bioLabel}`}
+            </motion.button>
+          )}
+        </div>
 
         {/* Keypad */}
-        <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto pb-4">
+        <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto pb-4 shrink-0">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <KeypadButton
               key={digit}
