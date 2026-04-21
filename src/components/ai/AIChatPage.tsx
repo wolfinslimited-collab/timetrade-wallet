@@ -238,7 +238,22 @@ export const AIChatPage = () => {
                   : "bg-card/80 border border-border/50 rounded-bl-lg backdrop-blur-sm"
               )}>
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_code]:bg-secondary/60 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs [&_pre]:bg-secondary/40 [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border/30">
+                <div className="prose prose-sm prose-invert max-w-none break-words
+                  [&>*:first-child]:mt-0 [&>*:last-child]:mb-0
+                  [&_p]:leading-[1.8] [&_p]:mb-3
+                  [&_li]:leading-[1.8] [&_li]:mb-1.5
+                  [&_ol]:pl-4 [&_ol]:mb-3 [&_ol]:space-y-1
+                  [&_ul]:pl-4 [&_ul]:mb-3 [&_ul]:space-y-1
+                  [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-foreground
+                  [&_h2]:text-[15px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-3.5 [&_h2]:text-foreground
+                  [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1.5 [&_h3]:mt-3 [&_h3]:text-foreground
+                  [&_strong]:text-foreground [&_strong]:font-semibold
+                  [&_code]:bg-secondary/60 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs [&_code]:font-mono
+                  [&_pre]:bg-secondary/40 [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border/30 [&_pre]:p-3 [&_pre]:my-3
+                  [&_blockquote]:border-l-2 [&_blockquote]:border-primary/30 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground
+                  [&_hr]:border-border/30 [&_hr]:my-3
+                  [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2
+                ">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 ) : (
