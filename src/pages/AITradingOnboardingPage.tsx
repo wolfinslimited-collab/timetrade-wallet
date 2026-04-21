@@ -43,8 +43,8 @@ const AITradingOnboardingPage = () => {
 
   if (api.isCheckingSession || !api.isAuthenticated || !balanceLoaded) {
     return (
-      <div className="min-h-full bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="min-h-full bg-background p-4">
+        <GenericCardSkeleton />
       </div>
     );
   }

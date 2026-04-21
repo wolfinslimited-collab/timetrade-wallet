@@ -465,10 +465,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
         <div>
           <h2 className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Available to Stake</h2>
           {isLoadingBalance ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading balances...</span>
-            </div>
+            <StakingBalanceSkeleton />
           ) : (
             <div className="space-y-2">
               {availableStablecoinList.length === 0 ? (
@@ -511,9 +508,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
         <div>
           <h2 className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Active Stakes</h2>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-            </div>
+            <StakingPositionsSkeleton />
           ) : positions.length === 0 ? (
             <Card className="p-8 text-center bg-card/20 border-border/20 border-dashed">
               <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-muted/20 flex items-center justify-center">

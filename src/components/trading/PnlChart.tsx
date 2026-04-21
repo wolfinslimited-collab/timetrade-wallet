@@ -149,9 +149,7 @@ export function PnlChart(_props: PnlChartProps) {
       {/* Chart */}
       <div className="h-32 w-full px-1 pb-2">
         {loading && !hasData ? (
-          <div className="h-full flex items-center justify-center">
-            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
-          </div>
+          <ChartSkeleton />
         ) : hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>

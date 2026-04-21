@@ -131,9 +131,7 @@ const AITradingWalletPage = () => {
 
   if (api.isCheckingSession || !api.isAuthenticated) {
     return (
-      <div className="min-h-full bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <TradingDashboardSkeleton />
     );
   }
 
