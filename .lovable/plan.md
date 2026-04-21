@@ -1,51 +1,38 @@
 
 
-# Fix Biometric Authentication with Native Capacitor Plugin
+# Redesign Transaction Success Screen
 
-## Problem
-WebAuthn (`navigator.credentials.create/get`) does **not work** inside Capacitor's WKWebView (iOS) or Android WebView. This is a known platform limitation -- WebAuthn requires a real browser context. The current implementation silently fails, showing "Setup cancelled."
-
-## Solution
-Replace WebAuthn with `@capgo/capacitor-native-biometric` -- a native Capacitor 7/8 plugin that uses real iOS Keychain + Face ID/Touch ID and Android Keystore + BiometricPrompt. It also provides secure credential storage built-in, eliminating the need to store the PIN in localStorage as base64.
+## Overview
+Replace the current busy success screen with a clean, minimal design matching the reference screenshot. Add haptic feedback on mount. The new layout: large green checkmark with animation, "Sent!" title, amount + recipient summary, and a "View transaction" link. Remove the card-style summary, Explorer/Share buttons, and Done button clutter.
 
 ## Changes
 
-### 1. Install native biometric plugin
-**File:** `package.json`
-- Add `@capgo/capacitor-native-biometric` dependency
+### 1. Rewrite `TransactionSuccessStep.tsx`
+**File:** `src/components/send/TransactionSuccessStep.tsx`
 
-### 2. Rewrite `useBiometricAuth` hook
-**File:** `src/hooks/useBiometricAuth.ts`
+Replace the entire render with a minimal centered layout:
+- **Haptic on mount**: Fire `haptics.notify("success")` in a `useEffect` on mount
+- **Animated green checkmark**: Large 80px solid green (`#4ADE80`) circle with a `Check` icon inside, spring animation from scale 0 to 1
+- **"Sent!" heading**: Bold, 24px, appears after checkmark with fade-in
+- **Summary line**: Muted text showing `"{amount} {symbol} was successfully sent to {truncatedAddress}"` -- concise, single line
+- **"View transaction" link**: Primary-colored text button that opens the explorer URL, appears with fade-in
+- **Done button at bottom**: Keep a minimal "Done" button with safe area padding, same as current
+- Remove: the card with amount/status/txHash details, the Explorer and Share pill buttons, the ripple animation, the `CheckCircle` icon (use filled circle + `Check` instead)
 
-Replace the entire WebAuthn implementation with the native plugin:
-- **Availability check**: Use `NativeBiometric.isAvailable()` which returns biometry type (Face ID, Touch ID, Fingerprint, Iris)
-- **Registration**: Use `NativeBiometric.verifyIdentity()` to prompt biometric, then `NativeBiometric.setCredentials()` to securely store the PIN in Keychain/Keystore (server: `"timetrade-wallet"`, username: `"wallet-pin"`, password: the PIN)
-- **Authentication**: Use `NativeBiometric.verifyIdentity()` then `NativeBiometric.getCredentials()` to retrieve the stored PIN
-- **Removal**: Use `NativeBiometric.deleteCredentials()` to clear stored data
-- **Web fallback**: On non-native platforms (browser preview), keep the existing WebAuthn logic as a fallback so the app doesn't crash in development
+### 2. Add Haptics to Other Key Moments
+**File:** `src/components/send/ConfirmationStep.tsx`
 
-### 3. Update iOS build workflow for Face ID permission
-**File:** `.github/workflows/build-ios.yml`
-- Ensure `NSFaceIDUsageDescription` is injected into Info.plist (already done in previous fix, verify it's present)
-
-### 4. Update Android manifest for biometric permission
-**File:** `android/app/src/main/AndroidManifest.xml`
-- Add `<uses-permission android:name="android.permission.USE_BIOMETRIC" />`
-
-### 5. Update Android CI workflow
-**File:** `.github/workflows/build-android.yml`
-- Inject `USE_BIOMETRIC` permission during CI build
+- Add `haptics.impact("medium")` when broadcast succeeds (just before transitioning to the success step)
+- Add `haptics.notify("error")` on broadcast failure
 
 ## Technical Details
-- `@capgo/capacitor-native-biometric` uses iOS `LAContext` (LocalAuthentication framework) and Android `BiometricPrompt` -- both work natively without browser context
-- Credentials are stored in iOS Keychain and Android Keystore, which is significantly more secure than base64 in localStorage
-- The plugin auto-detects biometry type (Face ID vs Touch ID vs Fingerprint) so the UI label detection continues to work
-- No changes needed to `BiometricSetupStep.tsx`, `LockScreen.tsx`, `PinUnlockModal.tsx`, or `BiometricSetupDialog.tsx` -- they all consume the hook interface which stays the same
-- The `NativeBiometric.isAvailable()` call returns `{ isAvailable: boolean, biometryType: BiometryType }` for accurate detection
+- Import `haptics` from `@/lib/haptics` (already exists and works on native + web)
+- Use Framer Motion `motion.div` for the checkmark spring and text fade-ins (already a dependency)
+- Green circle uses inline Tailwind: `bg-emerald-400` for the filled circle, white `Check` icon
+- Keep `useQueryClient` invalidation in `handleDone`
+- Safe area bottom padding preserved on the Done button
 
 ## Files Modified
-- `package.json` -- add `@capgo/capacitor-native-biometric`
-- `src/hooks/useBiometricAuth.ts` -- full rewrite with native plugin + web fallback
-- `android/app/src/main/AndroidManifest.xml` -- add USE_BIOMETRIC permission
-- `.github/workflows/build-android.yml` -- inject biometric permission in CI
+- `src/components/send/TransactionSuccessStep.tsx` -- full redesign
+- `src/components/send/ConfirmationStep.tsx` -- add haptic calls on broadcast result
 
