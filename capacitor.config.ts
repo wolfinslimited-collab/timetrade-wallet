@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'never',
-    scrollEnabled: true
+    scrollEnabled: true,
   },
   android: {
     allowMixedContent: true

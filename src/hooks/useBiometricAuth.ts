@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 
 const BIOMETRIC_CREDENTIAL_KEY = 'timetrade_biometric_credential';
@@ -28,26 +28,34 @@ export function useBiometricAuth() {
     isRegistered: false,
   });
 
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   useEffect(() => {
     checkBiometricStatus();
   }, []);
 
-  const checkBiometricStatus = useCallback(async () => {
+  const checkBiometricStatus = useCallback(async (): Promise<void> => {
     let isAvailable = false;
     const native = isNativePlatform();
+    const tag = '%c[BIOMETRIC]';
+    const style = 'color: #a855f7; font-weight: bold;';
 
     if (native) {
       try {
         const NativeBiometric = await getNativeBiometric();
         const result = await NativeBiometric.isAvailable();
         isAvailable = result.isAvailable;
-      } catch {
+        console.info(tag, style, 'Native availability:', result);
+      } catch (err) {
+        console.warn(tag, style, 'Native availability check failed:', err);
         isAvailable = false;
       }
     } else if (window.PublicKeyCredential) {
       try {
         isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      } catch {
+      } catch (err) {
+        console.warn(tag, style, 'WebAuthn availability check failed:', err);
         isAvailable = false;
       }
     }
@@ -57,18 +65,24 @@ export function useBiometricAuth() {
       ? isEnabled
       : !!localStorage.getItem(BIOMETRIC_CREDENTIAL_KEY);
 
-    setState({ isAvailable, isEnabled, isRegistered });
+    const newState = { isAvailable, isEnabled, isRegistered };
+    console.info(tag, style, 'Status:', { native, ...newState });
+    setState(newState);
   }, []);
 
   // ── Native biometric methods ──
 
   const registerNative = useCallback(async (pin: string): Promise<boolean> => {
+    const tag = '%c[BIOMETRIC]';
+    const style = 'color: #a855f7; font-weight: bold;';
     try {
       const NativeBiometric = await getNativeBiometric();
+      console.info(tag, style, 'Requesting identity verification...');
       await NativeBiometric.verifyIdentity({
         reason: 'Enable biometric unlock for your wallet',
         title: 'Biometric Setup',
       });
+      console.info(tag, style, 'Identity verified, storing credentials...');
       await NativeBiometric.setCredentials({
         server: NATIVE_BIOMETRIC_SERVER,
         username: NATIVE_BIOMETRIC_USERNAME,
@@ -76,13 +90,17 @@ export function useBiometricAuth() {
       });
       localStorage.setItem('timetrade_biometric', 'true');
       await checkBiometricStatus();
+      console.info(tag, style, 'Registration complete');
       return true;
-    } catch {
+    } catch (err) {
+      console.error(tag, style, 'Registration failed:', err);
       return false;
     }
   }, [checkBiometricStatus]);
 
   const authenticateNative = useCallback(async (): Promise<string | null> => {
+    const tag = '%c[BIOMETRIC]';
+    const style = 'color: #a855f7; font-weight: bold;';
     try {
       const NativeBiometric = await getNativeBiometric();
       await NativeBiometric.verifyIdentity({
@@ -92,8 +110,10 @@ export function useBiometricAuth() {
       const credentials = await NativeBiometric.getCredentials({
         server: NATIVE_BIOMETRIC_SERVER,
       });
+      console.info(tag, style, 'Authentication success');
       return credentials.password;
-    } catch {
+    } catch (err) {
+      console.error(tag, style, 'Authentication failed:', err);
       return null;
     }
   }, []);
@@ -104,13 +124,15 @@ export function useBiometricAuth() {
       await NativeBiometric.deleteCredentials({
         server: NATIVE_BIOMETRIC_SERVER,
       });
-    } catch { /* credentials may not exist */ }
+    } catch (err) {
+      console.warn('%c[BIOMETRIC]', 'color: #a855f7; font-weight: bold;', 'Remove credentials error (may not exist):', err);
+    }
     localStorage.setItem('timetrade_biometric', 'false');
     checkBiometricStatus();
   }, [checkBiometricStatus]);
 
   const updateNativePin = useCallback(async (newPin: string) => {
-    if (!state.isRegistered) return;
+    if (!stateRef.current.isRegistered) return;
     try {
       const NativeBiometric = await getNativeBiometric();
       await NativeBiometric.setCredentials({
@@ -118,8 +140,10 @@ export function useBiometricAuth() {
         username: NATIVE_BIOMETRIC_USERNAME,
         password: newPin,
       });
-    } catch { /* silent */ }
-  }, [state.isRegistered]);
+    } catch (err) {
+      console.warn('%c[BIOMETRIC]', 'color: #a855f7; font-weight: bold;', 'Update PIN error:', err);
+    }
+  }, []);
 
   // ── Web (WebAuthn) fallback methods ──
 

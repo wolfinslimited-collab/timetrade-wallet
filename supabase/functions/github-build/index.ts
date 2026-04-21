@@ -317,7 +317,9 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Scan QR codes to quickly enter wallet addresses.'" "\$PLIST"
           /usr/libexec/PlistBuddy -c "Delete :NSPhotoLibraryUsageDescription" "\$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Import QR codes from your photo library.'" "\$PLIST"
-          echo "Camera and photo library permission keys set"
+          /usr/libexec/PlistBuddy -c "Delete :NSFaceIDUsageDescription" "\$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Use Face ID or Touch ID to securely unlock your wallet.'" "\$PLIST"
+          echo "Camera, photo library, and Face ID permission keys set"
 
       - name: Configure APNs entitlements
         run: |
