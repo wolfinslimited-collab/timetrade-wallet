@@ -448,9 +448,6 @@ jobs:
             -configuration Release \\
             -archivePath \$RUNNER_TEMP/App.xcarchive \\
             archive \\
-            CODE_SIGN_STYLE=Manual \\
-            DEVELOPMENT_TEAM="\$TEAM_ID" \\
-            CODE_SIGN_IDENTITY="Apple Distribution" \\
             CURRENT_PROJECT_VERSION="\$BUILD_NUMBER" \\
             ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon
 
