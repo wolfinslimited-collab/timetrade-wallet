@@ -1,69 +1,71 @@
 
 
-# Fix iPhone Push Registration + Add Mobile Debug Panel
+# Fix Biometric Authentication on Native App
 
-## Real Root Cause (corrected from last plan)
+## Problem
 
-The previous fix flipped `aps-environment` to `development`, but this is wrong for TestFlight. Apple's rules:
+There are multiple issues preventing biometrics from working reliably on the native app:
 
-| Build type | Provisioning profile | Required `aps-environment` |
-|---|---|---|
-| Xcode Debug → dev iPhone | Development | `development` (sandbox APNs) |
-| **TestFlight / App Store** | **Distribution (App Store)** | **`production`** |
-| Ad Hoc | Distribution (Ad Hoc) | `production` |
+1. **Silent error swallowing**: All biometric operations catch errors silently, making it impossible to debug what's actually failing on device.
 
-Our CI signs with an **App Store distribution profile** but writes `aps-environment = development`. iOS detects the mismatch and **silently refuses to register for push** — the `registration` event never fires, no token reaches the JS layer, no call to `apns-to-fcm`, hence zero iOS tokens in the database and zero edge function logs.
+2. **Stale `checkBiometricStatus` reference**: The `useCallback` for `checkBiometricStatus` has an empty dependency array but is called inside `useEffect([], [])` -- this works on mount but the function reference used by other callbacks (like `registerNative`) may be stale if React optimizes re-renders.
 
-Database confirms: 1 web token, 0 iOS tokens. `apns-to-fcm` logs: empty. The bug is upstream of any conversion logic.
+3. **No Capacitor plugin registration**: The `@capgo/capacitor-native-biometric` plugin is installed but not explicitly registered in `MainActivity.java`. Capacitor 8 auto-registers most plugins, but some community plugins (especially Capgo's) may need explicit `add()` calls in the bridge activity.
 
-## Changes
+4. **Missing iOS Face ID usage description**: The iOS project doesn't have an `NSFaceIDUsageDescription` entry -- this is **required** by Apple for Face ID. Without it, the biometric prompt will silently fail or crash on iOS.
 
-### 1. Fix the entitlement (`supabase/functions/github-build/index.ts`)
+5. **Race condition on registration flow**: In `BiometricSetupDialog`, the PIN is verified against `localStorage.getItem("timetrade_pin")` before calling `onRegister(pin)`. If the stored PIN format ever changes, registration silently fails.
 
-Set `aps-environment` back to `production` (lines 342 and 348). Then in the `apns-to-fcm` edge function call, set `sandbox: false` since we're now on production APNs. Firebase will return a real FCM token bound to production APNs.
+## Plan
 
-### 2. Update `useFCMToken` (`src/hooks/useFCMToken.ts`)
+### Step 1: Add diagnostic logging to biometric hook
 
-- Pass `sandbox: false` to `apns-to-fcm` (matches production entitlement).
-- Capture **every step** of the registration flow into a structured debug log (in-memory + persisted to `localStorage` under key `timetrade:push-debug`), including timestamps, permission state, registration token (truncated), errors, and the conversion response. This drives the debug panel in step 3.
-- Expose the debug log array and a `clearDebugLog()` function from the hook.
+Add temporary structured logging (using the project's console pattern) to `useBiometricAuth.ts` at key decision points:
+- `checkBiometricStatus`: log the native/web branch taken, `isAvailable` result, and final state
+- `registerNative` / `authenticateNative`: log entry and catch block errors with actual error messages instead of swallowing them
+- This will help identify the exact failure point on device
 
-Logged events: `init`, `permission-check`, `permission-result`, `register-called`, `registration-fired`, `apns-conversion-start`, `apns-conversion-success`, `apns-conversion-error`, `token-saved`, `registration-error`, `setup-error`.
+### Step 2: Register native biometric plugin explicitly
 
-### 3. Add Debug Panel to Notification Settings (`src/components/settings/NotificationSettingsSheet.tsx`)
+Update `android/app/src/main/java/com/wallet/ai/MainActivity.java` to explicitly register the `NativeBiometric` plugin in `onCreate()`:
 
-Add a new collapsible **"Push Debug (Mobile)"** section, visible only when `Capacitor.isNativePlatform()` is true. Contents:
+```java
+import com.capgo.capacitor.nativebiometric.NativeBiometric;
 
-- **Status row**: platform (`ios`/`android`), `fcmStatus`, permission state.
-- **Token row**: full token (with copy button) — currently only shows truncated.
-- **Device info**: bundle ID, app version, OS version (via `@capacitor/device` if installed; otherwise UA string).
-- **Event log table**: scrollable list of every step with timestamp + payload. Shows in red if step is an error.
-- **Actions**:
-  - "Copy Debug Report" → copies all logs + status as JSON to clipboard, so the user can paste it back to us.
-  - "Re-register Token" → resets the `registeredRef` and re-runs the native registration flow (no app restart needed).
-  - "Send Server Test Push" → already exists, keep it.
-  - "Clear Log" → wipes the in-memory + localStorage log.
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NativeBiometric.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+```
 
-Show the panel **regardless of whether registration succeeded or failed** so it can be used to verify success too.
+### Step 3: Add iOS Face ID usage description
 
-### 4. Optional Android note
+Add `NSFaceIDUsageDescription` to the Capacitor iOS config in `capacitor.config.ts` under the `ios` key so it gets injected into Info.plist during `cap sync`:
 
-Android currently works (it returns FCM tokens directly, no conversion). The debug panel still helps confirm tokens exist and identify Android-specific failures.
+```typescript
+ios: {
+  contentInset: 'never',
+  scrollEnabled: true,
+}
+```
 
-## Files to edit
+And create a note that when the user runs `npx cap sync ios`, they need to manually add `NSFaceIDUsageDescription` to their Info.plist, OR add it via the Capacitor config plugin settings.
 
-| File | Change |
-|---|---|
-| `supabase/functions/github-build/index.ts` | `aps-environment` → `production` (lines 342, 348) |
-| `src/hooks/useFCMToken.ts` | Add structured debug log; pass `sandbox: false`; expose `debugLog` + `clearDebugLog` + `reRegister` |
-| `src/components/settings/NotificationSettingsSheet.tsx` | New native-only "Push Debug" section with status, full token, event log, copy/re-register/clear actions |
+### Step 4: Improve error handling in BiometricSetupDialog
 
-## After this lands
+Instead of silently returning `false` on failure, surface the actual error message from the native plugin so users see what went wrong (e.g., "Biometric hardware not enrolled", "User cancelled").
 
-1. Trigger a **new iOS build** from Build Center (CI must redeploy with the production entitlement).
-2. Install via TestFlight, open app → Settings → Notifications → grant permission.
-3. Open the new **Push Debug** section. You should see events: `init` → `permission-result: granted` → `register-called` → `registration-fired (token: xxxx)` → `apns-conversion-success` → `token-saved`.
-4. The `fcm_tokens` table will have a row with `platform = 'ios'`.
-5. Tap "Send Server Test Push" — you should see the toast and a banner notification.
-6. If anything fails, tap "Copy Debug Report" and paste it back to us — we'll see exactly which step broke instead of guessing.
+### Step 5: Fix the hook's useCallback dependencies
+
+Ensure `checkBiometricStatus` is stable and properly referenced by adding it to the `useEffect` dependency array and ensuring derived callbacks like `registerNative` always reference the latest version.
+
+## Files to Modify
+
+- `src/hooks/useBiometricAuth.ts` -- Add logging, fix callback deps, improve error messages
+- `src/components/settings/BiometricSetupDialog.tsx` -- Surface actual error messages
+- `android/app/src/main/java/com/wallet/ai/MainActivity.java` -- Explicit plugin registration
+- `capacitor.config.ts` -- Add iOS biometric plugin config
 
