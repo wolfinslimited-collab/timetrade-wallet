@@ -333,16 +333,16 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "\$PLIST"
 
           if [ ! -f "\$ENTITLEMENTS" ]; then
-            cat > "\$ENTITLEMENTS" <<'ENTEOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>aps-environment</key>
-  <string>production</string>
-</dict>
-</plist>
-ENTEOF
+            {
+              echo '<?xml version="1.0" encoding="UTF-8"?>'
+              echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+              echo '<plist version="1.0">'
+              echo '<dict>'
+              echo '  <key>aps-environment</key>'
+              echo '  <string>production</string>'
+              echo '</dict>'
+              echo '</plist>'
+            } > "\$ENTITLEMENTS"
           else
             /usr/libexec/PlistBuddy -c "Delete :aps-environment" "\$ENTITLEMENTS" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :aps-environment string production" "\$ENTITLEMENTS"
