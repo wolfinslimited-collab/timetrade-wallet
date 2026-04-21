@@ -128,7 +128,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
             </button>
           </div>
           <SheetHeader className="px-6 pb-2">
-            <SheetTitle className="text-xl font-bold text-center">Select Account</SheetTitle>
+            <SheetTitle className="text-xl font-bold text-left">Select Account</SheetTitle>
           </SheetHeader>
           <div className="px-6 pb-8 mt-2">
             <p className="text-sm text-muted-foreground mb-4">
@@ -191,7 +191,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
           </button>
         </div>
         <SheetHeader className="px-6 pb-2">
-          <SheetTitle className="text-xl font-bold text-center">{selectedAccount?.nickname}</SheetTitle>
+          <SheetTitle className="text-xl font-bold text-left">{selectedAccount?.nickname}</SheetTitle>
         </SheetHeader>
 
         <div className="flex flex-col px-6 pb-8">
