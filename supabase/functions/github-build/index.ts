@@ -310,6 +310,43 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "\$PLIST"
           echo "Export compliance key set"
 
+      - name: Configure push notifications (APNs)
+        run: |
+          PLIST="ios/App/App/Info.plist"
+          ENTITLEMENTS="ios/App/App/App.entitlements"
+
+          /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "\$PLIST" 2>/dev/null || \\
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "\$PLIST"
+          if ! /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "\$PLIST" 2>/dev/null | grep -q "remote-notification"; then
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes: string remote-notification" "\$PLIST"
+          fi
+          echo "UIBackgroundModes:"
+          /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "\$PLIST"
+
+          if [ ! -f "\$ENTITLEMENTS" ]; then
+            cat > "\$ENTITLEMENTS" << 'ENTEOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>aps-environment</key>
+            <string>production</string>
+          </dict>
+          </plist>
+          ENTEOF
+          else
+            /usr/libexec/PlistBuddy -c "Delete :aps-environment" "\$ENTITLEMENTS" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :aps-environment string production" "\$ENTITLEMENTS"
+          fi
+          echo "App.entitlements:"
+          cat "\$ENTITLEMENTS"
+
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          if [ -f "\$PBXPROJ" ] && ! grep -q "CODE_SIGN_ENTITLEMENTS = App/App.entitlements" "\$PBXPROJ"; then
+            sed -i '' 's|CODE_SIGN_STYLE = Manual;|CODE_SIGN_STYLE = Manual;\\n\\t\\t\\t\\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;|g' "\$PBXPROJ"
+            echo "CODE_SIGN_ENTITLEMENTS injected into pbxproj"
+          fi
+
       - name: Setup signing assets
         env:
           BUILD_CERTIFICATE_BASE64: \${{ secrets.BUILD_CERTIFICATE_BASE64 }}
