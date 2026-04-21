@@ -9,42 +9,44 @@ export interface KeypadButtonProps {
 
 export const KeypadButton = ({ onPress, disabled, children }: KeypadButtonProps) => {
   const [pressed, setPressed] = useState(false);
-  const firedRef = useRef(false);
+  const activeRef = useRef(false);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  const fire = () => {
     if (disabled) return;
-    e.preventDefault();
-    firedRef.current = true;
     setPressed(true);
     onPress();
   };
+
   const release = () => {
     setPressed(false);
-    firedRef.current = false;
+    activeRef.current = false;
   };
 
   return (
     <button
       type="button"
       disabled={disabled}
-      onPointerDown={handlePointerDown}
-      onPointerUp={release}
-      onPointerLeave={release}
-      onPointerCancel={release}
       onTouchStart={(e) => {
-        // Fallback: if pointerdown didn't fire (iOS WKWebView edge cases)
-        if (disabled || firedRef.current) return;
-        firedRef.current = true;
-        setPressed(true);
-        onPress();
+        if (disabled) return;
+        e.preventDefault(); // prevent ghost click / scroll
+        activeRef.current = true;
+        fire();
       }}
-      onTouchEnd={release}
-      onClick={() => {
-        // Last-resort fallback for click-only environments
-        if (disabled || firedRef.current) return;
-        firedRef.current = true;
-        setPressed(true);
-        onPress();
+      onTouchEnd={() => release()}
+      onTouchCancel={() => release()}
+      onMouseDown={(e) => {
+        // Desktop fallback (touch devices won't reach here due to preventDefault)
+        if (disabled || activeRef.current) return;
+        e.preventDefault();
+        activeRef.current = true;
+        fire();
+      }}
+      onMouseUp={() => release()}
+      onMouseLeave={() => release()}
+      onClick={(e) => {
+        // Last-resort fallback for accessibility / non-pointer environments
+        if (disabled || activeRef.current) return;
+        fire();
         setTimeout(release, 100);
       }}
       className={cn(
