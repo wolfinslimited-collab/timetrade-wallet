@@ -48,10 +48,27 @@ export function useFCMToken() {
     async function registerNative() {
       try {
         setStatus('requesting');
-        const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
+        
+        // Add a timeout so we don't hang forever if plugin isn't available
+        const timeoutMs = 15000;
+        const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+          Promise.race([
+            promise,
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms)),
+          ]);
 
-        const permResult = await FirebaseMessaging.requestPermissions();
-        if (permResult.receive !== "granted") {
+        let FirebaseMessaging: any;
+        try {
+          const mod = await timeout(import("@capacitor-firebase/messaging"), 5000);
+          FirebaseMessaging = mod.FirebaseMessaging;
+        } catch {
+          setStatus('error');
+          setErrorMessage('Firebase Messaging plugin not available. Rebuild the app.');
+          return;
+        }
+
+        const permResult: any = await timeout(FirebaseMessaging.requestPermissions(), timeoutMs);
+        if (permResult?.receive !== "granted") {
           setStatus('denied');
           return;
         }
@@ -59,7 +76,8 @@ export function useFCMToken() {
         const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
 
         // Get the real FCM token (bridges APNS→FCM on iOS)
-        const { token } = await FirebaseMessaging.getToken();
+        const result: any = await timeout(FirebaseMessaging.getToken(), timeoutMs);
+        const token = result?.token;
         if (token) {
           toast(`FCM token received (${platform})`, { description: token.substring(0, 20) + "..." });
           await saveToken(token, platform);
