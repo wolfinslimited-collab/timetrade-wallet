@@ -6,6 +6,7 @@ import { BottomNav, NavTab } from "@/components/BottomNav";
 import { WalletHeader } from "@/components/WalletHeader";
 import { QuickActions } from "@/components/QuickActions";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { ChevronRight } from "lucide-react";
 import { UnifiedTokenList } from "@/components/wallet/UnifiedTokenList";
 import { SettingsPage } from "./SettingsPage";
 import { StakingPage } from "./StakingPage";
@@ -306,12 +307,15 @@ const Index = () => {
           {/* Token List */}
           <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
             <div className="px-5 flex items-center justify-between mb-3">
-              <h2 className="text-[15px] font-bold text-foreground">Assets</h2>
+              <h2 className="text-[15px] font-bold text-foreground">
+                Assets
+              </h2>
               <button 
                 onClick={() => navigate("/assets")}
-                className="text-[12px] text-primary font-semibold active:opacity-70"
+                className="flex items-center gap-0.5 text-[12px] text-primary font-semibold active:opacity-70"
               >
                 View All
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
             <UnifiedTokenList key={`tokens-${refreshKey}`} />
