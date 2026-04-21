@@ -6,8 +6,18 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'never',
-    scrollEnabled: true
+    scrollEnabled: true,
   },
+  plugins: {
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true
+    },
+    CapacitorUpdater: {
+      autoUpdate: true
+    }
+  }
+};
   android: {
     allowMixedContent: true
   },

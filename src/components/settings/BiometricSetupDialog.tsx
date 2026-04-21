@@ -40,10 +40,11 @@ export const BiometricSetupDialog = ({
         }, 350);
         return true;
       }
-      setError("Couldn't set up biometrics");
+      setError("Biometric setup was cancelled or not available");
       return false;
-    } catch {
-      setError("Biometric setup failed");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Biometric setup failed";
+      setError(msg);
       return false;
     }
   };
