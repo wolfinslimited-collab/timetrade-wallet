@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Camera } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Capacitor } from "@capacitor/core";
 
 interface QRScannerModalProps {
   open: boolean;
@@ -29,7 +28,6 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<any>(null);
   const scannedRef = useRef(false);
-  const isNative = Capacitor.isNativePlatform();
 
   const stopWebScanner = useCallback(async () => {
     try {
@@ -48,64 +46,9 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
     scannerRef.current = null;
   }, []);
 
-  const stopNativeScanner = useCallback(async () => {
-    try {
-      const { BarcodeScanner } = await import("@capacitor-community/barcode-scanner");
-      await BarcodeScanner.stopScan();
-      document.querySelector("body")?.classList.remove("scanner-active");
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // Native scanner flow
-  useEffect(() => {
-    if (!open || !isNative) return;
-
-    scannedRef.current = false;
-    setError(null);
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { BarcodeScanner } = await import("@capacitor-community/barcode-scanner");
-
-        const status = await BarcodeScanner.checkPermission({ force: true });
-        if (!status.granted) {
-          setError("Camera permission denied. Please allow camera access in your device settings.");
-          return;
-        }
-
-        document.querySelector("body")?.classList.add("scanner-active");
-        await BarcodeScanner.hideBackground();
-
-        const result = await BarcodeScanner.startScan();
-        if (cancelled) return;
-
-        if (result.hasContent && result.content) {
-          scannedRef.current = true;
-          const address = extractAddress(result.content);
-          onScan(address);
-        }
-
-        document.querySelector("body")?.classList.remove("scanner-active");
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setError("Could not start scanner. " + (err instanceof Error ? err.message : String(err)));
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      stopNativeScanner();
-    };
-  }, [open, isNative, onScan, stopNativeScanner]);
-
   // Web scanner flow
   useEffect(() => {
-    if (!open || isNative) return;
+    if (!open) return;
 
     scannedRef.current = false;
     setError(null);
@@ -148,14 +91,10 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
       clearTimeout(timeout);
       stopWebScanner();
     };
-  }, [open, isNative, onScan, stopWebScanner]);
+  }, [open, onScan, stopWebScanner]);
 
   const handleClose = () => {
-    if (isNative) {
-      stopNativeScanner();
-    } else {
-      stopWebScanner();
-    }
+    stopWebScanner();
     onClose();
   };
 
