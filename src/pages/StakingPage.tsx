@@ -581,7 +581,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                       size="sm"
                       className={cn(
                         "w-full rounded-xl h-10",
-                        isUnlocked && "bg-foreground text-background hover:bg-foreground/90"
+                        isUnlocked && "bg-primary text-primary-foreground hover:bg-primary/90"
                       )}
                       onClick={() => handleUnstake(position)}
                       disabled={!isUnlocked}
