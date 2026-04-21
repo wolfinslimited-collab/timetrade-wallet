@@ -1,71 +1,41 @@
 
 
-# Fix Biometric Authentication on Native App
+# Fix Android Capacitor Build CI
 
 ## Problem
 
-There are multiple issues preventing biometrics from working reliably on the native app:
+The Android CI workflow (`build-android.yml`) runs `rm -rf android && npx cap add android`, which replaces the entire Android project with Capacitor defaults. Unlike the iOS workflow (which has extensive post-creation patching for permissions, Face ID, entitlements, etc.), the Android workflow is missing critical patching steps:
 
-1. **Silent error swallowing**: All biometric operations catch errors silently, making it impossible to debug what's actually failing on device.
+1. **Missing AndroidManifest permissions** -- `CAMERA` and `USE_BIOMETRIC` permissions are lost after recreation
+2. **Missing NativeBiometric plugin registration** -- `MainActivity.java` reverts to default without `registerPlugin(NativeBiometric.class)`
+3. **Missing proguard rules** -- R8 minification can strip Capacitor and plugin classes, causing runtime crashes
+4. **Version code/name not injected** -- `ANDROID_VERSION_CODE`/`ANDROID_VERSION_NAME` env vars are set but the default `build.gradle` doesn't read them (it uses hardcoded values)
 
-2. **Stale `checkBiometricStatus` reference**: The `useCallback` for `checkBiometricStatus` has an empty dependency array but is called inside `useEffect([], [])` -- this works on mount but the function reference used by other callbacks (like `registerNative`) may be stale if React optimizes re-renders.
-
-3. **No Capacitor plugin registration**: The `@capgo/capacitor-native-biometric` plugin is installed but not explicitly registered in `MainActivity.java`. Capacitor 8 auto-registers most plugins, but some community plugins (especially Capgo's) may need explicit `add()` calls in the bridge activity.
-
-4. **Missing iOS Face ID usage description**: The iOS project doesn't have an `NSFaceIDUsageDescription` entry -- this is **required** by Apple for Face ID. Without it, the biometric prompt will silently fail or crash on iOS.
-
-5. **Race condition on registration flow**: In `BiometricSetupDialog`, the PIN is verified against `localStorage.getItem("timetrade_pin")` before calling `onRegister(pin)`. If the stored PIN format ever changes, registration silently fails.
+The iOS build works because it has dedicated steps to patch Info.plist, entitlements, and permissions after `npx cap add ios`.
 
 ## Plan
 
-### Step 1: Add diagnostic logging to biometric hook
+### Step 1: Add Android post-creation patching steps
 
-Add temporary structured logging (using the project's console pattern) to `useBiometricAuth.ts` at key decision points:
-- `checkBiometricStatus`: log the native/web branch taken, `isAvailable` result, and final state
-- `registerNative` / `authenticateNative`: log entry and catch block errors with actual error messages instead of swallowing them
-- This will help identify the exact failure point on device
+Add new workflow steps (after "Sync Capacitor", before "Customize splash screen") to:
 
-### Step 2: Register native biometric plugin explicitly
+**a) Patch AndroidManifest.xml** -- Inject `CAMERA`, `USE_BIOMETRIC`, and `INTERNET` permissions using `sed`
 
-Update `android/app/src/main/java/com/wallet/ai/MainActivity.java` to explicitly register the `NativeBiometric` plugin in `onCreate()`:
-
+**b) Patch MainActivity.java** -- Replace the default file with the custom one that registers `NativeBiometric`:
 ```java
-import com.capgo.capacitor.nativebiometric.NativeBiometric;
-
-public class MainActivity extends BridgeActivity {
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        registerPlugin(NativeBiometric.class);
-        super.onCreate(savedInstanceState);
-    }
-}
+registerPlugin(NativeBiometric.class);
 ```
 
-### Step 3: Add iOS Face ID usage description
+**c) Inject proguard-rules.pro** -- Write the custom proguard rules that keep Capacitor and app classes
 
-Add `NSFaceIDUsageDescription` to the Capacitor iOS config in `capacitor.config.ts` under the `ios` key so it gets injected into Info.plist during `cap sync`:
+**d) Patch build.gradle for versioning** -- Inject the `ANDROID_VERSION_CODE`/`ANDROID_VERSION_NAME` env var reading logic into the default `build.gradle` so version numbers are dynamic
 
-```typescript
-ios: {
-  contentInset: 'never',
-  scrollEnabled: true,
-}
-```
+### Step 2: Update the edge function template
 
-And create a note that when the user runs `npx cap sync ios`, they need to manually add `NSFaceIDUsageDescription` to their Info.plist, OR add it via the Capacitor config plugin settings.
-
-### Step 4: Improve error handling in BiometricSetupDialog
-
-Instead of silently returning `false` on failure, surface the actual error message from the native plugin so users see what went wrong (e.g., "Biometric hardware not enrolled", "User cancelled").
-
-### Step 5: Fix the hook's useCallback dependencies
-
-Ensure `checkBiometricStatus` is stable and properly referenced by adding it to the `useEffect` dependency array and ensuring derived callbacks like `registerNative` always reference the latest version.
+Mirror all the same patching steps in the `WORKFLOW_TEMPLATES.android` template inside `supabase/functions/github-build/index.ts`, with proper `\$` escaping for shell variables inside the JS template literal.
 
 ## Files to Modify
 
-- `src/hooks/useBiometricAuth.ts` -- Add logging, fix callback deps, improve error messages
-- `src/components/settings/BiometricSetupDialog.tsx` -- Surface actual error messages
-- `android/app/src/main/java/com/wallet/ai/MainActivity.java` -- Explicit plugin registration
-- `capacitor.config.ts` -- Add iOS biometric plugin config
+- `.github/workflows/build-android.yml` -- Add patching steps after Capacitor sync
+- `supabase/functions/github-build/index.ts` -- Update the android workflow template to match
 
