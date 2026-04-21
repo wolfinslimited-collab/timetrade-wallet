@@ -227,9 +227,6 @@ export const AIChatPage = () => {
                 msg.role === "user" ? "justify-end" : "justify-start"
               )}
             >
-              {msg.role === "assistant" && (
-                <></>
-              )}
               <div className={cn(
                 "max-w-[85%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed",
                 msg.role === "user"
@@ -259,9 +256,6 @@ export const AIChatPage = () => {
                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                 )}
               </div>
-              {msg.role === "user" && (
-                <></>
-              )}
             </motion.div>
           ))}
         </AnimatePresence>
