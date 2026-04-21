@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Send, Bell, Smartphone, Monitor, Globe } from "lucide-react";
+import { ArrowLeft, Send, Bell, Smartphone, Monitor, Globe, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,22 @@ export default function AdminNotificationsPage() {
   const [icon, setIcon] = useState("");
   const [targetPlatform, setTargetPlatform] = useState("all");
   const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ sent: number; failed: number; total: number; cleaned: number } | null>(null);
+  const [devices, setDevices] = useState<{ platform: string; count: number }[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("fcm_tokens")
+      .select("platform")
+      .then(({ data }) => {
+        if (!data) return;
+        const counts: Record<string, number> = {};
+        data.forEach((d: any) => {
+          counts[d.platform] = (counts[d.platform] || 0) + 1;
+        });
+        setDevices(Object.entries(counts).map(([platform, count]) => ({ platform, count })));
+      });
+  }, [sendResult]);
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
@@ -46,7 +62,9 @@ export default function AdminNotificationsPage() {
 
       if (error) throw error;
 
-      toast.success("Notification sent!");
+      const result = data as any;
+      setSendResult(result);
+      toast.success(`Sent to ${result?.sent || 0} devices`);
       setTitle("");
       setMessage("");
       setIcon("");
@@ -68,6 +86,35 @@ export default function AdminNotificationsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        {/* Registered Devices */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" /> Registered Devices
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {devices.length === 0 ? (
+              <span className="text-xs text-muted-foreground">No devices registered</span>
+            ) : (
+              devices.map((d) => (
+                <span key={d.platform} className="px-3 py-1.5 rounded-lg bg-card/50 border border-border/30 text-xs font-medium">
+                  {d.platform}: {d.count}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Send Result */}
+        {sendResult && (
+          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-sm space-y-1">
+            <p className="font-medium text-primary">Last send result</p>
+            <p className="text-xs text-muted-foreground">
+              Sent: {sendResult.sent} | Failed: {sendResult.failed} | Total: {sendResult.total}
+              {sendResult.cleaned > 0 && ` | Cleaned: ${sendResult.cleaned} invalid tokens`}
+            </p>
+          </div>
+        )}
+
         {/* Platform */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Target Platform</Label>
