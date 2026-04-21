@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Sparkles, Zap, Shield, TrendingUp, MessageCircle } from "lucide-react";
+import { Send, Sparkles, Zap, Shield, TrendingUp, MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -166,6 +166,7 @@ export const AIChatPage = () => {
     <div className="flex flex-col flex-1 min-h-0">
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+        <div className="pt-3" />
         {/* Empty state */}
         {messages.length === 0 && (
           <motion.div
@@ -226,13 +227,8 @@ export const AIChatPage = () => {
                 msg.role === "user" ? "justify-end" : "justify-start"
               )}
             >
-              {msg.role === "assistant" && (
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 mt-1 border border-primary/10">
-                  <Bot className="w-4 h-4 text-primary" />
-                </div>
-              )}
               <div className={cn(
-                "max-w-[78%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed",
+                "max-w-[85%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed",
                 msg.role === "user"
                   ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-br-lg shadow-lg shadow-primary/10"
                   : "bg-card/80 border border-border/50 rounded-bl-lg"
@@ -260,11 +256,6 @@ export const AIChatPage = () => {
                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                 )}
               </div>
-              {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-xl bg-secondary/80 flex items-center justify-center shrink-0 mt-1 border border-border/30">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                </div>
-              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -276,9 +267,6 @@ export const AIChatPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="flex gap-2.5 mb-4"
           >
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
-              <Bot className="w-4 h-4 text-primary" />
-            </div>
             <div className="bg-card/80 border border-border/50 rounded-2xl rounded-bl-lg px-4 py-3.5">
               <div className="flex gap-1.5 items-center">
                 <span className="w-2 h-2 bg-primary/50 rounded-full animate-dot-pulse" style={{ animationDelay: "0ms" }} />
