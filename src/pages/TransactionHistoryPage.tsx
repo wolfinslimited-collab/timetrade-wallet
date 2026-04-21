@@ -9,6 +9,7 @@ import { TransactionFilterSheet, TransactionFilters } from "@/components/history
 import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransactionDetailSheet";
 import { Badge } from "@/components/ui/badge";
 import { useUnifiedTransactions } from "@/hooks/useUnifiedTransactions";
+import { TransactionListSkeleton } from "@/components/ui/loading-skeletons";
 
 export type TransactionType = "send" | "receive";
 export type TransactionStatus = "completed" | "pending" | "failed";

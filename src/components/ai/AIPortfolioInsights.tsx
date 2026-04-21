@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
 import { motion, AnimatePresence } from "framer-motion";
+import { InsightsLoadingSkeleton } from "@/components/ui/loading-skeletons";
 
 interface PortfolioInsightsData {
   risk_level: "Low" | "Medium" | "High";

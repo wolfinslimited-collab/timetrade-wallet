@@ -5,6 +5,7 @@ import { TradingOnboardingWizard, type TradingProfile } from "@/components/tradi
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { GenericCardSkeleton } from "@/components/ui/loading-skeletons";
 
 const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 

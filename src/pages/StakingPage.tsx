@@ -13,6 +13,7 @@ import { PinUnlockModal } from "@/components/send/PinUnlockModal";
 import { useStakeTransfer, getStakeWalletAddress } from "@/hooks/useStakeTransfer";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
 import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
+import { StakingBalanceSkeleton, StakingPositionsSkeleton } from "@/components/ui/loading-skeletons";
 
 interface StakingPageProps {
   onBack: () => void;

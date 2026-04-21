@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { BarChart3, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTradingApi, type EarningPoint } from "@/hooks/useTradingApi";
+import { ChartSkeleton } from "@/components/ui/loading-skeletons";
 
 type Range = "hourly" | "monthly";
 
