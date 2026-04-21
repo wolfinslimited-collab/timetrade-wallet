@@ -3,7 +3,6 @@ import { Capacitor } from "@capacitor/core";
 import { requestFCMToken, onForegroundMessage } from "@/lib/firebase";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export type FCMStatus = 'idle' | 'requesting' | 'registered' | 'denied' | 'error';
 
