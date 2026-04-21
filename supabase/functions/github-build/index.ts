@@ -317,8 +317,7 @@ jobs:
         run: |
           PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "\$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool true" "\$PLIST"
-          /usr/libexec/PlistBuddy -c "Delete :ITSEncryptionExportComplianceCode" "\$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "\$PLIST"
           echo "Export compliance key set"
 
       - name: Setup signing assets
