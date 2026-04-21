@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2, TrendingUp, TrendingDown, Bot, LogOut, RefreshCw,
   ArrowUpRight, ArrowDownRight, Activity, Zap,
-  ArrowDown, Eye, EyeOff,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
