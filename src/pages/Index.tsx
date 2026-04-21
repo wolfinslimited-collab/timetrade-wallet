@@ -150,9 +150,9 @@ const Index = () => {
   useEffect(() => {
     const tab = searchParams.get("tab") as NavTab | null;
     const allowedTabs: NavTab[] = ["wallet", "history", "staking", "trading", "ai", "settings"];
-    // Block deeplinks to hidden tabs (per-platform feature flags)
+    // Block deeplinks to hidden tabs (per-platform feature flags) — only after flags have loaded
     if (tab && allowedTabs.includes(tab) && !hiddenTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
-    if (tab && hiddenTabs.includes(tab as NavTab)) {
+    if (tab && !flags.isLoading && hiddenTabs.includes(tab as NavTab)) {
       setActiveTab("wallet");
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
@@ -161,7 +161,7 @@ const Index = () => {
       }, { replace: true });
     }
     if (!tab && activeTab !== "wallet") setActiveTab("wallet");
-  }, [searchParams, activeTab, hiddenTabs, setSearchParams]);
+  }, [searchParams, activeTab, hiddenTabs, flags.isLoading, setSearchParams]);
 
   const handleOnboardingComplete = () => {
     localStorage.setItem("timetrade_wallet_created", "true");
