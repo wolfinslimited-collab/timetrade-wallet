@@ -5,6 +5,7 @@ import { TradingOnboardingWizard, type TradingProfile } from "@/components/tradi
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { GenericCardSkeleton } from "@/components/ui/loading-skeletons";
 
 const TRADING_PROFILE_KEY = "timetrade_trading_profile";
 
@@ -43,8 +44,8 @@ const AITradingOnboardingPage = () => {
 
   if (api.isCheckingSession || !api.isAuthenticated || !balanceLoaded) {
     return (
-      <div className="min-h-full bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="min-h-full bg-background p-4">
+        <GenericCardSkeleton />
       </div>
     );
   }

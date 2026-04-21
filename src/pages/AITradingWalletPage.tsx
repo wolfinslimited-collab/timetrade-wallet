@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { TradingDashboardSkeleton } from "@/components/ui/loading-skeletons";
 
 type TabId = "deposit" | "withdraw";
 
@@ -131,9 +132,7 @@ const AITradingWalletPage = () => {
 
   if (api.isCheckingSession || !api.isAuthenticated) {
     return (
-      <div className="min-h-full bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <TradingDashboardSkeleton />
     );
   }
 

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
 import { motion, AnimatePresence } from "framer-motion";
+import { InsightsLoadingSkeleton } from "@/components/ui/loading-skeletons";
 
 interface PortfolioInsightsData {
   risk_level: "Low" | "Medium" | "High";
@@ -126,14 +127,7 @@ export const AIPortfolioInsights = ({ assets, totalValue }: AIPortfolioInsightsP
   if (isLoading) {
     return (
       <div className="px-4 pb-3">
-        <div className="bg-card/50 backdrop-blur-sm border border-border/30 rounded-2xl p-8 flex flex-col items-center gap-3">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500/10 to-blue-500/10 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-foreground/60" />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Analyzing portfolio…</p>
-        </div>
+        <InsightsLoadingSkeleton />
       </div>
     );
   }

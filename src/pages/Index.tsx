@@ -20,8 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { AppUpdateBanner } from "@/components/AppUpdateBanner";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PortfolioSkeleton } from "@/components/ui/loading-skeletons";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 import { supabase } from "@/integrations/supabase/client";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -267,10 +267,7 @@ const Index = () => {
           {/* Balance Section */}
           <div className="px-6 pt-8 pb-6 text-center">
             {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
-              <div className="flex items-center justify-center gap-2 py-10">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                <span className="text-muted-foreground text-sm">Loading portfolio…</span>
-              </div>
+              <PortfolioSkeleton />
             ) : (
               <>
                 <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>

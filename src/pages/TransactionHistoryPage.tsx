@@ -9,6 +9,7 @@ import { TransactionFilterSheet, TransactionFilters } from "@/components/history
 import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransactionDetailSheet";
 import { Badge } from "@/components/ui/badge";
 import { useUnifiedTransactions } from "@/hooks/useUnifiedTransactions";
+import { TransactionListSkeleton } from "@/components/ui/loading-skeletons";
 
 export type TransactionType = "send" | "receive";
 export type TransactionStatus = "completed" | "pending" | "failed";
@@ -528,9 +529,8 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
 
       {/* Loading State */}
       {isConnected && unifiedTx.isLoading && (
-        <div className="flex-1 flex flex-col items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Loading transactions...</p>
+        <div className="flex-1 px-4">
+          <TransactionListSkeleton />
         </div>
       )}
 
