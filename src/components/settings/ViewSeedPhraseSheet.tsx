@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Copy, AlertTriangle, Shield, ChevronRight, Wallet } from "lucide-react";
+import { Eye, EyeOff, Copy, AlertTriangle, Shield, ChevronRight, Wallet, X } from "lucide-react";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
@@ -118,9 +118,17 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   if (step === "select-account") {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl bg-background border-border p-0">
-          <SheetHeader className="px-6 pt-6 pb-2">
-            <SheetTitle className="text-xl font-bold">Select Account</SheetTitle>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl bg-background border-border p-0" hideCloseButton>
+          <div className="flex justify-center pt-3 pb-1">
+            <button
+              onClick={handleClose}
+              className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+            >
+              <X className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+          <SheetHeader className="px-6 pb-2">
+            <SheetTitle className="text-xl font-bold text-center">Select Account</SheetTitle>
           </SheetHeader>
           <div className="px-6 pb-8 mt-2">
             <p className="text-sm text-muted-foreground mb-4">
@@ -173,14 +181,17 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   // Step 3: View seed phrase
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto">
-        <SheetHeader className="px-6 pt-6 pb-2">
-          <div className="flex items-center gap-2">
-            <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-              ← Back
-            </button>
-            <SheetTitle className="text-xl font-bold">{selectedAccount?.nickname}</SheetTitle>
-          </div>
+      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto" hideCloseButton>
+        <div className="flex justify-center pt-3 pb-1">
+          <button
+            onClick={handleClose}
+            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+          >
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+        <SheetHeader className="px-6 pb-2">
+          <SheetTitle className="text-xl font-bold text-center">{selectedAccount?.nickname}</SheetTitle>
         </SheetHeader>
 
         <div className="flex flex-col px-6 pb-8">
