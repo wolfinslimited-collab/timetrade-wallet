@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2, TrendingUp, TrendingDown, Bot, LogOut, RefreshCw,
   ArrowUpRight, ArrowDownRight, Activity, Zap,
-  ArrowDown, Eye, EyeOff,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { PnlChart } from "@/components/trading/PnlChart";
+import { TradingDashboardSkeleton } from "@/components/ui/loading-skeletons";
 
 /* ── Auth Screens ── */
 
@@ -149,7 +150,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const navigate = useNavigate();
   const { balance, tradingStatus, earnings, tradeHistory, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
-  const [hideBalance, setHideBalance] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
   const totalProfit = balance?.released_profit || 0;
@@ -169,14 +169,11 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
   const fmt = (n: number) =>
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const mask = (v: string) => (hideBalance ? "••••••" : v);
   const pnlPct = totalBalance > 0 ? (totalProfit / totalBalance) * 100 : 0;
 
   if (isLoading && !balance) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <TradingDashboardSkeleton />
     );
   }
 
@@ -210,23 +207,14 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <div className="pointer-events-none absolute -bottom-24 -left-16 w-56 h-56 rounded-full bg-primary/10 blur-3xl" />
 
         <div className="relative">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Total Portfolio
-            </p>
-            <button
-              onClick={() => setHideBalance(!hideBalance)}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-background/40 border border-border/40 text-muted-foreground active:bg-background/70"
-              aria-label="Toggle balance"
-            >
-              {hideBalance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Total Portfolio
+          </p>
 
           <div className="mt-3 flex items-baseline">
             <span className="text-[22px] font-semibold text-foreground/70 mr-1">$</span>
             <span className="text-[42px] font-bold font-mono text-foreground tracking-tight leading-none tabular-nums">
-              {mask(fmt(totalBalance))}
+              {fmt(totalBalance)}
             </span>
           </div>
 
@@ -244,7 +232,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
               ) : (
                 <TrendingDown className="w-3 h-3" />
               )}
-              {totalProfit >= 0 ? "+" : "-"}${mask(fmt(Math.abs(totalProfit)))}
+              {totalProfit >= 0 ? "+" : "-"}${fmt(Math.abs(totalProfit))}
             </div>
             <span className="text-[11px] text-muted-foreground font-medium tabular-nums">
               {totalProfit >= 0 ? "+" : ""}
@@ -253,12 +241,12 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           </div>
 
           {/* Control row */}
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-5 flex items-center gap-2.5">
             <Button
               onClick={handleToggle}
               disabled={toggling}
               className={cn(
-                "h-12 flex-1 rounded-2xl text-[14px] font-semibold shadow-lg",
+                "h-[52px] flex-1 rounded-2xl text-[14px] font-semibold shadow-lg",
                 isActive
                   ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
                   : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
@@ -275,40 +263,48 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
                 </>
               )}
             </Button>
-            <div
+            <button
+              onClick={() => navigate("/live-trades")}
               className={cn(
-                "h-12 px-3.5 rounded-2xl flex items-center gap-2 border",
+                "h-[52px] px-4 rounded-2xl flex items-center gap-2 border active:scale-95 transition-transform",
                 isActive
-                  ? "bg-success/10 border-success/30"
-                  : "bg-secondary/40 border-border/50"
+                  ? "bg-success/10 border-success/30 hover:bg-success/15"
+                  : "bg-secondary/40 border-border/50 hover:bg-secondary/60"
               )}
             >
               <span
                 className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  isActive ? "bg-success animate-pulse" : "bg-muted-foreground/40"
+                  "relative flex w-2 h-2"
                 )}
-              />
+              >
+                {isActive && (
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+                )}
+                <span className={cn(
+                  "relative inline-flex w-2 h-2 rounded-full",
+                  isActive ? "bg-success" : "bg-muted-foreground/40"
+                )} />
+              </span>
               <span
                 className={cn(
-                  "text-[11px] font-semibold",
+                  "text-[12px] font-bold tracking-wide",
                   isActive ? "text-success" : "text-muted-foreground"
                 )}
               >
                 {isActive ? "LIVE" : "IDLE"}
               </span>
-            </div>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Stat grid */}
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <StatCard label="Available" value={`$${mask(fmt(availableBalance))}`} />
-        <StatCard label="In Trades" value={`$${mask(fmt(lockedBalance))}`} />
+        <StatCard label="Available" value={`$${fmt(availableBalance)}`} />
+        <StatCard label="In Trades" value={`$${fmt(lockedBalance)}`} />
         <StatCard
           label="7d Earnings"
-          value={`${earningsTotal >= 0 ? "+" : "-"}$${mask(fmt(Math.abs(earningsTotal)))}`}
+          value={`${earningsTotal >= 0 ? "+" : "-"}$${fmt(Math.abs(earningsTotal))}`}
           accent={earningsTotal > 0 ? "success" : earningsTotal < 0 ? "destructive" : undefined}
         />
       </div>
@@ -504,9 +500,7 @@ export const AITradingPage = ({ onBack }: AITradingPageProps) => {
 
   if (api.isCheckingSession) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <TradingDashboardSkeleton />
     );
   }
 
