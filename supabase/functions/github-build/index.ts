@@ -389,6 +389,34 @@ jobs:
 
       - name: Add push notification entitlements
         run: |
+          # Ensure GoogleService-Info.plist is added to the Xcode target
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          PLIST_FILE="ios/App/App/GoogleService-Info.plist"
+          if [ -f "\$PLIST_FILE" ] && [ -f "\$PBXPROJ" ]; then
+            if ! grep -q "GoogleService-Info.plist" "\$PBXPROJ"; then
+              ruby -e '
+                pbx = File.read(ARGV[0])
+                file_ref_id = "GSPLIST001"
+                build_file_id = "GSPLIST002"
+                unless pbx.include?("GoogleService-Info.plist")
+                  pbx.sub!(/\\/\\* End PBXFileReference section \\*\\//) {
+                    "#{file_ref_id} /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = \\"GoogleService-Info.plist\\"; sourceTree = \\"<group>\\"; };\\n/* End PBXFileReference section */"
+                  }
+                  pbx.sub!(/\\/\\* End PBXBuildFile section \\*\\//) {
+                    "#{build_file_id} /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = #{file_ref_id} /* GoogleService-Info.plist */; };\\n/* End PBXBuildFile section */"
+                  }
+                  pbx.gsub!(/files = \\(([^)]*\\/\\* Resources \\*\\/[^)]*)\\)/) { |m|
+                    m.sub(/\\)$/, "#{build_file_id} /* GoogleService-Info.plist in Resources */,)")
+                  }
+                end
+                File.write(ARGV[0], pbx)
+              ' "\$PBXPROJ"
+              echo "GoogleService-Info.plist added to Xcode target"
+            else
+              echo "GoogleService-Info.plist already in Xcode target"
+            fi
+          fi
+
           cat > ios/App/App/App.entitlements << 'ENTEOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

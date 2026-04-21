@@ -156,6 +156,18 @@ Deno.serve(async (req) => {
               token,
               notification: { title, body: message },
               data: { type: type || "info", icon: icon || "" },
+              apns: {
+                payload: {
+                  aps: {
+                    sound: "default",
+                    "content-available": 1,
+                    alert: { title, body: message },
+                  },
+                },
+              },
+              android: {
+                notification: { sound: "default" },
+              },
             },
           }),
         });
@@ -166,8 +178,9 @@ Deno.serve(async (req) => {
           const err = await res.json();
           console.error("FCM send failed for token:", token.substring(0, 20), JSON.stringify(err));
           failed++;
-          // Remove invalid tokens
-          if (err.error?.details?.some((d: any) => d.errorCode === "UNREGISTERED")) {
+          // Remove invalid tokens (UNREGISTERED, INVALID_ARGUMENT, NOT_FOUND)
+          const errorCode = err.error?.details?.[0]?.errorCode || err.error?.status || "";
+          if (["UNREGISTERED", "INVALID_ARGUMENT", "NOT_FOUND"].includes(errorCode)) {
             failedTokens.push(token);
           }
         }
@@ -190,7 +203,7 @@ Deno.serve(async (req) => {
       is_active: true,
     });
 
-    return new Response(JSON.stringify({ success: true, sent, failed }), {
+    return new Response(JSON.stringify({ success: true, sent, failed, total: tokens.length, cleaned: failedTokens.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
