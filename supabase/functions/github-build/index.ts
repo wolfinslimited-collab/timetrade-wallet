@@ -313,6 +313,15 @@ jobs:
       - name: Configure push notifications (APNs)
         run: |
           PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :NSCameraUsageDescription" "\$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Scan QR codes to quickly enter wallet addresses.'" "\$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :NSPhotoLibraryUsageDescription" "\$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Import QR codes from your photo library.'" "\$PLIST"
+          echo "Camera and photo library permission keys set"
+
+      - name: Configure APNs entitlements
+        run: |
+          PLIST="ios/App/App/Info.plist"
           ENTITLEMENTS="ios/App/App/App.entitlements"
 
           /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "\$PLIST" 2>/dev/null || \\
