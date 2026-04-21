@@ -67,8 +67,8 @@ export function useFCMToken() {
           return;
         }
 
-        const permResult = await timeout(FirebaseMessaging.requestPermissions(), timeoutMs);
-        if (permResult.receive !== "granted") {
+        const permResult: any = await timeout(FirebaseMessaging.requestPermissions(), timeoutMs);
+        if (permResult?.receive !== "granted") {
           setStatus('denied');
           return;
         }
@@ -76,7 +76,8 @@ export function useFCMToken() {
         const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
 
         // Get the real FCM token (bridges APNS→FCM on iOS)
-        const { token } = await timeout(FirebaseMessaging.getToken(), timeoutMs);
+        const result: any = await timeout(FirebaseMessaging.getToken(), timeoutMs);
+        const token = result?.token;
         if (token) {
           toast(`FCM token received (${platform})`, { description: token.substring(0, 20) + "..." });
           await saveToken(token, platform);
