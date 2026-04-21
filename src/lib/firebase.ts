@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage, type Messaging } from "firebase/messaging";
+import { Capacitor } from "@capacitor/core";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCBfKgjSvSy9tifr5I4EdI3wp2TQF0akHs",
@@ -11,7 +12,11 @@ const firebaseConfig = {
   measurementId: "G-J058ZT6EPZ",
 };
 
-const app = initializeApp(firebaseConfig);
+let app: ReturnType<typeof initializeApp> | null = null;
+
+if (!Capacitor.isNativePlatform()) {
+  app = initializeApp(firebaseConfig);
+}
 
 let messaging: Messaging | null = null;
 
@@ -20,6 +25,7 @@ let messaging: Messaging | null = null;
  */
 export function getFirebaseMessaging(): Messaging | null {
   if (messaging) return messaging;
+  if (!app) return null;
   try {
     messaging = getMessaging(app);
     return messaging;
@@ -33,7 +39,7 @@ export function getFirebaseMessaging(): Messaging | null {
  */
 export async function requestFCMToken(): Promise<string | null> {
   const m = getFirebaseMessaging();
-  if (!m) return null;
+  if (!m || !app) return null;
 
   try {
     const token = await getToken(m, {
