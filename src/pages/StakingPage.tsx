@@ -636,6 +636,53 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             </div>
           )}
         </div>
+
+        {/* Unstake Requests */}
+        {unstakeRequests.length > 0 && (
+          <div>
+            <h2 className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Unstake History</h2>
+            <div className="space-y-2">
+              {unstakeRequests.map((req) => {
+                const statusColor = req.status === 'completed' 
+                  ? 'bg-success/15 text-success border-success/20' 
+                  : req.status === 'rejected'
+                    ? 'bg-destructive/15 text-destructive border-destructive/20'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/20';
+                const statusLabel = req.status === 'completed' ? 'Paid' : req.status === 'rejected' ? 'Rejected' : 'Pending';
+                return (
+                  <Card key={req.id} className="p-4 bg-card/30 border-border/20 rounded-2xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <TokenLogo symbol={req.token_symbol} size="sm" />
+                        <div>
+                          <p className="font-semibold text-sm">{req.token_symbol}</p>
+                          <p className="text-[11px] text-muted-foreground capitalize">{req.chain}</p>
+                        </div>
+                      </div>
+                      <div className={cn("px-2.5 py-1 rounded-full text-[11px] font-semibold border", statusColor)}>
+                        {statusLabel}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase">Principal</p>
+                        <p className="text-xs font-semibold font-mono">{formatCurrency(req.staked_amount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase">Rewards</p>
+                        <p className="text-xs font-semibold font-mono text-success">+{formatCurrency(req.earned_rewards)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground uppercase">Date</p>
+                        <p className="text-xs font-mono">{new Date(req.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Token Selection Sheet */}
