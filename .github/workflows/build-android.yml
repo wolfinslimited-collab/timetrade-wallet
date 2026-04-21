@@ -38,8 +38,12 @@ jobs:
       - name: Recreate Android platform
         run: |
           TMP_GOOGLE_SERVICES="$RUNNER_TEMP/google-services.json"
+          TMP_BUILD_GRADLE="$RUNNER_TEMP/android-app-build.gradle"
           if [ -f android/app/google-services.json ]; then
             cp android/app/google-services.json "$TMP_GOOGLE_SERVICES"
+          fi
+          if [ -f android/app/build.gradle ]; then
+            cp android/app/build.gradle "$TMP_BUILD_GRADLE"
           fi
 
           rm -rf android
@@ -48,6 +52,10 @@ jobs:
           if [ -f "$TMP_GOOGLE_SERVICES" ]; then
             mkdir -p android/app
             cp "$TMP_GOOGLE_SERVICES" android/app/google-services.json
+          fi
+          if [ -f "$TMP_BUILD_GRADLE" ]; then
+            mkdir -p android/app
+            cp "$TMP_BUILD_GRADLE" android/app/build.gradle
           fi
 
       - name: Sync Capacitor
