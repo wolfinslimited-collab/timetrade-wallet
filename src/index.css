@@ -66,17 +66,6 @@
     -ms-overflow-style: none;
   }
 
-  /* Force GPU compositing on all animated/transitioning elements */
-  [class*="animate-"],
-  [class*="transition-"],
-  [data-state="open"],
-  [data-state="closed"] {
-    will-change: transform, opacity;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
-  }
-
   *::-webkit-scrollbar {
     display: none;
   }

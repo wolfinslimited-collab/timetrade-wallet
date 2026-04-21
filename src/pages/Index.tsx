@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { WalletOnboarding } from "@/components/WalletOnboarding";
 import { LockScreen } from "@/components/LockScreen";
@@ -217,50 +218,41 @@ const Index = () => {
     );
   }
 
-  if (currentView === "settings") {
+  const renderTabContent = () => {
+    switch (currentView) {
+      case "settings":
+        return <SettingsPage onBack={() => handleTabChange("wallet")} />;
+      case "history":
+        return <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />;
+      case "staking":
+        return <StakingPage onBack={() => handleTabChange("wallet")} />;
+      case "trading":
+        return <AITradingPage onBack={() => handleTabChange("wallet")} />;
+      default:
+        return null;
+    }
+  };
+
+  if (currentView !== "wallet") {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <SettingsPage onBack={() => handleTabChange("wallet")} />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
+            className="flex-1 overflow-y-auto"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {renderTabContent()}
+          </motion.div>
+        </AnimatePresence>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
       </div>
     );
   }
-
-  if (currentView === "history") {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <TransactionHistoryPage onBack={() => handleTabChange("wallet")} />
-        </div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </div>
-    );
-  }
-
-  if (currentView === "staking") {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <StakingPage onBack={() => handleTabChange("wallet")} />
-        </div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </div>
-    );
-  }
-
-  if (currentView === "trading") {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <AITradingPage onBack={() => handleTabChange("wallet")} />
-        </div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </div>
-    );
-  }
-
 
   return (
     <div className="flex flex-col flex-1 w-full relative overflow-hidden">
