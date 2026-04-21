@@ -62,6 +62,16 @@ export const FullScreenPinModal = ({
     }
   }, [open]);
 
+  // Reset when step changes (detected via title prop)
+  useEffect(() => {
+    if (open) {
+      setPin("");
+      setShake(false);
+      setSuccess(false);
+      setSubmitting(false);
+    }
+  }, [title]);
+
   // Trigger shake on external error
   useEffect(() => {
     if (externalError && open) {
