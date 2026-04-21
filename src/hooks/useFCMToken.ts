@@ -3,7 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { requestFCMToken, onForegroundMessage } from "@/lib/firebase";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { supabase as externalSupabase } from "@/lib/externalSupabase";
+import { supabase } from "@/integrations/supabase/client";
 
 export type FCMStatus = 'idle' | 'requesting' | 'registered' | 'denied' | 'error';
 
@@ -48,7 +48,7 @@ export function useFCMToken() {
           const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
           toast(`Push token received (${platform})`, { description: token.value.substring(0, 20) + "..." });
           setTokenValue(token.value);
-          const { error } = await externalSupabase.from("fcm_tokens").upsert(
+          const { error } = await supabase.from("fcm_tokens").upsert(
             { token: token.value, platform } as any,
             { onConflict: "token" }
           );
@@ -107,7 +107,7 @@ export function useFCMToken() {
         else if (ua.includes("iphone") || ua.includes("ipad")) platform = "iphone";
 
         // Upsert token
-        const { error } = await externalSupabase.from("fcm_tokens").upsert(
+        const { error } = await supabase.from("fcm_tokens").upsert(
           { token, platform } as any,
           { onConflict: "token" }
         );
@@ -142,7 +142,7 @@ export function useFCMToken() {
 
   const sendTestPush = useCallback(async () => {
     try {
-      const res = await externalSupabase.functions.invoke("fcm-push", {
+      const res = await supabase.functions.invoke("fcm-push", {
         body: { title: "Test Push", message: "If you see this, push notifications work!", type: "info" },
       });
       if (res.error) {
