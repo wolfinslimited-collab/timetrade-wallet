@@ -774,6 +774,11 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
                   Amount exceeds available balance
                 </p>
               )}
+              {isBelowMinimum && !isOverBalance && (
+                <p className="text-xs text-destructive mt-1.5 px-1">
+                  Minimum stake amount is ${minStakeAmount}
+                </p>
+              )}
             </div>
 
             {/* Earnings Preview */}
