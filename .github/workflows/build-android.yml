@@ -149,6 +149,34 @@ jobs:
           keyPassword=$ANDROID_KEY_PASSWORD
           KEYEOF
             echo "Signing configured for release build"
+
+            # Inject signingConfigs into app/build.gradle so Gradle actually uses key.properties
+            BUILD_GRADLE="android/app/build.gradle"
+            if [ -f "$BUILD_GRADLE" ]; then
+              # Add key.properties loading at the top of the android block
+              sed -i '/^android {/a \
+    def keystorePropertiesFile = rootProject.file("key.properties")\
+    def keystoreProperties = new Properties()\
+    if (keystorePropertiesFile.exists()) {\
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\
+    }' "$BUILD_GRADLE"
+
+              # Add signingConfigs block before buildTypes
+              sed -i '/buildTypes {/i \
+    signingConfigs {\
+        release {\
+            storeFile file(keystoreProperties["storeFile"] ?: "release.keystore")\
+            storePassword keystoreProperties["storePassword"] ?: ""\
+            keyAlias keystoreProperties["keyAlias"] ?: ""\
+            keyPassword keystoreProperties["keyPassword"] ?: ""\
+        }\
+    }' "$BUILD_GRADLE"
+
+              # Set release buildType to use release signing config
+              sed -i '/buildTypes {/,/}/ { /release {/,/}/ s/minifyEnabled/signingConfig signingConfigs.release\n            minifyEnabled/ }' "$BUILD_GRADLE"
+
+              echo "Gradle build.gradle patched with signing config"
+            fi
           else
             echo "No signing secrets provided, building debug APK"
           fi
