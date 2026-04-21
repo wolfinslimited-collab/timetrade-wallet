@@ -148,6 +148,15 @@ export default function AdminNotificationsPage() {
       </div>
 
       <div className="p-4 border-t border-border/30">
+        {(!title.trim() || !message.trim()) && (
+          <p className="text-xs text-warning mb-2 text-center">
+            {!title.trim() && !message.trim()
+              ? "Please fill in title and message"
+              : !title.trim()
+              ? "Please fill in the title"
+              : "Please fill in the message"}
+          </p>
+        )}
         <Button
           onClick={handleSend}
           disabled={sending || !title.trim() || !message.trim()}
