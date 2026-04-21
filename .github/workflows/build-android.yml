@@ -153,6 +153,38 @@ jobs:
             echo "No signing secrets provided, building debug APK"
           fi
 
+      - name: Patch build.gradle for release signing
+        run: |
+          BUILD_GRADLE="android/app/build.gradle"
+          if [ -f android/key.properties ] && [ -f "$BUILD_GRADLE" ]; then
+            # Inject keystoreProperties loading at top of file
+            sed -i '1i\
+            def keystorePropertiesFile = rootProject.file("key.properties")\
+            def keystoreProperties = new Properties()\
+            if (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }' "$BUILD_GRADLE"
+
+            # Inject signingConfigs block before buildTypes
+            sed -i '/buildTypes {/i\
+    signingConfigs {\
+        release {\
+            storeFile file(keystoreProperties["storeFile"])\
+            storePassword keystoreProperties["storePassword"]\
+            keyAlias keystoreProperties["keyAlias"]\
+            keyPassword keystoreProperties["keyPassword"]\
+        }\
+    }' "$BUILD_GRADLE"
+
+            # Inject signingConfig into the release buildType
+            sed -i '/buildTypes {/,/}/ { /release {/a\
+                signingConfig signingConfigs.release
+            }' "$BUILD_GRADLE"
+
+            echo "=== Patched build.gradle ==="
+            cat "$BUILD_GRADLE"
+          else
+            echo "No key.properties or build.gradle found, skipping signing patch"
+          fi
+
       - name: Build APK
         run: |
           cd android
