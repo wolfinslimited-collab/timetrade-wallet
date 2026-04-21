@@ -645,6 +645,45 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Patch Android native config
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "USE_BIOMETRIC" "\$MANIFEST"; then
+            sed -i '/<uses-permission android:name="android.permission.INTERNET"/a\\    <uses-permission android:name="android.permission.CAMERA" />\\n    <uses-permission android:name="android.permission.USE_BIOMETRIC" />' "\$MANIFEST"
+            echo "Injected CAMERA and USE_BIOMETRIC permissions"
+          fi
+
+          MAIN_ACT="android/app/src/main/java/com/getcapacitor/myapp/MainActivity.java"
+          mkdir -p "\$(dirname "\$MAIN_ACT")"
+          cat > "\$MAIN_ACT" << 'JAVAEOF'
+          package com.getcapacitor.myapp;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+          import com.capgo.capacitor.nativebiometric.NativeBiometric;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(NativeBiometric.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
+          JAVAEOF
+          echo "MainActivity patched with NativeBiometric registration"
+
+          cat > android/app/proguard-rules.pro << 'PROGUARDEOF'
+          -keep class com.getcapacitor.** { *; }
+          -keep class com.wallet.ai.** { *; }
+          -dontwarn com.getcapacitor.**
+          -keepclassmembers class * {
+              @android.webkit.JavascriptInterface <methods>;
+          }
+          -keepattributes SourceFile,LineNumberTable
+          -renamesourcefileattribute SourceFile
+          PROGUARDEOF
+          echo "Proguard rules injected"
+
       - name: Customize splash screen (dark + logo)
         run: |
           if [ -f public/app-logo.png ]; then
