@@ -208,18 +208,9 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
         <div className="pointer-events-none absolute -bottom-24 -left-16 w-56 h-56 rounded-full bg-primary/10 blur-3xl" />
 
         <div className="relative">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Total Portfolio
-            </p>
-            <button
-              onClick={() => setHideBalance(!hideBalance)}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-background/40 border border-border/40 text-muted-foreground active:bg-background/70"
-              aria-label="Toggle balance"
-            >
-              {hideBalance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Total Portfolio
+          </p>
 
           <div className="mt-3 flex items-baseline">
             <span className="text-[22px] font-semibold text-foreground/70 mr-1">$</span>
