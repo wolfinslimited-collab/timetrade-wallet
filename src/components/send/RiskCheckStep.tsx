@@ -144,7 +144,7 @@ export const RiskCheckStep = ({
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 w-full mt-auto px-2">
+          <div className="flex gap-3 w-full mt-auto px-2" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
             {isHigh && (
               <Button
                 variant="outline"

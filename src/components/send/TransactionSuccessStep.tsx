@@ -164,7 +164,7 @@ export const TransactionSuccessStep = ({ transaction, onClose }: TransactionSucc
       </div>
 
       {/* Done Button */}
-      <div className="w-full pt-4">
+      <div className="w-full pt-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
         <Button
           onClick={handleDone}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"

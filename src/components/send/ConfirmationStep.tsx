@@ -480,7 +480,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       )}
 
       {/* Confirm Button - Fixed at bottom with safe area */}
-      <div className="mt-auto pt-4 pb-6">
+      <div className="mt-auto pt-4 pb-6" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
         <Button
           onClick={handleConfirmClick}
           disabled={isProcessing || isSigningWithWC}

@@ -164,7 +164,7 @@ const SendPage = () => {
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
       {showHeader && (
-        <div className="px-6 pt-6 pb-2 relative flex items-center justify-center">
+        <div className="px-6 pt-6 pb-2 relative flex items-center justify-center" style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1.5rem)" }}>
           <button
             type="button"
             onClick={handleBack}
