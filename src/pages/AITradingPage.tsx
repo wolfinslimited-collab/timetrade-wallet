@@ -149,7 +149,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const navigate = useNavigate();
   const { balance, tradingStatus, earnings, tradeHistory, isLoading, fetchDashboardData, logout } = api;
   const [toggling, setToggling] = useState(false);
-  const [hideBalance, setHideBalance] = useState(false);
 
   const totalBalance = (balance?.usd_balance || 0) + (balance?.locked_balance || 0);
   const totalProfit = balance?.released_profit || 0;
@@ -169,7 +168,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
   const fmt = (n: number) =>
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const mask = (v: string) => (hideBalance ? "••••••" : v);
   const pnlPct = totalBalance > 0 ? (totalProfit / totalBalance) * 100 : 0;
 
   if (isLoading && !balance) {
