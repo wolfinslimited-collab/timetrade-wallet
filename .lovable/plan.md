@@ -1,69 +1,59 @@
 
 
-# iOS App Crash — Root Cause Analysis and Fix
+# iOS App Crash — Real Root Cause Found
 
-## Problem
-The app crashes immediately on launch on iOS. Based on the codebase analysis, there are two high-probability crash sources:
+## The Problem
+After multiple investigations, the actual crash cause is now clear:
 
-1. **`@reown/appkit` (WalletConnect) uses `require()` at module scope** — The `WalletConnectContext.tsx` file calls `require('@reown/appkit/react')` at the top level. While wrapped in a try/catch, `@reown/appkit` internally accesses browser-only APIs (WebSocket, window globals, IndexedDB) that may crash the WKWebView before the catch can fire. Additionally, `require()` is a CommonJS call in a Vite ESM build — Vite transforms it, but the resulting module initialization can trigger fatal errors in WKWebView.
+The iOS app crashes immediately at launch because **`FirebaseApp.configure()` is never called in the native iOS code**. The `@capacitor-firebase/messaging` plugin is installed (and required for push notifications), but the native Firebase iOS SDK throws a fatal `NSException` if `FirebaseApp.configure()` isn't called early in the app lifecycle. This kills the app before React Native (or in this case, the WKWebView) even loads.
 
-2. **Firebase web SDK initialization in native context** — `src/lib/firebase.ts` calls `initializeApp()` unconditionally at import time. The web Firebase Messaging SDK (`getMessaging`) uses Service Workers which are not available in WKWebView. While `getMessaging()` is deferred, the `initializeApp()` at module scope could interact badly with the native Firebase iOS SDK that `@capacitor-firebase/messaging` already provides, causing a duplicate initialization crash.
+### Why this kept being missed
+- The `ios/` directory is **not committed to the repo** — it's deleted and regenerated on every CI build via `rm -rf ios && npx cap add ios`.
+- Capacitor's stock `AppDelegate.swift` template does **not** include any Firebase initialization.
+- `GoogleService-Info.plist` is correctly added to the Xcode target, but it's useless without the matching `FirebaseApp.configure()` call.
+- The previous fixes addressed the JavaScript/web layer (WalletConnect, Firebase web SDK) — but those fixes don't matter because the crash happens in **native iOS code**, before the WebView even starts loading.
 
-## Changes
+## The Fix
 
-### 1. Guard WalletConnectContext for native platforms
-**File:** `src/contexts/WalletConnectContext.tsx`
+### Patch the scaffolded AppDelegate.swift in CI
 
-Replace the `require()` block with a native platform check. If running on Capacitor native, skip the entire `@reown/appkit` initialization:
+Add a new step in `.github/workflows/build-ios.yml` (immediately after `npx cap add ios` succeeds, before `npx cap sync ios`) that overwrites `ios/App/App/AppDelegate.swift` with a version that initializes Firebase.
 
-```typescript
-import { Capacitor } from "@capacitor/core";
+The new `AppDelegate.swift` will:
+1. `import FirebaseCore`
+2. Call `FirebaseApp.configure()` as the very first line of `application(_:didFinishLaunchingWithOptions:)`
+3. Preserve all existing Capacitor app delegate behavior (URL handling, universal links, push notification routing)
 
-let appKitInitialized = false;
-// ... default stubs ...
+```swift
+import UIKit
+import Capacitor
+import FirebaseCore
 
-if (!Capacitor.isNativePlatform()) {
-  try {
-    const appkit = require('@reown/appkit/react');
-    // ... rest of initialization
-  } catch (error) {
-    console.warn('WalletConnect initialization failed:', error);
-  }
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    var window: UIWindow?
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        FirebaseApp.configure()
+        return true
+    }
+    
+    // ...preserve all the standard Capacitor URL/notification handlers
 }
 ```
 
-### 2. Guard Firebase web SDK initialization for native platforms
-**File:** `src/lib/firebase.ts`
+### Apply the same patch in the edge function template
 
-Wrap `initializeApp()` so it only runs on web. On native, the Capacitor Firebase plugin handles everything:
+Mirror the change in `supabase/functions/github-build/index.ts` so the workflow stays in sync when re-deployed by the Build Center self-healing engine.
 
-```typescript
-import { Capacitor } from "@capacitor/core";
+## Files to Edit
+- `.github/workflows/build-ios.yml` — add a "Patch AppDelegate.swift with Firebase init" step after `npx cap add ios`
+- `supabase/functions/github-build/index.ts` — mirror the same step in the workflow template
 
-let app: any = null;
+## Why this will work
+The native Firebase iOS SDK requires `FirebaseApp.configure()` to be called before any Firebase plugin (including `@capacitor-firebase/messaging`) accesses it. Without it, the plugin loading triggers a fatal native exception **at app launch**, before any JavaScript runs. This explains why all our JS-side fixes (removing WalletConnect, guarding Firebase web SDK) had no effect — the crash was always in Objective-C/Swift land.
 
-if (!Capacitor.isNativePlatform()) {
-  app = initializeApp(firebaseConfig);
-}
-```
-
-All exported functions (`getFirebaseMessaging`, `requestFCMToken`, `onForegroundMessage`) already return null on failure, so they will gracefully no-op on native.
-
-### 3. Add `npm install --legacy-peer-deps` to iOS workflow
-**File:** `.github/workflows/build-ios.yml`
-
-The `npm install` step should use `--legacy-peer-deps` to match the previous fix for the barcode-scanner dependency conflict (even though it was removed, other peer conflicts may appear):
-
-```yaml
-- name: Install dependencies
-  run: npm install --legacy-peer-deps
-```
-
-## Summary of files to edit
-- `src/contexts/WalletConnectContext.tsx` — wrap `require()` block in native platform check
-- `src/lib/firebase.ts` — skip `initializeApp` on native platforms
-- `.github/workflows/build-ios.yml` — add `--legacy-peer-deps` flag
-
-## Technical Details
-The crash is a hard native crash (iOS shows "Crashed" dialog), not a JavaScript error. This points to module-level initialization code that triggers fatal WKWebView errors before React even mounts. Both `@reown/appkit` and Firebase web SDK perform heavy initialization at import time with browser-only APIs that are incompatible with the native iOS WebView context.
-
+After this fix, the launch sequence becomes:
+1. iOS loads `AppDelegate.swift`
+2. `FirebaseApp.configure()` initializes the native Firebase SDK using `GoogleService-Info.plist`
+3. Cap
