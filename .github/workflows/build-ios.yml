@@ -415,15 +415,22 @@ jobs:
       - name: Build Xcode archive
         run: |
           cd ios/App
-          # Resolve SPM packages first so we can patch OSBarcodeLib xcassets
+          # Resolve SPM packages so they are checked out before the archive step
           xcodebuild -project App.xcodeproj -scheme App -resolvePackageDependencies 2>/dev/null || true
-          # Fix OSBarcodeLib xcassets compilation failure on Xcode 16.4+
-          SPM_DIR="$(xcodebuild -project App.xcodeproj -scheme App -showBuildSettings 2>/dev/null | grep BUILD_DIR | head -1 | sed 's/.*= //' | sed 's|/Build/.*|/SourcePackages|')"
-          echo "SPM directory: $SPM_DIR"
-          find "$(pwd)" "$SPM_DIR" ~/Library/Developer/Xcode/DerivedData -path "*/OSBarcodeLib*OSBARCScannerView.xcassets" -type d 2>/dev/null | sort -u | while read XCASSET; do
-            echo "Patching OSBarcodeLib xcassets at: $XCASSET"
-            find "$XCASSET" -name "Contents.json" -exec sed -i '' 's/"compression-type"[[:space:]]*:[[:space:]]*"[^"]*",*//g' {} + 2>/dev/null || true
-          done
+          # Ensure the App target (and only the App target) declares the AppIcon name in its
+          # pbxproj build settings. We must NOT pass ASSETCATALOG_COMPILER_APPICON_NAME on the
+          # xcodebuild CLI because that propagates to every nested target (including the
+          # OSBarcodeLib_OSBarcodeLib SPM resource bundle, whose xcassets has no AppIcon set,
+          # which makes actool fail with "CompileAssetCatalogVariant ... failed".
+          PBX="App.xcodeproj/project.pbxproj"
+          if [ -f "$PBX" ]; then
+            if ! grep -q "ASSETCATALOG_COMPILER_APPICON_NAME" "$PBX"; then
+              echo "Injecting ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon into App target"
+              /usr/bin/sed -i '' \
+                's/PRODUCT_BUNDLE_IDENTIFIER = com\.wallet\.ai;/PRODUCT_BUNDLE_IDENTIFIER = com.wallet.ai;\n\t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' \
+                "$PBX"
+            fi
+          fi
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
@@ -431,7 +438,6 @@ jobs:
             -archivePath $RUNNER_TEMP/App.xcarchive \
             archive \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon \
             ASSETCATALOG_COMPILER_SKIP_VALIDATION_ON_COPY=YES
 
       - name: Validate archived icon payload (strict)
