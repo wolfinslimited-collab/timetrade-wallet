@@ -418,7 +418,9 @@ ENTEOF
           # Resolve SPM packages first so we can patch OSBarcodeLib xcassets
           xcodebuild -project App.xcodeproj -scheme App -resolvePackageDependencies 2>/dev/null || true
           # Fix OSBarcodeLib xcassets compilation failure on Xcode 16.4+
-          find "$(pwd)" -path "*/OSBarcodeLib*OSBARCScannerView.xcassets" -type d 2>/dev/null | while read XCASSET; do
+          SPM_DIR="$(xcodebuild -project App.xcodeproj -scheme App -showBuildSettings 2>/dev/null | grep BUILD_DIR | head -1 | sed 's/.*= //' | sed 's|/Build/.*|/SourcePackages|')"
+          echo "SPM directory: $SPM_DIR"
+          find "$(pwd)" "$SPM_DIR" ~/Library/Developer/Xcode/DerivedData -path "*/OSBarcodeLib*OSBARCScannerView.xcassets" -type d 2>/dev/null | sort -u | while read XCASSET; do
             echo "Patching OSBarcodeLib xcassets at: $XCASSET"
             find "$XCASSET" -name "Contents.json" -exec sed -i '' 's/"compression-type"[[:space:]]*:[[:space:]]*"[^"]*",*//g' {} + 2>/dev/null || true
           done
