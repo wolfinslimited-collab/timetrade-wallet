@@ -972,18 +972,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
           {/* Account List */}
           {addMode === null && (
-            <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
-              {/* Add Account Button */}
-              <button
-                onClick={() => setAddMode("menu")}
-                className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors duration-200"
-              >
-                <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Plus className="w-5 h-5 text-primary" />
-                </div>
-                <span className="font-semibold text-primary">Add or Import Account</span>
-              </button>
-
+            <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1 pb-2">
               {isLoadingAccounts ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -996,7 +985,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                   <p className="text-sm mt-1 opacity-70">Import a wallet to get started</p>
                 </div>
               ) : (
-                accounts.map((account, index) => {
+                accounts.map((account) => {
                   const isActive = activeAccountId === account.id;
                   const isEditing = editingAccountId === account.id;
 
@@ -1004,23 +993,27 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                     <div
                       key={account.id}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-colors duration-200",
+                        "w-full flex items-center gap-3 p-4 rounded-2xl border transition-colors duration-200",
                         isActive
-                          ? "border-foreground/30 bg-foreground/10"
+                          ? "border-primary/40 bg-primary/5"
                           : "border-border/30 bg-card/30 hover:bg-secondary/50"
                       )}
                     >
-                      {/* Account Number */}
+                      {/* Account Avatar */}
                       <button
                         onClick={() => handleSelectAccount(account.id)}
                         className={cn(
-                          "w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg shrink-0 transition-colors",
+                          "w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0 transition-colors",
                           isActive
-                            ? "bg-foreground text-background"
-                            : "bg-muted/50 text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted/30 text-muted-foreground"
                         )}
                       >
-                        {index + 1}
+                        {account.type === "privateKey" ? (
+                          <Key className="w-5 h-5" />
+                        ) : (
+                          <Wallet className="w-5 h-5" />
+                        )}
                       </button>
                       
                       {/* Account Info */}
@@ -1052,16 +1045,19 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                             </Button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground truncate">{account.name}</span>
-                            {account.type === "privateKey" && (
-                              <Key className="w-3 h-3 text-muted-foreground shrink-0" />
-                            )}
-                            {isActive && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/20 text-foreground font-semibold shrink-0">
-                                Active
-                              </span>
-                            )}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground truncate">{account.name}</span>
+                              {isActive && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-semibold shrink-0">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {account.type === "privateKey" ? "Private Key" : "Seed Phrase"}
+                              {account.evmAddress ? ` · ${account.evmAddress.slice(0, 6)}...${account.evmAddress.slice(-4)}` : ""}
+                            </p>
                           </div>
                         )}
                       </button>
@@ -1095,6 +1091,15 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                   );
                 })
               )}
+
+              {/* Add Account Button */}
+              <button
+                onClick={() => setAddMode("menu")}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-dashed border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-secondary/30 transition-colors duration-200 mt-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">Add or Import Account</span>
+              </button>
             </div>
           )}
         </SheetContent>
