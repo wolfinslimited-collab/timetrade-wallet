@@ -41,8 +41,6 @@ export function useFCMToken() {
           return;
         }
 
-        await PushNotifications.register();
-
         PushNotifications.addListener("registration", async (token) => {
           const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
           toast(`Push token received (${platform})`, { description: token.value.substring(0, 20) + "..." });
@@ -72,6 +70,8 @@ export function useFCMToken() {
           const body = notification.body || "";
           toast(title, { description: body });
         });
+
+        await PushNotifications.register();
       } catch {
         setStatus('error');
         setErrorMessage('Push notification setup failed');
