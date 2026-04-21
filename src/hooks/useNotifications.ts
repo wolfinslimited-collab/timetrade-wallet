@@ -4,6 +4,16 @@ import { useServerNotifications, dismissServerNotification, type ServerNotificat
 
 export type NotificationType = "price_alert" | "transaction" | "security" | "info";
 
+const SERVER_READ_KEY = "timetrade_read_server_notifications";
+
+const getStoredServerReadIds = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(SERVER_READ_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+
 export interface Notification {
   id: string;
   type: NotificationType;
@@ -18,6 +28,8 @@ export interface Notification {
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [readServerIds, setReadServerIds] = useState<string[]>(() => getStoredServerReadIds());
+  const [dismissedServerIds, setDismissedServerIds] = useState<string[]>([]);
   const { notifications: serverNotifications } = useServerNotifications();
   const { 
     showPriceAlertNotification, 
@@ -26,42 +38,72 @@ export const useNotifications = () => {
     showNotification: showWebNotification,
   } = useWebNotifications();
 
+  useEffect(() => {
+    localStorage.setItem(SERVER_READ_KEY, JSON.stringify(readServerIds));
+  }, [readServerIds]);
+
   // Merge server notifications into the list
   const mergedNotifications: Notification[] = [
-    ...serverNotifications.map((sn: ServerNotification): Notification => ({
-      id: `server_${sn.id}`,
-      type: (sn.type as NotificationType) || "info",
-      title: sn.title,
-      message: sn.message,
-      timestamp: new Date(sn.created_at),
-      read: false,
-      icon: sn.icon || undefined,
-    })),
+    ...serverNotifications
+      .filter((sn) => !dismissedServerIds.includes(sn.id))
+      .map((sn: ServerNotification): Notification => ({
+        id: `server_${sn.id}`,
+        type: (sn.type as NotificationType) || "info",
+        title: sn.title,
+        message: sn.message,
+        timestamp: new Date(sn.created_at),
+        read: readServerIds.includes(sn.id),
+        icon: sn.icon || undefined,
+      })),
     ...notifications,
   ];
 
   const unreadCount = mergedNotifications.filter((n) => !n.read).length;
 
   const markAsRead = useCallback((id: string) => {
+    if (id.startsWith("server_")) {
+      const serverId = id.replace("server_", "");
+      setReadServerIds((prev) => (prev.includes(serverId) ? prev : [...prev, serverId]));
+      return;
+    }
+
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   }, []);
 
   const markAllAsRead = useCallback(() => {
+    setReadServerIds((prev) => {
+      const next = new Set(prev);
+      serverNotifications.forEach((notification) => {
+        if (!dismissedServerIds.includes(notification.id)) {
+          next.add(notification.id);
+        }
+      });
+      return Array.from(next);
+    });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, []);
+  }, [dismissedServerIds, serverNotifications]);
 
   const deleteNotification = useCallback((id: string) => {
     if (id.startsWith("server_")) {
-      dismissServerNotification(id.replace("server_", ""));
+      const serverId = id.replace("server_", "");
+      dismissServerNotification(serverId);
+      setDismissedServerIds((prev) => (prev.includes(serverId) ? prev : [...prev, serverId]));
+      setReadServerIds((prev) => prev.filter((storedId) => storedId !== serverId));
+      return;
     }
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
   const clearAll = useCallback(() => {
+    serverNotifications.forEach((notification) => {
+      dismissServerNotification(notification.id);
+    });
+    setDismissedServerIds((prev) => Array.from(new Set([...prev, ...serverNotifications.map((n) => n.id)])));
+    setReadServerIds([]);
     setNotifications([]);
-  }, []);
+  }, [serverNotifications]);
 
   const addNotification = useCallback((
     notification: Omit<Notification, "id" | "timestamp" | "read">,
