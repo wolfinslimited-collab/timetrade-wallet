@@ -4,7 +4,7 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Wallet, ArrowDownLeft } from "lucide-react";
 
 const getCryptoLogoUrl = (symbol: string): string => {
   return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
@@ -109,8 +109,21 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   if (tokensWithValue.length === 0) {
     return (
-      <div className={cn("px-5 py-10 text-center", className)}>
-        <p className="text-sm text-muted-foreground">No tokens found</p>
+      <div className={cn("px-5 py-12 flex flex-col items-center justify-center", className)}>
+        <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+          <Wallet className="w-7 h-7 text-muted-foreground/60" />
+        </div>
+        <p className="text-[15px] font-semibold text-foreground mb-1">No assets yet</p>
+        <p className="text-[12px] text-muted-foreground mb-5 max-w-[220px] text-center leading-relaxed">
+          Your tokens will appear here once you receive or import crypto
+        </p>
+        <button
+          onClick={() => navigate("/receive")}
+          className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-primary text-primary-foreground text-[13px] font-semibold active:scale-[0.97]"
+        >
+          <ArrowDownLeft className="w-3.5 h-3.5" />
+          Receive
+        </button>
       </div>
     );
   }

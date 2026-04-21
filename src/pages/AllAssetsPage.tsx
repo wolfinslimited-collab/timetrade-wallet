@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, SlidersHorizontal, Check } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal, Check, Wallet, ArrowDownLeft, XCircle } from "lucide-react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { getNetworkLogoUrl, NETWORKS } from "@/config/networks";
 import { Chain } from "@/hooks/useBlockchain";
@@ -200,11 +200,38 @@ export const AllAssetsPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="px-4 py-16 text-center"
+            className="px-4 py-20 flex flex-col items-center justify-center"
           >
-            <p className="text-sm text-muted-foreground">
-              {hasActiveFilter ? "No assets on selected networks" : "No assets found"}
-            </p>
+            <div className="w-16 h-16 rounded-full bg-muted/40 flex items-center justify-center mb-4">
+              <Wallet className="w-8 h-8 text-muted-foreground/50" />
+            </div>
+            {hasActiveFilter ? (
+              <>
+                <p className="text-[15px] font-semibold text-foreground mb-1">No assets on selected networks</p>
+                <p className="text-[12px] text-muted-foreground mb-5">Try clearing your filter to see all assets</p>
+                <button
+                  onClick={clearFilter}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-border text-[13px] font-medium text-muted-foreground active:scale-[0.97] hover:bg-secondary"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Clear filter
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[15px] font-semibold text-foreground mb-1">No assets yet</p>
+                <p className="text-[12px] text-muted-foreground mb-5 max-w-[220px] text-center leading-relaxed">
+                  Your tokens will appear here once you receive or import crypto
+                </p>
+                <button
+                  onClick={() => navigate("/receive")}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-primary text-primary-foreground text-[13px] font-semibold active:scale-[0.97]"
+                >
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  Receive
+                </button>
+              </>
+            )}
           </motion.div>
         ) : (
           <motion.div
