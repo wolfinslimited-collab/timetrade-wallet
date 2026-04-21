@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
     // Firebase batchImport accepts hex-encoded APNs tokens directly.
     const apnsToken = apnsTokenRaw.replace(/\s+/g, "").toLowerCase();
 
+    console.log(`[apns-to-fcm] token=${apnsToken.substring(0, 20)}... sandbox=${sandbox}`);
+
     const accessToken = await getAccessToken();
 
     // Firebase Instance ID batchImport
@@ -137,7 +139,10 @@ Deno.serve(async (req) => {
     });
 
     const iidData = await iidRes.json().catch(() => ({}));
+    console.log(`[apns-to-fcm] batchImport status=${iidRes.status}`, JSON.stringify(iidData));
+
     if (!iidRes.ok) {
+      console.error(`[apns-to-fcm] batchImport failed`, JSON.stringify(iidData));
       return new Response(
         JSON.stringify({ error: "batchImport failed", details: iidData }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -147,6 +152,7 @@ Deno.serve(async (req) => {
     const result = iidData?.results?.[0];
     const fcmToken = result?.registration_token;
     if (!fcmToken) {
+      console.error(`[apns-to-fcm] No registration_token in response`, JSON.stringify(iidData));
       return new Response(
         JSON.stringify({ error: "No registration_token returned", details: iidData }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -158,6 +164,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
+    console.error(`[apns-to-fcm] error:`, (e as Error).message);
     return new Response(
       JSON.stringify({ error: (e as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
