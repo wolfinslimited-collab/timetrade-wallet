@@ -119,7 +119,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
     return (
       <Sheet open={open} onOpenChange={handleClose}>
         <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl bg-background border-border p-0" hideCloseButton>
-          <div className="flex justify-center pt-3 pb-1">
+          <div className="flex justify-end pt-3 pb-1 px-4">
             <button
               onClick={handleClose}
               className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
@@ -182,7 +182,7 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   return (
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl bg-background border-border p-0 overflow-y-auto" hideCloseButton>
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-end pt-3 pb-1 px-4">
           <button
             onClick={handleClose}
             className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
