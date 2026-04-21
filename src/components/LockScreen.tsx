@@ -158,13 +158,22 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
       <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-xl" />
 
       {/* PIN entry overlay */}
-      <div className="relative z-20 flex-1 flex flex-col items-center justify-center px-6">
+      <div
+        className="relative z-20 flex-1 flex flex-col items-center px-6"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 12px)",
+          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+        }}
+      >
+        {/* Spacer for top alignment like FullScreenPinModal */}
+        <div className="shrink-0 h-4" />
+
         {/* Lock icon */}
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-4"
+          className="mt-4 mb-4"
         >
           <img src="/app-logo.png" alt="Logo" className="w-14 h-14 object-cover" />
         </motion.div>
@@ -207,7 +216,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           <motion.div
             animate={showError ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : {}}
             transition={{ duration: 0.45 }}
-            className="flex gap-3.5 mb-6"
+            className="flex gap-3.5"
           >
             {[0, 1, 2, 3, 4, 5].map((i) => {
               const filled = i < pin.length;
@@ -235,6 +244,9 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           </motion.div>
         </motion.div>
 
+        {/* Flex spacer pushes keypad to bottom */}
+        <div className="flex-1" />
+
         {/* Prominent biometric pill */}
         {biometricReady && !isLocked && (
           <motion.button
@@ -257,7 +269,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
         )}
 
         {/* Keypad */}
-        <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto">
+        <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto pb-4">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <KeypadButton
               key={digit}
