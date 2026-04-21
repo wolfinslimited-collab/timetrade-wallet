@@ -166,6 +166,10 @@ const Index = () => {
     sessionStorage.setItem("timetrade_unlocked", "true");
     setHasWallet(true);
     setIsLocked(false);
+    const pin = localStorage.getItem("timetrade_pin");
+    if (pin) {
+      window.dispatchEvent(new CustomEvent("timetrade:unlocked", { detail: { pin } }));
+    }
   };
 
   const handleUnlock = () => {
