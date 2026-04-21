@@ -51,7 +51,7 @@ export const NotificationItem = ({
       transition={{ delay: index * 0.05, duration: 0.2 }}
       onClick={handleClick}
       className={cn(
-        "relative p-4 rounded-xl border border-border transition-all cursor-pointer group",
+        "relative p-4 rounded-xl border border-border transition-colors cursor-pointer group",
         notification.read 
           ? "bg-card/50 opacity-70" 
           : "bg-card shadow-sm"
@@ -72,7 +72,7 @@ export const NotificationItem = ({
           e.stopPropagation();
           onDelete(notification.id);
         }}
-        className="absolute top-3 right-3 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-secondary transition-all"
+        className="absolute top-3 right-3 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-secondary transition-opacity"
       >
         <X className="w-3.5 h-3.5 text-muted-foreground" />
       </button>

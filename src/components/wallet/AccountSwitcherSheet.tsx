@@ -858,7 +858,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
             <div className="space-y-3 py-4">
               <button
                 onClick={() => setAddMode("mnemonic")}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/50 hover:bg-secondary/50 transition-all duration-200"
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/50 hover:bg-secondary/50 transition-colors duration-200"
               >
                 <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-foreground" />
@@ -872,7 +872,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
               <button
                 onClick={() => setAddMode("privateKey")}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/50 hover:bg-secondary/50 transition-all duration-200"
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/50 hover:bg-secondary/50 transition-colors duration-200"
               >
                 <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
                   <Key className="w-5 h-5 text-foreground" />
@@ -976,7 +976,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
               {/* Add Account Button */}
               <button
                 onClick={() => setAddMode("menu")}
-                className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all duration-200"
+                className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors duration-200"
               >
                 <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <Plus className="w-5 h-5 text-primary" />
@@ -1004,7 +1004,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                     <div
                       key={account.id}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-all duration-200",
+                        "w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-colors duration-200",
                         isActive
                           ? "border-foreground/30 bg-foreground/10"
                           : "border-border/30 bg-card/30 hover:bg-secondary/50"
