@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { NetworkAssetSelector, AvailableAsset } from "./NetworkAssetSelector";
 import { AddressInputStep } from "./AddressInputStep";
@@ -298,22 +298,31 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
       <SheetContent 
         side="bottom" 
         className="h-[90vh] rounded-t-3xl bg-background border-border p-0 flex flex-col"
-        hideCloseButton={hideSheetClose}
+        hideCloseButton={true}
       >
         {showHeader && (
-          <SheetHeader className="px-6 pt-6 pb-2 relative">
-            <div className="flex items-center justify-center">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <div className="flex items-center">
               {canGoBack && (
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+                  className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
                   aria-label="Back"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               )}
-              <SheetTitle className="text-xl font-bold text-center">{getStepTitle()}</SheetTitle>
+              {!canGoBack && <div className="w-9 h-9" />}
+              <SheetTitle className="text-xl font-bold text-center flex-1">{getStepTitle()}</SheetTitle>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </SheetHeader>
         )}
