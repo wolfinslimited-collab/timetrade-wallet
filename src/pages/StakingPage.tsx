@@ -442,6 +442,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
       toast({ title: "Unstaked successfully!", description: `${position.amount} ${position.token_symbol} + rewards returned` });
       fetchPositions();
+      fetchUnstakeRequests();
     } catch (err) {
       console.error("Unstake error:", err);
       toast({ title: "Unstake failed", description: "Please try again", variant: "destructive" });
