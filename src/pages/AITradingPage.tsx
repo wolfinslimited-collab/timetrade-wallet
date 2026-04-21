@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { PnlChart } from "@/components/trading/PnlChart";
+import { TradingDashboardSkeleton } from "@/components/ui/loading-skeletons";
 
 /* ── Auth Screens ── */
 
@@ -172,9 +173,7 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
 
   if (isLoading && !balance) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <TradingDashboardSkeleton />
     );
   }
 
@@ -501,9 +500,7 @@ export const AITradingPage = ({ onBack }: AITradingPageProps) => {
 
   if (api.isCheckingSession) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <TradingDashboardSkeleton />
     );
   }
 
