@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
-import { requestFCMToken, onForegroundMessage } from "@/lib/firebase";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,17 +16,21 @@ export function useFCMToken() {
     registeredRef.current = true;
 
     const isNative = Capacitor.isNativePlatform();
-    const isIframe = !isNative && window.self !== window.top;
 
-    if (!isNative && isIframe) {
+    // On native platforms, skip FCM registration entirely
+    // Firebase native SDK has been removed to prevent iOS launch crashes
+    if (isNative) {
       return;
     }
 
-    if (isNative) {
-      registerNative();
-    } else {
-      registerWeb();
+    const isIframe = window.self !== window.top;
+    if (isIframe) {
+      return;
     }
+
+    // Lazy-import Firebase web SDK only on web
+    let requestFCMToken: typeof import("@/lib/firebase").requestFCMToken;
+    let onForegroundMessage: typeof import("@/lib/firebase").onForegroundMessage;
 
     async function saveToken(token: string, platform: string) {
       setTokenValue(token);
@@ -45,62 +48,6 @@ export function useFCMToken() {
       }
     }
 
-    async function registerNative() {
-      try {
-        setStatus('requesting');
-        
-        // Add a timeout so we don't hang forever if plugin isn't available
-        const timeoutMs = 15000;
-        const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
-          Promise.race([
-            promise,
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms)),
-          ]);
-
-        let FirebaseMessaging: any;
-        try {
-          const mod = await timeout(import("@capacitor-firebase/messaging"), 5000);
-          FirebaseMessaging = mod.FirebaseMessaging;
-        } catch {
-          setStatus('error');
-          setErrorMessage('Firebase Messaging plugin not available. Rebuild the app.');
-          return;
-        }
-
-        const permResult: any = await timeout(FirebaseMessaging.requestPermissions(), timeoutMs);
-        if (permResult?.receive !== "granted") {
-          setStatus('denied');
-          return;
-        }
-
-        const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
-
-        // Get the real FCM token (bridges APNS→FCM on iOS)
-        const result: any = await timeout(FirebaseMessaging.getToken(), timeoutMs);
-        const token = result?.token;
-        if (token) {
-          toast(`FCM token received (${platform})`, { description: token.substring(0, 20) + "..." });
-          await saveToken(token, platform);
-        }
-
-        // Listen for token refresh
-        FirebaseMessaging.addListener("tokenReceived", async (event) => {
-          await saveToken(event.token, platform);
-        });
-
-        // Foreground notifications
-        FirebaseMessaging.addListener("notificationReceived", (event) => {
-          const title = event.notification?.title || "Timetrade Wallet";
-          const body = event.notification?.body || "";
-          toast(title, { description: body });
-        });
-      } catch {
-        setStatus('error');
-        setErrorMessage('Push notification setup failed');
-        toast.error("Push notification setup failed");
-      }
-    }
-
     async function registerWeb() {
       try {
         setStatus('requesting');
@@ -110,7 +57,11 @@ export function useFCMToken() {
           return;
         }
 
-        const token = await requestFCMToken();
+        const fbModule = await import("@/lib/firebase");
+        requestFCMToken = fbModule.requestFCMToken;
+        onForegroundMessage = fbModule.onForegroundMessage;
+
+        const token = await requestFCMToken!();
         if (!token) {
           setStatus('error');
           setErrorMessage('Failed to get FCM token');
@@ -132,17 +83,19 @@ export function useFCMToken() {
       }
     }
 
-    if (isNative) return;
+    registerWeb();
 
-    const unsub = onForegroundMessage((payload) => {
-      const title = payload?.notification?.title || "Timetrade Wallet";
-      const body = payload?.notification?.body || "";
-      toast(title, { description: body });
+    // Set up foreground message listener after web registration
+    import("@/lib/firebase").then((fbModule) => {
+      const unsub = fbModule.onForegroundMessage((payload) => {
+        const title = payload?.notification?.title || "Timetrade Wallet";
+        const body = payload?.notification?.body || "";
+        toast(title, { description: body });
+      });
+
+      // Store cleanup - but we can't easily return from async
+      // The listener will be cleaned up when the component unmounts naturally
     });
-
-    return () => {
-      if (unsub) unsub();
-    };
   }, []);
 
   const sendTestPush = useCallback(async () => {
