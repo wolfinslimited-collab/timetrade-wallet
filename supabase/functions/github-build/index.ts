@@ -1531,12 +1531,12 @@ Deno.serve(async (req) => {
           // 1) Resolve workflow by path and dispatch by numeric ID when possible
           // 2) Auto-enable workflow when GitHub reports disabled state
           // 3) On 422 workflow_dispatch errors, re-patch trigger and retry with backoff
-          const delays = [1500, 3000];
+          const delays = [3000, 6000];
           const workflowPath = `.github/workflows/${workflow}`;
           let lastErr: unknown = null;
 
           // Small indexing grace period
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, 5000));
 
           for (let i = 0; i < delays.length; i++) {
             try {
