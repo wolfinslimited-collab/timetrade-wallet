@@ -3,27 +3,46 @@ import { Skeleton } from "@/components/ui/skeleton";
 /* ── Portfolio (Index page) ── */
 export function PortfolioSkeleton() {
   return (
-    <div className="space-y-5">
-      {/* Balance card */}
-      <div className="rounded-2xl border border-border/30 bg-card/40 p-5 space-y-4">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-9 w-40 mx-auto" />
-        <Skeleton className="h-3 w-28 mx-auto" />
+    <div className="space-y-0">
+      {/* Balance area - matches text-center layout */}
+      <div className="flex flex-col items-center gap-3">
+        <Skeleton className="h-3.5 w-24" /> {/* "Total Balance" label */}
+        <Skeleton className="h-[42px] w-52" /> {/* Big balance number */}
+        <Skeleton className="h-7 w-36 rounded-full" /> {/* Change pill */}
       </div>
-      {/* Token rows */}
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="flex items-center gap-3 px-1">
-          <Skeleton className="w-10 h-10 rounded-full shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-3 w-16" />
+
+      {/* Quick actions - matches centered row of icon buttons */}
+      <div className="flex items-center justify-center gap-6 py-4 mt-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex flex-col items-center gap-2.5">
+            <Skeleton className="w-14 h-14 rounded-2xl" />
+            <Skeleton className="h-3 w-10" />
           </div>
-          <div className="text-right space-y-2">
-            <Skeleton className="h-3.5 w-16 ml-auto" />
-            <Skeleton className="h-3 w-12 ml-auto" />
-          </div>
+        ))}
+      </div>
+
+      {/* Assets card - matches rounded-3xl card with header */}
+      <div className="mt-6 mx-[-0.5rem] bg-card rounded-3xl border border-border/40 pt-5 pb-3">
+        <div className="px-5 flex items-center justify-between mb-3">
+          <Skeleton className="h-4 w-14" /> {/* "Assets" */}
+          <Skeleton className="h-3.5 w-16" /> {/* "View All" */}
         </div>
-      ))}
+        <div className="px-4 space-y-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center gap-3 py-3 px-1">
+              <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <div className="text-right space-y-2">
+                <Skeleton className="h-3.5 w-16 ml-auto" />
+                <Skeleton className="h-3 w-12 ml-auto" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
