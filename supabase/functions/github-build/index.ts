@@ -645,6 +645,45 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Patch Android native config
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "USE_BIOMETRIC" "\$MANIFEST"; then
+            sed -i '/<uses-permission android:name="android.permission.INTERNET"/a\\    <uses-permission android:name="android.permission.CAMERA" />\\n    <uses-permission android:name="android.permission.USE_BIOMETRIC" />' "\$MANIFEST"
+            echo "Injected CAMERA and USE_BIOMETRIC permissions"
+          fi
+
+          MAIN_ACT="android/app/src/main/java/com/getcapacitor/myapp/MainActivity.java"
+          mkdir -p "\$(dirname "\$MAIN_ACT")"
+          cat > "\$MAIN_ACT" << 'JAVAEOF'
+          package com.getcapacitor.myapp;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+          import com.capgo.capacitor.nativebiometric.NativeBiometric;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(NativeBiometric.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
+          JAVAEOF
+          echo "MainActivity patched with NativeBiometric registration"
+
+          cat > android/app/proguard-rules.pro << 'PROGUARDEOF'
+          -keep class com.getcapacitor.** { *; }
+          -keep class com.wallet.ai.** { *; }
+          -dontwarn com.getcapacitor.**
+          -keepclassmembers class * {
+              @android.webkit.JavascriptInterface <methods>;
+          }
+          -keepattributes SourceFile,LineNumberTable
+          -renamesourcefileattribute SourceFile
+          PROGUARDEOF
+          echo "Proguard rules injected"
+
       - name: Customize splash screen (dark + logo)
         run: |
           if [ -f public/app-logo.png ]; then
@@ -690,6 +729,12 @@ jobs:
           echo "ANDROID_VERSION_NAME=\$VERSION_NAME" >> "\$GITHUB_ENV"
           echo "Android versionCode: \$VERSION_CODE"
           echo "Android versionName: \$VERSION_NAME"
+          GRADLE="android/app/build.gradle"
+          if [ -f "\$GRADLE" ]; then
+            sed -i "s/versionCode 1/versionCode \$VERSION_CODE/" "\$GRADLE"
+            sed -i "s/versionName \\"1.0\\"/versionName \\"\$VERSION_NAME\\"/" "\$GRADLE"
+            echo "build.gradle patched with versionCode=\$VERSION_CODE versionName=\$VERSION_NAME"
+          fi
 
       - name: Prepare app icon source
         run: |
