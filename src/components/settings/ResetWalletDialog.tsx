@@ -1,14 +1,7 @@
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
 
 interface ResetWalletDialogProps {
@@ -39,40 +32,55 @@ export const ResetWalletDialog = ({ open, onOpenChange, onConfirm }: ResetWallet
 
   return (
     <>
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="bg-background border-border max-w-sm p-6">
-          <AlertDialogHeader>
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-destructive" />
+      {open && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
+          <div className="relative w-full max-w-sm mx-4 mb-6 sm:mb-0 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
+            {/* Close */}
+            <button
+              onClick={() => onOpenChange(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-xl bg-muted/50 flex items-center justify-center"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+
+            {/* Icon */}
+            <div className="flex justify-center mb-5">
+              <div className="w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-destructive" />
               </div>
             </div>
-            <AlertDialogTitle className="text-center">Reset Wallet?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              This will permanently delete your wallet data from this device.
-              Make sure you have backed up your seed phrase before proceeding.
-              <span className="block mt-2 font-semibold text-destructive">
-                This action cannot be undone!
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col mt-4">
+
+            {/* Text */}
+            <h3 className="text-base font-semibold text-foreground text-center mb-1.5">Reset Wallet?</h3>
+            <p className="text-sm text-muted-foreground text-center leading-relaxed mb-1">
+              This will permanently delete your wallet data from this device. Make sure you have backed up your seed phrase before proceeding.
+            </p>
+            <p className="text-xs font-medium text-destructive text-center mb-6">
+              This action cannot be undone
+            </p>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2.5">
             <Button
               onClick={handleProceedToPin}
-              className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium"
             >
               Yes, Reset Wallet
             </Button>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="w-full border-border bg-card hover:bg-secondary"
+              className="w-full h-12 rounded-xl border-border/50 bg-muted/30 hover:bg-muted/50 text-muted-foreground"
             >
               Cancel
             </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <FullScreenPinModal
         open={pinOpen}
