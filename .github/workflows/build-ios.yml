@@ -343,6 +343,22 @@ jobs:
             if ! grep -q "CODE_SIGN_IDENTITY" "$PBXPROJ"; then
               sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution\";/g" "$PBXPROJ"
             fi
+            # Force Apple Distribution for ALL CODE_SIGN_IDENTITY variants (iPhone Developer, iPhone Distribution, Apple Development, etc.)
+            sed -i '' 's|CODE_SIGN_IDENTITY = "iPhone Developer";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "$PBXPROJ"
+            sed -i '' 's|CODE_SIGN_IDENTITY = "iPhone Distribution";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "$PBXPROJ"
+            sed -i '' 's|CODE_SIGN_IDENTITY = "Apple Development";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "$PBXPROJ"
+            python3 - <<'PYEOF'
+            import re
+            from pathlib import Path
+            p = Path("ios/App/App.xcodeproj/project.pbxproj")
+            text = p.read_text()
+            # Replace any sdk-scoped CODE_SIGN_IDENTITY for iphoneos
+            text = re.sub(r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*?\]"\s*=\s*"[^"]*";', '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";', text)
+            p.write_text(text)
+            print("Forced Apple Distribution on all sdk-scoped CODE_SIGN_IDENTITY entries")
+            PYEOF
+            echo "=== Final CODE_SIGN settings in pbxproj ==="
+            grep -E "CODE_SIGN|DEVELOPMENT_TEAM|PROVISIONING_PROFILE" "$PBXPROJ" | sort -u
           fi
 
           cat > ios/App/ExportOptions.plist << EXPORTEOF
