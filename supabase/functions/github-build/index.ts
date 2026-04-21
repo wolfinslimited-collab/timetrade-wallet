@@ -339,13 +339,13 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>aps-environment</key>
-            <string>production</string>
+            <string>development</string>
           </dict>
           </plist>
           ENTEOF
           else
             /usr/libexec/PlistBuddy -c "Delete :aps-environment" "\$ENTITLEMENTS" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Add :aps-environment string production" "\$ENTITLEMENTS"
+            /usr/libexec/PlistBuddy -c "Add :aps-environment string development" "\$ENTITLEMENTS"
           fi
           echo "App.entitlements:"
           cat "\$ENTITLEMENTS"

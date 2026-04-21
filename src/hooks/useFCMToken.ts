@@ -68,7 +68,7 @@ export function useFCMToken() {
             // Convert it to an FCM registration token via our edge function
             try {
               const { data, error } = await supabase.functions.invoke('apns-to-fcm', {
-                body: { apns_token: rawToken },
+                body: { apns_token: rawToken, sandbox: true },
               });
               if (error) throw error;
               const fcmToken = (data as { fcm_token?: string } | null)?.fcm_token;
@@ -76,7 +76,7 @@ export function useFCMToken() {
               await saveToken(fcmToken, 'ios');
             } catch (e: any) {
               // Fall back to storing the raw APNs token so the device is at least known
-              await saveToken(rawToken, 'ios-apns');
+              await saveToken(rawToken, 'iphone');
               setErrorMessage(e?.message || 'APNs->FCM conversion failed');
             }
           });
