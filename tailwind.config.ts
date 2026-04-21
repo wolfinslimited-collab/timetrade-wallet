@@ -109,8 +109,8 @@ export default {
           to: { transform: "translate3d(0,0,0)" },
         },
         "fade-in-up": {
-          from: { opacity: "0", transform: "translate3d(0,8px,0)" },
-          to: { opacity: "1", transform: "translate3d(0,0,0)" },
+          from: { opacity: "0", transform: "translate3d(0,8px,0)", willChange: "transform, opacity" },
+          to: { opacity: "1", transform: "translate3d(0,0,0)", willChange: "auto" },
         },
       },
       animation: {

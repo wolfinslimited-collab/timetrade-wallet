@@ -36,15 +36,17 @@ const queryClient = new QueryClient({
 // iOS-style native page transition: subtle slide + fade, hardware-accelerated
 const easeIOS = [0.32, 0.72, 0, 1] as const;
 const pageVariants: Variants = {
-  initial: { opacity: 0, x: 12 },
+  initial: { opacity: 0, x: 12, willChange: "transform, opacity" },
   animate: {
     opacity: 1,
     x: 0,
     transition: { duration: 0.22, ease: easeIOS },
+    willChange: "auto",
   },
   exit: {
     opacity: 0,
     x: -8,
+    willChange: "transform, opacity",
     transition: { duration: 0.16, ease: easeIOS },
   },
 };
@@ -76,7 +78,7 @@ const AnimatedRoutes = () => {
           initial="initial"
           animate="animate"
           exit="exit"
-          className="flex-1 flex flex-col overflow-hidden overflow-x-hidden"
+          className="flex-1 flex flex-col overflow-hidden overflow-x-hidden [backface-visibility:hidden] [transform:translateZ(0)]"
         >
           <Routes location={location}>
             <Route path="/" element={<Index />} />
