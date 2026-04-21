@@ -307,6 +307,14 @@ export const FullScreenPinModal = ({
               </div>
 
               {footer && <div className="mt-4">{footer}</div>}
+
+              {/* Cancel button */}
+              <button
+                onClick={onClose}
+                className="mt-4 w-full text-center text-sm font-medium text-muted-foreground active:opacity-60 transition-opacity"
+              >
+                Cancel
+              </button>
             </div>
           </motion.div>
         </motion.div>
