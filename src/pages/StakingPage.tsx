@@ -428,9 +428,9 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
           </div>
           <button
             onClick={() => setShowTokenSheet(true)}
-            className="w-10 h-10 rounded-full bg-foreground flex items-center justify-center hover:bg-foreground/90 transition-colors"
+            className="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors"
           >
-            <Plus className="w-5 h-5 text-background" />
+            <Plus className="w-5 h-5 text-primary-foreground" />
           </button>
         </div>
       </div>
