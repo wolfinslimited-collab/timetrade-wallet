@@ -210,6 +210,31 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     fetchPositions();
   }, [walletAddress]);
 
+  // Fetch minimum stake amount from config
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase.from("config").select("value").eq("key", "minimum_stake_amount").maybeSingle();
+        if (data?.value) setMinStakeAmount(Number(data.value) || 10);
+      } catch {}
+    })();
+  }, []);
+
+  // Fetch unstake requests
+  const fetchUnstakeRequests = async () => {
+    if (!walletAddress) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('staking', {
+        body: { action: 'get-unstake-requests', wallet_address: walletAddress.toLowerCase() },
+      });
+      if (!error && data?.data) setUnstakeRequests(data.data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchUnstakeRequests();
+  }, [walletAddress]);
+
   // Prevent stale state causing accidental stakes when reopening the sheet
   useEffect(() => {
     if (!showStakeSheet) return;
