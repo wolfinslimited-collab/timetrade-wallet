@@ -1,41 +1,54 @@
 
 
-# Professional Empty State and Assets UI Enhancement
+# Add Safe Area Bottom Padding to All Bottom Buttons
 
-## Overview
-Upgrade the "No tokens found" empty state on the home screen and the All Assets page with a polished, professional design. Replace the plain text placeholder with an illustrated empty state featuring an icon, descriptive copy, and a subtle call-to-action.
+## Problem
+On devices with a home indicator (iPhone X and later), bottom buttons are obscured by the phone's home bar because they lack safe area inset padding. The screenshot shows the SecurityWarningStep button being cut off.
 
-## Changes
+## Affected Files and Changes
 
-### 1. UnifiedTokenList — Empty State (Home Screen)
-**File:** `src/components/wallet/UnifiedTokenList.tsx`
+### 1. `src/components/onboarding/SecurityWarningStep.tsx`
+The fixed bottom container (`shrink-0 px-6 py-4 border-t`) needs safe area padding:
+- Change the bottom container div to include `style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}`
 
-Replace the current plain `"No tokens found"` text (lines 110-115) with a professional empty state card:
-- Centered layout with a large subtle wallet/coins icon (from Lucide, e.g. `Wallet` or `Coins`)
-- Headline: "No assets yet"
-- Subtext: "Your tokens will appear here once you receive or import crypto"
-- A subtle "Receive" button linking to `/receive` for quick onboarding
-- Muted color scheme matching the existing card aesthetic
+### 2. `src/components/onboarding/SeedPhraseStep.tsx`
+The fixed bottom button container (`shrink-0 px-6 py-4 border-t`) has no safe area:
+- Add `style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}`
 
-### 2. AllAssetsPage — Empty State
-**File:** `src/pages/AllAssetsPage.tsx`
+### 3. `src/components/onboarding/VerifySeedStep.tsx`
+Same pattern -- fixed bottom button container missing safe area:
+- Add `style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}`
 
-Replace the current plain empty text (lines 199-208) with a matching professional empty state:
-- Same visual pattern as the home screen empty state (icon + headline + subtext)
-- When filter is active: "No assets on selected networks" with a "Clear filter" button
-- When no filter: same "No assets yet" pattern with a Receive CTA
+### 4. `src/components/send/AddressInputStep.tsx`
+The "Continue" button wrapper (`div className="pt-4"`) sits at the bottom with no safe area:
+- Add `style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}`
 
-### 3. Assets Section Header Polish
-**File:** `src/pages/Index.tsx`
+### 5. `src/components/send/AmountInputStep.tsx`
+The "Review Transaction" button wrapper (`div className="mt-auto pt-6"`) has no safe area:
+- Add `style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}`
 
-Minor refinements to the Assets card container (lines 307-318):
-- Add a small asset count badge next to "Assets" when tokens exist (e.g., "Assets · 5")
-- Improve the "View All" button with a subtle chevron-right icon
+### 6. `src/components/send/ConfirmationStep.tsx`
+The "Confirm" button wrapper (`div className="mt-auto pt-4 pb-6"`) has no safe area:
+- Add `style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}`
 
-### Technical Details
-- Uses existing Lucide icons (`Wallet`, `Coins`, `ChevronRight`, `ArrowDownLeft`)
+### 7. `src/components/send/TransactionSuccessStep.tsx`
+The "Done" button wrapper (`div className="w-full pt-4"`) and the outer container (`pb-8`) have no safe area:
+- Add `style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}` to the button wrapper
+
+### 8. `src/components/send/RiskCheckStep.tsx`
+The action buttons at the bottom (`div className="flex gap-3 w-full mt-auto px-2"`) have no safe area:
+- Add `style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}`
+
+### 9. `src/pages/ReceivePage.tsx`
+The action buttons at the bottom (`div className="flex gap-3 mt-6"`) have no safe area:
+- Add `style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}`
+
+### 10. `src/pages/SendPage.tsx`
+The page header also needs top safe area inset:
+- Add `style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1.5rem)" }}` to the header div
+
+## Technical Details
+- All fixes use `env(safe-area-inset-bottom, 0px)` which is already supported via the `viewport-fit=cover` meta tag in `index.html`
+- The pattern is consistent with existing safe area usage across the onboarding flow (WelcomeStep, PinSetupStep, etc.)
 - No new dependencies required
-- Follows the existing navy/dark card aesthetic with `bg-card`, `border-border/40`, `text-muted-foreground`
-- Maintains the zero-transition motion policy (no Framer Motion on the home screen empty state)
-- Staggered fade-in animation on the All Assets page empty state uses existing Framer variants
 
