@@ -112,6 +112,10 @@ export default {
           from: { opacity: "0", transform: "translate3d(0,8px,0)", willChange: "transform, opacity" },
           to: { opacity: "1", transform: "translate3d(0,0,0)", willChange: "auto" },
         },
+        "dot-pulse": {
+          "0%, 100%": { opacity: "0.4", transform: "scale3d(0.8,0.8,1)" },
+          "50%": { opacity: "1", transform: "scale3d(1,1,1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -122,6 +126,7 @@ export default {
         "scale-in": "scale-in 0.2s cubic-bezier(0.16,1,0.3,1)",
         "slide-in-bottom": "slide-in-bottom 0.3s cubic-bezier(0.16,1,0.3,1)",
         "fade-in-up": "fade-in-up 0.32s cubic-bezier(0.32,0.72,0,1) both",
+        "dot-pulse": "dot-pulse 1.2s ease-in-out infinite",
       },
     },
   },

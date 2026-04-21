@@ -38,7 +38,7 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
         className="w-full px-3 pt-1 pb-1 nav-safe-inset"
         >
           <div 
-            className="bg-card/90 border border-border/30 rounded-2xl px-1 py-1.5"
+            className="bg-card/90 border border-border/30 rounded-2xl px-1 py-1.5 gpu-layer"
           >
             <div className="flex items-center justify-around">
               {navItems.filter(item => !hiddenTabs.includes(item.tab)).map((item) => {

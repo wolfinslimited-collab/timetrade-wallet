@@ -171,6 +171,15 @@
     padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
   }
 
+  .gpu-layer {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+  }
+
+  .contain-content {
+    contain: content;
+  }
+
   .pb-nav-safe {
     padding-bottom: calc(5rem + 5px + env(safe-area-inset-bottom, 0px));
   }

@@ -62,7 +62,7 @@ export const TransactionRiskModal = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-black/70" onClick={onCancel} />
       <div className="relative w-full max-w-sm bg-background border border-border rounded-3xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {isLoading ? (
           <div className="flex flex-col items-center gap-4 py-8">

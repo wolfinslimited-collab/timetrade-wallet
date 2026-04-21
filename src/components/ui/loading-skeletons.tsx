@@ -142,7 +142,7 @@ export function ChartSkeleton() {
 /* ── AI Insights loading ── */
 export function InsightsLoadingSkeleton() {
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/30 rounded-2xl p-6 space-y-4">
+    <div className="bg-card/50 border border-border/30 rounded-2xl p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Skeleton className="w-6 h-6 rounded-full" />
         <Skeleton className="h-3 w-20" />
