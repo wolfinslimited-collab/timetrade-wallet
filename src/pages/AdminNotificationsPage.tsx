@@ -40,12 +40,7 @@ export default function AdminNotificationsPage() {
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-notification", {
-        body: { title, message, type, icon: icon || null, target_platform: targetPlatform },
-      });
-
-      // Also send real FCM push
-      await supabase.functions.invoke("fcm-push", {
+      const { data, error } = await supabase.functions.invoke("fcm-push", {
         body: { title, message, type, icon: icon || null, target_platform: targetPlatform },
       });
 
