@@ -3,6 +3,8 @@ import { X, Camera, ScanLine } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Capacitor } from "@capacitor/core";
 
+let CapacitorBarcodeScannerModule: any = null;
+
 interface QRScannerModalProps {
   open: boolean;
   onClose: () => void;
@@ -13,7 +15,6 @@ const SCANNER_ID = "qr-reader";
 const isNative = Capacitor.isNativePlatform();
 
 let Html5QrcodeModule: typeof import("html5-qrcode") | null = null;
-let BarcodeScannerModule: any = null;
 
 function extractAddress(raw: string): string {
   // Handle ethereum:0x... or bitcoin:bc1... URI schemes
@@ -60,28 +61,22 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
 
     const runNativeScan = async () => {
       try {
-        if (!BarcodeScannerModule) {
-          BarcodeScannerModule = await import("@capacitor-mlkit/barcode-scanning");
+        if (!CapacitorBarcodeScannerModule) {
+          CapacitorBarcodeScannerModule = await import("@capacitor/barcode-scanner");
         }
-        const { BarcodeScanner, BarcodeFormat } = BarcodeScannerModule;
-
-        const permResult = await BarcodeScanner.requestPermissions();
-        if (permResult.camera === "denied") {
-          setError("Camera permission denied. Please allow camera access in your device settings.");
-          return;
-        }
+        const { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } = CapacitorBarcodeScannerModule;
 
         setNativeScanning(true);
-        const { barcodes } = await BarcodeScanner.scan({
-          formats: [BarcodeFormat.QrCode],
+        const result = await CapacitorBarcodeScanner.scanBarcode({
+          hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
         });
 
         if (cancelled) return;
         setNativeScanning(false);
 
-        if (barcodes.length > 0 && !scannedRef.current) {
+        if (result.ScanResult && !scannedRef.current) {
           scannedRef.current = true;
-          const address = extractAddress(barcodes[0].rawValue || "");
+          const address = extractAddress(result.ScanResult);
           onScan(address);
         }
         onClose();
