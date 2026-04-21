@@ -333,16 +333,16 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "\$PLIST"
 
           if [ ! -f "\$ENTITLEMENTS" ]; then
-            cat > "\$ENTITLEMENTS" << 'ENTEOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>aps-environment</key>
-            <string>production</string>
-          </dict>
-          </plist>
-          ENTEOF
+            cat > "\$ENTITLEMENTS" <<'ENTEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>aps-environment</key>
+  <string>production</string>
+</dict>
+</plist>
+ENTEOF
           else
             /usr/libexec/PlistBuddy -c "Delete :aps-environment" "\$ENTITLEMENTS" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :aps-environment string production" "\$ENTITLEMENTS"
@@ -441,6 +441,13 @@ jobs:
       - name: Build Xcode archive
         run: |
           cd ios/App
+          # Resolve SPM packages first so we can patch OSBarcodeLib xcassets
+          xcodebuild -project App.xcodeproj -scheme App -resolvePackageDependencies 2>/dev/null || true
+          # Fix OSBarcodeLib xcassets compilation failure on Xcode 16.4+
+          find "\$(pwd)" -path "*/OSBarcodeLib*OSBARCScannerView.xcassets" -type d 2>/dev/null | while read XCASSET; do
+            echo "Patching OSBarcodeLib xcassets at: \$XCASSET"
+            find "\$XCASSET" -name "Contents.json" -exec sed -i '' 's/"compression-type"[[:space:]]*:[[:space:]]*"[^"]*",*//g' {} + 2>/dev/null || true
+          done
           xcodebuild -project App.xcodeproj \\
             -scheme App \\
             -sdk iphoneos \\
@@ -448,7 +455,8 @@ jobs:
             -archivePath \$RUNNER_TEMP/App.xcarchive \\
             archive \\
             CURRENT_PROJECT_VERSION="\$BUILD_NUMBER" \\
-            ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon
+            ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon \\
+            ASSETCATALOG_COMPILER_SKIP_VALIDATION_ON_COPY=YES
 
       - name: Validate archived icon payload (strict)
         run: |
