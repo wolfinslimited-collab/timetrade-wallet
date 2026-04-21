@@ -33,6 +33,18 @@ interface StakingPosition {
   tx_hash?: string;
 }
 
+interface UnstakeRequest {
+  id: string;
+  position_id: string;
+  wallet_address: string;
+  token_symbol: string;
+  chain: string;
+  staked_amount: number;
+  earned_rewards: number;
+  status: string;
+  created_at: string;
+}
+
 // 15% monthly rate (not annual)
 const MONTHLY_RATE = 15; // percent per 30 days
 
@@ -122,6 +134,8 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const [isStaking, setIsStaking] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [unstakeRequests, setUnstakeRequests] = useState<UnstakeRequest[]>([]);
+  const [minStakeAmount, setMinStakeAmount] = useState(10);
   const { toast } = useToast();
 
   // Stake transfer hook for real on-chain transfers
@@ -196,6 +210,31 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     fetchPositions();
   }, [walletAddress]);
 
+  // Fetch minimum stake amount from config
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase.from("config").select("value").eq("key", "minimum_stake_amount").maybeSingle();
+        if (data?.value) setMinStakeAmount(Number(data.value) || 10);
+      } catch {}
+    })();
+  }, []);
+
+  // Fetch unstake requests
+  const fetchUnstakeRequests = async () => {
+    if (!walletAddress) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('staking', {
+        body: { action: 'get-unstake-requests', wallet_address: walletAddress.toLowerCase() },
+      });
+      if (!error && data?.data) setUnstakeRequests(data.data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchUnstakeRequests();
+  }, [walletAddress]);
+
   // Prevent stale state causing accidental stakes when reopening the sheet
   useEffect(() => {
     if (!showStakeSheet) return;
@@ -255,8 +294,9 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   // Validate amount against balance
   const parsedAmount = parseFloat(stakeAmount) || 0;
   const maxBalance = selectedToken?.balance || 0;
-  const isAmountValid = parsedAmount > 0 && parsedAmount <= maxBalance;
+  const isAmountValid = parsedAmount >= minStakeAmount && parsedAmount <= maxBalance;
   const isOverBalance = parsedAmount > maxBalance;
+  const isBelowMinimum = parsedAmount > 0 && parsedAmount < minStakeAmount;
 
   // Opens PIN modal to initiate staking
   const handleStake = async () => {
@@ -402,6 +442,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
 
       toast({ title: "Unstaked successfully!", description: `${position.amount} ${position.token_symbol} + rewards returned` });
       fetchPositions();
+      fetchUnstakeRequests();
     } catch (err) {
       console.error("Unstake error:", err);
       toast({ title: "Unstake failed", description: "Please try again", variant: "destructive" });
@@ -595,6 +636,53 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
             </div>
           )}
         </div>
+
+        {/* Unstake Requests */}
+        {unstakeRequests.length > 0 && (
+          <div>
+            <h2 className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Unstake History</h2>
+            <div className="space-y-2">
+              {unstakeRequests.map((req) => {
+                const statusColor = req.status === 'completed' 
+                  ? 'bg-success/15 text-success border-success/20' 
+                  : req.status === 'rejected'
+                    ? 'bg-destructive/15 text-destructive border-destructive/20'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/20';
+                const statusLabel = req.status === 'completed' ? 'Paid' : req.status === 'rejected' ? 'Rejected' : 'Pending';
+                return (
+                  <Card key={req.id} className="p-4 bg-card/30 border-border/20 rounded-2xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <TokenLogo symbol={req.token_symbol} size="sm" />
+                        <div>
+                          <p className="font-semibold text-sm">{req.token_symbol}</p>
+                          <p className="text-[11px] text-muted-foreground capitalize">{req.chain}</p>
+                        </div>
+                      </div>
+                      <div className={cn("px-2.5 py-1 rounded-full text-[11px] font-semibold border", statusColor)}>
+                        {statusLabel}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase">Principal</p>
+                        <p className="text-xs font-semibold font-mono">{formatCurrency(req.staked_amount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase">Rewards</p>
+                        <p className="text-xs font-semibold font-mono text-success">+{formatCurrency(req.earned_rewards)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground uppercase">Date</p>
+                        <p className="text-xs font-mono">{new Date(req.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Token Selection Sheet */}
@@ -732,6 +820,11 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
               {isOverBalance && (
                 <p className="text-xs text-destructive mt-1.5 px-1">
                   Amount exceeds available balance
+                </p>
+              )}
+              {isBelowMinimum && !isOverBalance && (
+                <p className="text-xs text-destructive mt-1.5 px-1">
+                  Minimum stake amount is ${minStakeAmount}
                 </p>
               )}
             </div>

@@ -218,6 +218,53 @@ export type Database = {
         }
         Relationships: []
       }
+      unstake_requests: {
+        Row: {
+          chain: string
+          created_at: string
+          earned_rewards: number
+          id: string
+          position_id: string
+          staked_amount: number
+          status: string
+          token_symbol: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          chain?: string
+          created_at?: string
+          earned_rewards?: number
+          id?: string
+          position_id: string
+          staked_amount: number
+          status?: string
+          token_symbol?: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          chain?: string
+          created_at?: string
+          earned_rewards?: number
+          id?: string
+          position_id?: string
+          staked_amount?: number
+          status?: string
+          token_symbol?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unstake_requests_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "staking_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_users: {
         Row: {
           city: string | null
