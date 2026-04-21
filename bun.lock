@@ -118,7 +118,7 @@
 
     "@babel/runtime": ["@babel/runtime@7.28.2", "", {}, "sha512-KHp2IflsnGywDjBWDkR9iEqiWSpc8GIi0lgTT3mOElT0PP1tG26P4tmFI2YvAdzgq9RGyoHZQEIEdZy6Ec5xCA=="],
 
-    "@capacitor-mlkit/barcode-scanning": ["@capacitor-mlkit/barcode-scanning@8.0.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-mlkit/barcode-scanning/-/barcode-scanning-8.0.1.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-94SyxzbcQ2HBd7yxS34dqc0PzwdOw8/98xBrjw1ioznE/Ksky/iwsip5Bm8P8Qg+dgnJYWz7NcIPjd+6bLjVoQ=="],
+    "@capacitor-mlkit/barcode-scanning": ["@capacitor-mlkit/barcode-scanning@8.0.1", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-mlkit/barcode-scanning/-/barcode-scanning-8.0.1.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-94SyxzbcQ2HBd7yxS34dqc0PzwdOw8/98xBrjw1ioznE/Ksky/iwsip5Bm8P8Qg+dgnJYWz7NcIPjd+6bLjVoQ=="],
 
     "@capacitor/android": ["@capacitor/android@8.0.2", "", { "peerDependencies": { "@capacitor/core": "^8.0.0" } }, "sha512-0D7j0YvzjnfCMKLvFkAbx8b3Vwx+QfHFG5NzoXpI9sAl3zWiLsfa+NX4x92Fy+k4MGjLSMAfLThCqILYGDDsgw=="],
 
