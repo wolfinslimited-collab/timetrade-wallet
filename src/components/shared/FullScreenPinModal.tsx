@@ -154,7 +154,7 @@ export const FullScreenPinModal = ({
             className="flex flex-col h-full"
           >
             {/* Header */}
-            <div className="flex items-center px-5 pt-2 pb-1 shrink-0">
+            <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
               {showBackArrow && (
                 <button
                   onClick={onClose}
@@ -164,6 +164,13 @@ export const FullScreenPinModal = ({
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               )}
+              {!showBackArrow && <div />}
+              <button
+                onClick={onClose}
+                className="text-sm font-medium text-muted-foreground active:opacity-60 transition-opacity"
+              >
+                Cancel
+              </button>
             </div>
 
             {/* Logo + Title — centered like the lock screen */}
@@ -307,14 +314,6 @@ export const FullScreenPinModal = ({
               </div>
 
               {footer && <div className="mt-4">{footer}</div>}
-
-              {/* Cancel button */}
-              <button
-                onClick={onClose}
-                className="mt-4 w-full text-center text-sm font-medium text-muted-foreground active:opacity-60 transition-opacity"
-              >
-                Cancel
-              </button>
             </div>
           </motion.div>
         </motion.div>
