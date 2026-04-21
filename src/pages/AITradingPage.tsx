@@ -190,7 +190,22 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
             <p className="text-[10px] text-muted-foreground font-medium">Autonomous portfolio bot</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate("/live-trades")}
+            className={cn(
+              "h-7 px-2.5 rounded-full flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
+              isActive
+                ? "bg-success/10 text-success"
+                : "bg-secondary/50 text-muted-foreground"
+            )}
+          >
+            <span className="relative flex w-1.5 h-1.5">
+              {isActive && <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />}
+              <span className={cn("relative inline-flex w-1.5 h-1.5 rounded-full", isActive ? "bg-success" : "bg-muted-foreground/40")} />
+            </span>
+            {isActive ? "Live" : "Idle"}
+          </button>
           <IconBtn onClick={fetchDashboardData} ariaLabel="Refresh">
             <RefreshCw className={cn("w-4 h-4 text-muted-foreground", isLoading && "animate-spin")} />
           </IconBtn>
@@ -241,12 +256,12 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
           </div>
 
           {/* Control row */}
-          <div className="mt-5 flex items-center gap-2.5">
+          <div className="mt-5">
             <Button
               onClick={handleToggle}
               disabled={toggling}
               className={cn(
-                "h-[52px] flex-1 rounded-2xl text-[14px] font-semibold shadow-lg",
+                "h-[52px] w-full rounded-2xl text-[14px] font-semibold shadow-lg",
                 isActive
                   ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
                   : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
@@ -263,37 +278,6 @@ function TradingDashboard({ api }: { api: ReturnType<typeof useTradingApi> }) {
                 </>
               )}
             </Button>
-            <button
-              onClick={() => navigate("/live-trades")}
-              className={cn(
-                "h-[52px] px-4 rounded-2xl flex items-center gap-2 border active:scale-95 transition-transform",
-                isActive
-                  ? "bg-success/10 border-success/30 hover:bg-success/15"
-                  : "bg-secondary/40 border-border/50 hover:bg-secondary/60"
-              )}
-            >
-              <span
-                className={cn(
-                  "relative flex w-2 h-2"
-                )}
-              >
-                {isActive && (
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
-                )}
-                <span className={cn(
-                  "relative inline-flex w-2 h-2 rounded-full",
-                  isActive ? "bg-success" : "bg-muted-foreground/40"
-                )} />
-              </span>
-              <span
-                className={cn(
-                  "text-[12px] font-bold tracking-wide",
-                  isActive ? "text-success" : "text-muted-foreground"
-                )}
-              >
-                {isActive ? "LIVE" : "IDLE"}
-              </span>
-            </button>
           </div>
         </div>
       </div>
