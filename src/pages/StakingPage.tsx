@@ -294,8 +294,9 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   // Validate amount against balance
   const parsedAmount = parseFloat(stakeAmount) || 0;
   const maxBalance = selectedToken?.balance || 0;
-  const isAmountValid = parsedAmount > 0 && parsedAmount <= maxBalance;
+  const isAmountValid = parsedAmount >= minStakeAmount && parsedAmount <= maxBalance;
   const isOverBalance = parsedAmount > maxBalance;
+  const isBelowMinimum = parsedAmount > 0 && parsedAmount < minStakeAmount;
 
   // Opens PIN modal to initiate staking
   const handleStake = async () => {
