@@ -914,15 +914,15 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                   className="w-full h-28 p-4 rounded-2xl border border-border/50 bg-secondary/50 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/50"
                 />
               </div>
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={resetAddMode} className="flex-1 rounded-xl">
+              <div className="flex gap-3 pt-4 pb-2">
+                <Button variant="outline" onClick={resetAddMode} className="flex-1 rounded-xl h-12">
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
                 <Button
                   onClick={handleImportMnemonic}
                   disabled={isImporting || !mnemonicInput.trim()}
-                  className="flex-1 rounded-xl"
+                  className="flex-1 rounded-xl h-12"
                 >
                   {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import Wallet"}
                 </Button>
@@ -954,15 +954,15 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
                   className="font-mono bg-secondary/50 border-border/50"
                 />
               </div>
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={resetAddMode} className="flex-1 rounded-xl">
+              <div className="flex gap-3 pt-4 pb-2">
+                <Button variant="outline" onClick={resetAddMode} className="flex-1 rounded-xl h-12">
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
                 <Button
                   onClick={handleImportPrivateKey}
                   disabled={isImporting || !privateKeyInput.trim()}
-                  className="flex-1 rounded-xl"
+                  className="flex-1 rounded-xl h-12"
                 >
                   {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import Key"}
                 </Button>
