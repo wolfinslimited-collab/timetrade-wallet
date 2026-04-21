@@ -121,7 +121,7 @@ export function TradingOnboardingWizard({ balance, onComplete, onCancel }: Wizar
   };
 
   return (
-    <Card className="w-full mx-auto border-border/60 shadow-2xl bg-card/95 backdrop-blur-md relative">
+    <Card className="w-full mx-auto border-border/60 shadow-2xl bg-card/95 relative">
       <CardContent className="p-6 space-y-6">
         {/* Header / step indicators */}
         <div className="space-y-2">
@@ -238,7 +238,7 @@ function StepRisk({ riskLevel, setRiskLevel }:{ riskLevel:string; setRiskLevel:(
           const Icon = opt.icon;
           return (
             <button key={opt.value} onClick={() => setRiskLevel(opt.value)}
-              className={cn("w-full rounded-xl border p-4 text-left transition-all", active ? opt.activeBg : opt.bg + " hover:opacity-80")}>
+              className={cn("w-full rounded-xl border p-4 text-left transition-colors", active ? opt.activeBg : opt.bg + " hover:opacity-80")}>
               <div className="flex items-start gap-3">
                 <Icon className={cn("w-5 h-5 mt-0.5 shrink-0", opt.color)} />
                 <div className="flex-1 min-w-0">
@@ -275,7 +275,7 @@ function StepStrategy({ strategyType, setStrategyType }:{ strategyType:string; s
           const Icon = opt.icon;
           return (
             <button key={opt.value} onClick={() => setStrategyType(opt.value)}
-              className={cn("w-full rounded-xl border p-4 text-left transition-all", active ? opt.activeBg : opt.bg + " hover:opacity-80")}>
+              className={cn("w-full rounded-xl border p-4 text-left transition-colors", active ? opt.activeBg : opt.bg + " hover:opacity-80")}>
               <div className="flex items-start gap-3">
                 <Icon className={cn("w-5 h-5 mt-0.5 shrink-0", opt.color)} />
                 <div className="flex-1 min-w-0">

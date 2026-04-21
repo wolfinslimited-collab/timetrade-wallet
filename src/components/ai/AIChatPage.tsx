@@ -200,8 +200,8 @@ export const AIChatPage = () => {
                   onClick={() => sendMessage(s.label)}
                   className={cn(
                     "flex items-start gap-2.5 p-3.5 rounded-2xl border text-left",
-                    "bg-gradient-to-br backdrop-blur-sm",
-                    "hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+                    "bg-gradient-to-br",
+                    "hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200",
                     s.color
                   )}
                 >
@@ -235,7 +235,7 @@ export const AIChatPage = () => {
                 "max-w-[78%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed",
                 msg.role === "user"
                   ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-br-lg shadow-lg shadow-primary/10"
-                  : "bg-card/80 border border-border/50 rounded-bl-lg backdrop-blur-sm"
+                  : "bg-card/80 border border-border/50 rounded-bl-lg"
               )}>
                 {msg.role === "assistant" ? (
                 <div className="prose prose-sm prose-invert max-w-none break-words
@@ -279,11 +279,11 @@ export const AIChatPage = () => {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
               <Bot className="w-4 h-4 text-primary" />
             </div>
-            <div className="bg-card/80 border border-border/50 rounded-2xl rounded-bl-lg px-4 py-3.5 backdrop-blur-sm">
+            <div className="bg-card/80 border border-border/50 rounded-2xl rounded-bl-lg px-4 py-3.5">
               <div className="flex gap-1.5 items-center">
-                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-dot-pulse" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-dot-pulse" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-dot-pulse" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </motion.div>
@@ -296,7 +296,7 @@ export const AIChatPage = () => {
         <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />
 
         <form onSubmit={handleSubmit} className="relative">
-          <div className="flex items-end gap-2 bg-card/80 border border-border/50 rounded-2xl p-1.5 backdrop-blur-xl focus-within:border-primary/30 transition-colors duration-200">
+          <div className="flex items-end gap-2 bg-card/90 border border-border/50 rounded-2xl p-1.5 focus-within:border-primary/30 transition-colors duration-200">
             <textarea
               ref={inputRef}
               value={input}
@@ -311,7 +311,7 @@ export const AIChatPage = () => {
               type="submit"
               disabled={!input.trim() || isLoading}
               className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-[background-color,transform] duration-200",
                 input.trim() && !isLoading
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-105 active:scale-95"
                   : "bg-secondary/50 text-muted-foreground/30"

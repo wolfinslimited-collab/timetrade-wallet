@@ -124,7 +124,7 @@ export default function AdminNotificationsPage() {
                 key={p.value}
                 onClick={() => setTargetPlatform(p.value)}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all",
+                  "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors",
                   targetPlatform === p.value
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border/30 bg-card/50 text-muted-foreground"
@@ -146,7 +146,7 @@ export default function AdminNotificationsPage() {
                 key={t.value}
                 onClick={() => setType(t.value)}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all",
+                  "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors",
                   type === t.value
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border/30 bg-card/50 text-muted-foreground"

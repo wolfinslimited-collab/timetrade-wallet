@@ -229,7 +229,7 @@ export const FeatureTourStep = ({ onContinue, onBack }: FeatureTourStepProps) =>
             <span
               key={i}
               className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
+                "h-1.5 rounded-full transition-[width] duration-300",
                 i === index ? "w-6 bg-primary" : "w-1.5 bg-border"
               )}
             />

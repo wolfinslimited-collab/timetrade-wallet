@@ -92,7 +92,7 @@ export const SecurityWarningStep = ({ onContinue, onBack }: SecurityWarningStepP
       <div className="shrink-0 px-6 py-4 border-t border-border bg-background space-y-3" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
         <label 
           className={cn(
-            "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+            "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors",
             acknowledged 
               ? "bg-primary/10 border-primary/50" 
               : "bg-card border-border hover:border-primary/30"
