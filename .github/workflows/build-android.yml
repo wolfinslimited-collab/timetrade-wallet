@@ -35,24 +35,60 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Add Android platform
+      - name: Recreate Android platform
         run: |
-          # Save google-services.json before recreating android/
-          if [ -f "android/app/google-services.json" ]; then
-            cp android/app/google-services.json /tmp/google-services.json
+          TMP_GOOGLE_SERVICES="$RUNNER_TEMP/google-services.json"
+          if [ -f android/app/google-services.json ]; then
+            cp android/app/google-services.json "$TMP_GOOGLE_SERVICES"
           fi
+
           rm -rf android
           npx cap add android
+
+          if [ -f "$TMP_GOOGLE_SERVICES" ]; then
+            mkdir -p android/app
+            cp "$TMP_GOOGLE_SERVICES" android/app/google-services.json
+          fi
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Restore google-services.json
+      - name: Customize splash screen (dark + logo)
         run: |
-          if [ -f "/tmp/google-services.json" ]; then
-            cp /tmp/google-services.json android/app/google-services.json
-            echo "google-services.json restored"
+          if [ -f public/app-logo.png ]; then
+            LOGO_SRC="public/app-logo.png"
+          elif [ -f public/app-logo.jpg ]; then
+            LOGO_SRC="public/app-logo.jpg"
+          else
+            echo "No app logo found, skipping splash customization"
+            exit 0
           fi
+
+          if ! command -v convert &>/dev/null && ! command -v magick &>/dev/null; then
+            sudo apt-get update && sudo apt-get install -y imagemagick
+          fi
+          MAGICK_CMD="convert"
+          command -v magick &>/dev/null && MAGICK_CMD="magick"
+
+          for SIZE_DIR in "drawable-mdpi 480x800" "drawable-hdpi 720x1280" "drawable-xhdpi 1080x1920" "drawable-xxhdpi 1440x2560" "drawable-xxxhdpi 1920x3200"; do
+            DIR_NAME="${SIZE_DIR%% *}"
+            DIMENSIONS="${SIZE_DIR#* }"
+            W="${DIMENSIONS%x*}"
+            H="${DIMENSIONS#*x}"
+            LOGO_SIZE=$((W / 4))
+            RES_DIR="android/app/src/main/res/$DIR_NAME"
+            mkdir -p "$RES_DIR"
+            $MAGICK_CMD -size ${W}x${H} "xc:#0E1116" "$RUNNER_TEMP/bg_$DIR_NAME.png"
+            $MAGICK_CMD "$LOGO_SRC" -resize ${LOGO_SIZE}x${LOGO_SIZE} "$RUNNER_TEMP/logo_$DIR_NAME.png"
+            $MAGICK_CMD "$RUNNER_TEMP/bg_$DIR_NAME.png" "$RUNNER_TEMP/logo_$DIR_NAME.png" -gravity center -composite "$RES_DIR/splash.png"
+          done
+
+          STYLES="android/app/src/main/res/values/styles.xml"
+          if [ -f "$STYLES" ]; then
+            sed -i 's|<item name="android:background">@drawable/splash</item>|<item name="android:background">#0E1116</item>|g' "$STYLES"
+            sed -i 's|<item name="android:background">@null</item>|<item name="android:background">#0E1116</item>|g' "$STYLES"
+          fi
+          echo "Android splash customized with dark background and app logo"
 
       - name: Set Android build number
         run: |
