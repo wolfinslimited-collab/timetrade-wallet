@@ -1596,6 +1596,7 @@ Deno.serve(async (req) => {
                     i + 1
                   } got workflow_dispatch 422; re-validating workflow trigger...`,
                 );
+                console.log(`422 response: ${msg.substring(0, 500)}`);
                 try {
                   const patchResult = await ensureWorkflowDispatchTrigger(
                     githubRepo,
@@ -1661,6 +1662,9 @@ Deno.serve(async (req) => {
                 0,
               );
 
+              console.log(`repository_dispatch sent successfully for event_type=${eventType}`);
+              // Give GitHub time to process the dispatch
+              await new Promise((r) => setTimeout(r, 3000));
               lastErr = null;
             }
           }
