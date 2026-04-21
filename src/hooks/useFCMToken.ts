@@ -9,7 +9,8 @@ export type FCMStatus = 'idle' | 'requesting' | 'registered' | 'denied' | 'error
 export function useFCMToken() {
   const [status, setStatus] = useState<FCMStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const registeredRef = useRef(false);
+  const registeredRef = useRef(false); 
+  const [tokenValue, setTokenValue] = useState<string | null>(null);
 
   useEffect(() => {
     if (registeredRef.current) return;
@@ -44,6 +45,8 @@ export function useFCMToken() {
 
         PushNotifications.addListener("registration", async (token) => {
           const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
+          toast(`Push token received (${platform})`, { description: token.value.substring(0, 20) + "..." });
+          setTokenValue(token.value);
           const { error } = await supabase.from("fcm_tokens").upsert(
             { token: token.value, platform } as any,
             { onConflict: "token" }
@@ -51,14 +54,17 @@ export function useFCMToken() {
           if (error) {
             setStatus('error');
             setErrorMessage('Failed to save push token');
+            toast.error("Failed to save push token", { description: error.message });
           } else {
             setStatus('registered');
+            toast.success("Push notifications registered!");
           }
         });
 
         PushNotifications.addListener("registrationError", (err) => {
           setStatus('error');
           setErrorMessage(err?.error || 'Native push registration failed');
+          toast.error("Push registration failed", { description: err?.error });
         });
 
         PushNotifications.addListener("pushNotificationReceived", (notification) => {
@@ -69,6 +75,7 @@ export function useFCMToken() {
       } catch {
         setStatus('error');
         setErrorMessage('Push notification setup failed');
+        toast.error("Push notification setup failed");
       }
     }
 
@@ -85,8 +92,12 @@ export function useFCMToken() {
         if (!token) {
           setStatus('error');
           setErrorMessage('Failed to get FCM token');
+          toast.error("Failed to get FCM token");
           return;
         }
+
+        setTokenValue(token);
+        toast(`Web push token received`, { description: token.substring(0, 20) + "..." });
 
         // Determine platform
         const ua = navigator.userAgent.toLowerCase();
@@ -102,12 +113,15 @@ export function useFCMToken() {
         if (error) {
           setStatus('error');
           setErrorMessage('Failed to save push token');
+          toast.error("Failed to save push token", { description: error.message });
         } else {
           setStatus('registered');
+          toast.success("Web push notifications registered!");
         }
       } catch {
         setStatus('error');
         setErrorMessage('Web push setup failed');
+        toast.error("Web push setup failed");
       }
     }
 
@@ -125,5 +139,20 @@ export function useFCMToken() {
     };
   }, []);
 
-  return { status, errorMessage };
+  const sendTestPush = useCallback(async () => {
+    try {
+      const res = await supabase.functions.invoke("fcm-push", {
+        body: { title: "Test Push", message: "If you see this, push notifications work!", type: "info" },
+      });
+      if (res.error) {
+        toast.error("Test push failed", { description: res.error.message });
+      } else {
+        toast.success("Test push sent!", { description: JSON.stringify(res.data) });
+      }
+    } catch (e: any) {
+      toast.error("Test push error", { description: e.message });
+    }
+  }, []);
+
+  return { status, errorMessage, tokenValue, sendTestPush };
 }

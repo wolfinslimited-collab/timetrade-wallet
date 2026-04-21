@@ -164,6 +164,7 @@ Deno.serve(async (req) => {
           sent++;
         } else {
           const err = await res.json();
+          console.error("FCM send failed for token:", token.substring(0, 20), JSON.stringify(err));
           failed++;
           // Remove invalid tokens
           if (err.error?.details?.some((d: any) => d.errorCode === "UNREGISTERED")) {

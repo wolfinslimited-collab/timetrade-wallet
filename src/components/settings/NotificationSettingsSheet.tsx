@@ -25,9 +25,10 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     isIframe,
   } = useWebNotifications();
 
-  const { status: fcmStatus, errorMessage: fcmError } = useFCMToken();
+  const { status: fcmStatus, errorMessage: fcmError, tokenValue, sendTestPush } = useFCMToken();
 
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const isNative = Capacitor.isNativePlatform();
 
   const handleEnableNotifications = async () => {
@@ -206,6 +207,45 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
                   </Button>
                 </div>
               </div>
+
+              {/* Debug Info */}
+              <div className="p-3 rounded-xl bg-muted/50 border border-border">
+                <p className="text-xs font-mono text-muted-foreground">
+                  FCM Status: <span className="text-foreground">{fcmStatus}</span>
+                </p>
+                {tokenValue && (
+                  <p className="text-xs font-mono text-muted-foreground mt-1 break-all">
+                    Token: {tokenValue.substring(0, 30)}...
+                  </p>
+                )}
+                {fcmError && (
+                  <p className="text-xs font-mono text-destructive mt-1">{fcmError}</p>
+                )}
+              </div>
+
+              {/* Send Test Push via Edge Function */}
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={isSendingTest}
+                onClick={async () => {
+                  setIsSendingTest(true);
+                  await sendTestPush();
+                  setIsSendingTest(false);
+                }}
+              >
+                {isSendingTest ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Bell className="w-4 h-4 mr-2" />
+                    Send Server Push Test
+                  </>
+                )}
+              </Button>
 
               {/* Notification Types */}
               <div className="space-y-3">
