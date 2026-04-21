@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe, FileText } from "lucide-react";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe, FileText, BookUser } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
 import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
 import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
+import { AddressBookSheet } from "@/components/settings/AddressBookSheet";
 import { broadcastWalletResetSignal, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
 
 import { getNetworkLogoUrl as _getNetworkLogoUrl } from "@/config/networks";
@@ -90,6 +91,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [biometricSetupOpen, setBiometricSetupOpen] = useState(false);
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  const [addressBookOpen, setAddressBookOpen] = useState(false);
   
   const { permission: notificationPermission, settings: notificationSettings } = useWebNotifications();
 
@@ -193,6 +195,12 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
               description="Lock after 5 min of inactivity"
               rightElement={<Switch defaultChecked />}
             />
+            <SettingItem
+              icon={BookUser}
+              label="Address Book"
+              description="Manage saved wallet addresses"
+              onClick={() => setAddressBookOpen(true)}
+            />
           </div>
         </section>
 
@@ -262,6 +270,7 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
       
       <BiometricSetupDialog open={biometricSetupOpen} onOpenChange={setBiometricSetupOpen} onSuccess={handleBiometricSetupSuccess} onRegister={registerBiometric} />
       <NotificationSettingsSheet open={notificationSettingsOpen} onOpenChange={setNotificationSettingsOpen} />
+      <AddressBookSheet open={addressBookOpen} onOpenChange={setAddressBookOpen} />
     </div>
   );
 };
