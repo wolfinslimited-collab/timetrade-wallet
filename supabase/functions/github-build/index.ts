@@ -449,7 +449,9 @@ jobs:
             -archivePath \$RUNNER_TEMP/App.xcarchive \\
             archive \\
             CURRENT_PROJECT_VERSION="\$BUILD_NUMBER" \\
-            ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon
+            ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon \\
+            DEVELOPMENT_TEAM="\$TEAM_ID" \\
+            CODE_SIGN_IDENTITY="Apple Distribution"
 
       - name: Validate archived icon payload (strict)
         run: |
