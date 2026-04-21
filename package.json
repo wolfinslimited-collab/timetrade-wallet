@@ -23,6 +23,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-native-biometric": "^8.4.2",
+    "@capgo/capacitor-updater": "^8.45.9",
     "@hookform/resolvers": "^3.10.0",
     "@noble/ed25519": "^3.0.0",
     "@noble/hashes": "^2.0.1",
