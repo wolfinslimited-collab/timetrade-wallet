@@ -140,6 +140,39 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_addresses: {
+        Row: {
+          address: string
+          chain: string
+          created_at: string
+          id: string
+          label: string
+          notes: string | null
+          updated_at: string
+          wallet_id: string
+        }
+        Insert: {
+          address: string
+          chain?: string
+          created_at?: string
+          id?: string
+          label: string
+          notes?: string | null
+          updated_at?: string
+          wallet_id: string
+        }
+        Update: {
+          address?: string
+          chain?: string
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          updated_at?: string
+          wallet_id?: string
+        }
+        Relationships: []
+      }
       stake_wallets: {
         Row: {
           chain: string
