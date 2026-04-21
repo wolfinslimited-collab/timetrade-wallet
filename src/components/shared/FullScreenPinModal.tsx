@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, Delete, Fingerprint, Check } from "lucide-react";
+import { ChevronLeft, Delete, Fingerprint, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { KeypadButton } from "@/components/shared/KeypadButton";
@@ -144,29 +144,27 @@ export const FullScreenPinModal = ({
             className="flex flex-col h-full"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
-              <button
-                onClick={onClose}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.05] border border-white/[0.08] active:scale-90 transition-transform"
-                aria-label="Close"
-              >
-                {showBackArrow ? (
+            <div className="flex items-center px-5 pt-2 pb-1 shrink-0">
+              {showBackArrow && (
+                <button
+                  onClick={onClose}
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.05] border border-white/[0.08] active:scale-90 transition-transform"
+                  aria-label="Back"
+                >
                   <ChevronLeft className="w-5 h-5" />
-                ) : (
-                  <X className="w-4.5 h-4.5" />
-                )}
-              </button>
+                </button>
+              )}
+            </div>
+
+            {/* Logo + Title — centered like the lock screen */}
+            <div className="px-6 pt-4 pb-2 text-center shrink-0 flex flex-col items-center">
+              <img src="/app-logo.png" alt="Logo" className="w-14 h-14 object-cover mb-4" />
               {eyebrow && (
-                <div className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                <div className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase mb-1">
                   {eyebrow}
                 </div>
               )}
-              <div className="w-9 h-9" />
-            </div>
-
-            {/* Title */}
-            <div className="px-6 pt-6 pb-2 text-center shrink-0">
-              <h1 className="text-[26px] font-bold tracking-tight text-foreground">
+              <h1 className="text-lg font-bold tracking-tight text-foreground">
                 {title}
               </h1>
               {subtitle && (
