@@ -451,7 +451,6 @@ jobs:
             CODE_SIGN_STYLE=Manual \\
             DEVELOPMENT_TEAM="\$TEAM_ID" \\
             CODE_SIGN_IDENTITY="Apple Distribution" \\
-            PROVISIONING_PROFILE_SPECIFIER="\$PROFILE_NAME" \\
             CURRENT_PROJECT_VERSION="\$BUILD_NUMBER" \\
             ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon
 
