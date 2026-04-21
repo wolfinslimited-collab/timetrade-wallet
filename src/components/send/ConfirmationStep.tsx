@@ -16,6 +16,7 @@ import { ethers } from "ethers";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 import { derivePrivateKeyForChain, SolanaDerivationPath } from "@/utils/walletDerivation";
 import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
+import { haptics } from "@/lib/haptics";
 
 interface ConfirmationStepProps {
   transaction: TransactionData;
@@ -197,6 +198,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       await onConfirm(undefined, result.txHash);
     } catch (error) {
       console.error('WalletConnect signing failed:', error);
+      haptics.notify("error");
       toast({
         title: "Transaction Failed",
         description: error instanceof Error ? error.message : "Failed to send transaction",
@@ -316,12 +318,14 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       setShowPinModal(false);
       await onConfirm(signedTx);
 
+      haptics.impact("medium");
       toast({
         title: "Transaction Signed",
         description: "Your transaction has been signed and is being broadcast.",
       });
     } catch (error) {
       console.error('Signing failed:', error);
+      haptics.notify("error");
       setPinError(error instanceof Error ? error.message : "Failed to sign transaction");
     } finally {
       setIsProcessing(false);
