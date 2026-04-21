@@ -30,37 +30,37 @@ const RECOMMENDED_AMOUNT_PCT = 0.5;
 const RISK_OPTIONS = [
   { value: "low" as const, label: "Conservative", icon: Shield,
     desc: "The system uses smaller positions and exits quickly when conditions change. Capital protection is the priority.",
-    detail: "Careful sizing · Quick exits", color: "text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-    activeBg: "bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/30" },
+    detail: "Careful sizing · Quick exits",
+    bg: "bg-card/60 border-border/50",
+    activeBg: "bg-card border-foreground/25 ring-1 ring-foreground/10" },
   { value: "balanced" as const, label: "Balanced", icon: Target,
     desc: "A measured approach to sizing and exposure. The system balances opportunity with protection.",
-    detail: "Balanced sizing · Steady management", color: "text-primary",
-    bg: "bg-primary/10 border-primary/20",
-    activeBg: "bg-primary/20 border-primary/50 ring-1 ring-primary/30" },
+    detail: "Balanced sizing · Steady management",
+    bg: "bg-card/60 border-border/50",
+    activeBg: "bg-card border-foreground/25 ring-1 ring-foreground/10" },
   { value: "high" as const, label: "Aggressive", icon: Zap,
     desc: "The system allocates more per trade and holds positions longer. Designed for traders comfortable with higher exposure.",
-    detail: "Larger sizing · Extended holds", color: "text-amber-400",
-    bg: "bg-amber-500/10 border-amber-500/20",
-    activeBg: "bg-amber-500/20 border-amber-500/50 ring-1 ring-amber-500/30" },
+    detail: "Larger sizing · Extended holds",
+    bg: "bg-card/60 border-border/50",
+    activeBg: "bg-card border-foreground/25 ring-1 ring-foreground/10" },
 ];
 
 const STRATEGY_OPTIONS = [
   { value: "steady_growth" as const, label: "Steady Growth", icon: TrendingUp,
     desc: "Enters trades frequently on stable, high-liquidity pairs. Prioritises consistency and small, reliable moves.",
-    detail: "Frequent entries · Stable pairs", color: "text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-    activeBg: "bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/30" },
+    detail: "Frequent entries · Stable pairs",
+    bg: "bg-card/60 border-border/50",
+    activeBg: "bg-card border-foreground/25 ring-1 ring-foreground/10" },
   { value: "momentum" as const, label: "Momentum", icon: Zap,
     desc: "Waits for strong trend signals before entering. Fewer trades, each backed by volume and directional conviction.",
-    detail: "Signal-driven · Selective entries", color: "text-primary",
-    bg: "bg-primary/10 border-primary/20",
-    activeBg: "bg-primary/20 border-primary/50 ring-1 ring-primary/30" },
+    detail: "Signal-driven · Selective entries",
+    bg: "bg-card/60 border-border/50",
+    activeBg: "bg-card border-foreground/25 ring-1 ring-foreground/10" },
   { value: "adaptive" as const, label: "Adaptive", icon: BarChart3,
     desc: "The AI reads market conditions in real time and switches approaches automatically. Fully hands-off.",
-    detail: "AI-managed · Dynamic approach", color: "text-violet-400",
-    bg: "bg-violet-500/10 border-violet-500/20",
-    activeBg: "bg-violet-500/20 border-violet-500/50 ring-1 ring-violet-500/30" },
+    detail: "AI-managed · Dynamic approach",
+    bg: "bg-card/60 border-border/50",
+    activeBg: "bg-card border-foreground/25 ring-1 ring-foreground/10" },
 ];
 
 const STEPS = ["Amount", "Risk", "Strategy", "Review"];
@@ -240,7 +240,9 @@ function StepRisk({ riskLevel, setRiskLevel }:{ riskLevel:string; setRiskLevel:(
             <button key={opt.value} onClick={() => setRiskLevel(opt.value)}
               className={cn("w-full rounded-xl border p-4 text-left transition-colors", active ? opt.activeBg : opt.bg + " hover:opacity-80")}>
               <div className="flex items-start gap-3">
-                <Icon className={cn("w-5 h-5 mt-0.5 shrink-0", opt.color)} />
+                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", active ? "bg-primary/15" : "bg-muted/50")}>
+                  <Icon className={cn("w-4.5 h-4.5", active ? "text-primary" : "text-muted-foreground")} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-foreground flex items-center gap-2">
@@ -277,7 +279,9 @@ function StepStrategy({ strategyType, setStrategyType }:{ strategyType:string; s
             <button key={opt.value} onClick={() => setStrategyType(opt.value)}
               className={cn("w-full rounded-xl border p-4 text-left transition-colors", active ? opt.activeBg : opt.bg + " hover:opacity-80")}>
               <div className="flex items-start gap-3">
-                <Icon className={cn("w-5 h-5 mt-0.5 shrink-0", opt.color)} />
+                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", active ? "bg-primary/15" : "bg-muted/50")}>
+                  <Icon className={cn("w-4.5 h-4.5", active ? "text-primary" : "text-muted-foreground")} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-foreground flex items-center gap-2">
@@ -317,14 +321,14 @@ function StepReview({ amount, riskLevel, strategyType }:{
         <div className="flex items-center justify-between p-4">
           <span className="text-sm text-muted-foreground">Risk Level</span>
           <div className="text-right">
-            <span className={cn("text-sm font-medium", risk.color)}>{risk.label}</span>
+            <span className="text-sm font-medium text-foreground">{risk.label}</span>
             <p className="text-[11px] text-muted-foreground">{risk.detail}</p>
           </div>
         </div>
         <div className="flex items-center justify-between p-4">
           <span className="text-sm text-muted-foreground">Trading Style</span>
           <div className="text-right">
-            <span className={cn("text-sm font-medium", strat.color)}>{strat.label}</span>
+            <span className="text-sm font-medium text-foreground">{strat.label}</span>
             <p className="text-[11px] text-muted-foreground">{strat.detail}</p>
           </div>
         </div>
