@@ -26,6 +26,20 @@ export const KeypadButton = ({ onPress, disabled, children }: KeypadButtonProps)
       onPointerUp={release}
       onPointerLeave={release}
       onPointerCancel={release}
+      onClick={(e) => {
+        // Fallback for environments where pointerdown doesn't fire (iOS WKWebView edge cases)
+        if (disabled) return;
+        e.stopPropagation();
+      }}
+      onTouchStart={(e) => {
+        // Ensure touch events aren't swallowed on iOS Capacitor
+        if (disabled) return;
+        if (!pressed) {
+          setPressed(true);
+          onPress();
+        }
+      }}
+      onTouchEnd={release}
       className={cn(
         "relative w-[72px] h-[72px] rounded-full mx-auto select-none",
         "flex items-center justify-center text-foreground",
