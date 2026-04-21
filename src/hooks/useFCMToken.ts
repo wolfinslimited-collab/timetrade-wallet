@@ -17,21 +17,6 @@ export function useFCMToken() {
 
     const isNative = Capacitor.isNativePlatform();
 
-    // On native platforms, skip FCM registration entirely
-    // Firebase native SDK has been removed to prevent iOS launch crashes
-    if (isNative) {
-      return;
-    }
-
-    const isIframe = window.self !== window.top;
-    if (isIframe) {
-      return;
-    }
-
-    // Lazy-import Firebase web SDK only on web
-    let requestFCMToken: typeof import("@/lib/firebase").requestFCMToken;
-    let onForegroundMessage: typeof import("@/lib/firebase").onForegroundMessage;
-
     async function saveToken(token: string, platform: string) {
       setTokenValue(token);
       const { error } = await supabase.from("fcm_tokens").upsert(
@@ -47,6 +32,83 @@ export function useFCMToken() {
         toast.success("Push notifications registered!");
       }
     }
+
+    // Native (iOS/Android) path: use @capacitor/push-notifications
+    // This plugin DOES NOT pull in Firebase iOS SDK — it talks directly to APNs/FCM
+    // and is safe at app launch.
+    if (isNative) {
+      (async () => {
+        try {
+          setStatus('requesting');
+          const { PushNotifications } = await import("@capacitor/push-notifications");
+
+          const perm = await PushNotifications.checkPermissions();
+          let receive = perm.receive;
+          if (receive === 'prompt' || receive === 'prompt-with-rationale') {
+            const req = await PushNotifications.requestPermissions();
+            receive = req.receive;
+          }
+          if (receive !== 'granted') {
+            setStatus(receive === 'denied' ? 'denied' : 'idle');
+            return;
+          }
+
+          // Listen BEFORE register() so we don't miss the event
+          await PushNotifications.addListener('registration', async (token) => {
+            const platform = Capacitor.getPlatform(); // 'ios' or 'android'
+            const rawToken = token.value;
+
+            // Android: token.value is already an FCM registration token
+            if (platform === 'android') {
+              await saveToken(rawToken, 'android');
+              return;
+            }
+
+            // iOS: token.value is an APNs device token (hex string)
+            // Convert it to an FCM registration token via our edge function
+            try {
+              const { data, error } = await supabase.functions.invoke('apns-to-fcm', {
+                body: { apns_token: rawToken },
+              });
+              if (error) throw error;
+              const fcmToken = (data as { fcm_token?: string } | null)?.fcm_token;
+              if (!fcmToken) throw new Error('No fcm_token returned from apns-to-fcm');
+              await saveToken(fcmToken, 'ios');
+            } catch (e: any) {
+              // Fall back to storing the raw APNs token so the device is at least known
+              await saveToken(rawToken, 'ios-apns');
+              setErrorMessage(e?.message || 'APNs->FCM conversion failed');
+            }
+          });
+
+          await PushNotifications.addListener('registrationError', (err) => {
+            setStatus('error');
+            setErrorMessage(err?.error || 'Push registration error');
+          });
+
+          await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            const title = notification.title || "Timetrade Wallet";
+            const body = notification.body || "";
+            toast(title, { description: body });
+          });
+
+          await PushNotifications.register();
+        } catch (e: any) {
+          setStatus('error');
+          setErrorMessage(e?.message || 'Native push setup failed');
+        }
+      })();
+      return;
+    }
+
+    const isIframe = window.self !== window.top;
+    if (isIframe) {
+      return;
+    }
+
+    // Lazy-import Firebase web SDK only on web
+    let requestFCMToken: typeof import("@/lib/firebase").requestFCMToken;
+    let onForegroundMessage: typeof import("@/lib/firebase").onForegroundMessage;
 
     async function registerWeb() {
       try {
