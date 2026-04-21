@@ -19,7 +19,6 @@ export function useFCMToken() {
     const isNative = Capacitor.isNativePlatform();
     const isIframe = !isNative && window.self !== window.top;
 
-    // Skip registration in iframe preview
     if (!isNative && isIframe) {
       return;
     }
@@ -30,48 +29,53 @@ export function useFCMToken() {
       registerWeb();
     }
 
+    async function saveToken(token: string, platform: string) {
+      setTokenValue(token);
+      const { error } = await supabase.from("fcm_tokens").upsert(
+        { token, platform } as any,
+        { onConflict: "token" }
+      );
+      if (error) {
+        setStatus('error');
+        setErrorMessage('Failed to save push token');
+        toast.error("Failed to save push token", { description: error.message });
+      } else {
+        setStatus('registered');
+        toast.success("Push notifications registered!");
+      }
+    }
+
     async function registerNative() {
       try {
         setStatus('requesting');
-        const { PushNotifications } = await import("@capacitor/push-notifications");
+        const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
 
-        const permResult = await PushNotifications.requestPermissions();
+        const permResult = await FirebaseMessaging.requestPermissions();
         if (permResult.receive !== "granted") {
           setStatus('denied');
           return;
         }
 
-        PushNotifications.addListener("registration", async (token) => {
-          const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
-          toast(`Push token received (${platform})`, { description: token.value.substring(0, 20) + "..." });
-          setTokenValue(token.value);
-          const { error } = await supabase.from("fcm_tokens").upsert(
-            { token: token.value, platform } as any,
-            { onConflict: "token" }
-          );
-          if (error) {
-            setStatus('error');
-            setErrorMessage('Failed to save push token');
-            toast.error("Failed to save push token", { description: error.message });
-          } else {
-            setStatus('registered');
-            toast.success("Push notifications registered!");
-          }
+        const platform = Capacitor.getPlatform() === "ios" ? "iphone" : "android";
+
+        // Get the real FCM token (bridges APNS→FCM on iOS)
+        const { token } = await FirebaseMessaging.getToken();
+        if (token) {
+          toast(`FCM token received (${platform})`, { description: token.substring(0, 20) + "..." });
+          await saveToken(token, platform);
+        }
+
+        // Listen for token refresh
+        FirebaseMessaging.addListener("tokenReceived", async (event) => {
+          await saveToken(event.token, platform);
         });
 
-        PushNotifications.addListener("registrationError", (err) => {
-          setStatus('error');
-          setErrorMessage(err?.error || 'Native push registration failed');
-          toast.error("Push registration failed", { description: err?.error });
-        });
-
-        PushNotifications.addListener("pushNotificationReceived", (notification) => {
-          const title = notification.title || "Timetrade Wallet";
-          const body = notification.body || "";
+        // Foreground notifications
+        FirebaseMessaging.addListener("notificationReceived", (event) => {
+          const title = event.notification?.title || "Timetrade Wallet";
+          const body = event.notification?.body || "";
           toast(title, { description: body });
         });
-
-        await PushNotifications.register();
       } catch {
         setStatus('error');
         setErrorMessage('Push notification setup failed');
@@ -96,28 +100,13 @@ export function useFCMToken() {
           return;
         }
 
-        setTokenValue(token);
-        toast(`Web push token received`, { description: token.substring(0, 20) + "..." });
-
-        // Determine platform
         const ua = navigator.userAgent.toLowerCase();
         let platform = "web";
         if (ua.includes("android")) platform = "android";
         else if (ua.includes("iphone") || ua.includes("ipad")) platform = "iphone";
 
-        // Upsert token
-        const { error } = await supabase.from("fcm_tokens").upsert(
-          { token, platform } as any,
-          { onConflict: "token" }
-        );
-        if (error) {
-          setStatus('error');
-          setErrorMessage('Failed to save push token');
-          toast.error("Failed to save push token", { description: error.message });
-        } else {
-          setStatus('registered');
-          toast.success("Web push notifications registered!");
-        }
+        toast(`Web push token received`, { description: token.substring(0, 20) + "..." });
+        await saveToken(token, platform);
       } catch {
         setStatus('error');
         setErrorMessage('Web push setup failed');
@@ -125,8 +114,7 @@ export function useFCMToken() {
       }
     }
 
-    // Listen for foreground messages
-    if (isNative) return; // Native uses its own listener above
+    if (isNative) return;
 
     const unsub = onForegroundMessage((payload) => {
       const title = payload?.notification?.title || "Timetrade Wallet";
