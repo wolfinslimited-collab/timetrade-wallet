@@ -1,38 +1,41 @@
 
 
-# Fix QR Scanner: Real Camera Access and Permission Handling
+# Professional Empty State and Assets UI Enhancement
 
-## Problem
-The QR scanner modal is a placeholder that only simulates scanning. It never actually opens the camera or scans real QR codes. The app also lacks the Android camera permission in its manifest.
+## Overview
+Upgrade the "No tokens found" empty state on the home screen and the All Assets page with a polished, professional design. Replace the plain text placeholder with an illustrated empty state featuring an icon, descriptive copy, and a subtle call-to-action.
 
-## Plan
+## Changes
 
-### 1. Install `html5-qrcode` library
-Add the `html5-qrcode` npm package, a lightweight browser-based QR scanner that uses `getUserMedia` to access the device camera and decode QR codes in real time. No native plugin needed -- it works inside Capacitor's WebView.
+### 1. UnifiedTokenList — Empty State (Home Screen)
+**File:** `src/components/wallet/UnifiedTokenList.tsx`
 
-### 2. Add Android camera permission
-Patch `android/app/src/main/AndroidManifest.xml` to include:
-```xml
-<uses-permission android:name="android.permission.CAMERA" />
-```
+Replace the current plain `"No tokens found"` text (lines 110-115) with a professional empty state card:
+- Centered layout with a large subtle wallet/coins icon (from Lucide, e.g. `Wallet` or `Coins`)
+- Headline: "No assets yet"
+- Subtext: "Your tokens will appear here once you receive or import crypto"
+- A subtle "Receive" button linking to `/receive` for quick onboarding
+- Muted color scheme matching the existing card aesthetic
 
-### 3. Rewrite `QRScannerModal.tsx` with real camera scanning
-Replace the current simulated scanner with a fully functional implementation:
+### 2. AllAssetsPage — Empty State
+**File:** `src/pages/AllAssetsPage.tsx`
 
-- On open, request camera permission and initialize `Html5Qrcode` scanner targeting a `<div>` rendered inside the modal.
-- Use the rear-facing camera (`facingMode: "environment"`).
-- On successful QR decode, extract the address (handle `ethereum:0x...` URI format too), call `onScan(address)`, and stop the scanner.
-- On close/unmount, stop the camera stream and clean up.
-- Show clear error states for: permission denied, no camera found, camera in use.
-- Remove the "Simulate QR Scan" button and the "In production" disclaimer.
-- Keep the existing scanner frame UI (corner accents, scanning line animation) overlaid on the live camera feed.
+Replace the current plain empty text (lines 199-208) with a matching professional empty state:
+- Same visual pattern as the home screen empty state (icon + headline + subtext)
+- When filter is active: "No assets on selected networks" with a "Clear filter" button
+- When no filter: same "No assets yet" pattern with a Receive CTA
 
-### 4. Patch CI workflow for camera permission
-Update `.github/workflows/build-android.yml` to inject the camera permission into `AndroidManifest.xml` during CI (since the `android/` folder is regenerated), similar to the existing signing patch pattern.
+### 3. Assets Section Header Polish
+**File:** `src/pages/Index.tsx`
 
-## Files Modified
-- `package.json` -- add `html5-qrcode` dependency
-- `src/components/send/QRScannerModal.tsx` -- full rewrite with real camera
-- `android/app/src/main/AndroidManifest.xml` -- add CAMERA permission
-- `.github/workflows/build-android.yml` -- inject CAMERA permission in CI
+Minor refinements to the Assets card container (lines 307-318):
+- Add a small asset count badge next to "Assets" when tokens exist (e.g., "Assets · 5")
+- Improve the "View All" button with a subtle chevron-right icon
+
+### Technical Details
+- Uses existing Lucide icons (`Wallet`, `Coins`, `ChevronRight`, `ArrowDownLeft`)
+- No new dependencies required
+- Follows the existing navy/dark card aesthetic with `bg-card`, `border-border/40`, `text-muted-foreground`
+- Maintains the zero-transition motion policy (no Framer Motion on the home screen empty state)
+- Staggered fade-in animation on the All Assets page empty state uses existing Framer variants
 
