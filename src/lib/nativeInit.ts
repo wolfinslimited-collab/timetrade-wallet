@@ -40,4 +40,12 @@ export async function initNativeShell() {
   } catch {
     // splash-screen unavailable
   }
+
+  // Capgo live updates — notify that the JS bundle loaded successfully
+  try {
+    const { CapacitorUpdater } = await import("@capgo/capacitor-updater");
+    await CapacitorUpdater.notifyAppReady();
+  } catch {
+    // capgo updater unavailable
+  }
 }

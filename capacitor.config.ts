@@ -15,6 +15,9 @@ const config: CapacitorConfig = {
     Keyboard: {
       resize: 'body',
       resizeOnFullScreen: true
+    },
+    CapacitorUpdater: {
+      autoUpdate: true
     }
   }
 };
