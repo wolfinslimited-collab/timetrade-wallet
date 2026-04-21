@@ -366,58 +366,6 @@ jobs:
           </plist>
           EXPORTEOF
 
-      - name: Add push notification entitlements
-        run: |
-          # Ensure GoogleService-Info.plist is added to the Xcode target
-          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
-          PLIST_FILE="ios/App/App/GoogleService-Info.plist"
-          if [ -f "$PLIST_FILE" ] && [ -f "$PBXPROJ" ]; then
-            if ! grep -q "GoogleService-Info.plist" "$PBXPROJ"; then
-              ruby -e '
-                pbx = File.read(ARGV[0])
-                file_ref_id = "GSPLIST001"
-                build_file_id = "GSPLIST002"
-                unless pbx.include?("GoogleService-Info.plist")
-                  pbx.sub!(/\/\* End PBXFileReference section \*\//) {
-                    "#{file_ref_id} /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = \"GoogleService-Info.plist\"; sourceTree = \"<group>\"; };\n/* End PBXFileReference section */"
-                  }
-                  pbx.sub!(/\/\* End PBXBuildFile section \*\//) {
-                    "#{build_file_id} /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = #{file_ref_id} /* GoogleService-Info.plist */; };\n/* End PBXBuildFile section */"
-                  }
-                  pbx.gsub!(/files = \(([^)]*\/\* Resources \*\/[^)]*)\)/) { |m|
-                    m.sub(/\)$/, "#{build_file_id} /* GoogleService-Info.plist in Resources */,)")
-                  }
-                end
-                File.write(ARGV[0], pbx)
-              ' "$PBXPROJ"
-              echo "GoogleService-Info.plist added to Xcode target"
-            else
-              echo "GoogleService-Info.plist already in Xcode target"
-            fi
-          fi
-
-          cat > ios/App/App/App.entitlements << 'ENTEOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>aps-environment</key>
-            <string>production</string>
-          </dict>
-          </plist>
-          ENTEOF
-
-          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
-          if [ -f "$PBXPROJ" ]; then
-            if ! grep -q "CODE_SIGN_ENTITLEMENTS" "$PBXPROJ"; then
-              sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App\/App.entitlements;/g" "$PBXPROJ"
-            fi
-          fi
-
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" ios/App/App/Info.plist 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" ios/App/App/Info.plist 2>/dev/null || true
-          echo "Push notification entitlements and background modes added"
-
       - name: Build Xcode archive
         run: |
           cd ios/App
