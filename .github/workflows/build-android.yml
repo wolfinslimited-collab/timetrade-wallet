@@ -53,6 +53,17 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Inject Android camera permission
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q 'android.permission.CAMERA' "$MANIFEST"; then
+            sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.CAMERA" />|' "$MANIFEST"
+            echo "Camera permission injected"
+          else
+            echo "Camera permission already present"
+          fi
+          grep 'CAMERA' "$MANIFEST"
+
       - name: Customize splash screen (dark + logo)
         run: |
           if [ -f public/app-logo.png ]; then
