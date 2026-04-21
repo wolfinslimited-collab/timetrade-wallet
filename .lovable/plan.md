@@ -1,70 +1,65 @@
 
 
-# Fix QR Scanner — Native Camera on iOS/Android, Reliable Web Fallback
+# Fix iOS QR Scanner — Switch to SPM-Compatible Plugin
 
-## Why it's broken in 3 places
+## Why the previous fix failed
 
-| Surface | Real cause |
+The error **"BarcodeScanner plugin is not implemented on ios"** means Capacitor's JavaScript layer loaded the plugin shim, but the native iOS Swift code was never compiled into the app. The reason:
+
+| Capacitor 8 (our setup) | `@capacitor-mlkit/barcode-scanning` |
 |---|---|
-| **iOS TestFlight** | Capacitor's `WKWebView` does **not** expose `navigator.mediaDevices.getUserMedia` to the web layer, and `Info.plist` has no `NSCameraUsageDescription`. So `html5-qrcode` correctly reports *"Camera streaming not supported by the browser."* |
-| **Android APK** | `WebView` also blocks `getUserMedia` until `WebChromeClient.onPermissionRequest` grants `VIDEO_CAPTURE` (Capacitor doesn't do this). Even with the manifest permission, the JS API stays unavailable. |
-| **Lovable preview / web** | The preview iframe is cross-origin sandboxed without `allow="camera"`, and the current code starts the camera inside a `setTimeout` — outside the user-gesture chain, which WebKit silently denies. |
+| Uses **Swift Package Manager** (`ios/App/CapApp-SPM/Package.swift`) | Ships **CocoaPods only** — has no `Package.swift` manifest |
+| Auto-discovers SPM-compatible plugins via `npx cap sync ios` | Cannot be discovered → native code never linked |
 
-Stacking patches onto `html5-qrcode` will never work on native — the WebView simply does not have a camera stream API. The fix is to **use a native scanner on iOS/Android** and keep a **web-only fallback**.
+Result: `npx cap sync ios` silently skips the plugin's iOS target, the IPA ships without the native scanner module, and at runtime the JS call fails. Adding more `Info.plist` permissions or PlistBuddy steps cannot fix this — the native code simply isn't in the binary.
 
-## The Fix
+Confirmed by checking the plugin's repo: there is no `Package.swift` in `@capacitor-mlkit/barcode-scanning`.
 
-### 1. Add the native scanner plugin
-Add `@capacitor-mlkit/barcode-scanning` (industry standard, MIT-friendly, used by Trust Wallet / Phantom-class apps). On iOS/Android it opens the **native camera** via AVFoundation / CameraX — no WebView permission games, no `getUserMedia` needed.
+## The Fix — Switch to the Ionic-official scanner
 
-### 2. Rewrite `src/components/send/QRScannerModal.tsx` as a hybrid
+Replace `@capacitor-mlkit/barcode-scanning` with **`@capacitor/barcode-scanner`** (Ionic's official one). It:
+- Ships a proper `Package.swift` → works with Capacitor 8 SPM out of the box
+- Uses native `AVFoundation` on iOS and `CameraX` on Android
+- Has a simpler API (returns the decoded value directly)
+- No CocoaPods, no Podfile, no workflow changes
 
-```text
-isNativePlatform()?
-  ├─ YES → call BarcodeScanner.requestPermissions() then BarcodeScanner.scan()
-  │         (full-screen native camera UI takes over, returns the decoded string)
-  └─ NO  → use html5-qrcode as today, but:
-            • detect missing navigator.mediaDevices early and show a clear message
-            • start getUserMedia synchronously on mount (no setTimeout)
-            • show a "Tap to enable camera" button as user-gesture fallback
-              when permissions API reports prompt/denied
-```
+## Changes
 
-### 3. Inject iOS camera permission keys in CI
-Update `supabase/functions/github-build/index.ts` (the `build-ios.yml` template) to add a step **before** signing that writes:
+### 1. `package.json`
+- **Remove** `@capacitor-mlkit/barcode-scanning`
+- **Add** `@capacitor/barcode-scanner` (latest v2)
+
+### 2. `src/components/send/QRScannerModal.tsx`
+Rewrite the native branch to use the new plugin's API:
 
 ```text
-PLIST="ios/App/App/Info.plist"
-PlistBuddy -c "Add :NSCameraUsageDescription string 'Used to scan QR codes for wallet addresses and seed phrases.'" "$PLIST"
-PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Used to import QR codes from your photos.'" "$PLIST"
+import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
+
+const result = await CapacitorBarcodeScanner.scanBarcode({
+  hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
+});
+// result.ScanResult is the decoded string
 ```
 
-This makes the native camera prompt appear on TestFlight builds.
+Web fallback (`html5-qrcode`) stays unchanged.
 
-### 4. Android — already covered
-The native plugin handles `CAMERA` permission via Android's runtime permission API, so the existing `<uses-permission android:name="android.permission.CAMERA" />` in `AndroidManifest.xml` is sufficient. No WebView permission glue needed.
+### 3. iOS workflow (`supabase/functions/github-build/index.ts`)
+**No change needed.** The existing `NSCameraUsageDescription` PlistBuddy step already covers permissions. SPM auto-discovery during `npx cap sync ios` will pick up the new plugin automatically.
 
-### 5. Web preview — graceful message
-Inside the Lovable iframe, `navigator.mediaDevices` is gated by the parent iframe's `allow` attribute (out of our control). When detection shows it's unavailable on web, show:
+### 4. Android
+**No change needed.** Existing `<uses-permission android:name="android.permission.CAMERA" />` in `AndroidManifest.xml` is sufficient. The plugin handles runtime permission requests via Android's standard API.
 
-> "Camera scanning isn't available in the in-app preview. Open the published URL or paste the address manually."
+## After this lands
 
-Real production web (timetrade-wallet.lovable.app) is not iframed and works normally.
+1. **Trigger a new iOS build** from the Build Center.
+2. On TestFlight, tapping the QR scan icon will open the native iOS camera UI, prompt for camera permission with our description, scan the QR, and return the address — no more "plugin not implemented" error.
+3. Android APK behaves the same.
+4. Web preview shows the existing graceful "use the published URL" message.
 
-## Files to change
+## Files to edit
 
 | File | Change |
 |---|---|
-| `package.json` | Add `@capacitor-mlkit/barcode-scanning` dependency |
-| `src/components/send/QRScannerModal.tsx` | Hybrid native/web scanner; synchronous getUserMedia on web; fallback button |
-| `supabase/functions/github-build/index.ts` | Add `NSCameraUsageDescription` + `NSPhotoLibraryUsageDescription` PlistBuddy step in iOS workflow template |
-
-## After implementation
-
-- **iOS TestFlight**: Tap scan → native iOS camera opens → permission prompt with our description → scans QR → returns address. Works offline, fast, full-resolution.
-- **Android APK**: Same flow with native camera UI.
-- **Production web**: html5-qrcode opens with proper user-gesture handling.
-- **Lovable preview**: Shows clear "use the published URL" message instead of confusing camera error.
-
-A new iOS build must be triggered after this lands so the `Info.plist` permission key is included.
+| `package.json` | Remove `@capacitor-mlkit/barcode-scanning`, add `@capacitor/barcode-scanner` |
+| `src/components/send/QRScannerModal.tsx` | Replace native branch to use `CapacitorBarcodeScanner.scanBarcode()` |
 
