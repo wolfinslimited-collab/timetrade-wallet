@@ -361,6 +361,14 @@ jobs:
             if ! grep -q "PROVISIONING_PROFILE_SPECIFIER" "\$PBXPROJ"; then
               sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\\n\\t\\t\\t\\tPROVISIONING_PROFILE_SPECIFIER = \\"\$PROFILE_NAME\\";/g" "\$PBXPROJ"
             fi
+            if ! grep -q "DEVELOPMENT_TEAM" "\$PBXPROJ"; then
+              sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\\n\\t\\t\\t\\tDEVELOPMENT_TEAM = \$TEAM_ID;/g" "\$PBXPROJ"
+            fi
+            sed -i '' 's|CODE_SIGN_IDENTITY = "Apple Development";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "\$PBXPROJ"
+            sed -i '' 's|"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "Apple Development";|"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";|g' "\$PBXPROJ"
+            if ! grep -q "CODE_SIGN_IDENTITY" "\$PBXPROJ"; then
+              sed -i '' "s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Manual;\\n\\t\\t\\t\\tCODE_SIGN_IDENTITY = \\"Apple Distribution\\";/g" "\$PBXPROJ"
+            fi
           fi
 
           cat > ios/App/ExportOptions.plist << EXPORTEOF
