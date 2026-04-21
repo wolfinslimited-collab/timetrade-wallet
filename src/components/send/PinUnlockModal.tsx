@@ -41,10 +41,11 @@ export const PinUnlockModal = ({
     }
   }, [open, refreshStatus]);
 
-  const handleSubmit = (pin: string) => {
+  const handleSubmit = async (pin: string): Promise<boolean | void> => {
+    // Fire-and-forget to parent; FullScreenPinModal will rely on isLoading
+    // from the parent to manage the loading state.
     onSubmit(pin);
-    // PIN verification happens upstream — return undefined so modal stays open
-    // until parent closes it (after sign succeeds/fails).
+    // Return undefined — modal stays open until parent closes it.
   };
 
   const handleBiometricAuth = async () => {
