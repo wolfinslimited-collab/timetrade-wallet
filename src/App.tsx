@@ -14,6 +14,7 @@ import { AllAssetsPage } from "./pages/AllAssetsPage";
 import AIChatPageRoute from "./pages/AIChatPage";
 import NotFound from "./pages/NotFound";
 import SendPage from "./pages/SendPage";
+import SwapPage from "./pages/SwapPage";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import ReceivePage from "./pages/ReceivePage";
 import Build from "./pages/Build";
@@ -86,7 +87,7 @@ const AnimatedRoutes = () => {
             <Route path="/ai-chat" element={<AIChatPageRoute />} />
             <Route path="/asset" element={<AssetDetailPage />} />
             <Route path="/assets" element={<AllAssetsPage />} />
-            <Route path="/swap" element={<NotFound />} />
+            <Route path="/swap" element={<SwapPage />} />
             <Route path="/send" element={<SendPage />} />
             <Route path="/receive" element={<ReceivePage />} />
             <Route path="/build" element={<Build />} />
