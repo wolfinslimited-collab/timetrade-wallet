@@ -85,7 +85,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       setEncryptedSeedStr(encStr);
 
       const storedSolPath = localStorage.getItem("timetrade_solana_derivation_path") as any;
-      const accounts = deriveMultipleAccounts(seedPhrase, 5, storedSolPath || "legacy");
+      const accounts = deriveMultipleAccounts(seedPhrase, 5, storedSolPath || "phantom");
 
       if (accounts.evm.length > 0) {
         connectWallet(accounts.evm[0].address);
