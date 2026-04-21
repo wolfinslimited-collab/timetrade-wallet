@@ -8,16 +8,6 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     scrollEnabled: true,
   },
-  plugins: {
-    Keyboard: {
-      resize: 'body',
-      resizeOnFullScreen: true
-    },
-    CapacitorUpdater: {
-      autoUpdate: true
-    }
-  }
-};
   android: {
     allowMixedContent: true
   },
