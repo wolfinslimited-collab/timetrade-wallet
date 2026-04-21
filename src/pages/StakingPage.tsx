@@ -33,6 +33,18 @@ interface StakingPosition {
   tx_hash?: string;
 }
 
+interface UnstakeRequest {
+  id: string;
+  position_id: string;
+  wallet_address: string;
+  token_symbol: string;
+  chain: string;
+  staked_amount: number;
+  earned_rewards: number;
+  status: string;
+  created_at: string;
+}
+
 // 15% monthly rate (not annual)
 const MONTHLY_RATE = 15; // percent per 30 days
 
