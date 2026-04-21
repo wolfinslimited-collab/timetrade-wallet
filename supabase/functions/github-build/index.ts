@@ -729,6 +729,12 @@ jobs:
           echo "ANDROID_VERSION_NAME=\$VERSION_NAME" >> "\$GITHUB_ENV"
           echo "Android versionCode: \$VERSION_CODE"
           echo "Android versionName: \$VERSION_NAME"
+          GRADLE="android/app/build.gradle"
+          if [ -f "\$GRADLE" ]; then
+            sed -i "s/versionCode 1/versionCode \$VERSION_CODE/" "\$GRADLE"
+            sed -i "s/versionName \\"1.0\\"/versionName \\"\$VERSION_NAME\\"/" "\$GRADLE"
+            echo "build.gradle patched with versionCode=\$VERSION_CODE versionName=\$VERSION_NAME"
+          fi
 
       - name: Prepare app icon source
         run: |
