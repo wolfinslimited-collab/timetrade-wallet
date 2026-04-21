@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Camera } from "lucide-react";
+import { X, Camera, ScanLine } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Capacitor } from "@capacitor/core";
 
 interface QRScannerModalProps {
   open: boolean;
@@ -9,8 +10,10 @@ interface QRScannerModalProps {
 }
 
 const SCANNER_ID = "qr-reader";
+const isNative = Capacitor.isNativePlatform();
 
 let Html5QrcodeModule: typeof import("html5-qrcode") | null = null;
+let BarcodeScannerModule: any = null;
 
 function extractAddress(raw: string): string {
   // Handle ethereum:0x... or bitcoin:bc1... URI schemes
@@ -28,6 +31,7 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<any>(null);
   const scannedRef = useRef(false);
+  const [nativeScanning, setNativeScanning] = useState(false);
 
   const stopWebScanner = useCallback(async () => {
     try {
@@ -46,18 +50,82 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
     scannerRef.current = null;
   }, []);
 
+  // Native scanner flow (iOS/Android)
+  useEffect(() => {
+    if (!open || !isNative) return;
+
+    scannedRef.current = false;
+    setError(null);
+    let cancelled = false;
+
+    const runNativeScan = async () => {
+      try {
+        if (!BarcodeScannerModule) {
+          BarcodeScannerModule = await import("@capacitor-mlkit/barcode-scanning");
+        }
+        const { BarcodeScanner, BarcodeFormat } = BarcodeScannerModule;
+
+        const permResult = await BarcodeScanner.requestPermissions();
+        if (permResult.camera === "denied") {
+          setError("Camera permission denied. Please allow camera access in your device settings.");
+          return;
+        }
+
+        setNativeScanning(true);
+        const { barcodes } = await BarcodeScanner.scan({
+          formats: [BarcodeFormat.QrCode],
+        });
+
+        if (cancelled) return;
+        setNativeScanning(false);
+
+        if (barcodes.length > 0 && !scannedRef.current) {
+          scannedRef.current = true;
+          const address = extractAddress(barcodes[0].rawValue || "");
+          onScan(address);
+        }
+        onClose();
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setNativeScanning(false);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("canceled") || msg.includes("cancelled")) {
+          onClose();
+        } else {
+          setError("Could not start camera. " + msg);
+        }
+      }
+    };
+
+    runNativeScan();
+
+    return () => {
+      cancelled = true;
+      setNativeScanning(false);
+    };
+  }, [open, onScan, onClose]);
+
   // Web scanner flow
   useEffect(() => {
-    if (!open) return;
+    if (!open || isNative) return;
 
     scannedRef.current = false;
     setError(null);
 
-    const timeout = setTimeout(async () => {
+    // Check if mediaDevices is available (not available in sandboxed iframes)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError("Camera scanning isn't available in the in-app preview. Open the published URL or paste the address manually.");
+      return;
+    }
+
+    // Start immediately (no setTimeout) to stay within user-gesture chain
+    let mounted = true;
+    const startWebScanner = async () => {
       try {
         if (!Html5QrcodeModule) {
           Html5QrcodeModule = await import("html5-qrcode");
         }
+        if (!mounted) return;
         const scanner = new Html5QrcodeModule.Html5Qrcode(SCANNER_ID);
         scannerRef.current = scanner;
 
@@ -74,6 +142,7 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
           () => {}
         );
       } catch (err: unknown) {
+        if (!mounted) return;
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("NotAllowedError") || msg.includes("Permission")) {
           setError("Camera permission denied. Please allow camera access in your device settings.");
@@ -81,14 +150,18 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
           setError("No camera found on this device.");
         } else if (msg.includes("NotReadableError") || msg.includes("in use")) {
           setError("Camera is in use by another app.");
+        } else if (msg.includes("not supported") || msg.includes("Camera streaming")) {
+          setError("Camera scanning isn't available in this browser. Open the published URL or paste the address manually.");
         } else {
           setError("Could not start camera. " + msg);
         }
       }
-    }, 300);
+    };
+
+    startWebScanner();
 
     return () => {
-      clearTimeout(timeout);
+      mounted = false;
       stopWebScanner();
     };
   }, [open, onScan, stopWebScanner]);
@@ -97,6 +170,11 @@ export const QRScannerModal = ({ open, onClose, onScan }: QRScannerModalProps) =
     stopWebScanner();
     onClose();
   };
+
+  // On native, if scanning is active the native UI takes over — show minimal dialog
+  if (isNative && nativeScanning) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
