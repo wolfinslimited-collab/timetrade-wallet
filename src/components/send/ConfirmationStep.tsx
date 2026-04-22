@@ -437,12 +437,12 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         </div>
       )}
 
-      {/* Confirm Button - Fixed at bottom with safe area */}
-      <div className="mt-auto pt-4 pb-6" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
+      {/* Confirm Button - Sticky at bottom */}
+      <div className="sticky bottom-0 pt-4 pb-6 bg-background -mx-6 px-6" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
         <Button
           onClick={handleConfirmClick}
           disabled={isProcessing || isSigningWithWC}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base rounded-2xl"
         >
           {isProcessing || isSigningWithWC ? (
             <>
@@ -457,10 +457,10 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
           ) : hasMnemonicStored && isSigningAvailable ? (
             <>
               <Key className="w-5 h-5 mr-2" />
-              Sign with PIN
+              Confirm & Sign
             </>
           ) : isSigningAvailable ? (
-            "Sign & Send"
+            "Confirm & Send"
           ) : (
             "Confirm & Send"
           )}
