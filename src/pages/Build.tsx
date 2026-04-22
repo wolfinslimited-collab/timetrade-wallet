@@ -215,7 +215,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
     const poll = setInterval(async () => {
       try {
         const { data: newBuild } = await projectASupabase
-          .from("builds" as any)
+          .from("builds")
           .select("*")
           .eq("id", newBuildId)
           .single();
