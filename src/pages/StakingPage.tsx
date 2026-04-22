@@ -225,7 +225,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   const fetchUnstakeRequests = async () => {
     if (!walletAddress) return;
     try {
-      const { data, error } = await supabase.functions.invoke('staking', {
+      const { data, error } = await projectASupabase.functions.invoke('staking', {
         body: { action: 'get-unstake-requests', wallet_address: walletAddress.toLowerCase() },
       });
       if (!error && data?.data) setUnstakeRequests(data.data);
@@ -250,7 +250,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('staking', {
+      const { data, error } = await projectASupabase.functions.invoke('staking', {
         body: { action: 'get-positions', wallet_address: walletAddress },
       });
 
@@ -363,7 +363,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
       const unlockDate = new Date();
       unlockDate.setDate(unlockDate.getDate() + selectedDuration.duration);
 
-      const { data: fnData, error: fnError } = await supabase.functions.invoke("staking", {
+      const { data: fnData, error: fnError } = await projectASupabase.functions.invoke("staking", {
         body: {
           action: "create",
           wallet_address: walletAddress.toLowerCase(),
@@ -431,7 +431,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
     }
 
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke("staking", {
+      const { data: fnData, error: fnError } = await projectASupabase.functions.invoke("staking", {
         body: {
           action: "unstake",
           position_id: position.id,
