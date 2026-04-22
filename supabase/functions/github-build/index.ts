@@ -13,6 +13,7 @@ const WORKFLOW_MAP: Record<string, string> = {
   ios: "build-ios.yml",
   flutter_android: "build-flutter-android.yml",
   flutter_ios: "build-flutter-ios.yml",
+  capgo: "deploy-capgo.yml",
 };
 
 const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
@@ -20,6 +21,7 @@ const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
   ios: "build_ios",
   flutter_android: "build_flutter_android",
   flutter_ios: "build_flutter_ios",
+  capgo: "deploy_capgo",
 };
 
 const WORKFLOW_TEMPLATES: Record<string, string> = {
