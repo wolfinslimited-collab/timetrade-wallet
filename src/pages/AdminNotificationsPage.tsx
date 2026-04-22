@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { toast } from "sonner";
 import { ArrowLeft, Send, Bell, Smartphone, Monitor, Globe, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
