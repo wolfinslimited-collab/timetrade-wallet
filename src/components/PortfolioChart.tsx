@@ -1,6 +1,11 @@
 import { useMemo } from "react";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area as _Area, AreaChart, ResponsiveContainer, Tooltip as _Tooltip, XAxis as _XAxis, YAxis as _YAxis } from "recharts";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
+
+const Area = _Area as any;
+const Tooltip = _Tooltip as any;
+const XAxis = _XAxis as any;
+const YAxis = _YAxis as any;
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat("en-US", {
