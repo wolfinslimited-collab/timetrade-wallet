@@ -53,11 +53,6 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
     if (transaction.token.symbol.toUpperCase() === nativePriceSymbol.toUpperCase()) return transaction.token.price;
     return transaction.token.price; // last-resort fallback
   }, [prices, nativePriceSymbol, transaction.token.price, transaction.token.symbol]);
-  const { signTransaction: signEvmTransaction, isSigningAvailable: isEvmSigningAvailable } = useTransactionSigning(selectedChain, isTestnet);
-  const { signTransaction: signTronTransaction, isSigningAvailable: isTronSigningAvailable } = useTronTransactionSigning(isTestnet);
-  const { signTransaction: signSolanaTransaction, isSigningAvailable: isSolanaSigningAvailable } = useSolanaTransactionSigning(isTestnet);
-  
-  // Combined signing availability check
   const isSigningAvailable = isSigningSupportedForChain(selectedChain);
 
   // Check if there's a stored mnemonic for signing
