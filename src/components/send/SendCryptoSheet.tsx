@@ -337,24 +337,6 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
             </motion.div>
           )}
 
-          {step === "risk" && (
-            <motion.div
-              key="risk"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex-1 flex flex-col"
-            >
-              <RiskCheckStep
-                address={transaction.recipient}
-                chain={selectedChain}
-                amount={transaction.amount}
-                senderAddress={senderAddress}
-                onProceed={handleRiskProceed}
-                onCancel={handleRiskCancel}
-              />
-            </motion.div>
-          )}
 
           {step === "amount" && selectedAsset && (
             <motion.div
