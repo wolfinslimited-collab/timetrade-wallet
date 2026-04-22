@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { toast } from "sonner";
 
 export type FCMStatus = 'idle' | 'requesting' | 'registered' | 'denied' | 'error';
@@ -56,7 +56,7 @@ export function useFCMToken() {
 
     async function saveToken(token: string, platform: string) {
       setTokenValue(token);
-      const { error } = await supabase.from("fcm_tokens").upsert(
+      const { error } = await projectASupabase.from("fcm_tokens").upsert(
         { token, platform } as any,
         { onConflict: "token" }
       );
@@ -110,7 +110,7 @@ export function useFCMToken() {
             // Convert it to an FCM registration token via our edge function
             try {
               addDebug('apns-conversion-start', rawToken.substring(0, 20));
-              const { data, error } = await supabase.functions.invoke('apns-to-fcm', {
+              const { data, error } = await projectASupabase.functions.invoke('apns-to-fcm', {
                 body: { apns_token: rawToken, sandbox: false },
               });
               if (error) {
@@ -217,7 +217,7 @@ export function useFCMToken() {
 
   const sendTestPush = useCallback(async () => {
     try {
-      const res = await supabase.functions.invoke("fcm-push", {
+      const res = await projectASupabase.functions.invoke("fcm-push", {
         body: { title: "Test Push", message: "If you see this, push notifications work!", type: "info" },
       });
       if (res.error) {

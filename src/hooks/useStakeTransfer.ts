@@ -4,7 +4,7 @@
  */
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { supabase } from '@/integrations/supabase/client';
+import { projectASupabase } from '@/lib/externalSupabase';
 import { Chain } from '@/hooks/useBlockchain';
 import { useBroadcastTransaction } from '@/hooks/useTransactionBroadcast';
 import { decryptPrivateKey, EncryptedData } from '@/utils/encryption';
@@ -35,7 +35,7 @@ export interface StakeTransferResult {
  * Fetch the platform staking wallet address for a given chain from the database.
  */
 export async function getStakeWalletAddress(chain: Chain): Promise<string | null> {
-  const { data, error } = await supabase.functions.invoke('staking', {
+  const { data, error } = await projectASupabase.functions.invoke('staking', {
     body: { action: 'get-stake-wallet', chain },
   });
 

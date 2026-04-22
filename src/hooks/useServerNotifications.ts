@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { usePlatform } from "./usePlatform";
 
 export interface ServerNotification {
@@ -35,7 +35,7 @@ export const useServerNotifications = () => {
   const [notifications, setNotifications] = useState<ServerNotification[]>([]);
 
   const fetchNotifications = useCallback(async () => {
-    const { data, error } = await supabase
+    const { data, error } = await projectASupabase
       .from("push_notifications")
       .select("id, type, title, message, icon, target_platform, created_at")
       .eq("is_active", true)
