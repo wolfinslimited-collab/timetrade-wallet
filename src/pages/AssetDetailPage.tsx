@@ -260,21 +260,21 @@ export const AssetDetailPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="flex justify-center gap-3 px-4 py-5">
-          <Button
-            className="flex-1 h-14 flex-col gap-0.5 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90"
+        <div className="flex justify-center gap-3 px-4 py-4">
+          <button
+            className="flex-1 h-[56px] flex flex-col items-center justify-center gap-1 rounded-2xl bg-primary/90 text-primary-foreground active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             onClick={() => setShowReceive(true)}
           >
-            <ArrowDownLeft className="w-5 h-5" />
-            <span className="text-[11px]">Receive</span>
-          </Button>
-          <Button
-            className="flex-1 h-14 flex-col gap-0.5 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90"
+            <ArrowDownLeft className="w-5 h-5" strokeWidth={2.5} />
+            <span className="text-[12px] font-semibold">Receive</span>
+          </button>
+          <button
+            className="flex-1 h-[56px] flex flex-col items-center justify-center gap-1 rounded-2xl bg-primary/90 text-primary-foreground active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             onClick={() => setShowSend(true)}
           >
-            <ArrowUpRight className="w-5 h-5" />
-            <span className="text-[11px]">Send</span>
-          </Button>
+            <ArrowUpRight className="w-5 h-5" strokeWidth={2.5} />
+            <span className="text-[12px] font-semibold">Send</span>
+          </button>
         </div>
 
         {/* AI Portfolio Insights */}
