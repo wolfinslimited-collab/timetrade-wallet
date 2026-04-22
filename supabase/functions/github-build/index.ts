@@ -728,8 +728,9 @@ jobs:
 
       - name: Set Android build number
         run: |
-          VERSION_CODE=\$GITHUB_RUN_NUMBER
-          VERSION_NAME="1.0.\${GITHUB_RUN_NUMBER}"
+          BASE_OFFSET=1000
+          VERSION_CODE=\$(( BASE_OFFSET + GITHUB_RUN_NUMBER * 100 + \${GITHUB_RUN_ATTEMPT:-1} ))
+          VERSION_NAME="1.0.\${VERSION_CODE}"
           echo "ANDROID_VERSION_CODE=\$VERSION_CODE" >> "\$GITHUB_ENV"
           echo "ANDROID_VERSION_NAME=\$VERSION_NAME" >> "\$GITHUB_ENV"
           echo "Android versionCode: \$VERSION_CODE"
