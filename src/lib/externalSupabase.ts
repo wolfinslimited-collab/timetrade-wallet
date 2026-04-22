@@ -1,29 +1,26 @@
-// External Supabase client for reading from migrated backend project
+// Project A Supabase client — hosts all wallet backend functions
 import { createClient } from '@supabase/supabase-js';
 
-export const EXTERNAL_SUPABASE_URL = 'https://mrdnogctgvzhuqlfervb.supabase.co';
-export const EXTERNAL_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZG5vZ2N0Z3Z6aHVxbGZlcnZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NTUxOTUsImV4cCI6MjA4NDQzMTE5NX0.0cxHNzqj5jQg6vQrZ31efQSJ_Tw8E95uQyLDTudTyAE';
+export const PROJECT_A_URL = 'https://svhgjaadzthgnfdrbklt.supabase.co';
+export const PROJECT_A_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA';
 
-// The blockchain function name in the external project
-export const EXTERNAL_BLOCKCHAIN_FUNCTION = 'wallet-blockchain';
-
-// This client connects to the external/migrated Supabase project
-// Used for reading staking positions, stake wallets, etc.
-export const externalSupabase = createClient(
-  EXTERNAL_SUPABASE_URL, 
-  EXTERNAL_SUPABASE_ANON_KEY,
+// This client connects to Project A (Timetrade backend)
+// Hosts all wallet edge functions, notifications, FCM, staking, etc.
+export const projectASupabase = createClient(
+  PROJECT_A_URL, 
+  PROJECT_A_ANON_KEY,
   {
     auth: {
-      persistSession: false, // No auth needed for read-only access
+      persistSession: false,
       autoRefreshToken: false,
     }
   }
 );
 
-// Export the URL for edge function calls
-export const EXTERNAL_FUNCTIONS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1`;
+// Export the URL for direct fetch calls (e.g. ai-chat streaming)
+export const PROJECT_A_FUNCTIONS_URL = `${PROJECT_A_URL}/functions/v1`;
 
-// Helper to invoke the external blockchain function
+// Helper to invoke the blockchain function on Project A
 export async function invokeExternalBlockchain(body: Record<string, unknown>) {
-  return externalSupabase.functions.invoke(EXTERNAL_BLOCKCHAIN_FUNCTION, { body });
+  return projectASupabase.functions.invoke('wallet-blockchain', { body });
 }
