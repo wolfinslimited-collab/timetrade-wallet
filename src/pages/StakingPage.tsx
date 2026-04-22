@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { Chain } from "@/hooks/useBlockchain";
