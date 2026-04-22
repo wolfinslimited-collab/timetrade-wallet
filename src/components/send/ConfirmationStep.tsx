@@ -5,7 +5,7 @@ import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { Chain, getChainInfo, useGasEstimate } from "@/hooks/useBlockchain";
-import { isEvmChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
+import { isEvmChain, isTronChain, isSolanaChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
 import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { PinUnlockModal } from "./PinUnlockModal";
 import { toast } from "@/hooks/use-toast";
@@ -186,7 +186,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         description: "Your transaction has been sent via WalletConnect.",
       });
 
-      await onConfirm(undefined, result.txHash);
+      await onConfirm();
     } catch (error) {
       console.error('WalletConnect signing failed:', error);
       haptics.notify("error");
