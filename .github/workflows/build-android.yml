@@ -219,14 +219,12 @@ jobs:
 
           gradle = Path("android/app/build.gradle")
           if not gradle.exists():
-              print("FATAL: android/app/build.gradle not found")
-              sys.exit(1)
+              print("FATAL: android/app/build.gradle not found"); sys.exit(1)
 
           src = gradle.read_text()
 
           if "signingConfig signingConfigs.release" in src:
-              print("build.gradle already contains signing config, skipping")
-              sys.exit(0)
+              print("build.gradle already contains signing config, skipping"); sys.exit(0)
 
           loader = """def keystorePropertiesFile = rootProject.file('key.properties')
           def keystoreProperties = new Properties()
@@ -240,8 +238,7 @@ jobs:
               if "android {" in src:
                   src = src.replace("android {", loader + "android {", 1)
               else:
-                  print("FATAL: 'android {' block not found")
-                  sys.exit(1)
+                  print("FATAL: 'android {' block not found"); sys.exit(1)
 
           signing_block = """    signingConfigs {
               release {
@@ -258,8 +255,7 @@ jobs:
               if "    buildTypes {" in src:
                   src = src.replace("    buildTypes {", signing_block + "    buildTypes {", 1)
               else:
-                  print("FATAL: 'buildTypes' block not found")
-                  sys.exit(1)
+                  print("FATAL: 'buildTypes' block not found"); sys.exit(1)
 
           release_pattern = "    buildTypes {\n        release {\n"
           if release_pattern in src and "signingConfig signingConfigs.release" not in src:
@@ -268,7 +264,7 @@ jobs:
 
           gradle.write_text(src)
           print("Successfully patched android/app/build.gradle for release signing")
-          PYEOF
+PYEOF
           echo "--- Signing verification ---"
           grep -n "keystorePropertiesFile|signingConfigs|signingConfig " android/app/build.gradle
           grep -q "signingConfig signingConfigs.release" android/app/build.gradle || { echo "FATAL: signing patch failed"; exit 1; }
