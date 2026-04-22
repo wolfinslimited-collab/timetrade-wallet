@@ -8,7 +8,7 @@ import { AmountInputStep } from "@/components/send/AmountInputStep";
 import { ConfirmationStep } from "@/components/send/ConfirmationStep";
 import { TransactionResultStep } from "@/components/send/TransactionResultStep";
 import { RiskCheckStep } from "@/components/send/RiskCheckStep";
-import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+import { Chain } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import type { SendStep, TransactionData } from "@/components/send/SendCryptoSheet";
