@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Transaction, ParsedInstruction, SolanaTokenTransfer } from "@/hooks/useBlockchain";
+import { KNOWN_SPL, resolveSplToken } from "@/config/knownTokens";
 
 interface SolanaTransactionDetailSheetProps {
   transaction: Transaction | null;
@@ -43,6 +44,28 @@ export const SolanaTransactionDetailSheet = ({
 
   const isSend = transaction.from?.toLowerCase() === userAddress?.toLowerCase();
   const status = transaction.status;
+
+  // Determine display token: if there are token transfers, use the relevant one
+  const displayToken = useMemo(() => {
+    const transfers = transaction.tokenTransfers || [];
+    if (transfers.length > 0) {
+      // Find the transfer relevant to the user
+      const relevant = transfers.find(t =>
+        t.source?.toLowerCase() === userAddress?.toLowerCase() ||
+        t.destination?.toLowerCase() === userAddress?.toLowerCase()
+      ) || transfers[0];
+
+      const resolved = resolveSplToken(relevant.mint, relevant.symbol, relevant.decimals);
+      if (resolved && resolved.symbol !== 'SOL') {
+        const amount = parseFloat(relevant.amount || '0') / Math.pow(10, resolved.decimals);
+        const isOutgoing = relevant.source?.toLowerCase() === userAddress?.toLowerCase();
+        return { symbol: resolved.symbol, amount, isSend: isOutgoing };
+      }
+    }
+    // Fallback: native SOL
+    const solAmount = parseFloat(formatLamports(transaction.value || '0'));
+    return { symbol: 'SOL', amount: solAmount, isSend };
+  }, [transaction, userAddress, isSend]);
 
   const formatAddress = (addr: string) => {
     if (!addr) return 'Unknown';
@@ -130,8 +153,8 @@ export const SolanaTransactionDetailSheet = ({
               "text-2xl font-bold",
               isSend ? "text-red-500" : "text-green-500"
             )}>
-              {isSend ? "-" : "+"}
-              {formatLamports(transaction.value || '0')} SOL
+              {displayToken.isSend ? "-" : "+"}
+              {displayToken.amount.toFixed(displayToken.symbol === 'SOL' ? 6 : 4)} {displayToken.symbol}
             </p>
 
             {/* Status Badge */}
