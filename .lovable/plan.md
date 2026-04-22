@@ -1,30 +1,39 @@
 
 
-## Inline Security Check in Address Input
+## Separate PIN Verification from Transaction Signing
 
 ### What changes
 
-The address input step will show a **"Security Check - Analyze address for risks"** card directly below the address input field when a valid address is entered. This replaces the current behavior where clicking "Continue" triggers a full-screen risk analysis that hides the address form.
+The PIN unlock modal will only verify the PIN (decrypt the seed to confirm correctness), then immediately close and advance to the "sending" step. The actual transaction signing and broadcasting will happen inside the "sending/result" step, using the verified PIN to derive keys and sign.
 
-### How it will work
+### Why
 
-1. **When a valid address is typed/pasted**: A clickable "Security Check" card appears below the address input (green shield icon, "Security Check" title, "Analyze address for risks" subtitle, chevron arrow).
+Currently, the PIN modal both verifies the PIN AND signs the transaction inline, which couples two concerns. The user wants the PIN step to be a quick unlock gate, with the heavier signing/broadcast work shown in the loading result screen.
 
-2. **Tapping the Security Check card**: Triggers the risk analysis inline -- the card expands to show loading state, then results (risk level, score, flags) within the same card area. The address input remains visible above.
+### Technical details
 
-3. **Continue button**: Always visible at the bottom. Tapping "Continue" submits the address and moves to the amount step directly -- no separate risk step. The security check is optional/informational, not blocking.
+#### 1. `src/components/send/ConfirmationStep.tsx`
 
-4. **High risk handling**: If high risk is detected, the card shows a warning but the user can still proceed via Continue.
+- Modify `onConfirm` prop signature to accept an optional `pin` parameter: `onConfirm: (pin?: string) => void`
+- Simplify `handlePinSubmit`: only decrypt the seed phrase to verify the PIN is correct (keep the decrypt check), then call `onConfirm(pin)` without signing. Remove all signing logic (EVM, Solana, Tron key derivation and `signTransaction` calls).
+- Remove imports and hooks no longer needed in this component: `useTransactionSigning`, `useTronTransactionSigning`, `useSolanaTransactionSigning`, `derivePrivateKeyForChain`, `ethers`, etc.
 
-### Files to modify
+#### 2. `src/components/send/SendCryptoSheet.tsx`
 
-- **`src/components/send/AddressInputStep.tsx`** -- Restructure to:
-  - Remove the full-screen risk takeover (loading/done states that hide the address form)
-  - Add an inline "Security Check" card below the address input that appears when address is valid
-  - Tapping the card runs the risk analysis and shows results inline within the card
-  - "Continue" button always calls `onSubmit` directly without triggering risk check
-  
-- **`src/pages/SendPage.tsx`** -- No changes needed (already routes address -> amount)
+- Update `handleConfirm` to accept `pin?: string` and store it in state (e.g., `verifiedPin`).
+- Move the signing logic (currently in `ConfirmationStep.handlePinSubmit`) into the `doBroadcast` function or a new `signAndBroadcast` function that runs during the "sending" step.
+- The "sending" step will: derive the private key from the stored mnemonic using the verified PIN, sign the transaction for the correct chain, then broadcast the signed transaction.
+- On error during signing, transition to the "error" step with the appropriate message and allow retry.
 
-- **`src/components/send/SendCryptoSheet.tsx`** -- Verify risk step is already removed from flow
+#### 3. `src/components/send/TransactionResultStep.tsx`
+
+- No structural changes needed. The "loading" mode already displays a spinner. The signing work will happen before this component shows "success" or "error".
+
+### Flow after changes
+
+```text
+Confirm screen → tap "Confirm & Sign" → PIN modal (verify only)
+  → PIN correct → close modal → "sending" step (sign + broadcast with loading spinner)
+  → success / error result
+```
 
