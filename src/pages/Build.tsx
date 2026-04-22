@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { toast } from "sonner";
 
 type Platform = "android" | "ios" | "flutter_android" | "flutter_ios";
