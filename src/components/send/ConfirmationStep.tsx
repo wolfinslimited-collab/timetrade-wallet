@@ -1,20 +1,16 @@
 import { useState, useMemo, useCallback } from "react";
-import { ChevronLeft, AlertTriangle, Shield, Zap, Wallet, Key } from "lucide-react";
+import { ChevronLeft, Wallet, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionData } from "./SendCryptoSheet";
 import { FeeEstimator, GasSpeed } from "./FeeEstimator";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { Chain, getChainInfo, useGasEstimate } from "@/hooks/useBlockchain";
-import { useTransactionSigning, isEvmChain, isTronChain, isSolanaChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
-import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
-import { useSolanaTransactionSigning } from "@/hooks/useSolanaTransactionSigning";
+import { isEvmChain, isSigningSupportedForChain } from "@/hooks/useTransactionSigning";
 import { useWalletConnect } from "@/contexts/WalletConnectContext";
 import { PinUnlockModal } from "./PinUnlockModal";
 import { toast } from "@/hooks/use-toast";
 import { LiveFeeData, getFeeForSpeed } from "@/hooks/useLiveFeeEstimation";
-import { ethers } from "ethers";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
-import { derivePrivateKeyForChain, SolanaDerivationPath } from "@/utils/walletDerivation";
 import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 import { haptics } from "@/lib/haptics";
 
@@ -22,7 +18,7 @@ interface ConfirmationStepProps {
   transaction: TransactionData;
   selectedChain: Chain;
   isTestnet?: boolean;
-  onConfirm: (signedTransaction?: string, txHash?: string) => void;
+  onConfirm: (pin?: string) => void;
   onBack: () => void;
 }
 
