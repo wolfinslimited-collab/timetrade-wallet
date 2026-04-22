@@ -19,20 +19,20 @@ export const QuickActions = () => {
       icon: <ArrowDownToLine className="w-5 h-5" />,
       label: "Receive",
       action: "receive",
-      color: "bg-white/20 text-primary",
+      color: "bg-white/10 text-primary",
     },
     {
       icon: <Send className="w-5 h-5" />,
       label: "Send",
       action: "send",
-      color: "bg-white/20 text-primary",
+      color: "bg-white/10 text-primary",
     },
     ...(flags.showSwap
       ? [{
           icon: <ArrowLeftRight className="w-5 h-5" />,
           label: "Swap",
           action: "swap",
-          color: "bg-white/20 text-primary",
+          color: "bg-white/10 text-primary",
         }]
       : []),
   ];
