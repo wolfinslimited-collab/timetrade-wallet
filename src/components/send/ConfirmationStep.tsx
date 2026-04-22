@@ -317,9 +317,8 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
 
       await onConfirm(signedTx);
 
-      // Brief delay so user sees success checkmark in PIN modal before step changes
-      await new Promise((r) => setTimeout(r, 400));
-      setShowPinModal(false);
+      // onConfirm sets step to "success" which unmounts this component
+      // and the PIN modal portal — no need to close manually
     } catch (error) {
       console.error('Signing failed:', error);
       haptics.notify("error");
