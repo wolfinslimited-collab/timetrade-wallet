@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useState, useEffect, useCallback, ReactNode, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Delete, Fingerprint, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -130,9 +129,21 @@ export const FullScreenPinModal = ({
     setPin((p) => p.slice(0, -1));
   }, [success, submitting, isLoading]);
 
-  if (typeof document === "undefined") return null;
+  // When modal opens, ensure body pointer-events aren't blocked by Radix
+  // dismissable layers (which set pointer-events:none on body for modals)
+  const bodyStyleRef = useRef<string>("");
+  useEffect(() => {
+    if (open) {
+      // Override any Radix-imposed pointer-events:none on body
+      bodyStyleRef.current = document.body.style.pointerEvents;
+      document.body.style.pointerEvents = "auto";
+      return () => {
+        document.body.style.pointerEvents = bodyStyleRef.current;
+      };
+    }
+  }, [open]);
 
-  return createPortal(
+  return (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -143,6 +154,7 @@ export const FullScreenPinModal = ({
           className="fixed inset-0 z-[10000] bg-background"
           style={{
             zIndex: 10100,
+            pointerEvents: "auto",
             paddingTop: "max(env(safe-area-inset-top), 12px)",
             paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
           }}
@@ -273,8 +285,8 @@ export const FullScreenPinModal = ({
             </div>
 
             {/* Keypad */}
-            <div className="px-6 pb-4 shrink-0">
-              <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto">
+            <div className="px-6 pb-4 shrink-0" style={{ pointerEvents: "auto" }}>
+              <div className="grid grid-cols-3 gap-x-6 gap-y-3 max-w-[320px] mx-auto" style={{ pointerEvents: "auto" }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
                   <KeypadButton
                     key={digit}
@@ -319,8 +331,7 @@ export const FullScreenPinModal = ({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>,
-    document.body
+    </AnimatePresence>
   );
 };
 
