@@ -279,7 +279,7 @@ export const FeatureTourStep = ({ onContinue, onBack }: FeatureTourStepProps) =>
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="w-full h-full flex items-center justify-center"
+            className="w-full h-full flex items-center justify-center [transform:translateZ(0)] [backface-visibility:hidden] [will-change:transform,opacity]"
           >
             {renderHero()}
           </motion.div>
@@ -295,7 +295,7 @@ export const FeatureTourStep = ({ onContinue, onBack }: FeatureTourStepProps) =>
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="text-center"
+            className="text-center [transform:translateZ(0)] [will-change:transform,opacity]"
           >
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-primary mb-1.5">
               {slide.eyebrow}
