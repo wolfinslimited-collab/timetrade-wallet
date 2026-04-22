@@ -11,7 +11,6 @@ import { RiskCheckStep } from "@/components/send/RiskCheckStep";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
-import { toast } from "@/hooks/use-toast";
 import type { SendStep, TransactionData } from "@/components/send/SendCryptoSheet";
 
 const VALID_CHAINS: Chain[] = ["ethereum", "polygon", "arbitrum", "bsc", "solana", "tron", "bitcoin"];
