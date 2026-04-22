@@ -243,80 +243,25 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
 
       // Decrypt the seed phrase
       const encryptedData: EncryptedData = JSON.parse(encryptedSeedJson);
-      let mnemonic: string;
       try {
-        mnemonic = await decryptPrivateKey(encryptedData, pin);
+        await decryptPrivateKey(encryptedData, pin);
       } catch (decryptError) {
         setPinError("Incorrect PIN. Please try again.");
         setIsProcessing(false);
         throw new Error("Incorrect PIN");
       }
 
-      // Get account index (default 0)
-      const accountIndex = parseInt(localStorage.getItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX) || '0', 10);
-      
-      // Get Solana path style if applicable
-      const solanaPathStyle = (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) || 'phantom';
-
-      // Derive private key for the selected chain
-      const privateKey = derivePrivateKeyForChain(mnemonic, selectedChain, accountIndex, solanaPathStyle);
-
-      let signedTx: string;
-
-      if (isSolanaChain(selectedChain)) {
-        // Solana transaction signing
-        const solanaAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || '';
-        
-        const result = await signSolanaTransaction(privateKey, {
-          to: transaction.recipient,
-          amount: transaction.amount,
-          from: solanaAddress,
-          priorityFee: gasSpeed === 'fast' ? 100000 : gasSpeed === 'instant' ? 500000 : undefined,
-        });
-        signedTx = result.signedTx;
-      } else if (isTronChain(selectedChain)) {
-        // Tron transaction signing
-        const tronAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || '';
-        const isToken = transaction.token.symbol !== 'TRX';
-        
-        const result = await signTronTransaction(privateKey, {
-          to: transaction.recipient,
-          amount: transaction.amount,
-          from: tronAddress,
-          isToken,
-          contractAddress: isToken ? (transaction.token as any).contractAddress : undefined,
-          decimals: transaction.token.symbol === 'USDT' ? 6 : 6, // TRC-20 tokens typically use 6 decimals
-        });
-        signedTx = result.signedTx;
-      } else {
-        // EVM transaction signing
-        const txParams = {
-          to: transaction.recipient,
-          value: transaction.amount,
-          gasLimit: BigInt(transaction.gasEstimate),
-          ...(feeDetails.isEIP1559 ? {
-            maxFeePerGas: feeDetails.maxFee.toFixed(9),
-            maxPriorityFeePerGas: feeDetails.priorityFee.toFixed(9),
-          } : {
-            gasPrice: feeDetails.gasPriceGwei,
-          }),
-        };
-        
-        const result = await signEvmTransaction(privateKey, txParams);
-        signedTx = result.signedTx;
-      }
-
-      // Signing succeeded — close PIN modal and hand off to parent for broadcast
+      // PIN verified — close modal and advance to sending step
       setShowPinModal(false);
       setIsProcessing(false);
-      onConfirm(signedTx);
+      onConfirm(pin);
     } catch (error) {
-      console.error('Signing failed:', error);
+      console.error('PIN verification failed:', error);
       haptics.notify("error");
-      const msg = error instanceof Error ? error.message : "Failed to sign transaction";
+      const msg = error instanceof Error ? error.message : "PIN verification failed";
       setPinError(msg);
       setIsProcessing(false);
-      throw error; // Re-throw so PinUnlockModal shows shake
+      throw error;
     }
   };
 
