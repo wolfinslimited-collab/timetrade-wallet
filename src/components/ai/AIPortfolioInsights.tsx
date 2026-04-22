@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Brain, Loader2, TrendingUp, AlertTriangle, Shield, ShieldCheck, ShieldAlert, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
 import { motion, AnimatePresence } from "framer-motion";
 import { InsightsLoadingSkeleton } from "@/components/ui/loading-skeletons";

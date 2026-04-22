@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { AlertTriangle, Shield, ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 
 interface RiskData {
   risk_score: number;
@@ -42,7 +42,7 @@ export const TransactionRiskModal = ({
     setError(null);
     setRiskData(null);
     
-    supabase.functions.invoke("transaction-risk", {
+    projectASupabase.functions.invoke("transaction-risk", {
       body: { address, chain, amount, senderAddress },
     }).then(({ data, error: fnError }) => {
       if (fnError) {
