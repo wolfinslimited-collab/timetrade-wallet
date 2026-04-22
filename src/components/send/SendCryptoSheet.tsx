@@ -75,7 +75,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   // Signing hooks
   const { signTransaction: signEvmTransaction } = useTransactionSigning(selectedChain, isTestnet);
   const { signTransaction: signTronTransaction } = useTronTransactionSigning(isTestnet);
-  const { signTransaction: signSolanaTransaction } = useSolanaTransactionSigning(isTestnet);
+  const { signTransaction: signSolanaTransaction, signSplTokenTransaction: signSolanaSplTransaction } = useSolanaTransactionSigning(isTestnet);
   
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
@@ -232,12 +232,28 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
 
         if (isSolanaChain(selectedChain)) {
           const solanaAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || '';
-          const result = await signSolanaTransaction(privateKey, {
-            to: transaction.recipient,
-            amount: transaction.amount,
-            from: solanaAddress,
-          });
-          signedTx = result.signedTx;
+          const isNativeSOL = transaction.token.isNative || transaction.token.symbol === 'SOL';
+
+          if (isNativeSOL) {
+            // Native SOL transfer
+            const result = await signSolanaTransaction(privateKey, {
+              to: transaction.recipient,
+              amount: transaction.amount,
+              from: solanaAddress,
+            });
+            signedTx = result.signedTx;
+          } else {
+            // SPL token transfer (USDC, USDT, etc.)
+            const result = await signSolanaSplTransaction(privateKey, {
+              to: transaction.recipient,
+              amount: transaction.amount,
+              from: solanaAddress,
+              isToken: true,
+              tokenMint: transaction.token.contractAddress,
+              decimals: transaction.token.decimals ?? 6,
+            });
+            signedTx = result.signedTx;
+          }
         } else if (isTronChain(selectedChain)) {
           const tronAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || '';
           const isToken = transaction.token.symbol !== 'TRX';
