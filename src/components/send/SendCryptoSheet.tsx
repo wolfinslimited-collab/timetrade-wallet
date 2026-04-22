@@ -9,10 +9,9 @@ import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionResultStep } from "./TransactionResultStep";
 import { RiskCheckStep } from "./RiskCheckStep";
-import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+import { Chain } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
-import { toast } from "@/hooks/use-toast";
 
 export type SendStep = "select" | "address" | "risk" | "amount" | "confirm" | "sending" | "success" | "error";
 
