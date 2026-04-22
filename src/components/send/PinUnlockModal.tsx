@@ -58,7 +58,7 @@ export const PinUnlockModal = ({
     try {
       const retrievedPin = await authenticateWithBiometric();
       if (retrievedPin) {
-        onSubmit(retrievedPin);
+        await onSubmit(retrievedPin);
       } else {
         setBiometricError("Biometric authentication failed");
       }
