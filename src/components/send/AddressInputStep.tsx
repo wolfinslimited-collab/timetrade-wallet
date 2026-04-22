@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Scan, Clipboard, AlertCircle, Bookmark, BookmarkPlus, Trash2, Loader2, ShieldCheck, Shield, AlertTriangle } from "lucide-react";
+import { Scan, Clipboard, AlertCircle, Bookmark, BookmarkPlus, Trash2, Loader2, ShieldCheck, Shield, AlertTriangle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -112,34 +112,34 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
       return;
     }
     if (validateAddress(address.trim())) {
-      // Start risk check
-      setRiskState("loading");
-      setRiskData(null);
-      projectASupabase.functions
-        .invoke("transaction-risk", {
-          body: { address: address.trim(), chain: selectedChain },
-        })
-        .then(({ data, error: fnError }) => {
-          if (fnError) {
-            setRiskData({
-              risk_score: 15,
-              risk_level: "Low",
-              explanation: "Risk analysis unavailable.",
-              flags: [],
-            });
-          } else {
-            setRiskData(data);
-          }
-          setRiskState("done");
-        });
+      onSubmit(address.trim());
     }
   };
 
-  const handleRiskProceed = () => {
-    onSubmit(address.trim());
+  const handleSecurityCheck = () => {
+    if (!address.trim() || !validateAddress(address.trim())) return;
+    setRiskState("loading");
+    setRiskData(null);
+    projectASupabase.functions
+      .invoke("transaction-risk", {
+        body: { address: address.trim(), chain: selectedChain },
+      })
+      .then(({ data, error: fnError }) => {
+        if (fnError) {
+          setRiskData({
+            risk_score: 15,
+            risk_level: "Low",
+            explanation: "Risk analysis unavailable.",
+            flags: [],
+          });
+        } else {
+          setRiskData(data);
+        }
+        setRiskState("done");
+      });
   };
 
-  const handleRiskReset = () => {
+  const handleRiskClose = () => {
     setRiskState("idle");
     setRiskData(null);
   };
@@ -188,64 +188,6 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
       {/* Scrollable content area */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6">
 
-      {/* Risk check loading state */}
-      {riskState === "loading" && (
-        <div className="flex flex-col items-center gap-4 py-16">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Analyzing recipient address...</p>
-        </div>
-      )}
-
-      {/* Risk check result */}
-      {riskState === "done" && riskData && (() => {
-        const isHigh = riskData.risk_level === "High";
-        const isMedium = riskData.risk_level === "Medium";
-        return (
-          <div className="flex flex-col items-center py-6">
-            <div className={cn(
-              "w-20 h-20 rounded-full flex items-center justify-center mb-5",
-              isHigh ? "bg-destructive/15" : isMedium ? "bg-amber-500/15" : "bg-success/15"
-            )}>
-              {isHigh ? (
-                <AlertTriangle className="w-10 h-10 text-destructive" />
-              ) : isMedium ? (
-                <Shield className="w-10 h-10 text-amber-500" />
-              ) : (
-                <ShieldCheck className="w-10 h-10 text-success" />
-              )}
-            </div>
-            <h3 className={cn(
-              "text-2xl font-bold text-center mb-2",
-              isHigh ? "text-destructive" : isMedium ? "text-amber-500" : "text-success"
-            )}>
-              {isHigh ? "⚠️ High Risk Address" : isMedium ? "⚠️ Medium Risk" : "✅ Low Risk"}
-            </h3>
-            <span className={cn(
-              "text-xs px-3 py-1 rounded-full font-medium mb-4",
-              isHigh ? "bg-destructive/10 text-destructive" : isMedium ? "bg-amber-500/10 text-amber-500" : "bg-success/10 text-success"
-            )}>
-              Risk Score: {riskData.risk_score}/100
-            </span>
-            <p className="text-sm text-muted-foreground text-center mb-4 max-w-xs">
-              {riskData.explanation}
-            </p>
-            {riskData.flags && riskData.flags.length > 0 && (
-              <div className="space-y-2 w-full max-w-xs">
-                {riskData.flags.map((flag, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <AlertTriangle className="w-3 h-3 mt-0.5 text-amber-500 shrink-0" />
-                    <span>{flag}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Address input & saved addresses - only show when not in risk check */}
-      {riskState === "idle" && (
-        <>
           {/* Network indicator */}
           <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
             <span>Sending on</span>
@@ -334,6 +276,95 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
             )}
           </div>
 
+          {/* Inline Security Check Card */}
+          {address.trim() && validateAddressForChain(address.trim(), selectedChain).valid && (
+            <div className="mt-4">
+              {riskState === "idle" && (
+                <button
+                  onClick={handleSecurityCheck}
+                  className="w-full flex items-center gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors active:scale-[0.98]"
+                >
+                  <div className="w-10 h-10 rounded-full bg-success/15 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-5 h-5 text-success" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium">Security Check</p>
+                    <p className="text-xs text-muted-foreground">Analyze address for risks</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+              )}
+
+              {riskState === "loading" && (
+                <div className="w-full flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
+                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium">Analyzing...</p>
+                    <p className="text-xs text-muted-foreground">Checking recipient address</p>
+                  </div>
+                </div>
+              )}
+
+              {riskState === "done" && riskData && (() => {
+                const isHigh = riskData.risk_level === "High";
+                const isMedium = riskData.risk_level === "Medium";
+                return (
+                  <div className="w-full rounded-xl bg-card border border-border overflow-hidden">
+                    <button
+                      onClick={handleRiskClose}
+                      className="w-full flex items-center gap-3 p-4 active:scale-[0.98]"
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                        isHigh ? "bg-destructive/15" : isMedium ? "bg-amber-500/15" : "bg-success/15"
+                      )}>
+                        {isHigh ? (
+                          <AlertTriangle className="w-5 h-5 text-destructive" />
+                        ) : isMedium ? (
+                          <Shield className="w-5 h-5 text-amber-500" />
+                        ) : (
+                          <ShieldCheck className="w-5 h-5 text-success" />
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className={cn(
+                          "text-sm font-medium",
+                          isHigh ? "text-destructive" : isMedium ? "text-amber-500" : "text-success"
+                        )}>
+                          {isHigh ? "High Risk" : isMedium ? "Medium Risk" : "Low Risk"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Score: {riskData.risk_score}/100</p>
+                      </div>
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded-full font-medium",
+                        isHigh ? "bg-destructive/10 text-destructive" : isMedium ? "bg-amber-500/10 text-amber-500" : "bg-success/10 text-success"
+                      )}>
+                        {riskData.risk_level}
+                      </span>
+                    </button>
+                    {(riskData.explanation || (riskData.flags && riskData.flags.length > 0)) && (
+                      <div className="px-4 pb-4 pt-0 border-t border-border">
+                        <p className="text-xs text-muted-foreground mt-3 mb-2">{riskData.explanation}</p>
+                        {riskData.flags && riskData.flags.length > 0 && (
+                          <div className="space-y-1.5">
+                            {riskData.flags.map((flag, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <AlertTriangle className="w-3 h-3 mt-0.5 text-amber-500 shrink-0" />
+                                <span>{flag}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Saved Addresses */}
           {chainSavedAddresses.length > 0 && (
             <div className="mt-6">
@@ -396,52 +427,17 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
               </div>
             </div>
           )}
-        </>
-      )}
       </div>
 
       {/* Continue Button */}
       <div className="shrink-0 px-6 pt-3 bg-background" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-        {riskState === "idle" && (
-          <Button
-            onClick={handleSubmit}
-            disabled={!address.trim()}
-            className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base rounded-2xl"
-          >
-            Continue
-          </Button>
-        )}
-        {riskState === "done" && riskData && (
-          <div className="flex gap-3">
-            {riskData.risk_level === "High" && (
-              <Button
-                variant="outline"
-                className="flex-1 h-14 text-base border-destructive/30 text-destructive hover:bg-destructive/10 rounded-2xl"
-                onClick={handleRiskReset}
-              >
-                Cancel
-              </Button>
-            )}
-            {riskData.risk_level !== "High" && (
-              <Button
-                variant="outline"
-                className="flex-1 h-14 text-base rounded-2xl"
-                onClick={handleRiskReset}
-              >
-                Back
-              </Button>
-            )}
-            <Button
-              className={cn(
-                "flex-1 h-14 text-base rounded-2xl",
-                riskData.risk_level === "High" ? "bg-destructive hover:bg-destructive/90" : ""
-              )}
-              onClick={handleRiskProceed}
-            >
-              {riskData.risk_level === "High" ? "Proceed Anyway" : "Continue"}
-            </Button>
-          </div>
-        )}
+        <Button
+          onClick={handleSubmit}
+          disabled={!address.trim()}
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base rounded-2xl"
+        >
+          Continue
+        </Button>
       </div>
 
       {/* QR Scanner Modal */}
