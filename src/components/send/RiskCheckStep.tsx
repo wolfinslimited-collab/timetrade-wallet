@@ -37,7 +37,7 @@ export const RiskCheckStep = ({
     setError(null);
     setRiskData(null);
 
-    supabase.functions
+    projectASupabase.functions
       .invoke("transaction-risk", {
         body: { address, chain, amount, senderAddress },
       })

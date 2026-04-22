@@ -75,7 +75,7 @@ export const AIPortfolioInsights = ({ assets, totalValue }: AIPortfolioInsightsP
     setHasRequested(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("portfolio-insights", {
+      const { data, error: fnError } = await projectASupabase.functions.invoke("portfolio-insights", {
         body: {
           assets: assets.map(a => ({ symbol: a.symbol, chain: a.chain, valueUsd: a.valueUsd })),
           totalValue,
