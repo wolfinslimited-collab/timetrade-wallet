@@ -134,6 +134,7 @@ const SendPage = () => {
     } catch (error) {
       console.error("Transaction broadcast failed:", error);
       toast({ title: "Transaction Failed", description: error instanceof Error ? error.message : "Failed to broadcast transaction", variant: "destructive" });
+      throw error; // Re-throw so PIN modal can show the error
     }
   };
 
