@@ -6,7 +6,7 @@ import { NetworkAssetSelector, AvailableAsset, NetworkAssetSelectorHandle } from
 import { AddressInputStep } from "@/components/send/AddressInputStep";
 import { AmountInputStep } from "@/components/send/AmountInputStep";
 import { ConfirmationStep } from "@/components/send/ConfirmationStep";
-import { TransactionSuccessStep } from "@/components/send/TransactionSuccessStep";
+import { TransactionResultStep } from "@/components/send/TransactionResultStep";
 import { RiskCheckStep } from "@/components/send/RiskCheckStep";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
@@ -41,6 +41,8 @@ const SendPage = () => {
   const [senderAddress, setSenderAddress] = useState<string>("");
   const [isTestnet] = useState(false);
   const networkSelectorRef = useRef<NetworkAssetSelectorHandle>(null);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  const [pendingSignedTx, setPendingSignedTx] = useState<string | null>(null);
 
   // Pre-set recipient when arriving with a URL prefill
   useEffect(() => {
