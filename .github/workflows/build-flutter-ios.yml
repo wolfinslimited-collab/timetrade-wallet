@@ -89,27 +89,29 @@ jobs:
             exit 1
           fi
 
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-          import re
+          echo "=== Patching pbxproj for manual signing ==="
 
-          pbxproj_path = Path("flutter_app/ios/Runner.xcodeproj/project.pbxproj")
-          text = pbxproj_path.read_text()
+          sed -i '' 's|PRODUCT_BUNDLE_IDENTIFIER = com.example.flutterApp;|PRODUCT_BUNDLE_IDENTIFIER = '"$BUNDLE_ID"';|g' "$PBXPROJ"
+          sed -i '' 's|PRODUCT_BUNDLE_IDENTIFIER = "com.example.flutterApp";|PRODUCT_BUNDLE_IDENTIFIER = "'"$BUNDLE_ID"'";|g' "$PBXPROJ"
 
-          bundle_id = os.environ["BUNDLE_ID"]
-          team_id = os.environ["TEAM_ID"]
-          profile_name = os.environ["PROFILE_NAME"]
+          sed -i '' 's|CODE_SIGN_STYLE = Automatic;|CODE_SIGN_STYLE = Manual;|g' "$PBXPROJ"
 
-          text = text.replace("PRODUCT_BUNDLE_IDENTIFIER = com.example.flutterApp;", f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};")
-          text = re.sub(r"DEVELOPMENT_TEAM = [A-Z0-9]*;", f"DEVELOPMENT_TEAM = {team_id};", text)
-          text = text.replace("CODE_SIGN_STYLE = Automatic;", "CODE_SIGN_STYLE = Manual;")
-          text = re.sub(r'CODE_SIGN_IDENTITY = "Apple Development";', 'CODE_SIGN_IDENTITY = "Apple Distribution";', text)
-          text = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = "";', f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";', text)
+          sed -i '' 's|DEVELOPMENT_TEAM = "[^"]*";|DEVELOPMENT_TEAM = "'"$TEAM_ID"'";|g' "$PBXPROJ"
+          sed -i '' 's|DEVELOPMENT_TEAM = [A-Z0-9]*;|DEVELOPMENT_TEAM = '"$TEAM_ID"';|g' "$PBXPROJ"
+          sed -i '' 's|DEVELOPMENT_TEAM = "";|DEVELOPMENT_TEAM = "'"$TEAM_ID"'";|g' "$PBXPROJ"
 
-          pbxproj_path.write_text(text)
-          print("Applied Runner signing patch for bundle/team/profile")
-          PY
+          sed -i '' 's|CODE_SIGN_IDENTITY = "[^"]*";|CODE_SIGN_IDENTITY = "Apple Distribution";|g' "$PBXPROJ"
+          sed -i '' 's|"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "[^"]*";|"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";|g' "$PBXPROJ"
+
+          sed -i '' 's|PROVISIONING_PROFILE_SPECIFIER = "[^"]*";|PROVISIONING_PROFILE_SPECIFIER = "'"$PROFILE_NAME"'";|g' "$PBXPROJ"
+          sed -i '' 's|PROVISIONING_PROFILE_SPECIFIER = "";|PROVISIONING_PROFILE_SPECIFIER = "'"$PROFILE_NAME"'";|g' "$PBXPROJ"
+
+          echo "=== Verification ==="
+          grep -c "CODE_SIGN_STYLE = Manual" "$PBXPROJ" || echo "WARNING: No Manual signing found"
+          grep -c "Apple Distribution" "$PBXPROJ" || echo "WARNING: No Apple Distribution found"
+          grep -c "$TEAM_ID" "$PBXPROJ" || echo "WARNING: Team ID not found"
+          grep -c "$PROFILE_NAME" "$PBXPROJ" || echo "WARNING: Profile name not found"
+          echo "=== Signing patch complete ==="
 
       - name: Create ExportOptions.plist
         run: |
