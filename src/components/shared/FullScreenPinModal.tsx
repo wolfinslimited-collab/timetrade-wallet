@@ -141,9 +141,8 @@ export const FullScreenPinModal = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[10000] bg-background"
-          // Must be above Sheet/Dialog overlays which are also z-[10000]
           style={{
-            zIndex: 10010,
+            zIndex: 10100,
             paddingTop: "max(env(safe-area-inset-top), 12px)",
             paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
           }}
