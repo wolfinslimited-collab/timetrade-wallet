@@ -247,7 +247,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       if (!encryptedSeedJson) {
         setPinError("No wallet found. Please re-import your wallet.");
         setIsProcessing(false);
-        return;
+        throw new Error("No wallet found");
       }
 
       // Decrypt the seed phrase
@@ -258,7 +258,7 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       } catch (decryptError) {
         setPinError("Incorrect PIN. Please try again.");
         setIsProcessing(false);
-        return;
+        throw new Error("Incorrect PIN");
       }
 
       // Get account index (default 0)
@@ -318,15 +318,15 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       setShowPinModal(false);
       await onConfirm(signedTx);
 
-      haptics.impact("medium");
-      toast({
-        title: "Transaction Signed",
-        description: "Your transaction has been signed and is being broadcast.",
-      });
+      // Brief delay so user sees success checkmark in PIN modal before step changes
+      await new Promise((r) => setTimeout(r, 400));
     } catch (error) {
       console.error('Signing failed:', error);
       haptics.notify("error");
-      setPinError(error instanceof Error ? error.message : "Failed to sign transaction");
+      const msg = error instanceof Error ? error.message : "Failed to sign transaction";
+      setPinError(msg);
+      setIsProcessing(false);
+      throw error; // Re-throw so PinUnlockModal shows shake
     } finally {
       setIsProcessing(false);
     }
