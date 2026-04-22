@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { SwapTokenSelector } from "./SwapTokenSelector";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { Chain } from "@/hooks/useBlockchain";
 import { PinUnlockModal } from "@/components/send/PinUnlockModal";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
