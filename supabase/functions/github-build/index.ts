@@ -862,7 +862,7 @@ jobs:
           print("Successfully patched android/app/build.gradle for release signing")
           PYEOF
           echo "--- Signing verification ---"
-          grep -n "keystorePropertiesFile\|signingConfigs\|signingConfig " android/app/build.gradle
+          grep -nE "keystorePropertiesFile|signingConfigs|signingConfig " android/app/build.gradle || true
           grep -q "signingConfig signingConfigs.release" android/app/build.gradle || { echo "FATAL: signing patch failed"; exit 1; }
           echo "--- Signing patch verified ---"
 
