@@ -1,6 +1,9 @@
 import { useMemo } from "react";
-import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
+import { Area as _Area, AreaChart, ResponsiveContainer, YAxis as _YAxis } from "recharts";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+
+const Area = _Area as any;
+const YAxis = _YAxis as any;
 import { NETWORK_MAP } from "@/config/networks";
 
 interface NetworkBalanceChartProps {

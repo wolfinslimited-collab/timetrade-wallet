@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from "recharts";
+import { Bar as _Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as _Tooltip, XAxis as _XAxis, YAxis as _YAxis, Cell } from "recharts";
 import { BarChart3, Loader2 } from "lucide-react";
+
+const Bar = _Bar as any;
+const Tooltip = _Tooltip as any;
+const XAxis = _XAxis as any;
+const YAxis = _YAxis as any;
 import { cn } from "@/lib/utils";
 import { useTradingApi, type EarningPoint } from "@/hooks/useTradingApi";
 import { ChartSkeleton } from "@/components/ui/loading-skeletons";
