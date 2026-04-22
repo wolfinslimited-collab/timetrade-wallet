@@ -9,6 +9,13 @@ import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { TransactionResultStep } from "./TransactionResultStep";
 import { Chain } from "@/hooks/useBlockchain";
+import { isSolanaChain, isTronChain, isEvmChain } from "@/hooks/useTransactionSigning";
+import { useTransactionSigning } from "@/hooks/useTransactionSigning";
+import { useTronTransactionSigning } from "@/hooks/useTronTransactionSigning";
+import { useSolanaTransactionSigning } from "@/hooks/useSolanaTransactionSigning";
+import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
+import { derivePrivateKeyForChain, SolanaDerivationPath } from "@/utils/walletDerivation";
+import { WALLET_STORAGE_KEYS, getActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 
@@ -63,6 +70,12 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   const [isTestnet] = useState(false);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [pendingSignedTx, setPendingSignedTx] = useState<string | null>(null);
+  const [verifiedPin, setVerifiedPin] = useState<string | null>(null);
+
+  // Signing hooks
+  const { signTransaction: signEvmTransaction } = useTransactionSigning(selectedChain, isTestnet);
+  const { signTransaction: signTronTransaction } = useTronTransactionSigning(isTestnet);
+  const { signTransaction: signSolanaTransaction } = useSolanaTransactionSigning(isTestnet);
   
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
@@ -195,28 +208,69 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
     setStep("confirm");
   };
 
-  const handleConfirm = (signedTransaction?: string, directTxHash?: string) => {
+  const handleConfirm = (pin?: string) => {
     setBroadcastError(null);
-    setPendingSignedTx(signedTransaction || null);
+    setVerifiedPin(pin || null);
     setStep("sending");
-    doBroadcast(signedTransaction, directTxHash);
+    doSignAndBroadcast(pin || null);
   };
 
-  const doBroadcast = async (signedTransaction?: string, directTxHash?: string) => {
+  const doSignAndBroadcast = async (pin: string | null) => {
     try {
-      if (directTxHash) {
-        const explorerUrl = isTestnet 
-          ? `https://sepolia.etherscan.io/tx/${directTxHash}`
-          : `https://etherscan.io/tx/${directTxHash}`;
-        setTransaction((prev) => ({ ...prev, txHash: directTxHash, explorerUrl }));
-      } else if (signedTransaction) {
+      let signedTx: string | undefined;
+
+      if (pin) {
+        // Derive private key from mnemonic using verified PIN
+        const encryptedSeedJson = getActiveAccountEncryptedSeed();
+        if (!encryptedSeedJson) throw new Error("No wallet found");
+
+        const encryptedData: EncryptedData = JSON.parse(encryptedSeedJson);
+        const mnemonic = await decryptPrivateKey(encryptedData, pin);
+        const accountIndex = parseInt(localStorage.getItem(WALLET_STORAGE_KEYS.ACTIVE_ACCOUNT_INDEX) || '0', 10);
+        const solanaPathStyle = (localStorage.getItem(WALLET_STORAGE_KEYS.SOLANA_DERIVATION_PATH) as SolanaDerivationPath) || 'phantom';
+        const privateKey = derivePrivateKeyForChain(mnemonic, selectedChain, accountIndex, solanaPathStyle);
+
+        if (isSolanaChain(selectedChain)) {
+          const solanaAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_SOLANA) || '';
+          const result = await signSolanaTransaction(privateKey, {
+            to: transaction.recipient,
+            amount: transaction.amount,
+            from: solanaAddress,
+          });
+          signedTx = result.signedTx;
+        } else if (isTronChain(selectedChain)) {
+          const tronAddress = localStorage.getItem(WALLET_STORAGE_KEYS.WALLET_ADDRESS_TRON) || '';
+          const isToken = transaction.token.symbol !== 'TRX';
+          const result = await signTronTransaction(privateKey, {
+            to: transaction.recipient,
+            amount: transaction.amount,
+            from: tronAddress,
+            isToken,
+            contractAddress: isToken ? (transaction.token as any).contractAddress : undefined,
+            decimals: 6,
+          });
+          signedTx = result.signedTx;
+        } else {
+          const result = await signEvmTransaction(privateKey, {
+            to: transaction.recipient,
+            value: transaction.amount,
+            gasLimit: BigInt(transaction.gasEstimate),
+          });
+          signedTx = result.signedTx;
+        }
+      }
+
+      // Broadcast
+      if (signedTx) {
         const result = await broadcastMutation.mutateAsync({
           chain: selectedChain,
-          signedTransaction,
+          signedTransaction: signedTx,
           testnet: isTestnet,
         });
+        setPendingSignedTx(signedTx);
         setTransaction((prev) => ({ ...prev, txHash: result.txHash, explorerUrl: result.explorerUrl }));
       } else {
+        // Simulated / no-signing fallback
         await new Promise((resolve) => setTimeout(resolve, 2000));
         setTransaction((prev) => ({
           ...prev,
@@ -236,7 +290,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   const handleRetryBroadcast = () => {
     setStep("sending");
     setBroadcastError(null);
-    doBroadcast(pendingSignedTx || undefined);
+    doSignAndBroadcast(verifiedPin);
   };
 
   const handleBack = () => {
