@@ -268,7 +268,7 @@ jobs:
 
             gradle.write_text(src)
             print("Successfully patched android/app/build.gradle for release signing")
-PYEOF
+          PYEOF
           echo "--- Signing verification ---"
           grep -n "keystorePropertiesFile|signingConfigs|signingConfig " android/app/build.gradle
           grep -q "signingConfig signingConfigs.release" android/app/build.gradle || { echo "FATAL: signing patch failed"; exit 1; }
