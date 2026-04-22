@@ -13,6 +13,7 @@ const WORKFLOW_MAP: Record<string, string> = {
   ios: "build-ios.yml",
   flutter_android: "build-flutter-android.yml",
   flutter_ios: "build-flutter-ios.yml",
+  capgo: "deploy-capgo.yml",
 };
 
 const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
@@ -20,6 +21,7 @@ const REPOSITORY_DISPATCH_EVENT_MAP: Record<string, string> = {
   ios: "build_ios",
   flutter_android: "build_flutter_android",
   flutter_ios: "build_flutter_ios",
+  capgo: "deploy_capgo",
 };
 
 const WORKFLOW_TEMPLATES: Record<string, string> = {
@@ -1202,6 +1204,55 @@ jobs:
         run: |
           BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
           echo "Flutter iOS Build ID \$BUILD_ID finished with status \${{ job.status }}"
+`,
+  capgo: `name: Deploy OTA (Capgo)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build record ID from Build Center"
+        required: true
+        type: string
+  repository_dispatch:
+    types: [deploy_capgo]
+
+jobs:
+  deploy-capgo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Install Capgo CLI
+        run: npm install -g @capgo/cli@latest
+
+      - name: Upload bundle to Capgo
+        env:
+          CAPGO_API_KEY: \${{ secrets.CAPGO_API_KEY }}
+        run: |
+          npx @capgo/cli@latest bundle upload \\
+            --apikey "\$CAPGO_API_KEY" \\
+            --channel production
+          echo "Capgo OTA bundle uploaded successfully"
+
+      - name: Notify deploy complete
+        if: always()
+        run: |
+          BUILD_ID="\${{ github.event.inputs.build_id || github.event.client_payload.build_id || 'n/a' }}"
+          echo "Capgo Deploy ID \$BUILD_ID finished with status \${{ job.status }}"
 `,
 };
 
