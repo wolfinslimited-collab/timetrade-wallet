@@ -486,9 +486,11 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
               <div className="px-3 py-1 rounded-full bg-foreground/10 border border-foreground/10">
                 <span className="text-xs font-semibold text-foreground/80">Fixed 15% /month</span>
               </div>
-              <div className="px-3 py-1 rounded-full bg-success/10 border border-success/20">
-                <span className="text-xs font-semibold text-success">Active</span>
-              </div>
+              {positions.length > 0 && (
+                <div className="px-3 py-1 rounded-full bg-success/10 border border-success/20">
+                  <span className="text-xs font-semibold text-success">Active</span>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
