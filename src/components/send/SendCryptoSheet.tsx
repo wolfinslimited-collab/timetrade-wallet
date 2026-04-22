@@ -336,7 +336,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex-1"
+              className="flex-1 min-h-0 flex flex-col"
             >
               <AddressInputStep
                 selectedChain={selectedChain}
