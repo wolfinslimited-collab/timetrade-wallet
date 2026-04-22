@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { projectASupabase } from "@/lib/externalSupabase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type Platform = "android" | "ios" | "flutter_android" | "flutter_ios";
@@ -152,7 +152,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
 
     setDownloading(true);
     try {
-      const { data, error } = await projectASupabase.functions.invoke("github-build", {
+      const { data, error } = await supabase.functions.invoke("github-build", {
         body: { action: "download-artifact", runId: parseInt(match[1]) },
       });
       if (error) throw error;
@@ -171,7 +171,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
     setLoadingLogs(true);
     setLogMessage(null);
     try {
-      const { data, error } = await projectASupabase.functions.invoke("github-build", {
+      const { data, error } = await supabase.functions.invoke("github-build", {
         body: { action: "fetch-logs", buildId: build.id },
       });
       if (error) throw error;
@@ -213,7 +213,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
 
     const poll = setInterval(async () => {
       try {
-        const { data: newBuild } = await projectASupabase
+        const { data: newBuild } = await supabase
           .from("builds")
           .select("*")
           .eq("id", newBuildId)
@@ -223,7 +223,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
 
         if (newBuild.status === "failed") {
           clearInterval(poll);
-          const { data: logData } = await projectASupabase.functions.invoke("github-build", {
+          const { data: logData } = await supabase.functions.invoke("github-build", {
             body: { action: "fetch-logs", buildId: newBuildId },
           });
           
@@ -237,7 +237,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
           toast.info(`Build failed again. Auto-fixing (iteration ${iteration + 1}/${maxIterations})...`);
           setFixing(true);
 
-          const { data, error } = await projectASupabase.functions.invoke("fix-and-rebuild", {
+          const { data, error } = await supabase.functions.invoke("fix-and-rebuild", {
             body: {
               buildId: newBuildId,
               platform: build.platform,
@@ -318,7 +318,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
               onClick={async () => {
                 setCancelling(true);
                 try {
-                  const { data, error } = await projectASupabase.functions.invoke("github-build", {
+                  const { data, error } = await supabase.functions.invoke("github-build", {
                     body: { action: "cancel", buildId: build.id },
                   });
                   if (error) throw error;
@@ -418,7 +418,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
                             onClick={async () => {
                               setFixing(true);
                               try {
-                                const { data, error } = await projectASupabase.functions.invoke("fix-and-rebuild", {
+                                const { data, error } = await supabase.functions.invoke("fix-and-rebuild", {
                                   body: {
                                     buildId: build.id,
                                     platform: build.platform,
@@ -507,7 +507,7 @@ export default function Build() {
   useEffect(() => {
     loadBuilds();
 
-    const channel = projectASupabase
+    const channel = supabase
       .channel("builds-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "builds" }, (payload) => {
         if (payload.eventType === "INSERT") {
@@ -520,13 +520,13 @@ export default function Build() {
       })
       .subscribe();
 
-    return () => { projectASupabase.removeChannel(channel); };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   async function loadBuilds() {
     setLoading(true);
     try {
-      const { data } = await projectASupabase
+      const { data } = await supabase
         .from("builds")
         .select("*")
         .order("created_at", { ascending: false })
@@ -540,7 +540,7 @@ export default function Build() {
   async function triggerBuild(platform: Platform) {
     setTriggering(platform);
     try {
-      const { data, error } = await projectASupabase.functions.invoke("github-build", {
+      const { data, error } = await supabase.functions.invoke("github-build", {
         body: { action: "trigger", platform },
       });
       if (error) throw error;

@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      builds: {
+        Row: {
+          artifact_url: string | null
+          build_log: string | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          platform: string
+          runpod_pod_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          artifact_url?: string | null
+          build_log?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          platform: string
+          runpod_pod_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          artifact_url?: string | null
+          build_log?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          platform?: string
+          runpod_pod_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
