@@ -262,14 +262,14 @@ export const AssetDetailPage = () => {
         {/* Quick Actions */}
         <div className="flex justify-center gap-3 px-4 py-4">
           <button
-            className="flex-1 h-[56px] flex flex-col items-center justify-center gap-1 rounded-2xl bg-primary/90 text-primary-foreground active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
+            className="flex-1 h-[56px] flex flex-col items-center justify-center gap-1 rounded-2xl bg-white/[0.08] border border-white/[0.12] text-foreground active:scale-[0.97] active:bg-white/[0.12] transition-all"
             onClick={() => setShowReceive(true)}
           >
             <ArrowDownLeft className="w-5 h-5" strokeWidth={2.5} />
             <span className="text-[12px] font-semibold">Receive</span>
           </button>
           <button
-            className="flex-1 h-[56px] flex flex-col items-center justify-center gap-1 rounded-2xl bg-primary/90 text-primary-foreground active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
+            className="flex-1 h-[56px] flex flex-col items-center justify-center gap-1 rounded-2xl bg-white/[0.08] border border-white/[0.12] text-foreground active:scale-[0.97] active:bg-white/[0.12] transition-all"
             onClick={() => setShowSend(true)}
           >
             <ArrowUpRight className="w-5 h-5" strokeWidth={2.5} />
