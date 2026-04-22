@@ -215,7 +215,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.from("config").select("value").eq("key", "minimum_stake_amount").maybeSingle();
+        const { data } = await projectASupabase.from("config").select("value").eq("key", "minimum_stake_amount").maybeSingle();
         if (data?.value) setMinStakeAmount(Number(data.value) || 10);
       } catch {}
     })();
