@@ -14,7 +14,7 @@ import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { toast } from "@/hooks/use-toast";
 
-export type SendStep = "select" | "address" | "risk" | "amount" | "confirm" | "success";
+export type SendStep = "select" | "address" | "risk" | "amount" | "confirm" | "sending" | "success" | "error";
 
 export interface TokenInfo {
   symbol: string;
