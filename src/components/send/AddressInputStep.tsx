@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Scan, Clipboard, User, AlertCircle, Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
+import { Scan, Clipboard, User, AlertCircle, Bookmark, BookmarkPlus, Trash2, ShieldCheck, Shield, AlertTriangle, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { QRScannerModal } from "./QRScannerModal";
 import { Chain, getChainInfo } from "@/hooks/useBlockchain";
 import { useSavedAddresses, SavedAddress } from "@/hooks/useSavedAddresses";
 import { validateCryptoAddress } from "@nodehash/address-validator";
+import { projectASupabase } from "@/lib/externalSupabase";
 
 interface AddressInputStepProps {
   selectedChain: Chain;
@@ -50,6 +51,9 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
   const [error, setError] = useState<string | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveLabel, setSaveLabel] = useState("");
+  const [showRiskCheck, setShowRiskCheck] = useState(false);
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskData, setRiskData] = useState<{ risk_score: number; risk_level: string; explanation: string; flags: string[] } | null>(null);
 
   const chainInfo = getChainInfo(selectedChain);
   
@@ -145,6 +149,31 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
     );
   }, [chainSavedAddresses, address]);
 
+  const isAddressValid = useMemo(() => {
+    if (!address.trim()) return false;
+    return validateAddressForChain(address.trim(), selectedChain).valid;
+  }, [address, selectedChain]);
+
+  const handleSecurityCheck = async () => {
+    if (!isAddressValid) return;
+    setShowRiskCheck(true);
+    setRiskLoading(true);
+    setRiskData(null);
+    try {
+      const { data, error: fnError } = await projectASupabase.functions.invoke("transaction-risk", {
+        body: { address: address.trim(), chain: selectedChain },
+      });
+      if (fnError) {
+        setRiskData({ risk_score: 0, risk_level: "Low", explanation: "Risk analysis unavailable.", flags: [] });
+      } else {
+        setRiskData(data);
+      }
+    } catch {
+      setRiskData({ risk_score: 0, risk_level: "Low", explanation: "Risk analysis unavailable.", flags: [] });
+    }
+    setRiskLoading(false);
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-8">
       {/* Network indicator */}
@@ -234,6 +263,82 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
           </div>
         )}
       </div>
+
+      {/* Security Check Button */}
+      {isAddressValid && !showRiskCheck && (
+        <button
+          onClick={handleSecurityCheck}
+          className="mt-3 flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors w-full"
+        >
+          <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
+            <ShieldCheck className="w-4 h-4 text-success" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium">Security Check</p>
+            <p className="text-xs text-muted-foreground">Analyze address for risks</p>
+          </div>
+        </button>
+      )}
+
+      {/* Inline Risk Result */}
+      {showRiskCheck && (
+        <div className="mt-3 p-4 rounded-xl bg-card border border-border relative">
+          <button
+            onClick={() => { setShowRiskCheck(false); setRiskData(null); }}
+            className="absolute top-3 right-3 p-1 rounded-lg hover:bg-secondary"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+          {riskLoading ? (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Analyzing address...</p>
+            </div>
+          ) : riskData ? (
+            <div className="flex flex-col items-center gap-3">
+              <div className={cn(
+                "w-14 h-14 rounded-full flex items-center justify-center",
+                riskData.risk_level === "High" ? "bg-destructive/15" :
+                riskData.risk_level === "Medium" ? "bg-amber-500/15" : "bg-success/15"
+              )}>
+                {riskData.risk_level === "High" ? (
+                  <AlertTriangle className="w-7 h-7 text-destructive" />
+                ) : riskData.risk_level === "Medium" ? (
+                  <Shield className="w-7 h-7 text-amber-500" />
+                ) : (
+                  <ShieldCheck className="w-7 h-7 text-success" />
+                )}
+              </div>
+              <p className={cn(
+                "text-lg font-bold",
+                riskData.risk_level === "High" ? "text-destructive" :
+                riskData.risk_level === "Medium" ? "text-amber-500" : "text-success"
+              )}>
+                {riskData.risk_level === "High" ? "⚠️ High Risk" :
+                 riskData.risk_level === "Medium" ? "⚠️ Medium Risk" : "✅ Low Risk"}
+              </p>
+              <span className={cn(
+                "text-xs px-3 py-1 rounded-full font-medium",
+                riskData.risk_level === "High" ? "bg-destructive/10 text-destructive" :
+                riskData.risk_level === "Medium" ? "bg-amber-500/10 text-amber-500" : "bg-success/10 text-success"
+              )}>
+                Risk Score: {riskData.risk_score}/100
+              </span>
+              <p className="text-xs text-muted-foreground text-center">{riskData.explanation}</p>
+              {riskData.flags?.length > 0 && (
+                <div className="space-y-1 w-full">
+                  {riskData.flags.map((flag, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 text-amber-500 shrink-0" />
+                      <span>{flag}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Saved Addresses */}
       {chainSavedAddresses.length > 0 && (
