@@ -315,11 +315,11 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         signedTx = result.signedTx;
       }
 
-      setShowPinModal(false);
       await onConfirm(signedTx);
 
       // Brief delay so user sees success checkmark in PIN modal before step changes
       await new Promise((r) => setTimeout(r, 400));
+      setShowPinModal(false);
     } catch (error) {
       console.error('Signing failed:', error);
       haptics.notify("error");
