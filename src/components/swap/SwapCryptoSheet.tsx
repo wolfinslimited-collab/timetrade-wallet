@@ -128,7 +128,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
           parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)
         ).toString();
 
-        const { data, error } = await supabase.functions.invoke("swap-quote", {
+        const { data, error } = await projectASupabase.functions.invoke("swap-quote", {
           body: {
             action: "quote",
             chain: fromAsset.chain,
@@ -247,7 +247,7 @@ export const SwapCryptoSheet = ({ open, onOpenChange }: SwapCryptoSheetProps) =>
 
         // Getting Jupiter swap transaction
 
-        const { data: swapData, error: swapErr } = await supabase.functions.invoke("swap-quote", {
+        const { data: swapData, error: swapErr } = await projectASupabase.functions.invoke("swap-quote", {
           body: {
             action: "swap",
             chain: "solana",
