@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, X } from "lucide-react";
@@ -86,9 +86,17 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
     return addresses.evm || '';
   };
 
-  // Handle pre-selected asset from AssetDetailSheet
+  // Handle pre-selected asset from AssetDetailSheet — only on fresh open
+  const hasInitialised = useRef(false);
   useEffect(() => {
-    if (open && preSelectedAsset) {
+    if (!open) {
+      hasInitialised.current = false;
+      return;
+    }
+    if (hasInitialised.current) return;
+    hasInitialised.current = true;
+
+    if (preSelectedAsset) {
       const chain = preSelectedAsset.chain;
       const sender = getSenderAddress(chain);
       
@@ -124,7 +132,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
       // Skip directly to address step
       setStep("address");
     }
-  }, [open, preSelectedAsset, addresses]);
+  }, [open, preSelectedAsset, addresses]); // addresses still listed but guarded by hasInitialised
 
   const handleClose = () => {
     onOpenChange(false);
