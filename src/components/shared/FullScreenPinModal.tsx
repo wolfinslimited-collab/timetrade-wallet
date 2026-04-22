@@ -142,6 +142,7 @@ export const FullScreenPinModal = ({
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[10000] bg-background"
           style={{
+            zIndex: 10100,
             paddingTop: "max(env(safe-area-inset-top), 12px)",
             paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
           }}
