@@ -261,7 +261,7 @@ const Index = () => {
         unreadCount={unreadCount}
       />
 
-      <div className="flex-1 overflow-y-auto pb-nav-safe -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex-1 overflow-y-auto pb-nav-safe" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'none' }}>
         <PullToRefresh onRefresh={handleRefresh}>
           {/* Balance Section */}
           <div className="px-6 pt-8 pb-6 text-center">
