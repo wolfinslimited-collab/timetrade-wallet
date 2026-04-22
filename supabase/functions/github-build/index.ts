@@ -806,7 +806,7 @@ jobs:
             exit 1
           fi
           python3 << 'PYEOF'
-import re, sys
+import sys
 from pathlib import Path
 
 gradle = Path("android/app/build.gradle")
