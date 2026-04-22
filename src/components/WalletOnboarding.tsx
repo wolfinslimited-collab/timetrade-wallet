@@ -252,11 +252,11 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
           <motion.div
             key={step}
             custom={direction}
-            initial={{ x: direction > 0 ? "100%" : "-25%", opacity: 0 }}
+            initial={{ opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: direction > 0 ? "-25%" : "100%", opacity: 0 }}
-            transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-            className="absolute inset-0 will-change-transform"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute inset-0 will-change-[opacity]"
           >
             {renderStep()}
           </motion.div>

@@ -295,6 +295,7 @@ export const FeatureTourStep = ({ onContinue, onBack }: FeatureTourStepProps) =>
           onClick={handleNext}
           className="w-full rounded-2xl bg-primary px-5 py-[16px] transition-transform duration-150 active:scale-[0.98] shadow-lg shadow-primary/25"
         >
+          className="w-full rounded-2xl bg-primary px-5 py-[16px] transition-transform duration-150 active:scale-[0.98]"
           <span className="text-[15px] font-bold text-primary-foreground">
             {isLast ? "Get Started" : "Continue"}
           </span>
