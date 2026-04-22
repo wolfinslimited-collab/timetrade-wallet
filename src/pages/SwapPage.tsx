@@ -117,7 +117,7 @@ const SwapPage = () => {
           parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)
         ).toString();
 
-          const { data, error } = await supabase.functions.invoke("swap-quote", {
+          const { data, error } = await projectASupabase.functions.invoke("swap-quote", {
             body: {
               action: "quote",
               chain: fromAsset.chain,
@@ -241,7 +241,7 @@ const SwapPage = () => {
         // Getting Jupiter swap transaction
 
         // 3. Get Jupiter swap transaction via edge function
-        const { data: swapData, error: swapErr } = await supabase.functions.invoke("swap-quote", {
+        const { data: swapData, error: swapErr } = await projectASupabase.functions.invoke("swap-quote", {
           body: {
             action: "swap",
             chain: "solana",

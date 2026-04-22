@@ -56,7 +56,7 @@ export default function AdminNotificationsPage() {
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("fcm-push", {
+      const { data, error } = await projectASupabase.functions.invoke("fcm-push", {
         body: { title, message, type, icon: icon || null, target_platform: targetPlatform },
       });
 

@@ -621,7 +621,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       // Register user in database
       try {
-        await supabase.functions.invoke("register-user", {
+        await projectASupabase.functions.invoke("register-user", {
           body: {
             wallet_name: accountName,
             platform: currentPlatform,
@@ -729,7 +729,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       // Register user in database
       try {
-        await supabase.functions.invoke("register-user", {
+        await projectASupabase.functions.invoke("register-user", {
           body: {
             wallet_name: accountName,
             platform: currentPlatform,

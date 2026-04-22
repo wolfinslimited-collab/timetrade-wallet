@@ -150,7 +150,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     localStorage.setItem("timetrade_active_account_id", "main");
 
     try {
-      await supabase.functions.invoke("register-user", {
+      await projectASupabase.functions.invoke("register-user", {
         body: {
           wallet_name: walletName || "Main Wallet",
           platform,
