@@ -50,6 +50,21 @@ export const BalanceDisplay = () => {
     }).format(value);
   };
 
+  const renderBalance = (value: number) => {
+    const formatted = formatBalanceValue(value);
+    // Split at decimal point: "$2,673" and ".31"
+    const dotIndex = formatted.lastIndexOf('.');
+    if (dotIndex === -1) return <>{formatted}</>;
+    const whole = formatted.slice(0, dotIndex);
+    const decimal = formatted.slice(dotIndex);
+    return (
+      <>
+        {whole}
+        <span className="text-muted-foreground">{decimal}</span>
+      </>
+    );
+  };
+
   return (
     <div className="flex flex-col items-center py-6">
       {isLoadingBalance && isConnected ? (
@@ -63,8 +78,8 @@ export const BalanceDisplay = () => {
         </div>
       ) : (
         <>
-          <h1 className="text-5xl font-bold tracking-tight">
-            {formatBalanceValue(displayBalance)}
+          <h1 className="text-5xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: 'tabular-nums' }}>
+            {renderBalance(displayBalance)}
           </h1>
           
           {displayBalance > 0 && (
