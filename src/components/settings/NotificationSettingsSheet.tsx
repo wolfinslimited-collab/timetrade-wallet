@@ -26,7 +26,7 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     isIframe,
   } = useWebNotifications();
 
-  const { sendTestPush } = useFCMToken();
+  const { status: fcmStatus, errorMessage: fcmError, tokenValue, sendTestPush } = useFCMToken();
 
   const [isRequesting, setIsRequesting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
