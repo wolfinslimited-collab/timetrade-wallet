@@ -8,6 +8,7 @@ interface PinUnlockModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (pin: string) => void;
+  // onSubmit may return a promise (async signing flow)
   onUsePrivateKey?: () => void;
   isLoading: boolean;
   walletAddress?: string;
