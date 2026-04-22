@@ -181,15 +181,7 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
 
   const handleAddressSubmit = (address: string) => {
     setTransaction((prev) => ({ ...prev, recipient: address }));
-    setStep("risk");
-  };
-
-  const handleRiskProceed = () => {
     setStep("amount");
-  };
-
-  const handleRiskCancel = () => {
-    setStep("address");
   };
 
   const handleAmountSubmit = (amount: string) => {
