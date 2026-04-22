@@ -27,13 +27,13 @@ function generateChartData(startVal: number, endVal: number, points: number): { 
   const range = endVal - startVal;
   // Random walk with drift toward end value
   let current = startVal;
-  const volatility = Math.max(Math.abs(range) * 0.4, endVal * 0.008);
+  const volatility = Math.max(Math.abs(range) * 0.08, endVal * 0.0015);
   
   for (let i = 0; i < points; i++) {
     const progress = i / (points - 1);
     const target = startVal + range * progress;
     // Mean-revert toward the linear path with noise
-    const drift = (target - current) * 0.15;
+    const drift = (target - current) * 0.25;
     const noise = (Math.random() - 0.5) * volatility;
     current = current + drift + noise;
     // Clamp to reasonable range
@@ -135,7 +135,7 @@ export const PortfolioChart = () => {
                   type="monotone"
                   dataKey="total"
                   stroke={strokeColor}
-                  strokeWidth={1.5}
+                  strokeWidth={1}
                   fill={`url(#${gradientId})`}
                   dot={false}
                   activeDot={{ r: 3, strokeWidth: 1.5, stroke: strokeColor, fill: "hsl(var(--background))" }}
