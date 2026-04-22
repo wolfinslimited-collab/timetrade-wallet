@@ -1,97 +1,29 @@
 
 
-# Backend Migration: Redirect Frontend to Project A
+# Fix: PIN Keypad Triple-Press Bug
 
-## Summary
-Remove all non-build edge functions and tables from this project. Redirect all frontend API calls to Project A (`svhgjaadzthgnfdrbklt.supabase.co`). Keep only `builds` table, `config` table, and `github-build` edge function in this project.
+## Problem
+The `KeypadButton` component fires `onPress` multiple times per tap because the `activeRef` guard is reset too early in `release()`, allowing subsequent `click` (and sometimes `mouseDown`) events to pass the guard and fire again.
 
----
+## Root Cause
+Event sequence on desktop: `mouseDown` fires → `mouseUp` resets `activeRef=false` → `click` sees `activeRef=false` and fires again. On mobile, synthetic mouse events after touch events can cause a similar triple-fire.
 
-## Step 1: Create Project A Supabase Client
+## Fix (Single File)
 
-Update `src/lib/externalSupabase.ts` to point to Project A instead of the old `mrdnogctgvzhuqlfervb` project:
+**`src/components/shared/KeypadButton.tsx`**
 
-- URL: `https://svhgjaadzthgnfdrbklt.supabase.co`
-- Anon key: the one already stored in `useTradingApi.ts`
-- Rename exports to `projectA` / `projectASupabase` for clarity
+Replace the current event handling with a simplified approach:
+- In `release()`, delay the `activeRef.current = false` reset by ~50ms so it still blocks the subsequent `click` event
+- Remove the `onClick` handler entirely since `mouseDown` and `touchStart` already cover all interaction paths (accessibility is handled by the button element itself)
+- Alternative cleaner approach: use only `onPointerDown` + `onPointerUp` which unifies touch and mouse into a single event path, avoiding all duplicate-fire issues
 
----
+The recommended implementation:
+```
+- Remove onTouchStart, onTouchEnd, onTouchCancel, onMouseDown, onMouseUp, onMouseLeave, onClick
+- Use onPointerDown to fire (with e.preventDefault())
+- Use onPointerUp / onPointerLeave / onPointerCancel to release visual state
+- This single event path eliminates all duplicate firing
+```
 
-## Step 2: Redirect Edge Function Calls
-
-Update these files to use the Project A client for `functions.invoke()`:
-
-| File | Function Called | Change |
-|------|----------------|--------|
-| `src/lib/blockchain.ts` | `wallet-blockchain` | Use `projectASupabase.functions.invoke()` |
-| `src/pages/SwapPage.tsx` | `swap-quote` | Use `projectASupabase` |
-| `src/pages/StakingPage.tsx` | `staking` | Use `projectASupabase` |
-| `src/hooks/useStakeTransfer.ts` | `staking` | Use `projectASupabase` |
-| `src/hooks/useWalletAvatar.ts` | `generate-avatar` | Use `projectASupabase` |
-| `src/hooks/useFCMToken.ts` | `apns-to-fcm`, `fcm-push` | Use `projectASupabase` |
-| `src/components/send/TransactionRiskModal.tsx` | `transaction-risk` | Use `projectASupabase` |
-| `src/components/send/RiskCheckStep.tsx` | `transaction-risk` | Use `projectASupabase` |
-| `src/components/ai/AIPortfolioInsights.tsx` | `portfolio-insights` | Use `projectASupabase` |
-| `src/components/swap/SwapCryptoSheet.tsx` | `swap-quote` | Use `projectASupabase` |
-| `src/components/wallet/AccountSwitcherSheet.tsx` | `register-user` | Use `projectASupabase` |
-| `src/components/WalletOnboarding.tsx` | `register-user` | Use `projectASupabase` |
-| `src/pages/AdminNotificationsPage.tsx` | `fcm-push` | Use `projectASupabase` |
-
----
-
-## Step 3: Redirect Database Table Reads
-
-| File | Table | Change |
-|------|-------|--------|
-| `src/hooks/useServerNotifications.ts` | `push_notifications` | Use `projectASupabase.from()` |
-| `src/hooks/useFCMToken.ts` | `fcm_tokens` | Use `projectASupabase.from()` |
-| `src/pages/AdminNotificationsPage.tsx` | `fcm_tokens` | Use `projectASupabase.from()` |
-
----
-
-## Step 4: Keep These Unchanged (Still Use This Project's Supabase)
-
-- `src/pages/Build.tsx` — uses `github-build` function + `builds` table
-- `src/hooks/useFeatureFlags.ts` — reads `config` table
-- `src/hooks/useAppUpdate.ts` — reads `config` table
-- `src/pages/Index.tsx` — imports supabase for config
-
----
-
-## Step 5: Delete Edge Functions from This Project
-
-Remove these folders and undeploy:
-- `supabase/functions/wallet-blockchain/`
-- `supabase/functions/staking/`
-- `supabase/functions/ai-chat/`
-- `supabase/functions/fcm-push/`
-- `supabase/functions/send-notification/`
-- `supabase/functions/register-user/`
-- `supabase/functions/transaction-risk/`
-- `supabase/functions/portfolio-insights/`
-- `supabase/functions/swap-quote/`
-- `supabase/functions/apns-to-fcm/`
-
-Update `supabase/config.toml` to remove their `[functions.*]` blocks — keep only `[functions.github-build]`.
-
----
-
-## Step 6: Drop Non-Build Tables via Migration
-
-Drop these tables (data now lives in Project A):
-- `fcm_tokens`
-- `push_notifications`
-- `saved_addresses`
-- `stake_wallets`
-- `staking_positions`
-- `unstake_requests`
-- `wallet_users`
-
-Keep: `builds`, `config`
-
----
-
-## Step 7: Update Memory
-
-Update `mem://references/project-a.md` to reflect that Project A now hosts all wallet backend functions, not just the trading API.
+No other files need changes -- `KeypadButton` is the shared component used by `FullScreenPinModal`, which is in turn used by all PIN screens (lock, send, change PIN, biometric setup, reset wallet).
 
