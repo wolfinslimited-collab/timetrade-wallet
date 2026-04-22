@@ -238,10 +238,10 @@ const Index = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
             className="flex-1 overflow-y-auto"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
@@ -254,7 +254,13 @@ const Index = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 w-full relative overflow-hidden">
+    <motion.div
+      key="wallet"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+      className="flex flex-col flex-1 w-full relative overflow-hidden"
+    >
       <AppUpdateBanner />
       <WalletHeader 
         onSettingsClick={() => handleTabChange("settings")}
@@ -312,7 +318,7 @@ const Index = () => {
       </div>
 
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-    </div>
+    </motion.div>
   );
 };
 
