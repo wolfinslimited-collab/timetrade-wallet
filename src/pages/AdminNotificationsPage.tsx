@@ -35,7 +35,7 @@ export default function AdminNotificationsPage() {
   const [devices, setDevices] = useState<{ platform: string; count: number }[]>([]);
 
   useEffect(() => {
-    supabase
+    projectASupabase
       .from("fcm_tokens")
       .select("platform")
       .then(({ data }) => {
