@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
-import { Scan, Clipboard, User, AlertCircle, Bookmark, BookmarkPlus, Trash2, ShieldCheck, Shield, AlertTriangle, Loader2, X } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import { Scan, Clipboard, User, AlertCircle, Bookmark, BookmarkPlus, Trash2, ShieldCheck, Shield, AlertTriangle, Loader2, X, Search, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { QRScannerModal } from "./QRScannerModal";
@@ -175,7 +176,9 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-8">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Scrollable content area */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6">
       {/* Network indicator */}
       <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
         <span>Sending on</span>
@@ -268,7 +271,7 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
       {isAddressValid && !showRiskCheck && (
         <button
           onClick={handleSecurityCheck}
-          className="mt-3 flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors w-full"
+          className="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border hover:border-primary/50 active:scale-[0.98] transition-all w-full"
         >
           <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
             <ShieldCheck className="w-4 h-4 text-success" />
@@ -277,6 +280,7 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
             <p className="text-sm font-medium">Security Check</p>
             <p className="text-xs text-muted-foreground">Analyze address for risks</p>
           </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </button>
       )}
 
@@ -342,28 +346,41 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
 
       {/* Saved Addresses */}
       {chainSavedAddresses.length > 0 && (
-        <div className="mt-6 flex-1 overflow-y-auto">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
             <Bookmark className="w-4 h-4 text-muted-foreground" />
             <h3 className="text-sm font-medium">Saved Addresses</h3>
           </div>
-          <div className="space-y-2">
+          <span className="text-xs text-muted-foreground">{chainSavedAddresses.length} saved</span>
+          </div>
+          <div className="space-y-1.5 max-h-[240px] overflow-y-auto rounded-xl">
             {chainSavedAddresses.map((item) => (
               <div
                 key={`${item.chain}-${item.address}`}
-                className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors"
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl bg-card border transition-colors active:scale-[0.98]",
+                  address.toLowerCase() === item.address.toLowerCase()
+                    ? "border-primary/60 bg-primary/5"
+                    : "border-border hover:border-primary/30"
+                )}
               >
                 <button
                   onClick={() => handleSavedAddressSelect(item)}
                   className="flex-1 flex items-center gap-3 text-left"
                 >
-                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                    <User className="w-5 h-5 text-muted-foreground" />
+                  <div className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                    address.toLowerCase() === item.address.toLowerCase()
+                      ? "bg-primary/15 text-primary"
+                      : "bg-secondary text-muted-foreground"
+                  )}>
+                    {item.label.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{item.label}</p>
+                    <p className="font-medium text-sm truncate leading-tight">{item.label}</p>
                     <p className="text-xs text-muted-foreground font-mono truncate">
-                      {item.address.slice(0, 10)}...{item.address.slice(-8)}
+                      {item.address.slice(0, 8)}...{item.address.slice(-6)}
                     </p>
                   </div>
                 </button>
@@ -381,7 +398,7 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
 
       {/* Empty state if no saved addresses */}
       {chainSavedAddresses.length === 0 && (
-        <div className="mt-6 flex-1 flex items-center justify-center">
+        <div className="mt-6 py-8 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <Bookmark className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No saved addresses yet</p>
@@ -389,13 +406,14 @@ export const AddressInputStep = ({ selectedChain, onSubmit, initialAddress }: Ad
           </div>
         </div>
       )}
+      </div>
 
       {/* Continue Button */}
-      <div className="pt-4" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
+      <div className="shrink-0 px-6 pt-3 bg-background" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
         <Button
           onClick={handleSubmit}
           disabled={!address.trim()}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base"
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base rounded-2xl"
         >
           Continue
         </Button>
