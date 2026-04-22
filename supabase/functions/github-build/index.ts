@@ -669,19 +669,11 @@ jobs:
           cat > "\$MAIN_ACT" <<JAVAEOF
           package \$PACKAGE_NAME;
 
-          import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
-          import com.capgo.capacitor.nativebiometric.NativeBiometric;
 
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  registerPlugin(NativeBiometric.class);
-                  super.onCreate(savedInstanceState);
-              }
-          }
+          public class MainActivity extends BridgeActivity {}
           JAVAEOF
-          echo "MainActivity patched with NativeBiometric registration at \$MAIN_ACT"
+          echo "MainActivity patched at \$MAIN_ACT"
 
           cat > android/app/proguard-rules.pro << 'PROGUARDEOF'
           -keep class com.getcapacitor.** { *; }
