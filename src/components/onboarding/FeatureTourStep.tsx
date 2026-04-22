@@ -144,33 +144,57 @@ const AIInsightsHero = () => {
   );
 };
 
+/* Scattered coin positions — hand-tuned to avoid overlap, organic feel */
+const COIN_POSITIONS: { x: string; y: string; rotate: number; delay: number; float: number }[] = [
+  { x: "12%", y: "18%", rotate: -8, delay: 0.0, float: 0 },
+  { x: "58%", y: "8%",  rotate: 6,  delay: 0.06, float: 1.2 },
+  { x: "36%", y: "38%", rotate: -4, delay: 0.12, float: 0.6 },
+  { x: "72%", y: "32%", rotate: 10, delay: 0.08, float: 1.8 },
+  { x: "8%",  y: "58%", rotate: 5,  delay: 0.14, float: 0.3 },
+  { x: "50%", y: "62%", rotate: -6, delay: 0.1, float: 1.5 },
+  { x: "78%", y: "58%", rotate: 3,  delay: 0.16, float: 0.9 },
+];
+
 const ChainsHero = () => {
-  // Show ALL supported networks in a compact 4-col grid (fits without scroll)
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-transparent blur-3xl" />
-      <div className="relative grid grid-cols-4 gap-x-3 gap-y-3.5 max-w-[300px]">
-        {NETWORKS.map((n, i) => (
-          <motion.div
-            key={n.id}
-            initial={{ opacity: 0, scale: 0.7, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.06 + i * 0.04, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-            className="flex flex-col items-center gap-1.5"
-          >
-            <div className="w-12 h-12 rounded-[14px] bg-card border border-border/40 flex items-center justify-center shadow-lg shadow-black/30">
-              <img
-                src={`https://api.elbstream.com/logos/crypto/${n.logoSymbol}`}
-                alt={n.name}
-                className="w-7 h-7 object-contain rounded-[5px]"
-                loading="lazy"
-              />
-            </div>
-            <span className="text-[9.5px] font-semibold text-foreground/70 leading-tight text-center w-full truncate">
-              {n.name}
-            </span>
-          </motion.div>
-        ))}
+      <div className="relative w-full h-[280px]">
+        {NETWORKS.map((n, i) => {
+          const pos = COIN_POSITIONS[i % COIN_POSITIONS.length];
+          return (
+            <motion.div
+              key={n.id}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                delay: 0.05 + pos.delay,
+                duration: 0.4,
+                ease: [0.32, 0.72, 0, 1],
+              }}
+              className="absolute flex flex-col items-center gap-1.5"
+              style={{
+                left: pos.x,
+                top: pos.y,
+                transform: `translateZ(0) rotate(${pos.rotate}deg)`,
+                willChange: "transform, opacity",
+                animation: `coinFloat 3s ease-in-out ${pos.float}s infinite`,
+              }}
+            >
+              <div className="w-[56px] h-[56px] rounded-[16px] bg-card border border-border/40 flex items-center justify-center shadow-xl shadow-black/40">
+                <img
+                  src={`https://api.elbstream.com/logos/crypto/${n.logoSymbol}`}
+                  alt={n.name}
+                  className="w-8 h-8 object-contain rounded-[6px]"
+                  loading="lazy"
+                />
+              </div>
+              <span className="text-[10px] font-semibold text-foreground/70 leading-tight text-center">
+                {n.name}
+              </span>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -295,7 +319,6 @@ export const FeatureTourStep = ({ onContinue, onBack }: FeatureTourStepProps) =>
           onClick={handleNext}
           className="w-full rounded-2xl bg-primary px-5 py-[16px] transition-transform duration-150 active:scale-[0.98] shadow-lg shadow-primary/25"
         >
-          className="w-full rounded-2xl bg-primary px-5 py-[16px] transition-transform duration-150 active:scale-[0.98]"
           <span className="text-[15px] font-bold text-primary-foreground">
             {isLast ? "Get Started" : "Continue"}
           </span>
