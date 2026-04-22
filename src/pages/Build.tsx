@@ -153,7 +153,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
 
     setDownloading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("github-build", {
+      const { data, error } = await projectASupabase.functions.invoke("github-build", {
         body: { action: "download-artifact", runId: parseInt(match[1]) },
       });
       if (error) throw error;
@@ -172,7 +172,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
     setLoadingLogs(true);
     setLogMessage(null);
     try {
-      const { data, error } = await supabase.functions.invoke("github-build", {
+      const { data, error } = await projectASupabase.functions.invoke("github-build", {
         body: { action: "fetch-logs", buildId: build.id },
       });
       if (error) throw error;
@@ -214,7 +214,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
 
     const poll = setInterval(async () => {
       try {
-        const { data: newBuild } = await supabase
+        const { data: newBuild } = await projectASupabase
           .from("builds" as any)
           .select("*")
           .eq("id", newBuildId)
@@ -224,7 +224,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
 
         if (newBuild.status === "failed") {
           clearInterval(poll);
-          const { data: logData } = await supabase.functions.invoke("github-build", {
+          const { data: logData } = await projectASupabase.functions.invoke("github-build", {
             body: { action: "fetch-logs", buildId: newBuildId },
           });
           
@@ -238,7 +238,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
           toast.info(`Build failed again. Auto-fixing (iteration ${iteration + 1}/${maxIterations})...`);
           setFixing(true);
 
-          const { data, error } = await supabase.functions.invoke("fix-and-rebuild", {
+          const { data, error } = await projectASupabase.functions.invoke("fix-and-rebuild", {
             body: {
               buildId: newBuildId,
               platform: build.platform,
@@ -319,7 +319,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
               onClick={async () => {
                 setCancelling(true);
                 try {
-                  const { data, error } = await supabase.functions.invoke("github-build", {
+                  const { data, error } = await projectASupabase.functions.invoke("github-build", {
                     body: { action: "cancel", buildId: build.id },
                   });
                   if (error) throw error;
@@ -419,7 +419,7 @@ function BuildCard({ build, onFixTriggered, onCancelled }: { build: Build; onFix
                             onClick={async () => {
                               setFixing(true);
                               try {
-                                const { data, error } = await supabase.functions.invoke("fix-and-rebuild", {
+                                const { data, error } = await projectASupabase.functions.invoke("fix-and-rebuild", {
                                   body: {
                                     buildId: build.id,
                                     platform: build.platform,
@@ -527,7 +527,7 @@ export default function Build() {
   async function loadBuilds() {
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await projectASupabase
         .from("builds")
         .select("*")
         .order("created_at", { ascending: false })
@@ -541,7 +541,7 @@ export default function Build() {
   async function triggerBuild(platform: Platform) {
     setTriggering(platform);
     try {
-      const { data, error } = await supabase.functions.invoke("github-build", {
+      const { data, error } = await projectASupabase.functions.invoke("github-build", {
         body: { action: "trigger", platform },
       });
       if (error) throw error;
