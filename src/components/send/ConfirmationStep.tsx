@@ -407,49 +407,6 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         </div>
       </div>
 
-      {/* Wallet Ready Indicator */}
-      {hasMnemonicStored && isSigningAvailable && !isWalletConnectConnected && (
-        <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-          <Key className="w-5 h-5 text-green-500" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-green-500">Wallet Ready</p>
-            <p className="text-xs text-muted-foreground">
-              Enter your PIN to sign this transaction
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Insurance Badge */}
-      <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-        <Shield className="w-5 h-5 text-primary" />
-        <div>
-          <p className="text-sm font-medium">Protected by Timetrade Insurance</p>
-          <p className="text-xs text-muted-foreground">Transaction covered up to $10,000</p>
-        </div>
-      </div>
-
-      {/* Mainnet Indicator */}
-      {!isTestnet && (
-        <div className="mt-4 flex items-start gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
-          <Zap className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-destructive">Mainnet Transaction</p>
-            <p className="text-xs text-muted-foreground">
-              This transaction will use real funds on the {chainInfo.name} mainnet.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Warning */}
-      <div className="mt-4 flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground">
-          Please verify the recipient address carefully. Transactions cannot be reversed once confirmed.
-        </p>
-      </div>
-
       {/* WalletConnect Status */}
       {isEvmChain(selectedChain) && !hasMnemonicStored && (
         <div className="mt-4">
