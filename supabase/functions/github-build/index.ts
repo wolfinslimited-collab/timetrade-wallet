@@ -653,10 +653,15 @@ jobs:
             echo "Injected CAMERA and USE_BIOMETRIC permissions"
           fi
 
-          MAIN_ACT="android/app/src/main/java/com/getcapacitor/myapp/MainActivity.java"
+          PACKAGE_NAME=$(grep -oP '(?<=<string name="package_name">)[^<]+' android/app/src/main/res/values/strings.xml | head -n 1)
+          if [ -z "\$PACKAGE_NAME" ]; then
+            PACKAGE_NAME="com.wallet.ai"
+          fi
+          PACKAGE_PATH="\${PACKAGE_NAME//./\\/}"
+          MAIN_ACT="android/app/src/main/java/\$PACKAGE_PATH/MainActivity.java"
           mkdir -p "\$(dirname "\$MAIN_ACT")"
-          cat > "\$MAIN_ACT" << 'JAVAEOF'
-          package com.getcapacitor.myapp;
+          cat > "\$MAIN_ACT" <<JAVAEOF
+          package \$PACKAGE_NAME;
 
           import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
@@ -670,7 +675,7 @@ jobs:
               }
           }
           JAVAEOF
-          echo "MainActivity patched with NativeBiometric registration"
+          echo "MainActivity patched with NativeBiometric registration at \$MAIN_ACT"
 
           cat > android/app/proguard-rules.pro << 'PROGUARDEOF'
           -keep class com.getcapacitor.** { *; }
