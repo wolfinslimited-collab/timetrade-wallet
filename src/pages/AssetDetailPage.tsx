@@ -79,7 +79,7 @@ const LivePriceChart = ({ symbol, change24h }: { symbol: string; change24h: numb
             </linearGradient>
           </defs>
           <path d={areaPath} fill={`url(#gradient-${symbol}-${range})`} />
-          <path d={linePath} fill="none" stroke={rangeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={linePath} fill="none" stroke={rangeColor} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <div className="absolute top-2 right-3 text-[10px] font-medium px-1.5 py-0.5 rounded-md"
           style={{ color: rangeColor, backgroundColor: rangePositive ? "hsl(var(--success) / 0.1)" : "hsl(var(--destructive) / 0.1)" }}>
