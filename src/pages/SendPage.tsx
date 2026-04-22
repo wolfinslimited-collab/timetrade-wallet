@@ -109,7 +109,14 @@ const SendPage = () => {
     setStep("confirm");
   };
 
-  const handleConfirm = async (signedTransaction?: string, directTxHash?: string) => {
+  const handleConfirm = (signedTransaction?: string, directTxHash?: string) => {
+    setBroadcastError(null);
+    setPendingSignedTx(signedTransaction || null);
+    setStep("sending");
+    doBroadcast(signedTransaction, directTxHash);
+  };
+
+  const doBroadcast = async (signedTransaction?: string, directTxHash?: string) => {
     try {
       if (directTxHash) {
         const chainInfo = getChainInfo(selectedChain);
@@ -117,11 +124,9 @@ const SendPage = () => {
           ? `https://sepolia.etherscan.io/tx/${directTxHash}`
           : `https://etherscan.io/tx/${directTxHash}`;
         setTransaction((prev) => ({ ...prev, txHash: directTxHash, explorerUrl }));
-        toast({ title: "Transaction Sent!", description: `Your transaction has been broadcast to the ${chainInfo.name} network.` });
       } else if (signedTransaction) {
         const result = await broadcastMutation.mutateAsync({ chain: selectedChain, signedTransaction, testnet: isTestnet });
         setTransaction((prev) => ({ ...prev, txHash: result.txHash, explorerUrl: result.explorerUrl }));
-        toast({ title: "Transaction Sent!", description: "Your transaction has been broadcast to the network." });
       } else {
         await new Promise((resolve) => setTimeout(resolve, 2000));
         setTransaction((prev) => ({
@@ -129,15 +134,20 @@ const SendPage = () => {
           txHash: "0x" + Math.random().toString(16).slice(2, 66),
           explorerUrl: `https://etherscan.io/tx/0x${Math.random().toString(16).slice(2, 66)}`,
         }));
-        toast({ title: "Transaction Simulated", description: "This is a simulated transaction.", variant: "default" });
       }
       setStep("success");
       refreshAll();
     } catch (error) {
       console.error("Transaction broadcast failed:", error);
-      toast({ title: "Transaction Failed", description: error instanceof Error ? error.message : "Failed to broadcast transaction", variant: "destructive" });
-      throw error; // Re-throw so PIN modal can show the error
+      setBroadcastError(error instanceof Error ? error.message : "Failed to broadcast transaction");
+      setStep("error");
     }
+  };
+
+  const handleRetryBroadcast = () => {
+    setStep("sending");
+    setBroadcastError(null);
+    doBroadcast(pendingSignedTx || undefined);
   };
 
   const handleBack = () => {
@@ -158,11 +168,13 @@ const SendPage = () => {
       case "risk": return "Risk Analysis";
       case "amount": return "Enter Amount";
       case "confirm": return "Confirm Transaction";
+      case "sending": return "Sending…";
       case "success": return "Transaction Sent";
+      case "error": return "Transaction Failed";
     }
   };
 
-  const showHeader = step !== "confirm" && step !== "success" && step !== "risk";
+  const showHeader = step !== "confirm" && step !== "success" && step !== "risk" && step !== "sending" && step !== "error";
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
@@ -212,9 +224,15 @@ const SendPage = () => {
             <ConfirmationStep transaction={transaction} selectedChain={selectedChain} isTestnet={isTestnet} onConfirm={handleConfirm} onBack={handleBack} />
           </div>
         )}
-        {step === "success" && (
+        {(step === "sending" || step === "success" || step === "error") && (
           <div className="flex-1 min-h-0">
-            <TransactionSuccessStep transaction={transaction} onClose={handleClose} />
+            <TransactionResultStep
+              mode={step === "sending" ? "loading" : step === "success" ? "success" : "error"}
+              transaction={transaction}
+              errorMessage={broadcastError || undefined}
+              onClose={handleClose}
+              onRetry={step === "error" ? handleRetryBroadcast : undefined}
+            />
           </div>
         )}
       </div>
