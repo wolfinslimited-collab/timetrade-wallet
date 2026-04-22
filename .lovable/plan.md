@@ -1,29 +1,40 @@
 
 
-## Add Meta Pixel (Facebook Events) to the App
+## Fix Onboarding Button Bug + Enhance Animations + Redesign Chains Hero
 
-### What you need to provide
-Your **Meta Pixel ID** — a numeric string (e.g. `1234567890`). You can find it in your Meta Events Manager at [business.facebook.com/events_manager](https://business.facebook.com/events_manager). This is a **public tracking ID**, not a secret key, so it will be stored directly in the codebase.
+### Issues Found
 
-### Implementation
+1. **Button rendering raw className as text** — Lines 296-298 in `FeatureTourStep.tsx` have a duplicate `className=` string literally rendered inside the button element. This is what you see in the screenshot.
+2. **Animations are CSS/JS-based, not GPU-optimized** — Framer Motion transitions use `x`/`y`/`scale` without explicit `translateZ(0)` or `will-change` hints, causing jank on mobile.
+3. **Chains hero is a rigid grid** — User wants bigger coin icons in a scattered/organic layout instead of a 4-column list.
 
-1. **Add Meta Pixel base script to `index.html`**
-   - Insert the standard `fbevents.js` snippet in the `<head>` section
-   - Place the `<noscript><img>` fallback inside `<body>` (required by HTML5 spec — cannot go in `<head>`)
-   - Initialize with `fbq('init', 'YOUR_PIXEL_ID')` and fire `PageView`
+---
 
-2. **Create a reusable tracking utility**
-   - Create `src/lib/fbPixel.ts` with helper functions:
-     - `trackPageView()` — fires `fbq('track', 'PageView')`
-     - `trackEvent(eventName, params?)` — fires custom events like `Purchase`, `Lead`, `CompleteRegistration`, etc.
-   - Add TypeScript declarations for the global `fbq` function
+### Changes
 
-3. **Integrate page view tracking in the router**
-   - Add a `useEffect` in `src/App.tsx` (or the router component) that calls `trackPageView()` on every route change so all navigation is tracked automatically
+#### 1. Fix the broken button in `FeatureTourStep.tsx`
+- Remove the stray `className="w-full rounded-2xl bg-primary..."` text line (line 298) that's being rendered as button content.
 
-4. **Optional: track key wallet events**
-   - Fire custom events at meaningful points (e.g. onboarding complete, send transaction confirmed) using the `trackEvent` helper — this can be added incrementally later
+#### 2. GPU-optimized animations in `FeatureTourStep.tsx`
+- Add `transform: translateZ(0)` and `will-change: transform, opacity` to all animated containers.
+- Replace Framer Motion `x`/`y` with `translateX`/`translateY` for GPU compositing.
+- Reduce animation durations and simplify easing for snappier feel.
+- Use `layout` prop sparingly; keep AnimatePresence transitions under 200ms.
 
-### No backend changes needed
-Meta Pixel is a client-side-only script. No database migrations, edge functions, or secrets are required.
+#### 3. GPU-optimized transitions in `WalletOnboarding.tsx`
+- Add `will-change-[transform,opacity]` and `[transform:translateZ(0)]` to the motion wrapper.
+- Keep step transitions at ~180ms opacity-only for instant feel.
+
+#### 4. Redesign ChainsHero — scattered floating coins
+- Replace the 4-column grid with absolutely-positioned coins at predefined scattered coordinates.
+- Make coin icons larger (w-16 h-16 containers with w-10 h-10 logos).
+- Each coin gets a unique position with slight rotation and staggered float-in animation.
+- Add a subtle continuous floating/bobbing animation using CSS `@keyframes` (GPU-friendly, no JS repaints).
+- Positions hand-crafted to look organic but avoid overlap.
+
+### Technical Details
+
+**Files modified:**
+- `src/components/onboarding/FeatureTourStep.tsx` — button fix, ChainsHero redesign, GPU animation hints
+- `src/components/WalletOnboarding.tsx` — GPU-optimized step transitions
 
