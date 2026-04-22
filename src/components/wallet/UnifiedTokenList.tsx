@@ -4,7 +4,7 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { formatBalance, getChainInfo, Chain } from "@/hooks/useBlockchain";
 import { getPriceForSymbol } from "@/hooks/useCryptoPrices";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Wallet, ArrowDownLeft } from "lucide-react";
+import { ChevronRight, ArrowDownLeft } from "lucide-react";
 
 const getCryptoLogoUrl = (symbol: string): string => {
   return `https://api.elbstream.com/logos/crypto/${symbol.toLowerCase()}`;
@@ -109,20 +109,69 @@ export const UnifiedTokenList = ({ className }: { className?: string }) => {
 
   if (tokensWithValue.length === 0) {
     return (
-      <div className={cn("px-5 py-12 flex flex-col items-center justify-center", className)}>
-        <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-          <Wallet className="w-7 h-7 text-muted-foreground/60" />
+      <div className={cn("px-5 py-10 flex flex-col items-center justify-center", className)}>
+        {/* Animated empty wallet illustration */}
+        <div className="relative w-28 h-28 mb-6">
+          {/* Outer pulsing ring */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 112 112">
+            <circle
+              cx="56" cy="56" r="52"
+              fill="none"
+              stroke="hsl(var(--primary) / 0.1)"
+              strokeWidth="1.5"
+              className="animate-[ping_3s_ease-in-out_infinite]"
+              style={{ transformOrigin: 'center', opacity: 0.4 }}
+            />
+            <circle
+              cx="56" cy="56" r="44"
+              fill="none"
+              stroke="hsl(var(--primary) / 0.08)"
+              strokeWidth="1"
+              className="animate-[ping_3s_ease-in-out_1s_infinite]"
+              style={{ transformOrigin: 'center', opacity: 0.3 }}
+            />
+          </svg>
+          {/* Central icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" className="animate-[pulse_4s_ease-in-out_infinite]">
+              {/* Wallet body */}
+              <rect x="6" y="16" width="36" height="28" rx="4" stroke="hsl(var(--primary) / 0.5)" strokeWidth="1.8" fill="hsl(var(--primary) / 0.06)" />
+              {/* Wallet flap */}
+              <path d="M6 22C6 19.79 7.79 18 10 18H38" stroke="hsl(var(--primary) / 0.35)" strokeWidth="1.2" strokeLinecap="round" />
+              {/* Card slot accent */}
+              <rect x="30" y="26" width="16" height="12" rx="3" stroke="hsl(var(--primary) / 0.4)" strokeWidth="1.5" fill="hsl(var(--primary) / 0.08)" />
+              {/* Coin dot */}
+              <circle cx="38" cy="32" r="2.5" fill="hsl(var(--primary) / 0.5)">
+                <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite" />
+              </circle>
+              {/* Floating particles */}
+              <circle cx="14" cy="10" r="1.5" fill="hsl(var(--primary) / 0.25)">
+                <animate attributeName="cy" values="10;6;10" dur="3s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.2;0.5;0.2" dur="3s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="44" cy="8" r="1" fill="hsl(var(--primary) / 0.2)">
+                <animate attributeName="cy" values="8;4;8" dur="3.5s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.15;0.4;0.15" dur="3.5s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="28" cy="6" r="1.2" fill="hsl(var(--primary) / 0.2)">
+                <animate attributeName="cy" values="6;2;6" dur="2.8s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.1;0.35;0.1" dur="2.8s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
         </div>
-        <p className="text-[15px] font-semibold text-foreground mb-1">No assets yet</p>
-        <p className="text-[12px] text-muted-foreground mb-5 max-w-[220px] text-center leading-relaxed">
-          Your tokens will appear here once you receive or import crypto
+
+        <p className="text-[16px] font-semibold text-foreground mb-1.5 tracking-tight">No assets yet</p>
+        <p className="text-[13px] text-muted-foreground/70 mb-6 max-w-[240px] text-center leading-relaxed">
+          Receive or import crypto to start building your portfolio
         </p>
+
         <button
           onClick={() => navigate("/receive")}
-          className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-primary text-primary-foreground text-[13px] font-semibold active:scale-[0.97]"
+          className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[13px] font-semibold active:scale-[0.97] transition-colors hover:bg-primary/15"
         >
-          <ArrowDownLeft className="w-3.5 h-3.5" />
-          Receive
+          <ArrowDownLeft className="w-4 h-4" />
+          Receive Crypto
         </button>
       </div>
     );
