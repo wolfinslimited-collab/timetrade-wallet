@@ -206,7 +206,6 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   const doBroadcast = async (signedTransaction?: string, directTxHash?: string) => {
     try {
       if (directTxHash) {
-        const chainInfo = getChainInfo(selectedChain);
         const explorerUrl = isTestnet 
           ? `https://sepolia.etherscan.io/tx/${directTxHash}`
           : `https://etherscan.io/tx/${directTxHash}`;
