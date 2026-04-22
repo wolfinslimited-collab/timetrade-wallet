@@ -508,7 +508,7 @@ export default function Build() {
   useEffect(() => {
     loadBuilds();
 
-    const channel = supabase
+    const channel = projectASupabase
       .channel("builds-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "builds" }, (payload) => {
         if (payload.eventType === "INSERT") {
@@ -521,7 +521,7 @@ export default function Build() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { projectASupabase.removeChannel(channel); };
   }, []);
 
   async function loadBuilds() {
