@@ -171,6 +171,7 @@ export const PullToRefresh = ({ children, onRefresh }: PullToRefreshProps) => {
             />
             <path
               d="M20 12 L20 28 M14 22 L20 28 L26 22"
+              className="ptr-arrow"
               fill="none"
               stroke="hsl(var(--primary))"
               strokeWidth="2"
