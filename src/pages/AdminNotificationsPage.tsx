@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { toast } from "sonner";
 import { ArrowLeft, Send, Bell, Smartphone, Monitor, Globe, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -35,7 +35,7 @@ export default function AdminNotificationsPage() {
   const [devices, setDevices] = useState<{ platform: string; count: number }[]>([]);
 
   useEffect(() => {
-    supabase
+    projectASupabase
       .from("fcm_tokens")
       .select("platform")
       .then(({ data }) => {
@@ -56,7 +56,7 @@ export default function AdminNotificationsPage() {
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("fcm-push", {
+      const { data, error } = await projectASupabase.functions.invoke("fcm-push", {
         body: { title, message, type, icon: icon || null, target_platform: targetPlatform },
       });
 

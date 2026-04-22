@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Brain, Loader2, TrendingUp, AlertTriangle, Shield, ShieldCheck, ShieldAlert, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
 import { motion, AnimatePresence } from "framer-motion";
 import { InsightsLoadingSkeleton } from "@/components/ui/loading-skeletons";
@@ -75,7 +75,7 @@ export const AIPortfolioInsights = ({ assets, totalValue }: AIPortfolioInsightsP
     setHasRequested(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("portfolio-insights", {
+      const { data, error: fnError } = await projectASupabase.functions.invoke("portfolio-insights", {
         body: {
           assets: assets.map(a => ({ symbol: a.symbol, chain: a.chain, valueUsd: a.valueUsd })),
           totalValue,

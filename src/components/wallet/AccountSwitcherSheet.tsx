@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { toast } from "sonner";
 import { validateSeedPhrase } from "@/utils/seedPhrase";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import {
   deriveEvmAddress,
   deriveSolanaAddress,
@@ -621,7 +621,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       // Register user in database
       try {
-        await supabase.functions.invoke("register-user", {
+        await projectASupabase.functions.invoke("register-user", {
           body: {
             wallet_name: accountName,
             platform: currentPlatform,
@@ -729,7 +729,7 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
 
       // Register user in database
       try {
-        await supabase.functions.invoke("register-user", {
+        await projectASupabase.functions.invoke("register-user", {
           body: {
             wallet_name: accountName,
             platform: currentPlatform,

@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { SwapTokenSelector } from "@/components/swap/SwapTokenSelector";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { UnifiedAsset } from "@/hooks/useUnifiedPortfolio";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { Chain } from "@/hooks/useBlockchain";
 import { PinUnlockModal } from "@/components/send/PinUnlockModal";
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
@@ -117,7 +117,7 @@ const SwapPage = () => {
           parseFloat(fromAmount) * Math.pow(10, fromAsset.decimals)
         ).toString();
 
-          const { data, error } = await supabase.functions.invoke("swap-quote", {
+          const { data, error } = await projectASupabase.functions.invoke("swap-quote", {
             body: {
               action: "quote",
               chain: fromAsset.chain,
@@ -241,7 +241,7 @@ const SwapPage = () => {
         // Getting Jupiter swap transaction
 
         // 3. Get Jupiter swap transaction via edge function
-        const { data: swapData, error: swapErr } = await supabase.functions.invoke("swap-quote", {
+        const { data: swapData, error: swapErr } = await projectASupabase.functions.invoke("swap-quote", {
           body: {
             action: "swap",
             chain: "solana",

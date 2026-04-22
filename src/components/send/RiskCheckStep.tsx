@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { AlertTriangle, Shield, ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 
 interface RiskData {
   risk_score: number;
@@ -37,7 +37,7 @@ export const RiskCheckStep = ({
     setError(null);
     setRiskData(null);
 
-    supabase.functions
+    projectASupabase.functions
       .invoke("transaction-risk", {
         body: { address, chain, amount, senderAddress },
       })

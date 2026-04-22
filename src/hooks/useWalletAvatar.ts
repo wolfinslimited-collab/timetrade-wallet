@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 
 interface AvatarCache {
   [address: string]: string;
@@ -50,7 +50,7 @@ export function useWalletAvatar(address: string | null) {
     const requestPromise = (async () => {
       try {
         // First, check if avatar already exists in storage
-        const { data: publicUrl } = supabase.storage
+        const { data: publicUrl } = projectASupabase.storage
           .from("wallet-avatars")
           .getPublicUrl(`avatars/${addr}.png`);
         
@@ -66,7 +66,7 @@ export function useWalletAvatar(address: string | null) {
         }
 
         // Generate new avatar
-        const { data, error: fnError } = await supabase.functions.invoke("generate-avatar", {
+        const { data, error: fnError } = await projectASupabase.functions.invoke("generate-avatar", {
           body: { address: addr },
         });
 

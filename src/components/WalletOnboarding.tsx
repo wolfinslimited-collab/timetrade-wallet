@@ -14,7 +14,7 @@ import { encryptPrivateKey } from "@/utils/encryption";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
 import { deriveMultipleAccounts } from "@/utils/walletDerivation";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { usePlatform } from "@/hooks/usePlatform";
 
 export type OnboardingStep = "tour" | "welcome" | "security" | "seedphrase" | "verify" | "pin" | "biometric" | "success" | "import";
@@ -150,7 +150,7 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
     localStorage.setItem("timetrade_active_account_id", "main");
 
     try {
-      await supabase.functions.invoke("register-user", {
+      await projectASupabase.functions.invoke("register-user", {
         body: {
           wallet_name: walletName || "Main Wallet",
           platform,

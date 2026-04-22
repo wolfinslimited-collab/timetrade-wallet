@@ -1,28 +1,4 @@
 project_id = "uxjpbjkgyphhbycrldui"
 
-[functions.wallet-blockchain]
-verify_jwt = false
-
-[functions.staking]
-verify_jwt = false
-
-[functions.register-user]
-verify_jwt = false
-
-[functions.transaction-risk]
-verify_jwt = false
-
-[functions.portfolio-insights]
-verify_jwt = false
-
-[functions.ai-chat]
-verify_jwt = false
-
-[functions.swap-quote]
-verify_jwt = false
-
 [functions.github-build]
-verify_jwt = false
-
-[functions.apns-to-fcm]
 verify_jwt = false

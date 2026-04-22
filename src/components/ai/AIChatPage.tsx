@@ -7,7 +7,9 @@ import { useBlockchainContext } from "@/contexts/BlockchainContext";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+import { PROJECT_A_FUNCTIONS_URL, PROJECT_A_ANON_KEY } from "@/lib/externalSupabase";
+
+const CHAT_URL = `${PROJECT_A_FUNCTIONS_URL}/ai-chat`;
 
 const SUGGESTIONS = [
   { icon: Zap, label: "What is gas fee?", color: "from-amber-500/20 to-orange-500/20 border-amber-500/20" },
@@ -65,7 +67,7 @@ export const AIChatPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${PROJECT_A_ANON_KEY}`,
         },
         body: JSON.stringify({
           messages: allMessages,
