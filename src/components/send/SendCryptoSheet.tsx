@@ -7,14 +7,13 @@ import { NetworkAssetSelector, AvailableAsset } from "./NetworkAssetSelector";
 import { AddressInputStep } from "./AddressInputStep";
 import { AmountInputStep } from "./AmountInputStep";
 import { ConfirmationStep } from "./ConfirmationStep";
-import { TransactionSuccessStep } from "./TransactionSuccessStep";
+import { TransactionResultStep } from "./TransactionResultStep";
 import { RiskCheckStep } from "./RiskCheckStep";
-import { Chain, getChainInfo } from "@/hooks/useBlockchain";
+import { Chain } from "@/hooks/useBlockchain";
 import { useBroadcastTransaction } from "@/hooks/useTransactionBroadcast";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
-import { toast } from "@/hooks/use-toast";
 
-export type SendStep = "select" | "address" | "risk" | "amount" | "confirm" | "success";
+export type SendStep = "select" | "address" | "risk" | "amount" | "confirm" | "sending" | "success" | "error";
 
 export interface TokenInfo {
   symbol: string;
@@ -63,6 +62,8 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   const [selectedAsset, setSelectedAsset] = useState<AvailableAsset | null>(null);
   const [senderAddress, setSenderAddress] = useState<string>("");
   const [isTestnet] = useState(false);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  const [pendingSignedTx, setPendingSignedTx] = useState<string | null>(null);
   
   const [transaction, setTransaction] = useState<TransactionData>({
     recipient: "",
@@ -195,70 +196,48 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
     setStep("confirm");
   };
 
-  const handleConfirm = async (signedTransaction?: string, directTxHash?: string) => {
+  const handleConfirm = (signedTransaction?: string, directTxHash?: string) => {
+    setBroadcastError(null);
+    setPendingSignedTx(signedTransaction || null);
+    setStep("sending");
+    doBroadcast(signedTransaction, directTxHash);
+  };
+
+  const doBroadcast = async (signedTransaction?: string, directTxHash?: string) => {
     try {
       if (directTxHash) {
-        const chainInfo = getChainInfo(selectedChain);
         const explorerUrl = isTestnet 
           ? `https://sepolia.etherscan.io/tx/${directTxHash}`
           : `https://etherscan.io/tx/${directTxHash}`;
-
-        setTransaction((prev) => ({
-          ...prev,
-          txHash: directTxHash,
-          explorerUrl,
-        }));
-
-        toast({
-          title: "Transaction Sent!",
-          description: `Your transaction has been broadcast to the ${chainInfo.name} network.`,
-        });
+        setTransaction((prev) => ({ ...prev, txHash: directTxHash, explorerUrl }));
       } else if (signedTransaction) {
         const result = await broadcastMutation.mutateAsync({
           chain: selectedChain,
           signedTransaction,
           testnet: isTestnet,
         });
-
-        setTransaction((prev) => ({
-          ...prev,
-          txHash: result.txHash,
-          explorerUrl: result.explorerUrl,
-        }));
-
-        toast({
-          title: "Transaction Sent!",
-          description: `Your transaction has been broadcast to the network.`,
-        });
+        setTransaction((prev) => ({ ...prev, txHash: result.txHash, explorerUrl: result.explorerUrl }));
       } else {
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        
         setTransaction((prev) => ({
           ...prev,
           txHash: "0x" + Math.random().toString(16).slice(2, 66),
           explorerUrl: `https://etherscan.io/tx/0x${Math.random().toString(16).slice(2, 66)}`,
         }));
-
-        toast({
-          title: "Transaction Simulated",
-          description: "This is a simulated transaction.",
-          variant: "default",
-        });
       }
-      
       setStep("success");
-      
-      // Refresh blockchain data after successful transaction
-      // Refresh blockchain data after successful transaction
       refreshAll();
     } catch (error) {
       console.error("Transaction broadcast failed:", error);
-      toast({
-        title: "Transaction Failed",
-        description: error instanceof Error ? error.message : "Failed to broadcast transaction",
-        variant: "destructive",
-      });
+      setBroadcastError(error instanceof Error ? error.message : "Failed to broadcast transaction");
+      setStep("error");
     }
+  };
+
+  const handleRetryBroadcast = () => {
+    setStep("sending");
+    setBroadcastError(null);
+    doBroadcast(pendingSignedTx || undefined);
   };
 
   const handleBack = () => {
@@ -280,8 +259,8 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
   };
 
   // Hide header and close button for confirm and success steps
-  const showHeader = step !== "confirm" && step !== "success" && step !== "risk";
-  const hideSheetClose = step === "confirm" || step === "success" || step === "risk";
+  const showHeader = step !== "confirm" && step !== "success" && step !== "risk" && step !== "sending" && step !== "error";
+  const hideSheetClose = step === "confirm" || step === "success" || step === "risk" || step === "sending" || step === "error";
   const canGoBack = step === "address" || step === "amount" || step === "risk";
 
   const handleSheetOpenChange = (nextOpen: boolean) => {
@@ -412,17 +391,20 @@ export const SendCryptoSheet = ({ open, onOpenChange, preSelectedAsset }: SendCr
             </motion.div>
           )}
 
-          {step === "success" && (
+          {(step === "sending" || step === "success" || step === "error") && (
             <motion.div
-              key="success"
+              key="result"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               className="flex-1"
             >
-              <TransactionSuccessStep
+              <TransactionResultStep
+                mode={step === "sending" ? "loading" : step === "success" ? "success" : "error"}
                 transaction={transaction}
+                errorMessage={broadcastError || undefined}
                 onClose={handleClose}
+                onRetry={step === "error" ? handleRetryBroadcast : undefined}
               />
             </motion.div>
           )}
