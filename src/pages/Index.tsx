@@ -23,7 +23,6 @@ import { AppUpdateBanner } from "@/components/AppUpdateBanner";
 import { cn } from "@/lib/utils";
 import { PortfolioSkeleton } from "@/components/ui/loading-skeletons";
 import { getResetSignalKey, wipeAllWalletData, wipeIndexedDb } from "@/utils/walletStorage";
-import { supabase } from "@/integrations/supabase/client";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const Index = () => {
