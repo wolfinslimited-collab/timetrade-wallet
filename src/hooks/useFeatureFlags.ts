@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 import { usePlatform, type Platform } from "./usePlatform";
 
 type FeatureKey = "showStaking" | "showSwap" | "exchangeEnabled" | "showAiTrade";
@@ -53,7 +53,7 @@ export const useFeatureFlags = (): FeatureFlags => {
   const { data, isLoading } = useQuery({
     queryKey: ["feature-flags"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await projectASupabase
         .from("config")
         .select("key, value")
         .in("key", ALL_KEYS);

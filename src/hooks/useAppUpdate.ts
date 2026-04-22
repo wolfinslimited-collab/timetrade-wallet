@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { projectASupabase } from "@/lib/externalSupabase";
 
 const APP_VERSION = "1.0.0";
 
@@ -39,7 +39,7 @@ export function useAppUpdate() {
   useEffect(() => {
     const dismissedVersion = sessionStorage.getItem("timetrade_update_dismissed");
     
-    supabase
+    projectASupabase
       .from("config")
       .select("value")
       .eq("key", "app_update")

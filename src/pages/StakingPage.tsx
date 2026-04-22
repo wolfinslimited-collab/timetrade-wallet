@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { projectASupabase } from "@/lib/externalSupabase";
 import { cn } from "@/lib/utils";
 import { useBlockchainContext } from "@/contexts/BlockchainContext";
@@ -215,7 +214,7 @@ export const StakingPage = ({ onBack }: StakingPageProps) => {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.from("config").select("value").eq("key", "minimum_stake_amount").maybeSingle();
+        const { data } = await projectASupabase.from("config").select("value").eq("key", "minimum_stake_amount").maybeSingle();
         if (data?.value) setMinStakeAmount(Number(data.value) || 10);
       } catch {}
     })();
