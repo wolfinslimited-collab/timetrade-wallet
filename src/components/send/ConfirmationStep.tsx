@@ -22,7 +22,7 @@ interface ConfirmationStepProps {
   transaction: TransactionData;
   selectedChain: Chain;
   isTestnet?: boolean;
-  onConfirm: (signedTransaction?: string, txHash?: string) => Promise<void>;
+  onConfirm: (signedTransaction?: string, txHash?: string) => void;
   onBack: () => void;
 }
 
@@ -315,10 +315,10 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
         signedTx = result.signedTx;
       }
 
-      await onConfirm(signedTx);
-
-      // onConfirm sets step to "success" which unmounts this component
-      // and the PIN modal portal — no need to close manually
+      // Signing succeeded — close PIN modal and hand off to parent for broadcast
+      setShowPinModal(false);
+      setIsProcessing(false);
+      onConfirm(signedTx);
     } catch (error) {
       console.error('Signing failed:', error);
       haptics.notify("error");
@@ -326,8 +326,6 @@ export const ConfirmationStep = ({ transaction, selectedChain, isTestnet = false
       setPinError(msg);
       setIsProcessing(false);
       throw error; // Re-throw so PinUnlockModal shows shake
-    } finally {
-      setIsProcessing(false);
     }
   };
 
