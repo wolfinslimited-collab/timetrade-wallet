@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, ReactNode, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Delete, Fingerprint, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,9 @@ export const FullScreenPinModal = ({
     }
   }, [open]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -331,7 +334,8 @@ export const FullScreenPinModal = ({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
