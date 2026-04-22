@@ -1,39 +1,30 @@
 
 
-## Fix: Transaction Detail Sheet Shows Wrong Token Symbol
+## Inline Security Check in Address Input
 
-### Problem
-The Solana Transaction Detail Sheet always displays the amount as **SOL** (line 134 of `SolanaTransactionDetailSheet.tsx`), even when the transaction is an SPL token transfer (e.g. USDC). The header always calls `formatLamports(transaction.value)` which converts from lamports (SOL decimals), ignoring token transfer data entirely.
+### What changes
 
-The EVM `TransactionDetailSheet.tsx` also has hardcoded values — it always shows "ETH" for network fee (line 149) and "Ethereum Mainnet" for network (line 177), and links to etherscan.io (line 182), regardless of which chain the transaction is on.
+The address input step will show a **"Security Check - Analyze address for risks"** card directly below the address input field when a valid address is entered. This replaces the current behavior where clicking "Continue" triggers a full-screen risk analysis that hides the address form.
 
-### Plan
+### How it will work
 
-**1. Fix `SolanaTransactionDetailSheet.tsx` — detect token transfers and show correct symbol/amount**
+1. **When a valid address is typed/pasted**: A clickable "Security Check" card appears below the address input (green shield icon, "Security Check" title, "Analyze address for risks" subtitle, chevron arrow).
 
-- When `tokenTransfers` exist and contain a relevant transfer (matching `userAddress`), extract the token symbol, amount, and decimals from that transfer instead of showing SOL
-- Use the existing `KNOWN_SPL` mint mapping (from `TransactionHistoryPage.tsx`) to resolve token symbols — extract this into a shared utility
-- Only fall back to showing SOL when there are no token transfers (native SOL transaction)
-- The header amount will show e.g. "-1.0000 USDC" instead of "-1.000000 SOL"
+2. **Tapping the Security Check card**: Triggers the risk analysis inline -- the card expands to show loading state, then results (risk level, score, flags) within the same card area. The address input remains visible above.
 
-**2. Fix `TransactionDetailSheet.tsx` — use actual chain data instead of hardcoded Ethereum values**
+3. **Continue button**: Always visible at the bottom. Tapping "Continue" submits the address and moves to the amount step directly -- no separate risk step. The security check is optional/informational, not blocking.
 
-- Accept `chain` and `explorerUrl` as props
-- Use the chain's network config to show the correct network name, native symbol for fees, and explorer URL
-- Update the "View on Explorer" button to use the correct explorer URL
-
-**3. Extract shared `KNOWN_SPL` token map**
-
-- Move the `KNOWN_SPL` constant from `TransactionHistoryPage.tsx` into a shared file (e.g. `src/config/knownTokens.ts`) so both the history page and detail sheets can use it
-
-**4. Update parent components that render these sheets**
-
-- Pass `chain` and `explorerUrl` to `TransactionDetailSheet` from `TransactionHistoryPage.tsx` and `AssetDetailPage.tsx`
+4. **High risk handling**: If high risk is detected, the card shows a warning but the user can still proceed via Continue.
 
 ### Files to modify
-- `src/components/history/SolanaTransactionDetailSheet.tsx` — smart token detection in header
-- `src/components/history/TransactionDetailSheet.tsx` — accept chain/explorer props, remove hardcoded ETH/Ethereum
-- `src/pages/TransactionHistoryPage.tsx` — pass chain info to detail sheets, extract KNOWN_SPL
-- `src/pages/AssetDetailPage.tsx` — pass chain info to detail sheets
-- `src/config/knownTokens.ts` (new) — shared SPL token mint map
+
+- **`src/components/send/AddressInputStep.tsx`** -- Restructure to:
+  - Remove the full-screen risk takeover (loading/done states that hide the address form)
+  - Add an inline "Security Check" card below the address input that appears when address is valid
+  - Tapping the card runs the risk analysis and shows results inline within the card
+  - "Continue" button always calls `onSubmit` directly without triggering risk check
+  
+- **`src/pages/SendPage.tsx`** -- No changes needed (already routes address -> amount)
+
+- **`src/components/send/SendCryptoSheet.tsx`** -- Verify risk step is already removed from flow
 
