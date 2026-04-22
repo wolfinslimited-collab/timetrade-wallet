@@ -95,7 +95,7 @@ const SendPage = () => {
 
   const handleAddressSubmit = (address: string) => {
     setTransaction((prev) => ({ ...prev, recipient: address }));
-    setStep("risk");
+    setStep("amount");
   };
 
   const handleRiskProceed = () => setStep("amount");
@@ -155,7 +155,7 @@ const SendPage = () => {
     }
     else if (step === "address") setStep("select");
     else if (step === "risk") setStep("address");
-    else if (step === "amount") setStep("risk");
+    else if (step === "amount") setStep("address");
     else if (step === "confirm") setStep("amount");
   };
 
