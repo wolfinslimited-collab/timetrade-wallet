@@ -9,6 +9,7 @@ import { TransactionFilterSheet, TransactionFilters } from "@/components/history
 import { SolanaTransactionDetailSheet } from "@/components/history/SolanaTransactionDetailSheet";
 import { Badge } from "@/components/ui/badge";
 import { useUnifiedTransactions } from "@/hooks/useUnifiedTransactions";
+import { KNOWN_SPL } from "@/config/knownTokens";
 import { TransactionListSkeleton } from "@/components/ui/loading-skeletons";
 
 export type TransactionType = "send" | "receive";
@@ -80,18 +81,6 @@ export const TransactionHistoryPage = ({ onBack }: TransactionHistoryPageProps) 
     'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8': { symbol: 'USDC', decimals: 6 },
     'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR': { symbol: 'WTRX', decimals: 6 },
     'TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S': { symbol: 'SUN', decimals: 18 },
-  };
-
-  // Known SPL tokens for proper symbol/decimals in Solana history
-  const KNOWN_SPL: Record<string, { symbol: string; decimals: number }> = {
-    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', decimals: 6 },
-    'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { symbol: 'USDT', decimals: 6 },
-    'So11111111111111111111111111111111111111112': { symbol: 'SOL', decimals: 9 },
-    'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': { symbol: 'mSOL', decimals: 9 },
-    'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { symbol: 'BONK', decimals: 5 },
-    '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj': { symbol: 'stSOL', decimals: 9 },
-    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': { symbol: 'JUP', decimals: 6 },
-    'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3': { symbol: 'PYTH', decimals: 6 },
   };
 
   // Convert blockchain transactions to display format
