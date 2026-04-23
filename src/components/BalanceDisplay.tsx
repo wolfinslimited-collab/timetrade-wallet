@@ -78,7 +78,7 @@ export const BalanceDisplay = () => {
         </div>
       ) : (
         <>
-          <h1 className="text-5xl font-bold tracking-tight font-balance" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          <h1 className="text-5xl font-extrabold tracking-[-0.035em] font-balance" style={{ fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"ss01", "cv11"' }}>
             {renderBalance(displayBalance)}
           </h1>
           
