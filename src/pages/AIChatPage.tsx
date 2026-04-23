@@ -7,7 +7,10 @@ const AIChatPageRoute = () => {
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden bg-background">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80">
+      <div
+        className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+      >
         <button
           onClick={() => navigate(-1)}
           className="p-2 rounded-full bg-secondary/50 border border-border/50 hover:border-primary/30 hover:bg-secondary transition-all duration-200"

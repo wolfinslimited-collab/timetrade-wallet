@@ -281,7 +281,10 @@ export const AIChatPage = () => {
       </div>
 
       {/* Input area */}
-      <div className="relative px-4 pb-4 pt-2">
+      <div
+        className="relative px-4 pt-2"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+      >
         {/* Top fade gradient */}
         <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />
 
