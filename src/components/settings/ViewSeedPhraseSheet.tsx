@@ -7,6 +7,7 @@ import { Eye, EyeOff, Copy, AlertTriangle, Shield, ChevronRight, Wallet, X } fro
 import { decryptPrivateKey, EncryptedData } from "@/utils/encryption";
 import { WALLET_STORAGE_KEYS } from "@/utils/walletStorage";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 
 interface ViewSeedPhraseSheetProps {
   open: boolean;
@@ -48,6 +49,8 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
   const [error, setError] = useState<string | null>(null);
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric } = useBiometricAuth();
+  const canUseBiometric = isAvailable && isEnabled && isRegistered;
 
   const storedPin = localStorage.getItem("timetrade_pin");
   const accounts = getAccounts();
@@ -81,6 +84,20 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
       setIsDecrypting(false);
     }
   }, [storedPin, selectedAccount]);
+
+  const handleBiometric = useCallback(async () => {
+    setError(null);
+    try {
+      const recoveredPin = await authenticateWithBiometric();
+      if (recoveredPin) {
+        await handlePinSubmit(recoveredPin);
+      } else {
+        setError("Biometric authentication failed");
+      }
+    } catch {
+      setError("Biometric authentication failed");
+    }
+  }, [authenticateWithBiometric, handlePinSubmit]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(seedPhrase.join(" "));
@@ -171,6 +188,8 @@ export const ViewSeedPhraseSheet = ({ open, onOpenChange }: ViewSeedPhraseSheetP
         subtitle={`Verify to view ${selectedAccount?.nickname}'s seed phrase`}
         eyebrow="SECURITY"
         onSubmit={handlePinSubmit}
+        onBiometric={canUseBiometric ? handleBiometric : undefined}
+        biometricAvailable={canUseBiometric}
         error={error}
         isLoading={isDecrypting}
         showBackArrow
