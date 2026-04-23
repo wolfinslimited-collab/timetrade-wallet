@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, X } from "lucide-react";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 
 interface ResetWalletDialogProps {
   open: boolean;
@@ -12,6 +13,9 @@ interface ResetWalletDialogProps {
 
 export const ResetWalletDialog = ({ open, onOpenChange, onConfirm }: ResetWalletDialogProps) => {
   const [pinOpen, setPinOpen] = useState(false);
+  const [bioError, setBioError] = useState<string | null>(null);
+  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric } = useBiometricAuth();
+  const canUseBiometric = isAvailable && isEnabled && isRegistered;
 
   const handleProceedToPin = () => {
     onOpenChange(false);
@@ -28,6 +32,20 @@ export const ResetWalletDialog = ({ open, onOpenChange, onConfirm }: ResetWallet
       return true;
     }
     return false;
+  };
+
+  const handleBiometric = async () => {
+    setBioError(null);
+    try {
+      const recoveredPin = await authenticateWithBiometric();
+      if (recoveredPin) {
+        await handlePinSubmit(recoveredPin);
+      } else {
+        setBioError("Biometric authentication failed");
+      }
+    } catch {
+      setBioError("Biometric authentication failed");
+    }
   };
 
   return (
@@ -89,6 +107,9 @@ export const ResetWalletDialog = ({ open, onOpenChange, onConfirm }: ResetWallet
         title="Confirm Wallet Reset"
         subtitle="Enter your 6-digit PIN to permanently delete this wallet from the device"
         onSubmit={handlePinSubmit}
+        onBiometric={canUseBiometric ? handleBiometric : undefined}
+        biometricAvailable={canUseBiometric}
+        error={bioError}
       />
     </>
   );
