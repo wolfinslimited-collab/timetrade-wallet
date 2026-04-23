@@ -210,7 +210,7 @@ export function useFCMToken() {
         if (ua.includes("android")) platform = "android";
         else if (ua.includes("iphone") || ua.includes("ipad")) platform = "iphone";
 
-        toast(`Web push token received`, { description: token.substring(0, 20) + "..." });
+        addDebug('web-token-received', token.substring(0, 20) + "...");
         await saveToken(token, platform);
       } catch {
         setStatus('error');
