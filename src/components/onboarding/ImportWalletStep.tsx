@@ -84,9 +84,9 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       const targetCount = pastedWords.length >= 24 ? 24 : 12;
       setWordCount(targetCount);
       setWords(pastedWords.slice(0, targetCount).concat(Array(Math.max(0, targetCount - pastedWords.length)).fill("")));
-      toast({ title: "Pasted", description: `${Math.min(pastedWords.length, targetCount)} words detected` });
+      setInlineError(null);
     }
-  }, [toast]);
+  }, []);
 
   const handlePasteFromClipboard = useCallback(async () => {
     haptics.selection();
@@ -97,14 +97,14 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
         const targetCount = pastedWords.length >= 24 ? 24 : 12;
         setWordCount(targetCount);
         setWords(pastedWords.slice(0, targetCount).concat(Array(Math.max(0, targetCount - pastedWords.length)).fill("")));
-        toast({ title: "Pasted", description: `${Math.min(pastedWords.length, targetCount)} words detected` });
+        setInlineError(null);
       } else {
-        toast({ title: "Invalid clipboard", description: "Clipboard doesn't contain a valid seed phrase", variant: "destructive" });
+        setInlineError("Clipboard doesn't contain a valid seed phrase");
       }
     } catch {
-      toast({ title: "Cannot access clipboard", description: "Please paste manually into the first word field", variant: "destructive" });
+      setInlineError("Cannot access clipboard — paste manually into the first word field");
     }
-  }, [toast]);
+  }, []);
 
   const filledWords = words.filter(w => w.length > 0);
   const validWords = words.filter(w => isValidBip39Word(w));
@@ -113,18 +113,19 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
 
   const handleImport = () => {
     if (!allFilled) {
-      toast({ title: "Incomplete seed phrase", description: `Please enter all ${wordCount} words`, variant: "destructive" });
+      setInlineError(`Please enter all ${wordCount} words`);
       return;
     }
     if (!allValid) {
       const invalidIndices = words.map((w, i) => (!isValidBip39Word(w) ? i + 1 : null)).filter(Boolean);
-      toast({ title: "Invalid words detected", description: `Words at positions ${invalidIndices.join(", ")} are not valid`, variant: "destructive" });
+      setInlineError(`Invalid words at positions ${invalidIndices.join(", ")}`);
       return;
     }
     if (!validateSeedPhrase(words)) {
-      toast({ title: "Invalid seed phrase", description: "The checksum doesn't match. Please verify your words and order.", variant: "destructive" });
+      setInlineError("Invalid seed phrase — checksum doesn't match. Verify your words and order.");
       return;
     }
+    setInlineError(null);
     haptics.impact("medium");
     onImport(words);
   };
