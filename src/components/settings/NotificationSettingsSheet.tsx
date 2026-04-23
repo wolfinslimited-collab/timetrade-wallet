@@ -109,14 +109,26 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
                   <div className="text-muted-foreground">FCM Status</div>
                   <div className={cn(fcmStatus === 'registered' && 'text-green-500', fcmStatus === 'error' && 'text-destructive')}>{fcmStatus}</div>
                 </div>
-                {tokenValue && (
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">Token</p>
-                    <div className="bg-muted/50 rounded-lg p-2 text-[10px] font-mono break-all max-h-20 overflow-y-auto">
-                      {tokenValue}
-                    </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-muted-foreground">FCM Token</p>
+                    {tokenValue && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(tokenValue).then(() => toast.success("Token copied"));
+                        }}
+                        className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Copy className="w-3 h-3" /> Copy
+                      </button>
+                    )}
                   </div>
-                )}
+                  <div className="bg-muted/50 rounded-lg p-2 text-[10px] font-mono break-all max-h-32 overflow-y-auto">
+                    {tokenValue ? tokenValue : (
+                      <span className="text-muted-foreground italic">No token yet (status: {fcmStatus})</span>
+                    )}
+                  </div>
+                </div>
                 {fcmError && (
                   <div className="text-xs text-destructive bg-destructive/5 rounded-lg p-2 break-all">
                     {fcmError}
