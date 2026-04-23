@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,17 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
   const [isSendingTest, setIsSendingTest] = useState(false);
   const isNative = Capacitor.isNativePlatform();
   const [debugOpen, setDebugOpen] = useState(false);
+  const lastTapRef = useRef(0);
+
+  const handleDoubleTapTitle = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 400) {
+      setDebugOpen(prev => !prev);
+      lastTapRef.current = 0;
+    } else {
+      lastTapRef.current = now;
+    }
+  }, []);
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
     const granted = await requestPermission();
