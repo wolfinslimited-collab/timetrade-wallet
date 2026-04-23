@@ -80,9 +80,15 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl">
         <SheetHeader className="text-left pb-4">
-          <SheetTitle className="flex items-center gap-2">
+          <SheetTitle
+            className="flex items-center gap-2 select-none cursor-pointer"
+            onClick={handleDoubleTapTitle}
+          >
             <Bell className="w-5 h-5 text-primary" />
             Push Notifications
+            {debugOpen && (
+              <span className="ml-auto text-[10px] text-muted-foreground font-mono">debug</span>
+            )}
           </SheetTitle>
         </SheetHeader>
 
