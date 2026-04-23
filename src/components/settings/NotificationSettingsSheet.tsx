@@ -3,7 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bell, BellOff, TrendingUp, ArrowRightLeft, Shield, Check, X, ExternalLink, Info, AlertTriangle, Loader2 } from "lucide-react";
+import { Bell, BellOff, TrendingUp, ArrowRightLeft, Shield, Check, X, ExternalLink, Info, AlertTriangle, Loader2, Bug, ChevronDown, ChevronUp, Copy, RefreshCw } from "lucide-react";
 import { useWebNotifications } from "@/hooks/useWebNotifications";
 import { useFCMToken } from "@/hooks/useFCMToken";
 import { cn } from "@/lib/utils";
@@ -26,11 +26,12 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     isIframe,
   } = useWebNotifications();
 
-  const { status: fcmStatus, errorMessage: fcmError, tokenValue, sendTestPush } = useFCMToken();
+  const { status: fcmStatus, errorMessage: fcmError, tokenValue, sendTestPush, debugLog, clearDebugLog, reRegister } = useFCMToken();
 
   const [isRequesting, setIsRequesting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const isNative = Capacitor.isNativePlatform();
+  const [debugOpen, setDebugOpen] = useState(false);
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
     const granted = await requestPermission();
@@ -331,7 +332,89 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
           )}
 
         </div>
+
+        {/* Push Debug Panel — native only */}
+        {isNative && (
+          <div className="mx-1 mt-4 rounded-xl border border-border bg-card overflow-hidden">
+            <button
+              onClick={() => setDebugOpen(!debugOpen)}
+              className="w-full flex items-center justify-between p-4 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Bug className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Push Debug</span>
+                <span className="text-xs text-muted-foreground">({debugLog.length} events)</span>
+              </div>
+              {debugOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
+
+            {debugOpen && (
+              <div className="border-t border-border p-4 space-y-4">
+                {/* Status row */}
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="text-muted-foreground">Platform</div>
+                  <div>{Capacitor.getPlatform()}</div>
+                  <div className="text-muted-foreground">FCM Status</div>
+                  <div className={cn(fcmStatus === 'registered' && 'text-green-500', fcmStatus === 'error' && 'text-destructive')}>{fcmStatus}</div>
+                </div>
+
+                {/* Full token */}
+                {tokenValue && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Token</p>
+                    <div className="bg-muted/50 rounded-lg p-2 text-[10px] font-mono break-all max-h-20 overflow-y-auto">
+                      {tokenValue}
+                    </div>
+                  </div>
+                )}
+
+                {/* Error */}
+                {fcmError && (
+                  <div className="text-xs text-destructive bg-destructive/5 rounded-lg p-2 break-all">
+                    {fcmError}
+                  </div>
+                )}
+
+                {/* Event log */}
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Event Log</p>
+                  <div className="bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
+                    {debugLog.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-2">No events yet</p>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {debugLog.map((entry, i) => (
+                          <div key={i} className={cn("px-2 py-1.5 text-[10px] font-mono", entry.isError && "text-destructive bg-destructive/5")}>
+                            <span className="text-muted-foreground">{entry.ts.substring(11, 19)}</span>{" "}
+                            <span className="font-semibold">{entry.event}</span>
+                            {entry.payload && <span className="ml-1 opacity-70">{entry.payload}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => {
+                    const report = JSON.stringify({ fcmStatus, fcmError, tokenValue, platform: Capacitor.getPlatform(), log: debugLog }, null, 2);
+                    navigator.clipboard.writeText(report).then(() => toast.success("Debug report copied"));
+                  }}>
+                    <Copy className="w-3 h-3 mr-1" /> Copy
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={reRegister}>
+                    <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={clearDebugLog}>
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </SheetContent>
-    </Sheet>
+    </Sheet>  
   );
 };

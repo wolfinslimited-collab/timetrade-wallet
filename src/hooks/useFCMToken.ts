@@ -31,6 +31,7 @@ export function useFCMToken() {
   const registeredRef = useRef(false); 
   const [tokenValue, setTokenValue] = useState<string | null>(null);
   const [debugLog, setDebugLog] = useState<PushDebugEntry[]>(loadDebugLog);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addDebug = useCallback((event: string, payload?: string, isError?: boolean) => {
     const entry: PushDebugEntry = { ts: new Date().toISOString(), event, payload, isError };
@@ -54,8 +55,23 @@ export function useFCMToken() {
     const platform = Capacitor.getPlatform();
     addDebug('init', `native=${isNative} platform=${platform}`);
 
+    // Timeout: if still 'requesting' after 15s, mark as error
+    timeoutRef.current = setTimeout(() => {
+      setStatus(prev => {
+        if (prev === 'requesting') {
+          const msg = 'Push registration timed out after 15s. The registration callback was never received.';
+          setErrorMessage(msg);
+          addDebug('timeout', msg, true);
+          return 'error';
+        }
+        return prev;
+      });
+    }, 15000);
+
     async function saveToken(token: string, platform: string) {
       setTokenValue(token);
+      // Clear timeout on successful token receipt
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
       const { error } = await projectASupabase.from("fcm_tokens").upsert(
         { token, platform } as any,
         { onConflict: "token" }
@@ -136,6 +152,7 @@ export function useFCMToken() {
             const msg = err?.error || 'Push registration error';
             setErrorMessage(msg);
             addDebug('registration-error', msg, true);
+            if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
           });
 
           await PushNotifications.addListener('pushNotificationReceived', (notification) => {
