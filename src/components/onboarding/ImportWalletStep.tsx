@@ -232,6 +232,11 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
           ))}
         </div>
 
+        {inlineError && (
+          <div className="mt-3 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30">
+            <p className="text-[12px] font-medium text-destructive text-center">{inlineError}</p>
+          </div>
+        )}
       </div>
 
       {/* ── Sticky CTA ── */}
