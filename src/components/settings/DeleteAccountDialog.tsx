@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { UserX, X, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -13,6 +14,9 @@ interface DeleteAccountDialogProps {
 export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAccountDialogProps) => {
   const [pinOpen, setPinOpen] = useState(false);
   const [deletingState, setDeletingState] = useState<"idle" | "deleting" | "done">("idle");
+  const [bioError, setBioError] = useState<string | null>(null);
+  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric } = useBiometricAuth();
+  const canUseBiometric = isAvailable && isEnabled && isRegistered;
 
   const handleProceedToPin = () => {
     onOpenChange(false);
@@ -27,6 +31,20 @@ export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAcc
       return true;
     }
     return false;
+  };
+
+  const handleBiometric = async () => {
+    setBioError(null);
+    try {
+      const recoveredPin = await authenticateWithBiometric();
+      if (recoveredPin) {
+        await handlePinSubmit(recoveredPin);
+      } else {
+        setBioError("Biometric authentication failed");
+      }
+    } catch {
+      setBioError("Biometric authentication failed");
+    }
   };
 
   useEffect(() => {
@@ -105,6 +123,9 @@ export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAcc
         title="Confirm Account Deletion"
         subtitle="Enter your 6-digit PIN to permanently delete your account"
         onSubmit={handlePinSubmit}
+        onBiometric={canUseBiometric ? handleBiometric : undefined}
+        biometricAvailable={canUseBiometric}
+        error={bioError}
       />
 
       {/* Deleting / Done overlay */}
