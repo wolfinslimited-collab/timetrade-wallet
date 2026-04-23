@@ -26,43 +26,6 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
-  const [googleLoading, setGoogleLoading] = useState(false);
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    // Safety: if redirect doesn't happen within 8s, reset the button
-    const safetyTimer = setTimeout(() => setGoogleLoading(false), 8000);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/?tab=trading`,
-      });
-      if (result?.error) {
-        clearTimeout(safetyTimer);
-        toast.error("Google sign-in failed", {
-          description: result.error.message,
-        });
-        setGoogleLoading(false);
-        return;
-      }
-      if (result?.redirected) {
-        // Browser is navigating to Google — keep the loading state until unload.
-        return;
-      }
-      // Tokens received without redirect → already signed into Cloud.
-      clearTimeout(safetyTimer);
-      setGoogleLoading(false);
-      toast.success("Signed in with Google", {
-        description:
-          "Cloud session created. Trading dashboard requires the trading backend's own login.",
-      });
-    } catch (e: unknown) {
-      clearTimeout(safetyTimer);
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      toast.error("Google sign-in failed", { description: msg });
-      setGoogleLoading(false);
-    }
-  };
-
   const inputClass = "w-full h-12 rounded-xl bg-secondary/50 border border-border/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30";
 
   const switchView = (v: AuthView) => {
