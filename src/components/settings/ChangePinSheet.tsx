@@ -4,6 +4,7 @@ import { useStoredKeys } from "@/hooks/useStoredKeys";
 import { decryptPrivateKey, EncryptedData, encryptPrivateKey } from "@/utils/encryption";
 import { getActiveAccountEncryptedSeed, setActiveAccountEncryptedSeed } from "@/utils/walletStorage";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 
 interface ChangePinSheetProps {
   open: boolean;
@@ -21,6 +22,8 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
   const [newPin, setNewPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isReEncrypting, setIsReEncrypting] = useState(false);
+  const { isAvailable, isEnabled, isRegistered, authenticateWithBiometric } = useBiometricAuth();
+  const canUseBiometric = isAvailable && isEnabled && isRegistered;
 
   const storedPin = localStorage.getItem("timetrade_pin");
 
@@ -77,6 +80,20 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
     return false;
   }, [step, storedPin, currentPin, newPin, storedKeys, reEncryptWithNewPin, onSuccess]);
 
+  const handleBiometric = useCallback(async () => {
+    setError(null);
+    try {
+      const recoveredPin = await authenticateWithBiometric();
+      if (recoveredPin) {
+        await handleSubmit(recoveredPin);
+      } else {
+        setError("Biometric authentication failed");
+      }
+    } catch {
+      setError("Biometric authentication failed");
+    }
+  }, [authenticateWithBiometric, handleSubmit]);
+
   const handleClose = () => {
     onOpenChange(false);
     setTimeout(() => {
@@ -99,6 +116,8 @@ export const ChangePinSheet = ({ open, onOpenChange, onSuccess }: ChangePinSheet
       }
       eyebrow="CHANGE PIN"
       onSubmit={handleSubmit}
+      onBiometric={step === "current" && canUseBiometric ? handleBiometric : undefined}
+      biometricAvailable={step === "current" && canUseBiometric}
       error={error}
       isLoading={isReEncrypting}
       showBackArrow
