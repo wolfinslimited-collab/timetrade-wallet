@@ -3,7 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bell, BellOff, TrendingUp, ArrowRightLeft, Shield, Check, X, ExternalLink, Info, AlertTriangle, Loader2 } from "lucide-react";
+import { Bell, BellOff, TrendingUp, ArrowRightLeft, Shield, Check, X, ExternalLink, Info, AlertTriangle, Loader2, Bug, ChevronDown, ChevronUp, Copy, RefreshCw } from "lucide-react";
 import { useWebNotifications } from "@/hooks/useWebNotifications";
 import { useFCMToken } from "@/hooks/useFCMToken";
 import { cn } from "@/lib/utils";
@@ -26,11 +26,12 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     isIframe,
   } = useWebNotifications();
 
-  const { status: fcmStatus, errorMessage: fcmError, tokenValue, sendTestPush } = useFCMToken();
+  const { status: fcmStatus, errorMessage: fcmError, tokenValue, sendTestPush, debugLog, clearDebugLog, reRegister } = useFCMToken();
 
   const [isRequesting, setIsRequesting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const isNative = Capacitor.isNativePlatform();
+  const [debugOpen, setDebugOpen] = useState(false);
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
     const granted = await requestPermission();
@@ -332,6 +333,6 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
 
         </div>
       </SheetContent>
-    </Sheet>
+    </Sheet>  
   );
 };
