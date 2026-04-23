@@ -115,12 +115,12 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
 
   const handleBiometricComplete = (enabled: boolean) => {
     localStorage.setItem("timetrade_biometric", enabled ? "true" : "false");
-    setStep("success");
+    handleFinish();
   };
 
   const handleBiometricSkip = () => {
     localStorage.setItem("timetrade_biometric", "false");
-    setStep("success");
+    handleFinish();
   };
 
   const handleFinish = async () => {
