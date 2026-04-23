@@ -232,93 +232,83 @@ const Index = () => {
     }
   };
 
-  if (currentView !== "wallet") {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-            className="flex-1 overflow-y-auto"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            {renderTabContent()}
-          </motion.div>
-        </AnimatePresence>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-      </div>
-    );
-  }
-
   return (
-    <motion.div
-      key="wallet"
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-      className="flex flex-col flex-1 w-full relative overflow-hidden"
-    >
-      <AppUpdateBanner />
-      <WalletHeader 
-        onSettingsClick={() => handleTabChange("settings")}
-        unreadCount={unreadCount}
-      />
-
-      <div className="flex-1 overflow-y-auto pb-nav-safe" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'none' }}>
-        <PullToRefresh onRefresh={handleRefresh}>
-          {/* Balance Section */}
-          <div className="px-6 pt-8 pb-6 text-center">
-            {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
-              <PortfolioSkeleton />
-            ) : (
-              <>
-                <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
-                <h1 className="text-[42px] font-extrabold tracking-tight leading-none">
-                  <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
-                  <span className="text-foreground/30 font-bold">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
-                </h1>
-                {displayBalance > 0 && percentChange !== 0 && (
-                  <div className={cn(
-                    "text-[13px] font-semibold mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                    isPositive 
-                      ? "text-success bg-success/10 border border-success/20" 
-                      : "text-destructive bg-destructive/10 border border-destructive/20"
-                  )}>
-                    <span>{isPositive ? "↑" : "↓"}</span>
-                    <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
+    <div className="flex flex-col flex-1 w-full relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentView}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25, ease: [0.25, 0.8, 0.25, 1] }}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
+          {currentView === "wallet" ? (
+            <>
+              <AppUpdateBanner />
+              <WalletHeader 
+                onSettingsClick={() => handleTabChange("settings")}
+                unreadCount={unreadCount}
+              />
+              <div className="flex-1 overflow-y-auto pb-nav-safe" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'none' }}>
+                <PullToRefresh onRefresh={handleRefresh}>
+                  {/* Balance Section */}
+                  <div className="px-6 pt-8 pb-6 text-center">
+                    {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
+                      <PortfolioSkeleton />
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
+                        <h1 className="text-[42px] font-extrabold tracking-tight leading-none">
+                          <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
+                          <span className="text-foreground/30 font-bold">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
+                        </h1>
+                        {displayBalance > 0 && percentChange !== 0 && (
+                          <div className={cn(
+                            "text-[13px] font-semibold mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                            isPositive 
+                              ? "text-success bg-success/10 border border-success/20" 
+                              : "text-destructive bg-destructive/10 border border-destructive/20"
+                          )}>
+                            <span>{isPositive ? "↑" : "↓"}</span>
+                            <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                )}
-              </>
-            )}
-          </div>
 
-          {/* Quick Actions */}
-          <QuickActions />
+                  {/* Quick Actions */}
+                  <QuickActions />
 
-          {/* Token List */}
-          <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
-            <div className="px-5 flex items-center justify-between mb-3">
-              <h2 className="text-[15px] font-bold text-foreground">
-                Assets
-              </h2>
-              <button 
-                onClick={() => navigate("/assets")}
-                className="flex items-center gap-0.5 text-[12px] text-primary font-semibold active:opacity-70"
-              >
-                View All
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+                  {/* Token List */}
+                  <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
+                    <div className="px-5 flex items-center justify-between mb-3">
+                      <h2 className="text-[15px] font-bold text-foreground">
+                        Assets
+                      </h2>
+                      <button 
+                        onClick={() => navigate("/assets")}
+                        className="flex items-center gap-0.5 text-[12px] text-primary font-semibold active:opacity-70"
+                      >
+                        View All
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <UnifiedTokenList key={`tokens-${refreshKey}`} />
+                  </div>
+                </PullToRefresh>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {renderTabContent()}
             </div>
-            <UnifiedTokenList key={`tokens-${refreshKey}`} />
-          </div>
-        </PullToRefresh>
-      </div>
-
+          )}
+        </motion.div>
+      </AnimatePresence>
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} hiddenTabs={hiddenTabs} />
-    </motion.div>
+    </div>
   );
 };
 
