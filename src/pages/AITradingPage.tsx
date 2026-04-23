@@ -53,7 +53,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-12 min-h-[60vh]">
+    <div className="flex flex-col items-center justify-center px-6 pt-12 pb-32 min-h-[60vh]">
       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
         <Bot className="w-7 h-7 text-primary" />
       </div>
