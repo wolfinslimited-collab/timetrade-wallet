@@ -25,6 +25,7 @@
     "@capgo/capacitor-native-biometric": "^8.4.2",
     "@capgo/capacitor-updater": "^8.45.9",
     "@hookform/resolvers": "^3.10.0",
+    "@lovable.dev/cloud-auth-js": "^1.1.1",
     "@noble/ed25519": "^3.0.0",
     "@noble/hashes": "^2.0.1",
     "@nodehash/address-validator": "^0.6.3",
