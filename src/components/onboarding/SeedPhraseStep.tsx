@@ -38,12 +38,6 @@ export const SeedPhraseStep = ({ seedPhrase, onContinue, onBack }: SeedPhraseSte
       {/* Fixed header */}
       <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border bg-background">
         <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-2 rounded-full bg-card border border-border hover:bg-secondary transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Step 2 of 3</p>
             <h2 className="text-xl font-bold">Your Seed Phrase</h2>
