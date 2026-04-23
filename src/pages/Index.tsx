@@ -258,7 +258,13 @@ const Index = () => {
                     ) : (
                       <>
                         <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
-                        <h1 className="text-[42px] font-extrabold tracking-tight leading-none">
+                        <h1
+                          className="font-balance text-[44px] font-extrabold tracking-[-0.045em] leading-none"
+                          style={{
+                            fontVariantNumeric: 'tabular-nums',
+                            fontFeatureSettings: '"ss01", "cv11", "tnum"',
+                          }}
+                        >
                           <span className="text-foreground">${Math.floor(displayBalance).toLocaleString()}</span>
                           <span className="text-foreground/30 font-bold">.{(displayBalance % 1).toFixed(2).slice(2)}</span>
                         </h1>
