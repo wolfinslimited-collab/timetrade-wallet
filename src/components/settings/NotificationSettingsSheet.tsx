@@ -93,6 +93,71 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
         </SheetHeader>
 
         <div className="space-y-6 overflow-y-auto max-h-[calc(75vh-120px)] pb-4">
+          {/* Hidden Push Debug Panel — revealed by double-tapping the title */}
+          {debugOpen && (
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="flex items-center gap-2 p-3 border-b border-border">
+                <Bug className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Push Debug</span>
+                <span className="text-xs text-muted-foreground">({debugLog.length} events)</span>
+                <button onClick={() => setDebugOpen(false)} className="ml-auto text-xs text-muted-foreground">Hide</button>
+              </div>
+              <div className="p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="text-muted-foreground">Platform</div>
+                  <div>{Capacitor.getPlatform()}</div>
+                  <div className="text-muted-foreground">FCM Status</div>
+                  <div className={cn(fcmStatus === 'registered' && 'text-green-500', fcmStatus === 'error' && 'text-destructive')}>{fcmStatus}</div>
+                </div>
+                {tokenValue && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Token</p>
+                    <div className="bg-muted/50 rounded-lg p-2 text-[10px] font-mono break-all max-h-20 overflow-y-auto">
+                      {tokenValue}
+                    </div>
+                  </div>
+                )}
+                {fcmError && (
+                  <div className="text-xs text-destructive bg-destructive/5 rounded-lg p-2 break-all">
+                    {fcmError}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Event Log</p>
+                  <div className="bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
+                    {debugLog.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-2">No events yet</p>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {debugLog.map((entry, i) => (
+                          <div key={i} className={cn("px-2 py-1.5 text-[10px] font-mono", entry.isError && "text-destructive bg-destructive/5")}>
+                            <span className="text-muted-foreground">{entry.ts.substring(11, 19)}</span>{" "}
+                            <span className="font-semibold">{entry.event}</span>
+                            {entry.payload && <span className="ml-1 opacity-70">{entry.payload}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => {
+                    const report = JSON.stringify({ fcmStatus, fcmError, tokenValue, platform: Capacitor.getPlatform(), log: debugLog }, null, 2);
+                    navigator.clipboard.writeText(report).then(() => toast.success("Debug report copied"));
+                  }}>
+                    <Copy className="w-3 h-3 mr-1" /> Copy
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={reRegister}>
+                    <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={clearDebugLog}>
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Iframe Warning */}
           {showIframeWarning && (
             <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
