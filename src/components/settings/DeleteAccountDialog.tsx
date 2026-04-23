@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { UserX, X } from "lucide-react";
+import { UserX, X, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { FullScreenPinModal } from "@/components/shared/FullScreenPinModal";
 
 interface DeleteAccountDialogProps {
@@ -12,6 +12,7 @@ interface DeleteAccountDialogProps {
 
 export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAccountDialogProps) => {
   const [pinOpen, setPinOpen] = useState(false);
+  const [deletingState, setDeletingState] = useState<"idle" | "deleting" | "done">("idle");
 
   const handleProceedToPin = () => {
     onOpenChange(false);
@@ -22,11 +23,21 @@ export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAcc
     const storedPin = localStorage.getItem("timetrade_pin");
     if (enteredPin === storedPin) {
       setPinOpen(false);
-      setTimeout(() => onConfirm(), 150);
+      setTimeout(() => setDeletingState("deleting"), 150);
       return true;
     }
     return false;
   };
+
+  useEffect(() => {
+    if (deletingState === "deleting") {
+      const timer = setTimeout(() => {
+        onConfirm();
+        setDeletingState("done");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [deletingState, onConfirm]);
 
   return (
     <>
@@ -48,16 +59,24 @@ export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAcc
               </div>
             </div>
 
-            <h3 className="text-base font-semibold text-foreground text-center mb-1.5">Delete Account?</h3>
-            <p className="text-sm text-muted-foreground text-center leading-relaxed mb-1">
+            <h3 className="text-base font-semibold text-foreground text-center mb-2">Delete Account?</h3>
+            <p className="text-sm text-muted-foreground text-center leading-relaxed mb-2">
               This will permanently delete your account and all associated data, including wallet information, preferences, and transaction history.
             </p>
-            <p className="text-xs font-medium text-destructive text-center mb-1">
-              Make sure you have backed up your seed phrase.
-            </p>
-            <p className="text-xs font-medium text-destructive text-center mb-6">
-              This action cannot be undone.
-            </p>
+
+            <div className="bg-destructive/5 border border-destructive/15 rounded-xl p-3 mb-5">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-destructive">
+                    Make sure you have backed up your seed phrase before proceeding.
+                  </p>
+                  <p className="text-xs text-destructive/80">
+                    This action is permanent and cannot be undone. All wallet data, keys, and preferences will be erased.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="flex flex-col gap-2.5">
               <Button
@@ -87,6 +106,46 @@ export const DeleteAccountDialog = ({ open, onOpenChange, onConfirm }: DeleteAcc
         subtitle="Enter your 6-digit PIN to permanently delete your account"
         onSubmit={handlePinSubmit}
       />
+
+      {/* Deleting / Done overlay */}
+      {deletingState !== "idle" && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+          <div className="relative flex flex-col items-center gap-5 px-8">
+            {deletingState === "deleting" ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-destructive/15 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-destructive animate-spin" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Deleting Account...</h3>
+                  <p className="text-sm text-muted-foreground">Removing all data and wallet information</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Account Deleted</h3>
+                  <p className="text-sm text-muted-foreground mb-6">Your account and all associated data have been permanently removed.</p>
+                  <Button
+                    onClick={() => {
+                      setDeletingState("idle");
+                      window.location.reload();
+                    }}
+                    className="h-12 px-8 rounded-xl bg-foreground/10 hover:bg-foreground/15 text-foreground font-medium"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 };
