@@ -72,11 +72,16 @@ export function useFCMToken() {
       setTokenValue(token);
       // Clear timeout on successful token receipt
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
-      const { error } = await projectASupabase.from("fcm_tokens").upsert(
-        { token, platform } as any,
-        { onConflict: "token" }
+      // Try insert first; if token already exists (duplicate), just treat as success
+      const { error } = await projectASupabase.from("fcm_tokens").insert(
+        { token, platform } as any
       );
-      if (error) {
+      if (error && error.code === '23505') {
+        // Duplicate token — already registered, treat as success
+        setStatus('registered');
+        addDebug('token-already-exists', `platform=${platform} token=${token.substring(0, 20)}...`);
+        toast.success("Push notifications registered!");
+      } else if (error) {
         setStatus('error');
         setErrorMessage('Failed to save push token');
         addDebug('token-save-error', error.message, true);
