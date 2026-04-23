@@ -1,39 +1,45 @@
 
 
-## Separate PIN Verification from Transaction Signing
+## Goal
 
-### What changes
+Silence the noisy toast popups that appear during wallet creation, wallet import, and push notification registration — these are the ones surfacing on app launch (like "Push notifications registered!" in your screenshot). Keep critical toasts (transaction errors, copy confirmations, security alerts) so the app remains usable.
 
-The PIN unlock modal will only verify the PIN (decrypt the seed to confirm correctness), then immediately close and advance to the "sending" step. The actual transaction signing and broadcasting will happen inside the "sending/result" step, using the verified PIN to derive keys and sign.
+## Files containing the popups you asked about
 
-### Why
+**Wallet Create flow**
+- `src/components/WalletOnboarding.tsx` — "Setup failed" error toast during seed encryption (line ~110)
+- `src/components/onboarding/SuccessStep.tsx` — full-screen "Wallet Created!" success step (visual screen, not a toast)
 
-Currently, the PIN modal both verifies the PIN AND signs the transaction inline, which couples two concerns. The user wants the PIN step to be a quick unlock gate, with the heavier signing/broadcast work shown in the loading result screen.
+**Wallet Import flow**
+- `src/components/onboarding/ImportWalletStep.tsx` — toasts for: scanned, pasted, invalid QR, invalid clipboard, incomplete seed, invalid words, invalid checksum (lines 51, 53, 88, 101, 103, 106, 117, 122, 126)
+- `src/components/wallet/AccountSwitcherSheet.tsx` — `toast.success("Wallet imported successfully")` (line 620) when importing an additional account
 
-### Technical details
+**Web / Push notification popup**
+- `src/hooks/useFCMToken.ts` — `toast.success("Push notifications registered!")` (lines 83 and 92) — this is the popup in your screenshot
+- `src/components/settings/NotificationSettingsSheet.tsx` — toasts for enable/disable feedback
+- `src/pages/NotificationsPage.tsx` — debug copy toast
 
-#### 1. `src/components/send/ConfirmationStep.tsx`
+## Proposed changes
 
-- Modify `onConfirm` prop signature to accept an optional `pin` parameter: `onConfirm: (pin?: string) => void`
-- Simplify `handlePinSubmit`: only decrypt the seed phrase to verify the PIN is correct (keep the decrypt check), then call `onConfirm(pin)` without signing. Remove all signing logic (EVM, Solana, Tron key derivation and `signTransaction` calls).
-- Remove imports and hooks no longer needed in this component: `useTransactionSigning`, `useTronTransactionSigning`, `useSolanaTransactionSigning`, `derivePrivateKeyForChain`, `ethers`, etc.
+### 1. Remove the auto-registration popup (the one in your screenshot)
+Delete both `toast.success("Push notifications registered!")` calls in `src/hooks/useFCMToken.ts`. Status is already tracked in state — no need to interrupt the user on every app open.
 
-#### 2. `src/components/send/SendCryptoSheet.tsx`
+### 2. Silence wallet create flow
+Remove the "Setup failed" toast in `WalletOnboarding.tsx`. Replace with inline error handling (the user already sees the success step UI on completion).
 
-- Update `handleConfirm` to accept `pin?: string` and store it in state (e.g., `verifiedPin`).
-- Move the signing logic (currently in `ConfirmationStep.handlePinSubmit`) into the `doBroadcast` function or a new `signAndBroadcast` function that runs during the "sending" step.
-- The "sending" step will: derive the private key from the stored mnemonic using the verified PIN, sign the transaction for the correct chain, then broadcast the signed transaction.
-- On error during signing, transition to the "error" step with the appropriate message and allow retry.
+### 3. Silence wallet import flow
+- `ImportWalletStep.tsx`: Remove the 7 informational/validation toasts. Replace destructive validation errors (incomplete, invalid words, bad checksum) with **inline red text under the seed grid** — better UX than a popup.
+- `AccountSwitcherSheet.tsx`: Remove the "Wallet imported successfully" toast — the sheet closes and the new account appears, which is feedback enough.
 
-#### 3. `src/components/send/TransactionResultStep.tsx`
+### 4. Keep these (do NOT remove)
+- Transaction send errors / success (`ConfirmationStep.tsx`, `TransactionResultStep.tsx`) — financial actions need confirmation
+- Copy-to-clipboard toasts (address, seed phrase) — standard UX expectation
+- Lock screen "Incorrect PIN" toasts — security feedback
+- Biometric / PIN settings toasts — explicit user actions in settings
 
-- No structural changes needed. The "loading" mode already displays a spinner. The signing work will happen before this component shows "success" or "error".
+If you'd rather strip **every single toast everywhere** (including transaction confirmations and copy feedback), say "remove all toasts globally" and I'll do that instead — but it will make some flows feel broken.
 
-### Flow after changes
-
-```text
-Confirm screen → tap "Confirm & Sign" → PIN modal (verify only)
-  → PIN correct → close modal → "sending" step (sign + broadcast with loading spinner)
-  → success / error result
-```
+### Technical notes
+- No changes to `<Toaster />` / `<Sonner />` mounts in `App.tsx` — the toast system stays available for the kept use cases.
+- `AlertDialog` components (delete account confirm, remove key confirm) are **modals**, not popup alerts — they stay, since removing them would break destructive-action confirmations Apple requires.
 
