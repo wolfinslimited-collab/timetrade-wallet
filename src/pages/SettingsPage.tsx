@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Shield, Key, Fingerprint, Eye, Trash2, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe, FileText, BookUser, UserX } from "lucide-react";
+import { ChevronLeft, Shield, Key, Fingerprint, Eye, Lock, AlertTriangle, Bell, ChevronRight, Info, Globe, FileText, BookUser, UserX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,6 @@ import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { useWebNotifications } from "@/hooks/useWebNotifications";
 import { ChangePinSheet } from "@/components/settings/ChangePinSheet";
 import { ViewSeedPhraseSheet } from "@/components/settings/ViewSeedPhraseSheet";
-import { ResetWalletDialog } from "@/components/settings/ResetWalletDialog";
 import { BiometricSetupDialog } from "@/components/settings/BiometricSetupDialog";
 import { NotificationSettingsSheet } from "@/components/settings/NotificationSettingsSheet";
 import { AddressBookSheet } from "@/components/settings/AddressBookSheet";
@@ -89,7 +88,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
   
   const [changePinOpen, setChangePinOpen] = useState(false);
   const [viewSeedOpen, setViewSeedOpen] = useState(false);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [biometricSetupOpen, setBiometricSetupOpen] = useState(false);
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [addressBookOpen, setAddressBookOpen] = useState(false);
@@ -254,13 +252,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
           </p>
           <div className="bg-card/50 border border-destructive/15 rounded-2xl overflow-hidden">
             <SettingItem
-              icon={Trash2}
-              label="Reset Wallet"
-              description="Delete all data and start fresh"
-              onClick={() => setResetDialogOpen(true)}
-              danger
-            />
-            <SettingItem
               icon={UserX}
               label="Delete Account"
               description="Permanently delete your account and all data"
@@ -275,8 +266,6 @@ export const SettingsPage = ({ onBack }: SettingsPageProps) => {
       {/* Sheets */}
       <ChangePinSheet open={changePinOpen} onOpenChange={setChangePinOpen} onSuccess={handlePinChanged} />
       <ViewSeedPhraseSheet open={viewSeedOpen} onOpenChange={setViewSeedOpen} />
-      <ResetWalletDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen} onConfirm={handleResetWallet} />
-      
       <BiometricSetupDialog open={biometricSetupOpen} onOpenChange={setBiometricSetupOpen} onSuccess={handleBiometricSetupSuccess} onRegister={registerBiometric} />
       <NotificationSettingsSheet open={notificationSettingsOpen} onOpenChange={setNotificationSettingsOpen} />
       <AddressBookSheet open={addressBookOpen} onOpenChange={setAddressBookOpen} />
