@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useTradingApi } from "@/hooks/useTradingApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { lovable } from "@/integrations/lovable";
 import {
   Loader2, TrendingUp, TrendingDown, Bot, LogOut, RefreshCw,
   ArrowUpRight, ArrowDownRight, Activity, Zap,
