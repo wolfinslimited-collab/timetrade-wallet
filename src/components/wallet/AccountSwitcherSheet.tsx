@@ -617,8 +617,6 @@ export function AccountSwitcherSheet({ open, onOpenChange }: AccountSwitcherShee
       window.dispatchEvent(new CustomEvent("timetrade:unlocked", { detail: { pin: storedPin } }));
       window.dispatchEvent(new CustomEvent("timetrade:account-switched"));
 
-      toast.success("Wallet imported successfully");
-
       // Register user in database
       try {
         await projectASupabase.functions.invoke("register-user", {
