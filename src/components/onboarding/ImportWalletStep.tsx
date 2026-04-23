@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { ChevronLeft, Trash2, QrCode, Clipboard, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { validateSeedPhrase, isValidBip39Word } from "@/utils/seedPhrase";
 import { SeedWordInput } from "./SeedWordInput";
 import { QRScannerModal } from "@/components/send/QRScannerModal";
@@ -13,10 +12,10 @@ interface ImportWalletStepProps {
 }
 
 export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) => {
-  const { toast } = useToast();
   const [wordCount, setWordCount] = useState<12 | 24>(12);
   const [words, setWords] = useState<string[]>(Array(12).fill(""));
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   const handleWordCountChange = (count: 12 | 24) => {
     haptics.selection();
@@ -48,11 +47,11 @@ export const ImportWalletStep = ({ onImport, onBack }: ImportWalletStepProps) =>
       setWordCount(targetCount);
       setWords(scannedWords.slice(0, targetCount).concat(Array(Math.max(0, targetCount - scannedWords.length)).fill("")));
       setShowQRScanner(false);
-      toast({ title: "Seed phrase scanned", description: `${Math.min(scannedWords.length, targetCount)} words detected` });
+      setInlineError(null);
     } else {
-      toast({ title: "Invalid QR code", description: "The QR code doesn't contain a valid seed phrase", variant: "destructive" });
+      setInlineError("Invalid QR code — no valid seed phrase found");
     }
-  }, [toast]);
+  }, []);
 
   const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
     if (e.key === "v" && (e.ctrlKey || e.metaKey)) return;
