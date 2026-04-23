@@ -107,11 +107,6 @@ export const WalletOnboarding = ({ onComplete }: WalletOnboardingProps) => {
       setSelectedChain("ethereum");
     } catch (error) {
       console.error("Failed to encrypt seed phrase:", error);
-      toast({
-        title: "Setup failed",
-        description: "Could not secure your wallet. Please try again.",
-        variant: "destructive",
-      });
       return;
     }
 

@@ -80,16 +80,13 @@ export function useFCMToken() {
         // Duplicate token — already registered, treat as success
         setStatus('registered');
         addDebug('token-already-exists', `platform=${platform} token=${token.substring(0, 20)}...`);
-        toast.success("Push notifications registered!");
       } else if (error) {
         setStatus('error');
         setErrorMessage('Failed to save push token');
         addDebug('token-save-error', error.message, true);
-        toast.error("Failed to save push token", { description: error.message });
       } else {
         setStatus('registered');
         addDebug('token-saved', `platform=${platform} token=${token.substring(0, 20)}...`);
-        toast.success("Push notifications registered!");
       }
     }
 
