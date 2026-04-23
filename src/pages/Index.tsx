@@ -237,11 +237,10 @@ const Index = () => {
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.25, ease: [0.25, 0.8, 0.25, 1] }}
-          className="flex-1 flex flex-col overflow-hidden"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.2, 0.65, 0.3, 0.9] } }}
+          exit={{ opacity: 0, transition: { duration: 0.1, ease: "easeIn" } }}
+          className="flex-1 flex flex-col overflow-hidden [will-change:opacity,transform] [backface-visibility:hidden] [transform:translateZ(0)]"
         >
           {currentView === "wallet" ? (
             <>
