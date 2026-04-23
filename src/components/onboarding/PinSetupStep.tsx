@@ -86,13 +86,7 @@ export const PinSetupStep = ({ onComplete, onBack }: PinSetupStepProps) => {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
-        <button
-          onClick={step === "confirm" && !success ? handleReset : onBack}
-          className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.05] border border-white/[0.08] active:scale-90 transition-transform"
-          aria-label="Back"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+        <div className="w-9 h-9" />
         <div className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           {step === "create" ? "Step 1 of 2" : "Step 2 of 2"}
         </div>

@@ -241,13 +241,7 @@ export const FeatureTourStep = ({ onContinue, onBack }: FeatureTourStepProps) =>
         className="shrink-0 px-5 pt-3 pb-2 flex items-center justify-between"
         style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))" }}
       >
-        <button
-          onClick={handleBack}
-          className="w-9 h-9 rounded-full bg-card border border-border/40 flex items-center justify-center transition-transform duration-150 active:scale-90"
-          aria-label="Back"
-        >
-          <ChevronLeft className="w-5 h-5 text-foreground/80" />
-        </button>
+        <div className="w-9 h-9" />
         <div className="flex items-center gap-1.5">
           {slides.map((_, i) => (
             <span
