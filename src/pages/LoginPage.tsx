@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Bot, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTradingApi, isNativePlatform } from "@/hooks/useTradingApi";
+import { useTradingApi } from "@/hooks/useTradingApi";
 
 type AuthView = "login" | "signup" | "forgot";
 
@@ -19,7 +19,6 @@ const LoginPage = () => {
   const [forgotError, setForgotError] = useState<string | null>(null);
 
   const redirect = searchParams.get("redirect") || "/?tab=trading";
-  const native = isNativePlatform();
 
   // After successful auth, leave login screen.
   useEffect(() => {
@@ -106,8 +105,7 @@ const LoginPage = () => {
           </div>
         ) : (
           <>
-            {/* Google button — web only. Hidden on native to avoid the broken in-app browser flow. */}
-            {view !== "forgot" && !native && (
+            {view !== "forgot" && (
               <div className="w-full max-w-[420px] mb-4">
                 <button
                   type="button"
