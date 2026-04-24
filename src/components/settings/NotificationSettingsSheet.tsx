@@ -91,7 +91,9 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
         <SheetHeader className="text-left pb-4">
           <SheetTitle
             className="flex items-center gap-2 select-none cursor-pointer"
-            onClick={handleDoubleTapTitle}
+            onClick={handleTitleTap}
+            onDoubleClick={toggleDebug}
+            onTouchEnd={handleTitleTap}
           >
             <Bell className="w-5 h-5 text-primary" />
             Push Notifications
