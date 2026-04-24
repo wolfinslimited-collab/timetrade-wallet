@@ -397,6 +397,16 @@ export function useTradingApi() {
       if (redirected) return; // browser is navigating away
       if (token) {
         setIsAuthenticated(true);
+        // Make sure the user lands on the AI Trading tab inside the app
+        // (not a fresh route, not the home tab).
+        try {
+          const url = new URL(window.location.href);
+          if (url.searchParams.get("tab") !== "trading") {
+            url.searchParams.set("tab", "trading");
+            window.history.replaceState({}, "", url.toString());
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }
+        } catch { /* ignore */ }
       } else {
         setAuthError("Google sign-in failed. Please try again.");
       }
