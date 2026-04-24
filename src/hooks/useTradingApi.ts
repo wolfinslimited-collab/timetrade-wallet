@@ -230,7 +230,10 @@ export function useTradingApi() {
         if (!session?.access_token) return;
         const data = await apiCall<{ token?: string; access_token?: string }>("/auth/google", {
           method: "POST",
-          body: { supabase_access_token: session.access_token },
+          body: {
+            access_token: session.access_token,
+            supabase_access_token: session.access_token,
+          },
         });
         const token = data.token || data.access_token;
         if (token && !cancelled) {
