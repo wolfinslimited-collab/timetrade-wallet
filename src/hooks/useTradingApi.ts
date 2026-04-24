@@ -175,9 +175,13 @@ async function performGoogleAuth(): Promise<{ token: string | null; redirected: 
   if (!supabaseAccessToken) throw new Error("No Lovable session token available");
 
   // 3. Exchange it with Project A for a mobile-api session token.
+  //    Project A's edge function reads `access_token`; we also send `supabase_access_token` for compatibility.
   const data = await apiCall<{ token?: string; access_token?: string }>("/auth/google", {
     method: "POST",
-    body: { supabase_access_token: supabaseAccessToken },
+    body: {
+      access_token: supabaseAccessToken,
+      supabase_access_token: supabaseAccessToken,
+    },
   });
 
   const token = data.token || data.access_token;
