@@ -215,6 +215,31 @@ export function useTradingApi() {
     setIsCheckingSession(false);
   }, []);
 
+  // After OAuth redirect-back, finish the Google exchange if a Lovable session is present
+  // but we don't yet have a Project A token.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (getStoredToken()) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const data = await apiCall<{ token?: string; access_token?: string }>("/auth/google", {
+          method: "POST",
+          body: { supabase_access_token: session.access_token },
+        });
+        const token = data.token || data.access_token;
+        if (token && !cancelled) {
+          storeToken(token);
+          setIsAuthenticated(true);
+        }
+      } catch {
+        /* not signed in via Lovable, or exchange failed — ignore */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const authenticate = useCallback(async (email: string, password: string) => {
     setIsAuthenticating(true);
     setAuthError(null);
@@ -249,8 +274,27 @@ export function useTradingApi() {
     }
   }, []);
 
+  const authenticateWithGoogle = useCallback(async () => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const { token, redirected } = await performGoogleAuth();
+      if (redirected) return; // browser is navigating away
+      if (token) {
+        setIsAuthenticated(true);
+      } else {
+        setAuthError("Google sign-in failed. Please try again.");
+      }
+    } catch (e: any) {
+      setAuthError(e.message || "Google sign-in failed");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     clearStoredToken();
+    supabase.auth.signOut().catch(() => { /* ignore */ });
     setIsAuthenticated(false);
     setBalance(null);
     setTradingStatus(null);
