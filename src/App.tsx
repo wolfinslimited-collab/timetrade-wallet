@@ -50,12 +50,7 @@ const OAuthCompleteBridge = () => {
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
-      if (url.searchParams.get("oauth_complete") !== "1") return;
-
-      // Strip the marker from the URL so it doesn't loop on re-renders.
-      url.searchParams.delete("oauth_complete");
-      const cleanPath = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "") + url.hash;
-      window.history.replaceState({}, "", cleanPath);
+      if (url.pathname !== "/oauth/native-callback") return;
 
       // Fire the deep link. Use an iframe + window.location fallback for max
       // reliability across iOS Safari versions.
@@ -122,7 +117,8 @@ const KeyboardDismisser = () => {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
-  useFCMToken();
+  const isNativeOAuthCallback = location.pathname === "/oauth/native-callback";
+  useFCMToken({ disabled: isNativeOAuthCallback });
 
   return (
     <>
@@ -152,6 +148,7 @@ const AnimatedRoutes = () => {
             <Route path="/ai-trading/start" element={<AITradingOnboardingPage />} />
             <Route path="/ai-trading/wallet" element={<AITradingWalletPage />} />
             <Route path="/ota-deploy" element={<OTADeployPage />} />
+            <Route path="/oauth/native-callback" element={null} />
             <Route path="/~oauth/*" element={<OAuthBounce />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
