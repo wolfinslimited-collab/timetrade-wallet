@@ -251,12 +251,14 @@ const Index = () => {
               />
               <div className="flex-1 overflow-y-auto pb-nav-safe" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'none' }}>
                 <PullToRefresh onRefresh={handleRefresh}>
-                  {/* Balance Section */}
-                  <div className="px-6 pt-8 pb-6 text-center">
-                    {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
+                  {(isLoadingBalance || isLoadingAccounts || !isConnected) ? (
+                    <div className="px-6 pt-8 pb-6">
                       <PortfolioSkeleton />
-                    ) : (
-                      <>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Balance Section */}
+                      <div className="px-6 pt-8 pb-6 text-center">
                         <p className="text-muted-foreground text-[13px] font-medium mb-3">Total Balance</p>
                         <h1
                           className="font-balance text-[44px] font-extrabold tracking-[-0.045em] leading-none"
@@ -279,29 +281,29 @@ const Index = () => {
                             <span>{isPositive ? "+" : ""}{dollarChange.toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)</span>
                           </div>
                         )}
-                      </>
-                    )}
-                  </div>
+                      </div>
 
-                  {/* Quick Actions */}
-                  <QuickActions />
+                      {/* Quick Actions */}
+                      <QuickActions />
 
-                  {/* Token List */}
-                  <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
-                    <div className="px-5 flex items-center justify-between mb-3">
-                      <h2 className="text-[15px] font-bold text-foreground">
-                        Assets
-                      </h2>
-                      <button 
-                        onClick={() => navigate("/assets")}
-                        className="flex items-center gap-0.5 text-[12px] text-primary font-semibold active:opacity-70"
-                      >
-                        View All
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <UnifiedTokenList key={`tokens-${refreshKey}`} />
-                  </div>
+                      {/* Token List */}
+                      <div className="mt-6 mx-4 bg-card rounded-3xl border border-border/40 pt-5 pb-3">
+                        <div className="px-5 flex items-center justify-between mb-3">
+                          <h2 className="text-[15px] font-bold text-foreground">
+                            Assets
+                          </h2>
+                          <button 
+                            onClick={() => navigate("/assets")}
+                            className="flex items-center gap-0.5 text-[12px] text-primary font-semibold active:opacity-70"
+                          >
+                            View All
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <UnifiedTokenList key={`tokens-${refreshKey}`} />
+                      </div>
+                    </>
+                  )}
                 </PullToRefresh>
               </div>
             </>
