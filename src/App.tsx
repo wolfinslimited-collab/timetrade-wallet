@@ -23,6 +23,7 @@ import LiveTradesPage from "./pages/LiveTradesPage";
 import AITradingOnboardingPage from "./pages/AITradingOnboardingPage";
 import AITradingWalletPage from "./pages/AITradingWalletPage";
 import OTADeployPage from "./pages/OTADeployPage";
+import LoginPage from "./pages/LoginPage";
 
 // Defensive guard: if the native shell ever navigates to `/~oauth/...`
 // (e.g. cached install, missed redirect), bounce to the published web
@@ -32,41 +33,6 @@ const OAuthBounce = () => {
     try {
       const target = `https://timetrade-wallet.lovable.app${window.location.pathname}${window.location.search}${window.location.hash}`;
       window.location.replace(target);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-  return null;
-};
-
-// When the OAuth broker redirects back, the published web page loads INSIDE
-// the in-app browser sheet (SFSafariViewController on iOS / Chrome Custom Tab
-// on Android). The sheet won't auto-close because the WebView in the native
-// shell never sees that navigation. We fix that by firing a custom-scheme
-// deep link (`com.wallet.ai://oauth-done`). iOS/Android intercept that
-// scheme, dismiss the in-app browser, switch to the native app, and trigger
-// `appUrlOpen` — which our native flow listens for to finalize sign-in.
-const OAuthCompleteBridge = () => {
-  useEffect(() => {
-    try {
-      const url = new URL(window.location.href);
-      const isNativeOAuthDone = url.searchParams.get("native_oauth") === "done";
-      if (!isNativeOAuthDone) return;
-
-      // Fire the deep link. Use an iframe + window.location fallback for max
-      // reliability across iOS Safari versions.
-      const deepLink = "com.wallet.ai://oauth-done";
-      try {
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = deepLink;
-        document.body.appendChild(iframe);
-        setTimeout(() => { try { iframe.remove(); } catch { /* ignore */ } }, 1500);
-      } catch { /* ignore */ }
-      // Fallback: direct navigation. iOS will intercept the scheme.
-      setTimeout(() => {
-        try { window.location.href = deepLink; } catch { /* ignore */ }
-      }, 100);
     } catch {
       /* ignore */
     }
@@ -118,14 +84,11 @@ const KeyboardDismisser = () => {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isNativeOAuthCallback = searchParams.get("native_oauth") === "done";
-  useFCMToken({ disabled: isNativeOAuthCallback });
+  useFCMToken();
 
   return (
     <>
       <KeyboardDismisser />
-      <OAuthCompleteBridge />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}
@@ -138,6 +101,7 @@ const AnimatedRoutes = () => {
           <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/notifications" element={<Index />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/ai-chat" element={<AIChatPageRoute />} />
             <Route path="/asset" element={<AssetDetailPage />} />
             <Route path="/assets" element={<AllAssetsPage />} />
