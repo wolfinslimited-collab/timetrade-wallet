@@ -1,45 +1,57 @@
 
+Goal: fix Google sign-in on mobile so tapping “Continue with Google” no longer opens the app’s 404 screen.
 
-## Goal
+What I found
+- The current mobile patch only changes the OAuth `redirect_uri` in `src/hooks/useTradingApi.ts`.
+- The auth library still starts the flow through a relative broker path: `"/~oauth/initiate"`.
+- In the native mobile shell, that relative path resolves against the app origin (`capacitor://localhost`), so the app navigates to a local route like `/~oauth/initiate` and React Router shows `NotFound`.
+- That matches the screenshot exactly: this is not the Google callback failing first, it is the OAuth start URL being opened on the wrong origin.
 
-Silence the noisy toast popups that appear during wallet creation, wallet import, and push notification registration — these are the ones surfacing on app launch (like "Push notifications registered!" in your screenshot). Keep critical toasts (transaction errors, copy confirmations, security alerts) so the app remains usable.
+Implementation plan
+1. Make the OAuth start URL native-safe
+- Update the AI Trading Google auth flow to use the published app origin for the broker URL on native mobile.
+- Keep normal web behavior unchanged.
+- Use these two native helpers together:
+  - published broker URL: `https://timetrade-wallet.lovable.app/~oauth/initiate`
+  - published redirect URL: `https://timetrade-wallet.lovable.app/?tab=trading`
 
-## Files containing the popups you asked about
+2. Apply the fix inside the trading auth hook
+- Refactor `src/hooks/useTradingApi.ts` so native mobile Google auth uses a native-aware auth instance/config instead of the current relative broker path.
+- Keep the existing token exchange logic after return:
+  - get current auth session
+  - call `/auth/google`
+  - store trading API token
+  - mark AI Trading as authenticated
 
-**Wallet Create flow**
-- `src/components/WalletOnboarding.tsx` — "Setup failed" error toast during seed encryption (line ~110)
-- `src/components/onboarding/SuccessStep.tsx` — full-screen "Wallet Created!" success step (visual screen, not a toast)
+3. Add a defensive fallback for accidental `/~oauth/*` hits
+- Add a small route guard or redirect handler so if the mobile app ever lands on `/~oauth/...` locally again, it immediately forwards to the published URL instead of rendering the app’s 404 page.
+- This prevents bad UX for cached installs or edge cases.
 
-**Wallet Import flow**
-- `src/components/onboarding/ImportWalletStep.tsx` — toasts for: scanned, pasted, invalid QR, invalid clipboard, incomplete seed, invalid words, invalid checksum (lines 51, 53, 88, 101, 103, 106, 117, 122, 126)
-- `src/components/wallet/AccountSwitcherSheet.tsx` — `toast.success("Wallet imported successfully")` (line 620) when importing an additional account
+4. Verify mobile tab return behavior
+- Ensure the user lands back on AI Trading (`/?tab=trading`) after auth.
+- Confirm the existing `Index.tsx` tab parsing and session completion flow still activates the trading tab and finalizes login.
 
-**Web / Push notification popup**
-- `src/hooks/useFCMToken.ts` — `toast.success("Push notifications registered!")` (lines 83 and 92) — this is the popup in your screenshot
-- `src/components/settings/NotificationSettingsSheet.tsx` — toasts for enable/disable feedback
-- `src/pages/NotificationsPage.tsx` — debug copy toast
+Files to update
+- `src/hooks/useTradingApi.ts`
+- `src/App.tsx` or a tiny redirect component used by routing
 
-## Proposed changes
+Expected result
+- Web stays as-is.
+- On mobile, “Continue with Google” opens the correct hosted OAuth entrypoint instead of the app-local `/~oauth/initiate`.
+- The user returns to the AI Trading tab authenticated, with no “Page not found” screen.
 
-### 1. Remove the auto-registration popup (the one in your screenshot)
-Delete both `toast.success("Push notifications registered!")` calls in `src/hooks/useFCMToken.ts`. Status is already tracked in state — no need to interrupt the user on every app open.
+Technical note
+```text
+Current mobile flow
+capacitor://localhost/?tab=trading
+  -> /~oauth/initiate   (relative, wrong origin)
+  -> React Router NotFound
 
-### 2. Silence wallet create flow
-Remove the "Setup failed" toast in `WalletOnboarding.tsx`. Replace with inline error handling (the user already sees the success step UI on completion).
-
-### 3. Silence wallet import flow
-- `ImportWalletStep.tsx`: Remove the 7 informational/validation toasts. Replace destructive validation errors (incomplete, invalid words, bad checksum) with **inline red text under the seed grid** — better UX than a popup.
-- `AccountSwitcherSheet.tsx`: Remove the "Wallet imported successfully" toast — the sheet closes and the new account appears, which is feedback enough.
-
-### 4. Keep these (do NOT remove)
-- Transaction send errors / success (`ConfirmationStep.tsx`, `TransactionResultStep.tsx`) — financial actions need confirmation
-- Copy-to-clipboard toasts (address, seed phrase) — standard UX expectation
-- Lock screen "Incorrect PIN" toasts — security feedback
-- Biometric / PIN settings toasts — explicit user actions in settings
-
-If you'd rather strip **every single toast everywhere** (including transaction confirmations and copy feedback), say "remove all toasts globally" and I'll do that instead — but it will make some flows feel broken.
-
-### Technical notes
-- No changes to `<Toaster />` / `<Sonner />` mounts in `App.tsx` — the toast system stays available for the kept use cases.
-- `AlertDialog` components (delete account confirm, remove key confirm) are **modals**, not popup alerts — they stay, since removing them would break destructive-action confirmations Apple requires.
-
+Fixed mobile flow
+capacitor app
+  -> https://timetrade-wallet.lovable.app/~oauth/initiate
+  -> Google
+  -> https://timetrade-wallet.lovable.app/?tab=trading
+  -> session exchange in useTradingApi
+  -> authenticated AI Trading dashboard
+```
