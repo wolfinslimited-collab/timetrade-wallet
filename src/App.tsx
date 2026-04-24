@@ -24,6 +24,21 @@ import AITradingOnboardingPage from "./pages/AITradingOnboardingPage";
 import AITradingWalletPage from "./pages/AITradingWalletPage";
 import OTADeployPage from "./pages/OTADeployPage";
 
+// Defensive guard: if the native shell ever navigates to `/~oauth/...`
+// (e.g. cached install, missed redirect), bounce to the published web
+// origin so the user doesn't end up on the in-app 404 screen.
+const OAuthBounce = () => {
+  useEffect(() => {
+    try {
+      const target = `https://timetrade-wallet.lovable.app${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(target);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  return null;
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -97,6 +112,7 @@ const AnimatedRoutes = () => {
             <Route path="/ai-trading/start" element={<AITradingOnboardingPage />} />
             <Route path="/ai-trading/wallet" element={<AITradingWalletPage />} />
             <Route path="/ota-deploy" element={<OTADeployPage />} />
+            <Route path="/~oauth/*" element={<OAuthBounce />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </motion.div>

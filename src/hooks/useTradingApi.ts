@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { lovable } from "@/integrations/lovable/index";
+import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
 import { supabase } from "@/integrations/supabase/client";
 
 const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
@@ -160,32 +161,63 @@ async function performForgotPassword(email: string): Promise<void> {
 
 // ── Google auth via Lovable Cloud managed OAuth ──
 
+const PUBLISHED_WEB_ORIGIN = "https://timetrade-wallet.lovable.app";
+
+function isNativePlatform(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      ((window as any).Capacitor?.isNativePlatform?.() ||
+        /^capacitor:|^ionic:/i.test(window.location.protocol))
+    );
+  } catch {
+    return false;
+  }
+}
+
 function getOAuthRedirectUri(): string {
   // On native (Capacitor) the current URL is something like `capacitor://localhost/...`
   // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
   // Use the published web origin instead so the in-app browser returns successfully.
-  try {
-    const isNative =
-      typeof window !== "undefined" &&
-      ((window as any).Capacitor?.isNativePlatform?.() ||
-        /^capacitor:|^ionic:/i.test(window.location.protocol));
-    if (isNative) {
-      return "https://timetrade-wallet.lovable.app/?tab=trading";
-    }
-  } catch {
-    // ignore — fall through to web origin
+  if (isNativePlatform()) {
+    return `${PUBLISHED_WEB_ORIGIN}/?tab=trading`;
   }
   return window.location.href;
 }
 
+// On native mobile we can't use the default relative `/~oauth/initiate`,
+// because it resolves against `capacitor://localhost` and the WebView simply
+// renders the in-app 404. We point the broker at the published web origin
+// so the in-app browser opens the real Lovable OAuth entrypoint.
+const nativeLovableAuth = createLovableAuth({
+  oauthBrokerUrl: `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate`,
+});
+
 async function performGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
   // 1. Trigger Lovable-managed Google OAuth. May redirect the browser.
-  const result = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: getOAuthRedirectUri(),
-  });
+  //    Use a native-aware broker URL so Capacitor doesn't navigate to a
+    //    local `/~oauth/initiate` path that doesn't exist in the app shell.
+  const result = isNativePlatform()
+    ? await nativeLovableAuth.signInWithOAuth("google", {
+        redirect_uri: getOAuthRedirectUri(),
+      })
+    : await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: getOAuthRedirectUri(),
+      });
 
   if (result.redirected) return { token: null, redirected: true };
   if (result.error) throw result.error;
+
+  // The native path returns tokens directly (no redirect). Persist them in
+  // the Supabase client so the session-exchange step below works the same
+  // way as the web redirect-back flow.
+  if ((result as any).tokens) {
+    try {
+      await supabase.auth.setSession((result as any).tokens);
+    } catch {
+      /* ignore — fall through to session lookup */
+    }
+  }
 
   // 2. Get the freshly-set Lovable Supabase session JWT.
   const { data: { session } } = await supabase.auth.getSession();
