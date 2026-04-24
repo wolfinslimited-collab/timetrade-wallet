@@ -22,6 +22,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Custom-scheme deep link used to return from the in-app
+                 OAuth browser sheet (Google sign-in). The web bridge page
+                 at /auth-bridge.html redirects to com.wallet.ai://oauth-callback
+                 carrying the Supabase tokens in the URL fragment. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.wallet.ai" android:host="oauth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
