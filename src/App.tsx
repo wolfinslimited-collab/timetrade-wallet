@@ -39,6 +39,45 @@ const OAuthBounce = () => {
   return null;
 };
 
+// When the OAuth broker redirects back, the published web page loads INSIDE
+// the in-app browser sheet (SFSafariViewController on iOS / Chrome Custom Tab
+// on Android). The sheet won't auto-close because the WebView in the native
+// shell never sees that navigation. We fix that by firing a custom-scheme
+// deep link (`com.wallet.ai://oauth-done`). iOS/Android intercept that
+// scheme, dismiss the in-app browser, switch to the native app, and trigger
+// `appUrlOpen` — which our native flow listens for to finalize sign-in.
+const OAuthCompleteBridge = () => {
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("oauth_complete") !== "1") return;
+
+      // Strip the marker from the URL so it doesn't loop on re-renders.
+      url.searchParams.delete("oauth_complete");
+      const cleanPath = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "") + url.hash;
+      window.history.replaceState({}, "", cleanPath);
+
+      // Fire the deep link. Use an iframe + window.location fallback for max
+      // reliability across iOS Safari versions.
+      const deepLink = "com.wallet.ai://oauth-done";
+      try {
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = deepLink;
+        document.body.appendChild(iframe);
+        setTimeout(() => { try { iframe.remove(); } catch { /* ignore */ } }, 1500);
+      } catch { /* ignore */ }
+      // Fallback: direct navigation. iOS will intercept the scheme.
+      setTimeout(() => {
+        try { window.location.href = deepLink; } catch { /* ignore */ }
+      }, 100);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  return null;
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -88,6 +127,7 @@ const AnimatedRoutes = () => {
   return (
     <>
       <KeyboardDismisser />
+      <OAuthCompleteBridge />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}

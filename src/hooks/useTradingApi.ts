@@ -181,7 +181,9 @@ function getOAuthRedirectUri(): string {
   // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
   // Use the published web origin instead so the in-app browser returns successfully.
   if (isNativePlatform()) {
-    return `${PUBLISHED_WEB_ORIGIN}/?tab=trading`;
+    // Mark this redirect so the page (loaded inside the in-app browser sheet)
+    // knows to fire the custom-scheme deep link that closes the sheet.
+    return `${PUBLISHED_WEB_ORIGIN}/?tab=trading&oauth_complete=1`;
   }
   return window.location.href;
 }
@@ -192,7 +194,7 @@ function getOAuthRedirectUri(): string {
 // users were seeing the system Safari/Chrome instead of an in-app sheet.
 async function performNativeGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
   // Build the broker URL ourselves so we control the window.
-  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/?tab=trading`;
+  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/?tab=trading&oauth_complete=1`;
   const brokerUrl =
     `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate` +
     `?provider=google` +
