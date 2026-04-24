@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTradingApi } from "@/hooks/useTradingApi";
+import { useTradingApi, isNativePlatform } from "@/hooks/useTradingApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -85,7 +86,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       ) : (
         <>
           {view !== "forgot" && (
-            <div className="w-full max-w-[420px] mb-4">
+            !isNativePlatform() && <div className="w-full max-w-[420px] mb-4">
               <button
                 type="button"
                 onClick={() => api.authenticateWithGoogle()}
