@@ -512,7 +512,7 @@ export const AITradingPage = ({ onBack }: AITradingPageProps) => {
 
   useEffect(() => {
     if (!api.isCheckingSession && !api.isAuthenticated) {
-      navigate("/login?redirect=" + encodeURIComponent("/?tab=trading"), { replace: true });
+      navigate("/login?redirect=" + encodeURIComponent("/?tab=trading"));
     }
   }, [api.isCheckingSession, api.isAuthenticated, navigate]);
 

@@ -158,7 +158,7 @@ async function performForgotPassword(email: string): Promise<void> {
   });
 }
 
-// ── Google auth via Lovable Cloud managed OAuth (web only for now) ──
+// ── Google auth via Lovable Cloud managed OAuth ──
 
 export function isNativePlatform(): boolean {
   try {
@@ -173,14 +173,8 @@ export function isNativePlatform(): boolean {
 }
 
 async function performGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
-  // Native is not supported yet — surface a clear error so the UI can hide the button.
-  if (isNativePlatform()) {
-    throw new Error("Google sign-in is not available in the mobile app yet. Please use email login.");
-  }
-
-  // Web: standard Lovable-managed redirect flow.
   const result = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.href,
+    redirect_uri: window.location.origin,
   });
 
   if (result.redirected) return { token: null, redirected: true };
