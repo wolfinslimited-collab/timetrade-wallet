@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Returning to Timetrade Wallet…</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0b0b10;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .card { padding: 24px 28px; max-width: 320px; }
+    .spinner {
+      width: 28px; height: 28px; margin: 0 auto 16px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #6c8cff;
+      border-radius: 50%;
+      animation: s 0.9s linear infinite;
+    }
+    @keyframes s { to { transform: rotate(360deg); } }
+    h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+    p { font-size: 13px; opacity: 0.7; margin: 0; }
+    a { color: #6c8cff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner" aria-hidden="true"></div>
+    <h1>Returning to the app…</h1>
+    <p id="msg">Finishing sign-in.</p>
+  </div>
+  <script>
+    (function () {
+      // We arrive here from Lovable's OAuth broker after Google sign-in.
+      // The broker delivers the Supabase session in the URL fragment, e.g.:
+      //   /auth-bridge#access_token=...&refresh_token=...&expires_at=...
+      // We forward EVERYTHING after the '#' to a custom-scheme deep link
+      // that the native Capacitor shell is registered for. The native app
+      // listens for App.appUrlOpen, parses the same fragment, and finishes
+      // the auth handoff inside the WebView.
+      var SCHEME = "com.wallet.ai://oauth-callback";
+      var hash = window.location.hash || "";
+      var search = window.location.search || "";
+      // Strip leading '#' / '?'
+      var fragment = hash.replace(/^#/, "");
+      var query = search.replace(/^\?/, "");
+      var payload = fragment || query || "";
+      var deepLink = SCHEME + (payload ? "#" + payload : "");
+
+      // Try to bounce to the app. On iOS / Android in-app browsers
+      // (SFSafariViewController, Chrome Custom Tabs) this triggers the
+      // app's URL handler, which closes the sheet and resumes the app.
+      try {
+        window.location.replace(deepLink);
+      } catch (e) {
+        // ignore
+      }
+
+      // If after a moment the deep link did not catch (e.g. user opened
+      // this in a regular browser), give them a manual button.
+      setTimeout(function () {
+        var msg = document.getElementById("msg");
+        if (msg) {
+          msg.innerHTML =
+            'If the app did not reopen, <a href="' + deepLink + '">tap here to return</a>.';
+        }
+      }, 1500);
+    })();
+  </script>
+</body>
+</html>
