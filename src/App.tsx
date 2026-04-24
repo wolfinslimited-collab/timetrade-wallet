@@ -127,6 +127,7 @@ const AnimatedRoutes = () => {
   return (
     <>
       <KeyboardDismisser />
+      <OAuthCompleteBridge />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}
