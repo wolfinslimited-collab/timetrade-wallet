@@ -42,10 +42,10 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
     });
   }, []);
 
-  // Works for both desktop double-click AND touch double-tap
+  // Touch double-tap detection (mobile) — desktop uses native onDoubleClick
   const handleTitleTap = useCallback(() => {
     const now = Date.now();
-    if (now - lastTapRef.current < 600) {
+    if (now - lastTapRef.current < 400) {
       toggleDebug();
       lastTapRef.current = 0;
     } else {
@@ -91,7 +91,6 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
         <SheetHeader className="text-left pb-4">
           <SheetTitle
             className="flex items-center gap-2 select-none cursor-pointer"
-            onClick={handleTitleTap}
             onDoubleClick={toggleDebug}
             onTouchEnd={handleTitleTap}
           >
