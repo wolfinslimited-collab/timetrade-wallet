@@ -1,57 +1,54 @@
 
-Goal: make "Continue with Google" open inside the app (in-app browser) instead of kicking the user out to Safari/Chrome, and return cleanly without a 404.
+Goal: clarify what from the ChatGPT spec actually applies to your app, and propose the minimum real fix.
 
-Why this is happening
-- Today we call `lovable.auth.signInWithOAuth("google", ...)`, which sets `window.location.href` to the OAuth URL.
-- Inside the Capacitor WebView, that hands the URL off to the OS, which launches **Safari (iOS) / Chrome (Android)** — the "external browser" you're seeing.
-- Google **forbids** signing in inside an embedded WebView (`disallowed_useragent`), so we can't just load Google directly in the app's own WebView.
-- The correct native pattern is an **in-app browser** (SFSafariViewController on iOS, Chrome Custom Tab on Android) via `@capacitor/browser`. It slides up over the app, looks in-app, and we can close it programmatically when auth finishes.
+What the ChatGPT spec assumes (that you DON'T have)
+1. **Your own backend that you control the redirect of.**
+   - The spec says: "Backend redirects → `myapp://auth?token=xxx`".
+   - In your app, the OAuth backend is **Lovable Cloud's managed Google OAuth broker** (`/~oauth/initiate` → `/~oauth/callback` on `timetrade-wallet.lovable.app`).
+   - You cannot tell Lovable's broker to redirect to `com.wallet.ai://auth?token=...`. It only redirects to the `redirect_uri` you pass, which must be an HTTPS URL that's registered with Google as an authorized redirect URI.
+   - So step "📁 3. Backend Redirect" — `res.redirect('myapp://auth?token=...')` — is **not something we can do** without you running your own OAuth server.
 
-About the "Page not found"
-- That's the same wrong-origin issue: after Google, the broker tries to bounce to a path that the native WebView resolves against `capacitor://localhost`, hitting React Router's `NotFound`.
-- Once we own the OAuth window via `@capacitor/browser`, we control return ourselves and dismiss it — no 404 screen.
+2. **A JWT in the deep link.**
+   - The spec hands a token to the app via the URL. Lovable's broker doesn't do that — it sets a Supabase session cookie/token in the browser context, and your app reads it via `supabase.auth.getSession()`.
+   - That's why the current code polls `getSession()` after the in-app browser closes.
 
-Implementation plan
+3. **A custom URL scheme like `myapp://`.**
+   - You don't have one registered. Your `capacitor.config.ts` has no `appUrlOpen` scheme, your `AndroidManifest.xml` has no `<intent-filter>` for a custom scheme, and your iOS `Info.plist` has no `CFBundleURLTypes`.
+   - Even if we added one, Lovable's broker still can't redirect to it.
 
-1. Add the in-app browser plugin
-- Install `@capacitor/browser`.
-- Will require `npx cap sync` after build (standard Capacitor step).
+What IS already correct in your current code
+- ✅ Uses `@capacitor/browser` `Browser.open(...)` → opens **in-app** SFSafariViewController / Chrome Custom Tab (NOT external Safari/Chrome). This matches the spec's #1 requirement.
+- ✅ Listens for `appUrlOpen` and `browserFinished` to auto-close the sheet.
+- ✅ Closes the browser when the redirect comes back.
+- ✅ Reads the session and exchanges it with your trading API for a token.
 
-2. Build a native Google auth path in `useTradingApi.ts`
-- On native only, do NOT call `lovable.auth.signInWithOAuth` (which redirects the WebView).
-- Instead:
-  - Build the OAuth start URL manually: `https://timetrade-wallet.lovable.app/~oauth/initiate?provider=google&redirect_uri=https://timetrade-wallet.lovable.app/?tab=trading&...`
-  - Open it with `Browser.open({ url, presentationStyle: "popover" })` → this is the **in-app** Safari/Chrome sheet, not external Safari.
-  - Listen for `Browser.addListener("browserFinished", ...)` and `appUrlOpen` to know when the user returns.
-  - On return, call `Browser.close()` to dismiss the sheet, then run the existing token-exchange logic (`supabase.auth.getSession()` → `/auth/google`).
+So what's the ACTUAL problem you're seeing?
+You said earlier you saw it "open in external web browser". Two possible causes, and they need different fixes:
 
-3. Handle the return without a deep link
-- Since Lovable's OAuth broker redirects back to the published web URL (not a custom scheme), we use the simpler "polling on resume" pattern:
-  - When the in-app browser closes (`browserFinished` event), poll `supabase.auth.getSession()` for up to ~10s.
-  - As soon as a session appears, exchange it for the trading API token and mark authenticated.
-- Keep the existing `OAuthBounce` route as a safety net for any edge case.
-- Web behavior is unchanged (still uses `lovable.auth.signInWithOAuth` redirect flow).
+A. **Old build still installed on your device.**
+   - The `Browser.open` fix was added in the previous turn. If you haven't run `npm install && npm run build && npx cap sync ios && rebuild in Xcode`, the device is still running the old code that uses `window.location.href` → which iOS hands off to system Safari.
+   - **This is the most likely cause.** No code change will fix it until you rebuild.
 
-4. Clean up the UX
-- While the in-app browser is open, keep `isAuthenticating = true` so the button stays in loading state.
-- If the user dismisses the sheet without completing, clear loading state and show no error.
-- On success, automatically navigate to the AI Trading dashboard.
+B. **`Browser.open` is being called but iOS is escalating it.**
+   - This shouldn't happen with `@capacitor/browser` — it explicitly uses SFSafariViewController. If it does, we'd need logs.
 
-Files to update
-- `src/hooks/useTradingApi.ts` — native Google flow uses `@capacitor/browser` + session polling.
-- `package.json` — add `@capacitor/browser`.
-- `src/App.tsx` — keep `OAuthBounce` as fallback (no change needed).
+The realistic plan
+1. **Don't add a custom `myapp://` scheme.** It would only help if you owned the OAuth backend, which you don't (you use Lovable's managed broker).
+2. **Don't change the auth flow code.** The current `performNativeGoogleAuth` already does exactly what the spec's #1, #2, #4, #5 ask for, adapted to Lovable's managed OAuth.
+3. **Rebuild the native app** so the in-app browser fix actually ships to your device:
+   ```bash
+   git pull
+   npm install
+   npm run build
+   npx cap sync ios
+   # then open ios/App in Xcode and Run on device
+   ```
+4. **After rebuild, test again.** If you STILL see external Safari (not an in-app sheet that slides up), share the new console logs from the `useTradingApi` flow and we'll dig into why `Browser.open` isn't being honored.
 
-Expected result
-```text
-Tap "Continue with Google" on mobile
-  -> in-app browser sheet slides up (still feels in-app)
-  -> Google sign-in completes
-  -> sheet auto-closes
-  -> app picks up the session
-  -> lands on AI Trading dashboard
-  -> no external Safari, no 404 page
-```
+Optional, only if you later run your own OAuth backend
+- Then we can do the full deep-link flow from the ChatGPT spec: register `com.wallet.ai://auth` in `AndroidManifest.xml` + `Info.plist`, have your backend redirect to it with a JWT, and read the token from `appUrlOpen`.
+- Right now this is not applicable.
 
-Note
-- After this change you will need to `git pull`, `npm install`, `npm run build`, then `npx cap sync ios` and rebuild the iOS app for the new `@capacitor/browser` native plugin to be linked.
+Bottom line
+- The ChatGPT spec is correct **for an app with its own OAuth backend**. Yours uses Lovable's managed broker, so steps 3, 4, 5, 6 of that spec are not implementable as written.
+- The in-app browser part of the spec is **already implemented in your code**. You just need to rebuild the iOS app to actually run that code on your device.
