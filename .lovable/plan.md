@@ -1,54 +1,73 @@
+Goal: fix the two things you're seeing in the screenshots.
 
-Goal: clarify what from the ChatGPT spec actually applies to your app, and propose the minimum real fix.
+What you're reporting
+1. **External browser opening** instead of an in-app sheet. Screenshot 2 clearly shows iOS Safari (with the "◀ Timetrade Wa…" back-to-app chip in the status bar) opening `oauth.lovable.app`.
+2. **"redirect_uri is not allowed"** authorization failure on that page.
+3. After login you want to land **back on the AI Trading tab inside the app**, not on a new web route.
 
-What the ChatGPT spec assumes (that you DON'T have)
-1. **Your own backend that you control the redirect of.**
-   - The spec says: "Backend redirects → `myapp://auth?token=xxx`".
-   - In your app, the OAuth backend is **Lovable Cloud's managed Google OAuth broker** (`/~oauth/initiate` → `/~oauth/callback` on `timetrade-wallet.lovable.app`).
-   - You cannot tell Lovable's broker to redirect to `com.wallet.ai://auth?token=...`. It only redirects to the `redirect_uri` you pass, which must be an HTTPS URL that's registered with Google as an authorized redirect URI.
-   - So step "📁 3. Backend Redirect" — `res.redirect('myapp://auth?token=...')` — is **not something we can do** without you running your own OAuth server.
+Why each one is happening
 
-2. **A JWT in the deep link.**
-   - The spec hands a token to the app via the URL. Lovable's broker doesn't do that — it sets a Supabase session cookie/token in the browser context, and your app reads it via `supabase.auth.getSession()`.
-   - That's why the current code polls `getSession()` after the in-app browser closes.
+### Issue A — Still seeing external Safari
+The in-app browser code IS in the codebase (`Browser.open` from `@capacitor/browser` in `src/hooks/useTradingApi.ts`). But two things can defeat it:
+- **The native iOS app on the device hasn't been rebuilt** since `@capacitor/browser` was added. Until you `npm install && npm run build && npx cap sync ios` and re-run from Xcode, the device is running the OLD bundle that uses `lovable.auth.signInWithOAuth` → which calls `window.location.href` → which iOS hands to system Safari. This matches your screenshot exactly (Safari, not an SFSafariViewController sheet).
+- **Even after rebuild**, the `capacitor.config.ts` has no `server.url` block, so the app loads from local bundled assets. That's correct for production. But there is currently no log line confirming `isNativePlatform()` returns `true`, so we can't tell from your screenshot which code path actually ran.
 
-3. **A custom URL scheme like `myapp://`.**
-   - You don't have one registered. Your `capacitor.config.ts` has no `appUrlOpen` scheme, your `AndroidManifest.xml` has no `<intent-filter>` for a custom scheme, and your iOS `Info.plist` has no `CFBundleURLTypes`.
-   - Even if we added one, Lovable's broker still can't redirect to it.
+### Issue B — "redirect_uri is not allowed"
+This is a Lovable OAuth broker error. The broker only accepts `redirect_uri` values on an allowlist (your `*.lovable.app` and `*.lovableproject.com` origins, plus configured custom domains). Right now the code sends:
+```
+redirect_uri = https://timetrade-wallet.lovable.app/?tab=trading
+```
+The base origin `https://timetrade-wallet.lovable.app` IS allowed, but the broker is rejecting the **full URL with query string**. The broker matches against registered origins, and a path/query like `/?tab=trading` can fail the match depending on how the allowlist is configured for this project. That's why the page shows `Authorization failed — redirect_uri is not allowed`.
 
-What IS already correct in your current code
-- ✅ Uses `@capacitor/browser` `Browser.open(...)` → opens **in-app** SFSafariViewController / Chrome Custom Tab (NOT external Safari/Chrome). This matches the spec's #1 requirement.
-- ✅ Listens for `appUrlOpen` and `browserFinished` to auto-close the sheet.
-- ✅ Closes the browser when the redirect comes back.
-- ✅ Reads the session and exchanges it with your trading API for a token.
+### Issue C — "login should open in AI Trade tab, not a new route"
+You want: tap Continue with Google → after login, land back on the AI Trading tab (`/?tab=trading`) inside the app. Not on a separate web page, not on home, not on a 404.
 
-So what's the ACTUAL problem you're seeing?
-You said earlier you saw it "open in external web browser". Two possible causes, and they need different fixes:
+---
 
-A. **Old build still installed on your device.**
-   - The `Browser.open` fix was added in the previous turn. If you haven't run `npm install && npm run build && npx cap sync ios && rebuild in Xcode`, the device is still running the old code that uses `window.location.href` → which iOS hands off to system Safari.
-   - **This is the most likely cause.** No code change will fix it until you rebuild.
+The fix
 
-B. **`Browser.open` is being called but iOS is escalating it.**
-   - This shouldn't happen with `@capacitor/browser` — it explicitly uses SFSafariViewController. If it does, we'd need logs.
+Three small code changes, then a rebuild.
 
-The realistic plan
-1. **Don't add a custom `myapp://` scheme.** It would only help if you owned the OAuth backend, which you don't (you use Lovable's managed broker).
-2. **Don't change the auth flow code.** The current `performNativeGoogleAuth` already does exactly what the spec's #1, #2, #4, #5 ask for, adapted to Lovable's managed OAuth.
-3. **Rebuild the native app** so the in-app browser fix actually ships to your device:
-   ```bash
-   git pull
-   npm install
-   npm run build
-   npx cap sync ios
-   # then open ios/App in Xcode and Run on device
-   ```
-4. **After rebuild, test again.** If you STILL see external Safari (not an in-app sheet that slides up), share the new console logs from the `useTradingApi` flow and we'll dig into why `Browser.open` isn't being honored.
+1. **Use a redirect_uri the broker definitely accepts.** Drop the query string from the redirect_uri sent to the broker. Use the bare published origin `https://timetrade-wallet.lovable.app/`. We restore the `?tab=trading` ourselves after the in-app browser closes by calling `setTab("trading")` (or by router navigation) inside the app — we don't need the broker to preserve it.
+   - File: `src/hooks/useTradingApi.ts`
+     - In `performNativeGoogleAuth`: change `redirectUri` from `${PUBLISHED_WEB_ORIGIN}/?tab=trading` to `${PUBLISHED_WEB_ORIGIN}/`.
+     - In `getOAuthRedirectUri` (web path): same — return `${PUBLISHED_WEB_ORIGIN}/` on native, `window.location.href` on web.
 
-Optional, only if you later run your own OAuth backend
-- Then we can do the full deep-link flow from the ChatGPT spec: register `com.wallet.ai://auth` in `AndroidManifest.xml` + `Info.plist`, have your backend redirect to it with a JWT, and read the token from `appUrlOpen`.
-- Right now this is not applicable.
+2. **Force the in-app browser path on native, with diagnostic logs** so if it ever falls back to system Safari we can see why. Add a `console.info("[google-auth] platform=native, opening in-app browser")` and a matching web log. This makes the next debug round 1 step instead of guessing.
 
-Bottom line
-- The ChatGPT spec is correct **for an app with its own OAuth backend**. Yours uses Lovable's managed broker, so steps 3, 4, 5, 6 of that spec are not implementable as written.
-- The in-app browser part of the spec is **already implemented in your code**. You just need to rebuild the iOS app to actually run that code on your device.
+3. **Land back on the AI Trading tab.** After `performNativeGoogleAuth` resolves successfully, navigate to `/?tab=trading` programmatically (via `window.history.replaceState` + a `popstate` event, or by using your existing tab-state setter). The Account screen is rendered inside the trading tab, so once the user is authenticated the same tab will show the dashboard — no extra routing needed beyond setting `?tab=trading`.
+
+4. **Verify the broker allowlist actually contains your published origin.** If after the above the broker still says `redirect_uri is not allowed` with `https://timetrade-wallet.lovable.app/`, the project's OAuth allowlist itself is wrong, and we need to surface it from Lovable Cloud → Authentication → URL Configuration. (You'd add `https://timetrade-wallet.lovable.app` as an allowed redirect.)
+
+---
+
+After the code change — REQUIRED rebuild
+The in-app browser fix is native code (`@capacitor/browser` plugin). It cannot ship via OTA / Lovable preview. You must:
+```text
+git pull
+npm install
+npm run build
+npx cap sync ios
+# open ios/App in Xcode and Run on device (not just refresh the preview)
+```
+Until you do this, you will keep seeing system Safari no matter how many code changes I make, because the device bundle still contains the old `window.location.href` flow.
+
+---
+
+Expected result after rebuild
+```text
+Tap "Continue with Google" on AI Trade tab
+  → in-app browser sheet slides up (SFSafariViewController, NOT system Safari)
+  → Google sign-in completes on oauth.lovable.app (no "redirect_uri" error)
+  → sheet auto-closes
+  → app returns to ?tab=trading (AI Trading dashboard)
+  → user is logged in, no 404, no new route
+```
+
+Files I'll change
+- `src/hooks/useTradingApi.ts` — drop `?tab=trading` from `redirect_uri`, add platform log, navigate to `?tab=trading` after auth completes.
+
+Files I will NOT change
+- `capacitor.config.ts` — already correct.
+- `src/integrations/lovable/index.ts` — auto-generated, never edit.
+- Anything in `ios/` or `android/` — no native code change needed; the existing `@capacitor/browser` plugin is enough.
