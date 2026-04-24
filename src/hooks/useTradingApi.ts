@@ -163,6 +163,7 @@ async function performForgotPassword(email: string): Promise<void> {
 // ── Google auth via Lovable Cloud managed OAuth ──
 
 const PUBLISHED_WEB_ORIGIN = "https://timetrade-wallet.lovable.app";
+const NATIVE_OAUTH_CALLBACK_PATH = "/oauth/native-callback";
 
 function isNativePlatform(): boolean {
   try {
@@ -181,9 +182,7 @@ function getOAuthRedirectUri(): string {
   // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
   // Use the published web origin instead so the in-app browser returns successfully.
   if (isNativePlatform()) {
-    // Mark this redirect so the page (loaded inside the in-app browser sheet)
-    // knows to fire the custom-scheme deep link that closes the sheet.
-    return `${PUBLISHED_WEB_ORIGIN}/?tab=trading&oauth_complete=1`;
+    return `${PUBLISHED_WEB_ORIGIN}${NATIVE_OAUTH_CALLBACK_PATH}`;
   }
   return window.location.href;
 }
@@ -194,7 +193,7 @@ function getOAuthRedirectUri(): string {
 // users were seeing the system Safari/Chrome instead of an in-app sheet.
 async function performNativeGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
   // Build the broker URL ourselves so we control the window.
-  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/?tab=trading&oauth_complete=1`;
+  const redirectUri = `${PUBLISHED_WEB_ORIGIN}${NATIVE_OAUTH_CALLBACK_PATH}`;
   const brokerUrl =
     `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate` +
     `?provider=google` +
