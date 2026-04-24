@@ -160,10 +160,28 @@ async function performForgotPassword(email: string): Promise<void> {
 
 // ── Google auth via Lovable Cloud managed OAuth ──
 
+function getOAuthRedirectUri(): string {
+  // On native (Capacitor) the current URL is something like `capacitor://localhost/...`
+  // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
+  // Use the published web origin instead so the in-app browser returns successfully.
+  try {
+    const isNative =
+      typeof window !== "undefined" &&
+      ((window as any).Capacitor?.isNativePlatform?.() ||
+        /^capacitor:|^ionic:/i.test(window.location.protocol));
+    if (isNative) {
+      return "https://timetrade-wallet.lovable.app/?tab=trading";
+    }
+  } catch {
+    // ignore — fall through to web origin
+  }
+  return window.location.href;
+}
+
 async function performGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
   // 1. Trigger Lovable-managed Google OAuth. May redirect the browser.
   const result = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.href,
+    redirect_uri: getOAuthRedirectUri(),
   });
 
   if (result.redirected) return { token: null, redirected: true };
