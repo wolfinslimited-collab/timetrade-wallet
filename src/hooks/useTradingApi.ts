@@ -269,6 +269,7 @@ async function performGoogleAuth(): Promise<{ token: string | null; redirected: 
   }
 
   // Web: standard Lovable-managed redirect flow.
+  console.info("[google-auth] platform=web, using Lovable managed OAuth redirect");
   const result = await lovable.auth.signInWithOAuth("google", {
     redirect_uri: getOAuthRedirectUri(),
   });
