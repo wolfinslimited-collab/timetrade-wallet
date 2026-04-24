@@ -194,64 +194,125 @@ function getOAuthRedirectUri(): string {
 // users were seeing the system Safari/Chrome instead of an in-app sheet.
 async function performNativeGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
   console.info("[google-auth] platform=native, opening in-app browser (SFSafariViewController / Custom Tab)");
-  // Build the broker URL ourselves so we control the window.
-  // IMPORTANT: redirect_uri must be the bare allowlisted origin — no query string —
-  // otherwise the broker rejects with "redirect_uri is not allowed".
-  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/`;
+
+  // Strategy:
+  //   1. We point the broker at our own published HTTPS bridge page
+  //      (https://timetrade-wallet.lovable.app/auth-bridge.html). That URL
+  //      IS on the broker's allowlist (its origin is the same site the
+  //      project publishes from), so the broker will not reject it with
+  //      "redirect_uri is not allowed".
+  //   2. The bridge page reads the Supabase tokens that the broker puts in
+  //      the URL fragment (#access_token=...&refresh_token=...) and
+  //      immediately redirects to a custom-scheme deep link:
+  //         com.wallet.ai://oauth-callback#<same fragment>
+  //   3. iOS/Android open that deep link in our Capacitor app, the in-app
+  //      browser sheet auto-closes, and `App.addListener('appUrlOpen')`
+  //      fires inside the WebView with the tokens.
+  //   4. We call `supabase.auth.setSession(...)` from those tokens, then
+  //      exchange the access token with Project A's /auth/google.
+  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/auth-bridge.html`;
   const brokerUrl =
     `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate` +
     `?provider=google` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
+  // Wait for the deep-link handoff BEFORE opening the sheet so we never
+  // miss the event.
+  const callbackPromise = new Promise<{ access_token?: string; refresh_token?: string; error?: string } | null>((resolve) => {
+    let settled = false;
+    let urlHandle: any;
+    let finishedHandle: any;
+    const cleanup = () => {
+      try { urlHandle?.remove?.(); } catch { /* ignore */ }
+      try { finishedHandle?.remove?.(); } catch { /* ignore */ }
+      clearTimeout(timer);
+    };
+    const finish = (val: { access_token?: string; refresh_token?: string; error?: string } | null) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(val);
+    };
+
+    const timer = setTimeout(() => {
+      console.warn("[google-auth] native auth timed out after 2 minutes");
+      finish(null);
+    }, 120_000);
+
+    CapApp.addListener("appUrlOpen", (event: { url: string }) => {
+      console.info("[google-auth] appUrlOpen fired:", event?.url);
+      // Close the in-app browser sheet immediately.
+      Browser.close().catch(() => { /* already closed */ });
+      try {
+        const raw = event?.url || "";
+        // We expect com.wallet.ai://oauth-callback#access_token=...&refresh_token=...
+        const hashIdx = raw.indexOf("#");
+        const queryIdx = raw.indexOf("?");
+        let payload = "";
+        if (hashIdx !== -1) payload = raw.substring(hashIdx + 1);
+        else if (queryIdx !== -1) payload = raw.substring(queryIdx + 1);
+
+        if (!payload) {
+          console.warn("[google-auth] deep link had no payload");
+          finish(null);
+          return;
+        }
+
+        const params = new URLSearchParams(payload);
+        const access_token = params.get("access_token") || undefined;
+        const refresh_token = params.get("refresh_token") || undefined;
+        const error = params.get("error_description") || params.get("error") || undefined;
+        finish({ access_token, refresh_token, error });
+      } catch (e) {
+        console.error("[google-auth] failed to parse deep link", e);
+        finish(null);
+      }
+    }).then((h) => { urlHandle = h; });
+
+    Browser.addListener("browserFinished", () => {
+      // User closed the sheet manually before completing.
+      console.info("[google-auth] browserFinished (user dismissed)");
+      // Give appUrlOpen a brief moment to win the race if the close was
+      // triggered by the deep link itself.
+      setTimeout(() => finish(null), 250);
+    }).then((h) => { finishedHandle = h; });
+  });
+
   // Open the in-app browser (overlay sheet, NOT external Safari).
   await Browser.open({ url: brokerUrl, presentationStyle: "popover" });
 
-  // Wait for the user to finish (or dismiss). We resolve on:
-  //  - browserFinished (user closed the sheet, or it auto-closed)
-  //  - appUrlOpen (broker redirected back into the app)
-  //  - 2-minute timeout safety net
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      try { finishedHandle?.remove?.(); } catch { /* ignore */ }
-      try { urlHandle?.remove?.(); } catch { /* ignore */ }
-      clearTimeout(timer);
-      resolve();
-    };
-    let finishedHandle: any;
-    let urlHandle: any;
-    const timer = setTimeout(finish, 120_000);
-    Browser.addListener("browserFinished", finish).then((h) => { finishedHandle = h; });
-    CapApp.addListener("appUrlOpen", () => {
-      // Broker bounced back into the app — close the sheet and continue.
-      Browser.close().catch(() => { /* already closed */ });
-      finish();
-    }).then((h) => { urlHandle = h; });
-  });
+  const callback = await callbackPromise;
 
   // Make sure the sheet is gone.
   try { await Browser.close(); } catch { /* already closed */ }
 
-  // Poll for the Lovable session to appear (set by the OAuth return page).
-  // We give it up to ~10s in case the redirect-back is still finalizing.
-  let session: any = null;
-  for (let i = 0; i < 20; i++) {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) { session = data.session; break; }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  if (!session?.access_token) {
-    // User dismissed the sheet without completing.
+  if (!callback) {
     return { token: null, redirected: false };
+  }
+  if (callback.error) {
+    throw new Error(callback.error);
+  }
+  if (!callback.access_token || !callback.refresh_token) {
+    console.warn("[google-auth] callback missing tokens", callback);
+    return { token: null, redirected: false };
+  }
+
+  // Hydrate the in-app Supabase client with the session from the bridge.
+  try {
+    await supabase.auth.setSession({
+      access_token: callback.access_token,
+      refresh_token: callback.refresh_token,
+    });
+  } catch (e) {
+    console.error("[google-auth] supabase.setSession failed", e);
+    throw e instanceof Error ? e : new Error(String(e));
   }
 
   const data = await apiCall<{ token?: string; access_token?: string }>("/auth/google", {
     method: "POST",
     body: {
-      access_token: session.access_token,
-      supabase_access_token: session.access_token,
+      access_token: callback.access_token,
+      supabase_access_token: callback.access_token,
     },
   });
   const token = data.token || data.access_token;
