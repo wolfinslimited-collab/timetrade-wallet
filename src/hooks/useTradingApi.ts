@@ -179,11 +179,13 @@ function isNativePlatform(): boolean {
 function getOAuthRedirectUri(): string {
   // On native (Capacitor) the current URL is something like `capacitor://localhost/...`
   // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
-  // Use the published web origin instead so the in-app browser returns successfully.
+  // Use the bare published web origin (no query string) — the broker allowlist
+  // matches against registered origins, and a path/query like `/?tab=trading`
+  // can fail the match → "redirect_uri is not allowed".
   if (isNativePlatform()) {
-    return `${PUBLISHED_WEB_ORIGIN}/?tab=trading`;
+    return `${PUBLISHED_WEB_ORIGIN}/`;
   }
-  return window.location.href;
+  return window.location.origin + "/";
 }
 
 // Native Google OAuth via in-app browser (SFSafariViewController / Chrome Custom Tab).
@@ -191,8 +193,11 @@ function getOAuthRedirectUri(): string {
 // `window.location.href`, which Capacitor hands off to the OS — that's why
 // users were seeing the system Safari/Chrome instead of an in-app sheet.
 async function performNativeGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
+  console.info("[google-auth] platform=native, opening in-app browser (SFSafariViewController / Custom Tab)");
   // Build the broker URL ourselves so we control the window.
-  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/?tab=trading`;
+  // IMPORTANT: redirect_uri must be the bare allowlisted origin — no query string —
+  // otherwise the broker rejects with "redirect_uri is not allowed".
+  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/`;
   const brokerUrl =
     `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate` +
     `?provider=google` +
