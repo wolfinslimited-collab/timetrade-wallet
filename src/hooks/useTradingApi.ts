@@ -163,7 +163,7 @@ async function performForgotPassword(email: string): Promise<void> {
 // ── Google auth via Lovable Cloud managed OAuth ──
 
 const PUBLISHED_WEB_ORIGIN = "https://timetrade-wallet.lovable.app";
-const NATIVE_OAUTH_CALLBACK_PATH = "/oauth/native-callback";
+const NATIVE_OAUTH_CALLBACK_QUERY = "native_oauth=done";
 
 function isNativePlatform(): boolean {
   try {
@@ -182,7 +182,7 @@ function getOAuthRedirectUri(): string {
   // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
   // Use the published web origin instead so the in-app browser returns successfully.
   if (isNativePlatform()) {
-    return `${PUBLISHED_WEB_ORIGIN}${NATIVE_OAUTH_CALLBACK_PATH}`;
+    return `${PUBLISHED_WEB_ORIGIN}/?${NATIVE_OAUTH_CALLBACK_QUERY}`;
   }
   return window.location.href;
 }
@@ -193,14 +193,11 @@ function getOAuthRedirectUri(): string {
 // users were seeing the system Safari/Chrome instead of an in-app sheet.
 async function performNativeGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
   // Build the broker URL ourselves so we control the window.
-  const redirectUri = `${PUBLISHED_WEB_ORIGIN}${NATIVE_OAUTH_CALLBACK_PATH}`;
+  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/?${NATIVE_OAUTH_CALLBACK_QUERY}`;
   const brokerUrl =
     `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate` +
     `?provider=google` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-  // Open the in-app browser (overlay sheet, NOT external Safari).
-  await Browser.open({ url: brokerUrl, presentationStyle: "popover" });
 
   // Wait for the user to finish (or dismiss). We resolve on:
   //  - browserFinished (user closed the sheet, or it auto-closed)
@@ -208,6 +205,7 @@ async function performNativeGoogleAuth(): Promise<{ token: string | null; redire
   //  - 2-minute timeout safety net
   await new Promise<void>((resolve) => {
     let settled = false;
+    let opened = false;
     const finish = () => {
       if (settled) return;
       settled = true;
@@ -220,11 +218,20 @@ async function performNativeGoogleAuth(): Promise<{ token: string | null; redire
     let urlHandle: any;
     const timer = setTimeout(finish, 120_000);
     Browser.addListener("browserFinished", finish).then((h) => { finishedHandle = h; });
-    CapApp.addListener("appUrlOpen", () => {
+    CapApp.addListener("appUrlOpen", ({ url }) => {
+      if (!url?.startsWith("com.wallet.ai://oauth-done")) return;
       // Broker bounced back into the app — close the sheet and continue.
       Browser.close().catch(() => { /* already closed */ });
       finish();
     }).then((h) => { urlHandle = h; });
+
+    Browser.open({ url: brokerUrl, presentationStyle: "popover" })
+      .then(() => {
+        opened = true;
+      })
+      .catch(() => {
+        if (!opened) finish();
+      });
   });
 
   // Make sure the sheet is gone.
