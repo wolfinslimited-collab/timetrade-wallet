@@ -389,6 +389,7 @@ export function useTradingApi() {
     authError,
     authenticate,
     register,
+    authenticateWithGoogle,
     forgotPassword,
     logout,
     balance,
