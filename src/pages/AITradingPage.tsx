@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTradingApi } from "@/hooks/useTradingApi";
+import { useTradingApi, isNativePlatform } from "@/hooks/useTradingApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -85,7 +86,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       ) : (
         <>
           {view !== "forgot" && (
-            <div className="w-full max-w-[420px] mb-4">
+            !isNativePlatform() && <div className="w-full max-w-[420px] mb-4">
               <button
                 type="button"
                 onClick={() => api.authenticateWithGoogle()}
@@ -507,8 +508,15 @@ interface AITradingPageProps {
 
 export const AITradingPage = ({ onBack }: AITradingPageProps) => {
   const api = useTradingApi();
+  const navigate = useNavigate();
 
-  if (api.isCheckingSession) {
+  useEffect(() => {
+    if (!api.isCheckingSession && !api.isAuthenticated) {
+      navigate("/login?redirect=" + encodeURIComponent("/?tab=trading"), { replace: true });
+    }
+  }, [api.isCheckingSession, api.isAuthenticated, navigate]);
+
+  if (api.isCheckingSession || !api.isAuthenticated) {
     return (
       <TradingDashboardSkeleton />
     );
@@ -516,7 +524,7 @@ export const AITradingPage = ({ onBack }: AITradingPageProps) => {
 
   return (
     <div className="min-h-full bg-background">
-      {api.isAuthenticated ? <TradingDashboard api={api} /> : <TradingConnect api={api} />}
+      <TradingDashboard api={api} />
     </div>
   );
 };

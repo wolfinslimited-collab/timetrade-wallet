@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
-import { Browser } from "@capacitor/browser";
-import { App as CapApp } from "@capacitor/app";
 
 const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
 const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
@@ -160,12 +158,9 @@ async function performForgotPassword(email: string): Promise<void> {
   });
 }
 
-// ── Google auth via Lovable Cloud managed OAuth ──
+// ── Google auth via Lovable Cloud managed OAuth (web only for now) ──
 
-const PUBLISHED_WEB_ORIGIN = "https://timetrade-wallet.lovable.app";
-const NATIVE_OAUTH_CALLBACK_QUERY = "native_oauth=done";
-
-function isNativePlatform(): boolean {
+export function isNativePlatform(): boolean {
   try {
     return (
       typeof window !== "undefined" &&
@@ -177,103 +172,15 @@ function isNativePlatform(): boolean {
   }
 }
 
-function getOAuthRedirectUri(): string {
-  // On native (Capacitor) the current URL is something like `capacitor://localhost/...`
-  // which Lovable's OAuth broker doesn't recognize → redirect lands on a 404.
-  // Use the published web origin instead so the in-app browser returns successfully.
-  if (isNativePlatform()) {
-    return `${PUBLISHED_WEB_ORIGIN}/?${NATIVE_OAUTH_CALLBACK_QUERY}`;
-  }
-  return window.location.href;
-}
-
-// Native Google OAuth via in-app browser (SFSafariViewController / Chrome Custom Tab).
-// We do NOT use lovable.auth.signInWithOAuth on native because it sets
-// `window.location.href`, which Capacitor hands off to the OS — that's why
-// users were seeing the system Safari/Chrome instead of an in-app sheet.
-async function performNativeGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
-  // Build the broker URL ourselves so we control the window.
-  const redirectUri = `${PUBLISHED_WEB_ORIGIN}/?${NATIVE_OAUTH_CALLBACK_QUERY}`;
-  const brokerUrl =
-    `${PUBLISHED_WEB_ORIGIN}/~oauth/initiate` +
-    `?provider=google` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-  // Wait for the user to finish (or dismiss). We resolve on:
-  //  - browserFinished (user closed the sheet, or it auto-closed)
-  //  - appUrlOpen (broker redirected back into the app)
-  //  - 2-minute timeout safety net
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    let opened = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      try { finishedHandle?.remove?.(); } catch { /* ignore */ }
-      try { urlHandle?.remove?.(); } catch { /* ignore */ }
-      clearTimeout(timer);
-      resolve();
-    };
-    let finishedHandle: any;
-    let urlHandle: any;
-    const timer = setTimeout(finish, 120_000);
-    Browser.addListener("browserFinished", finish).then((h) => { finishedHandle = h; });
-    CapApp.addListener("appUrlOpen", ({ url }) => {
-      if (!url?.startsWith("com.wallet.ai://oauth-done")) return;
-      // Broker bounced back into the app — close the sheet and continue.
-      Browser.close().catch(() => { /* already closed */ });
-      finish();
-    }).then((h) => { urlHandle = h; });
-
-    Browser.open({ url: brokerUrl, presentationStyle: "popover" })
-      .then(() => {
-        opened = true;
-      })
-      .catch(() => {
-        if (!opened) finish();
-      });
-  });
-
-  // Make sure the sheet is gone.
-  try { await Browser.close(); } catch { /* already closed */ }
-
-  // Poll for the Lovable session to appear (set by the OAuth return page).
-  // We give it up to ~10s in case the redirect-back is still finalizing.
-  let session: any = null;
-  for (let i = 0; i < 20; i++) {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) { session = data.session; break; }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  if (!session?.access_token) {
-    // User dismissed the sheet without completing.
-    return { token: null, redirected: false };
-  }
-
-  const data = await apiCall<{ token?: string; access_token?: string }>("/auth/google", {
-    method: "POST",
-    body: {
-      access_token: session.access_token,
-      supabase_access_token: session.access_token,
-    },
-  });
-  const token = data.token || data.access_token;
-  if (token) {
-    storeToken(token);
-    return { token, redirected: false };
-  }
-  return { token: null, redirected: false };
-}
-
 async function performGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
-  // Native: in-app browser sheet (no external Safari, no 404).
+  // Native is not supported yet — surface a clear error so the UI can hide the button.
   if (isNativePlatform()) {
-    return performNativeGoogleAuth();
+    throw new Error("Google sign-in is not available in the mobile app yet. Please use email login.");
   }
 
   // Web: standard Lovable-managed redirect flow.
   const result = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: getOAuthRedirectUri(),
+    redirect_uri: window.location.href,
   });
 
   if (result.redirected) return { token: null, redirected: true };
