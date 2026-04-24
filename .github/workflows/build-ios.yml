@@ -298,7 +298,6 @@ jobs:
       - name: Configure custom URL scheme (OAuth return)
         run: |
           PLIST="ios/App/App/Info.plist"
-          # Reset CFBundleURLTypes and register com.wallet.ai:// for OAuth return.
           /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
