@@ -59,7 +59,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       <h2 className="text-xl font-bold text-foreground mb-1">
         {view === "login" ? "AI Trading" : view === "signup" ? "Create Account" : "Reset Password"}
       </h2>
-      <p className="text-sm text-muted-foreground mb-6 text-center max-w-[320px]">
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-[420px]">
         {view === "login"
           ? "Sign in to access your AI trading dashboard"
           : view === "signup"
@@ -68,13 +68,13 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       </p>
 
       {(api.authError || forgotError) && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 mb-4 w-full max-w-[320px]">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 mb-4 w-full max-w-[420px]">
           <p className="text-xs text-destructive text-center">{api.authError || forgotError}</p>
         </div>
       )}
 
       {view === "forgot" && forgotSent ? (
-        <div className="w-full max-w-[320px] space-y-4">
+        <div className="w-full max-w-[420px] space-y-4">
           <div className="bg-success/10 border border-success/20 rounded-xl px-4 py-4">
             <p className="text-xs text-success text-center">Password reset link sent to your email. Please check your inbox.</p>
           </div>
@@ -85,7 +85,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
       ) : (
         <>
           {view !== "forgot" && (
-            <div className="w-full max-w-[320px] mb-4">
+            <div className="w-full max-w-[420px] mb-4">
               <button
                 type="button"
                 onClick={() => api.authenticateWithGoogle()}
@@ -107,7 +107,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
               </div>
             </div>
           )}
-          <div className="w-full max-w-[320px] space-y-4 mb-5">
+          <div className="w-full max-w-[420px] space-y-4 mb-5">
             <div>
               <label className="text-sm font-semibold text-foreground mb-1.5 block">Email</label>
               <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
@@ -145,7 +145,7 @@ function TradingConnect({ api }: { api: ReturnType<typeof useTradingApi> }) {
           <Button
             onClick={view === "login" ? handleLogin : view === "signup" ? handleSignup : handleForgot}
             disabled={(view === "forgot" ? forgotLoading : api.isAuthenticating) || !email || (view !== "forgot" && !password)}
-            className="w-full max-w-[320px] h-12 rounded-xl font-semibold text-sm"
+            className="w-full max-w-[420px] h-12 rounded-xl font-semibold text-sm"
           >
             {(view === "forgot" ? forgotLoading : api.isAuthenticating) ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" />{view === "forgot" ? "Sending..." : view === "login" ? "Signing in..." : "Creating account..."}</>
