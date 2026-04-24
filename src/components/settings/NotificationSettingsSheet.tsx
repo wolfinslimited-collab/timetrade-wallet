@@ -34,15 +34,24 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
   const [debugOpen, setDebugOpen] = useState(false);
   const lastTapRef = useRef(0);
 
-  const handleDoubleTapTitle = useCallback(() => {
+  const toggleDebug = useCallback(() => {
+    setDebugOpen(prev => {
+      const next = !prev;
+      toast.success(next ? "Debug mode on" : "Debug mode off");
+      return next;
+    });
+  }, []);
+
+  // Works for both desktop double-click AND touch double-tap
+  const handleTitleTap = useCallback(() => {
     const now = Date.now();
-    if (now - lastTapRef.current < 400) {
-      setDebugOpen(prev => !prev);
+    if (now - lastTapRef.current < 600) {
+      toggleDebug();
       lastTapRef.current = 0;
     } else {
       lastTapRef.current = now;
     }
-  }, []);
+  }, [toggleDebug]);
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
     const granted = await requestPermission();
@@ -82,7 +91,9 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
         <SheetHeader className="text-left pb-4">
           <SheetTitle
             className="flex items-center gap-2 select-none cursor-pointer"
-            onClick={handleDoubleTapTitle}
+            onClick={handleTitleTap}
+            onDoubleClick={toggleDebug}
+            onTouchEnd={handleTitleTap}
           >
             <Bell className="w-5 h-5 text-primary" />
             Push Notifications
