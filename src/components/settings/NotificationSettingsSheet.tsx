@@ -34,15 +34,24 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
   const [debugOpen, setDebugOpen] = useState(false);
   const lastTapRef = useRef(0);
 
-  const handleDoubleTapTitle = useCallback(() => {
+  const toggleDebug = useCallback(() => {
+    setDebugOpen(prev => {
+      const next = !prev;
+      toast.success(next ? "Debug mode on" : "Debug mode off");
+      return next;
+    });
+  }, []);
+
+  // Works for both desktop double-click AND touch double-tap
+  const handleTitleTap = useCallback(() => {
     const now = Date.now();
-    if (now - lastTapRef.current < 400) {
-      setDebugOpen(prev => !prev);
+    if (now - lastTapRef.current < 600) {
+      toggleDebug();
       lastTapRef.current = 0;
     } else {
       lastTapRef.current = now;
     }
-  }, []);
+  }, [toggleDebug]);
   const handleEnableNotifications = async () => {
     setIsRequesting(true);
     const granted = await requestPermission();
