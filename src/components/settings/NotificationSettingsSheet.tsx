@@ -303,44 +303,59 @@ export const NotificationSettingsSheet = ({ open, onOpenChange }: NotificationSe
                 </div>
               </div>
 
-              {/* Debug Info */}
-              <div className="p-3 rounded-xl bg-muted/50 border border-border">
-                <p className="text-xs font-mono text-muted-foreground">
-                  FCM Status: <span className="text-foreground">{fcmStatus}</span>
-                </p>
-                {tokenValue && (
-                  <p className="text-xs font-mono text-muted-foreground mt-1 break-all">
-                    Token: {tokenValue.substring(0, 30)}...
-                  </p>
-                )}
-                {fcmError && (
-                  <p className="text-xs font-mono text-destructive mt-1">{fcmError}</p>
-                )}
-              </div>
+              {/* Debug Info — hidden by default; revealed via double-tap on title */}
+              {debugOpen && (
+                <>
+                  <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-2">
+                    <p className="text-xs font-mono text-muted-foreground">
+                      FCM Status: <span className="text-foreground">{fcmStatus}</span>
+                    </p>
+                    {tokenValue && (
+                      <div className="flex items-start gap-2">
+                        <p className="text-xs font-mono text-muted-foreground break-all flex-1">
+                          Token: {tokenValue.substring(0, 30)}...
+                        </p>
+                        <button
+                          onClick={() =>
+                            navigator.clipboard.writeText(tokenValue).then(() => toast.success("Token copied"))
+                          }
+                          className="text-[10px] text-primary hover:underline flex items-center gap-1 shrink-0"
+                          aria-label="Copy FCM token"
+                        >
+                          <Copy className="w-3 h-3" /> Copy
+                        </button>
+                      </div>
+                    )}
+                    {fcmError && (
+                      <p className="text-xs font-mono text-destructive">{fcmError}</p>
+                    )}
+                  </div>
 
-              {/* Send Test Push via Edge Function */}
-              <Button
-                variant="outline"
-                className="w-full"
-                disabled={isSendingTest}
-                onClick={async () => {
-                  setIsSendingTest(true);
-                  await sendTestPush();
-                  setIsSendingTest(false);
-                }}
-              >
-                {isSendingTest ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Bell className="w-4 h-4 mr-2" />
-                    Send Server Push Test
-                  </>
-                )}
-              </Button>
+                  {/* Send Test Push via Edge Function */}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={isSendingTest}
+                    onClick={async () => {
+                      setIsSendingTest(true);
+                      await sendTestPush();
+                      setIsSendingTest(false);
+                    }}
+                  >
+                    {isSendingTest ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="w-4 h-4 mr-2" />
+                        Send Server Push Test
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
 
               {/* Notification Types */}
               <div className="space-y-3">
