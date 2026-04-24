@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
+import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 
 const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
 const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
@@ -154,6 +156,36 @@ async function performForgotPassword(email: string): Promise<void> {
     method: "POST",
     body: { email },
   });
+}
+
+// ── Google auth via Lovable Cloud managed OAuth ──
+
+async function performGoogleAuth(): Promise<{ token: string | null; redirected: boolean }> {
+  // 1. Trigger Lovable-managed Google OAuth. May redirect the browser.
+  const result = await lovable.auth.signInWithOAuth("google", {
+    redirect_uri: window.location.href,
+  });
+
+  if (result.redirected) return { token: null, redirected: true };
+  if (result.error) throw result.error;
+
+  // 2. Get the freshly-set Lovable Supabase session JWT.
+  const { data: { session } } = await supabase.auth.getSession();
+  const supabaseAccessToken = session?.access_token;
+  if (!supabaseAccessToken) throw new Error("No Lovable session token available");
+
+  // 3. Exchange it with Project A for a mobile-api session token.
+  const data = await apiCall<{ token?: string; access_token?: string }>("/auth/google", {
+    method: "POST",
+    body: { supabase_access_token: supabaseAccessToken },
+  });
+
+  const token = data.token || data.access_token;
+  if (token) {
+    storeToken(token);
+    return { token, redirected: false };
+  }
+  return { token: null, redirected: false };
 }
 
 // ── Hook ──
