@@ -25,7 +25,7 @@ function persistDebugLog(entries: PushDebugEntry[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(-100))); } catch {}
 }
 
-export function useFCMToken(options?: { disabled?: boolean }) {
+export function useFCMToken() {
   const [status, setStatus] = useState<FCMStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const registeredRef = useRef(false); 
@@ -48,7 +48,6 @@ export function useFCMToken(options?: { disabled?: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (options?.disabled) return;
     if (registeredRef.current) return;
     registeredRef.current = true;
 
@@ -233,7 +232,7 @@ export function useFCMToken(options?: { disabled?: boolean }) {
       // Store cleanup - but we can't easily return from async
       // The listener will be cleaned up when the component unmounts naturally
     });
-  }, [options?.disabled]);
+  }, []);
 
   const sendTestPush = useCallback(async () => {
     try {

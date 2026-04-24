@@ -23,7 +23,6 @@ import LiveTradesPage from "./pages/LiveTradesPage";
 import AITradingOnboardingPage from "./pages/AITradingOnboardingPage";
 import AITradingWalletPage from "./pages/AITradingWalletPage";
 import OTADeployPage from "./pages/OTADeployPage";
-import LoginPage from "./pages/LoginPage";
 
 // Defensive guard: if the native shell ever navigates to `/~oauth/...`
 // (e.g. cached install, missed redirect), bounce to the published web
@@ -101,7 +100,6 @@ const AnimatedRoutes = () => {
           <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/notifications" element={<Index />} />
-            <Route path="/login" element={<LoginPage />} />
             <Route path="/ai-chat" element={<AIChatPageRoute />} />
             <Route path="/asset" element={<AssetDetailPage />} />
             <Route path="/assets" element={<AllAssetsPage />} />

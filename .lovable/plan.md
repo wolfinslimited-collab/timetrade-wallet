@@ -1,65 +1,57 @@
-## Plan: ساده‌سازی لاگین و حذف باگ صفحه عجیب بعد از Google auth
 
-### هدف
-یک صفحه لاگین واقعی برای اپ بسازیم و جریان فعلی Google sign-in را از حالت پیچیده و خراب خارج کنیم، طوری که کاربر دیگر هیچ‌وقت صفحه خطا یا پیام `Safari cannot open the page because the address is invalid` را نبیند.
+Goal: make "Continue with Google" open inside the app (in-app browser) instead of kicking the user out to Safari/Chrome, and return cleanly without a 404.
 
-### مشکل دقیق فعلی
-باگ اصلی از اینجاست که بستن مرورگر بعد از Google auth به لینک `com.wallet.ai://oauth-done` وابسته شده، ولی ثبت native این لینک در پروژه کامل نیست:
-- در `AndroidManifest.xml` هیچ `VIEW intent-filter` برای این scheme وجود ندارد.
-- در بخش iOS هم ثبت URL scheme لازم در فایل‌های native فعلاً دیده نمی‌شود.
-- نتیجه: وقتی صفحه OAuth می‌خواهد اپ را با این لینک باز کند، iOS آن را معتبر نمی‌شناسد و همان خطای Safari را نشان می‌دهد.
+Why this is happening
+- Today we call `lovable.auth.signInWithOAuth("google", ...)`, which sets `window.location.href` to the OAuth URL.
+- Inside the Capacitor WebView, that hands the URL off to the OS, which launches **Safari (iOS) / Chrome (Android)** — the "external browser" you're seeing.
+- Google **forbids** signing in inside an embedded WebView (`disallowed_useragent`), so we can't just load Google directly in the app's own WebView.
+- The correct native pattern is an **in-app browser** (SFSafariViewController on iOS, Chrome Custom Tab on Android) via `@capacitor/browser`. It slides up over the app, looks in-app, and we can close it programmatically when auth finishes.
 
-### کاری که انجام می‌دهم
-1. **جریان فعلی OAuth موبایل را ساده می‌کنم**
-   - کد bridge فعلی (`native_oauth`, `oauth-done`, bounce logic) را از مسیر لاگین حذف می‌کنم.
-   - دیگر هیچ صفحه واسط یا deep-link موقتی به کاربر نشان داده نمی‌شود.
+About the "Page not found"
+- That's the same wrong-origin issue: after Google, the broker tries to bounce to a path that the native WebView resolves against `capacitor://localhost`, hitting React Router's `NotFound`.
+- Once we own the OAuth window via `@capacitor/browser`, we control return ourselves and dismiss it — no 404 screen.
 
-2. **یک صفحه لاگین اختصاصی می‌سازم**
-   - مسیر جدا مثل `/login` برای ورود کاربر ایجاد می‌کنم.
-   - فرم تمیز برای:
-     - Sign in
-     - Create account
-     - Forgot password
-   - از همان APIهای ایمیل/پسورد موجود در `useTradingApi` استفاده می‌شود.
+Implementation plan
 
-3. **ورودی AI Trading را به صفحه لاگین وصل می‌کنم**
-   - اگر کاربر لاگین نباشد، به‌جای نمایش UI ناقص یا تلاش برای OAuth خراب، مستقیم به `/login` می‌رود.
-   - بعد از لاگین موفق، کاربر خودکار برمی‌گردد به داشبورد trading.
+1. Add the in-app browser plugin
+- Install `@capacitor/browser`.
+- Will require `npx cap sync` after build (standard Capacitor step).
 
-4. **Google sign-in را برای موبایل موقتاً از مسیر خراب خارج می‌کنم**
-   - روی native app، یا دکمه Google را موقتاً مخفی می‌کنم یا غیرفعال می‌کنم تا دیگر این باگ دیده نشود.
-   - روی web می‌توانیم Google را نگه داریم چون آنجا این مشکل native close-flow را ندارد.
+2. Build a native Google auth path in `useTradingApi.ts`
+- On native only, do NOT call `lovable.auth.signInWithOAuth` (which redirects the WebView).
+- Instead:
+  - Build the OAuth start URL manually: `https://timetrade-wallet.lovable.app/~oauth/initiate?provider=google&redirect_uri=https://timetrade-wallet.lovable.app/?tab=trading&...`
+  - Open it with `Browser.open({ url, presentationStyle: "popover" })` → this is the **in-app** Safari/Chrome sheet, not external Safari.
+  - Listen for `Browser.addListener("browserFinished", ...)` and `appUrlOpen` to know when the user returns.
+  - On return, call `Browser.close()` to dismiss the sheet, then run the existing token-exchange logic (`supabase.auth.getSession()` → `/auth/google`).
 
-5. **اگر بخواهیم Google روی native هم بماند، native config را درست می‌کنم**
-   - Android: اضافه کردن `intent-filter` برای custom scheme
-   - iOS: ثبت `CFBundleURLTypes`
-   - سپس فقط بعد از اینکه scheme واقعاً معتبر شد، browser close flow را دوباره فعال می‌کنم
-   - این بخش را فقط به‌صورت درست و کامل انجام می‌دهم، نه با workaround نیمه‌کاره
+3. Handle the return without a deep link
+- Since Lovable's OAuth broker redirects back to the published web URL (not a custom scheme), we use the simpler "polling on resume" pattern:
+  - When the in-app browser closes (`browserFinished` event), poll `supabase.auth.getSession()` for up to ~10s.
+  - As soon as a session appears, exchange it for the trading API token and mark authenticated.
+- Keep the existing `OAuthBounce` route as a safety net for any edge case.
+- Web behavior is unchanged (still uses `lovable.auth.signInWithOAuth` redirect flow).
 
-### نتیجه‌ای که می‌گیرید
+4. Clean up the UX
+- While the in-app browser is open, keep `isAuthenticating = true` so the button stays in loading state.
+- If the user dismisses the sheet without completing, clear loading state and show no error.
+- On success, automatically navigate to the AI Trading dashboard.
+
+Files to update
+- `src/hooks/useTradingApi.ts` — native Google flow uses `@capacitor/browser` + session polling.
+- `package.json` — add `@capacitor/browser`.
+- `src/App.tsx` — keep `OAuthBounce` as fallback (no change needed).
+
+Expected result
 ```text
-User opens app
-  -> sees proper login page
-  -> signs in with email/password
-  -> enters app directly
-  -> no weird callback page
-  -> no Safari invalid address alert
-  -> no stuck browser screen
+Tap "Continue with Google" on mobile
+  -> in-app browser sheet slides up (still feels in-app)
+  -> Google sign-in completes
+  -> sheet auto-closes
+  -> app picks up the session
+  -> lands on AI Trading dashboard
+  -> no external Safari, no 404 page
 ```
 
-### Technical details
-- فایل‌های اصلی که تغییر می‌کنند:
-  - `src/App.tsx`
-  - `src/hooks/useTradingApi.ts`
-  - `src/pages/AITradingPage.tsx`
-  - یک صفحه جدید لاگین مثل `src/pages/LoginPage.tsx`
-  - فایل‌های native برای deep link اگر Google native را نگه داریم:
-    - `android/app/src/main/AndroidManifest.xml`
-    - فایل تنظیمات iOS URL scheme
-- بعد از اعمال تغییرات native، لازم است:
-  - `npm run build`
-  - `npx cap sync ios` / `npx cap sync android`
-  - و اپ دوباره build شود
-
-### پیشنهاد اجرایی
-برای اینکه سریع و تمیز از این loop بیرون بیاییم، اول **صفحه لاگین واقعی + ایمیل/پسورد** را مسیر اصلی می‌کنم و باگ فعلی Google را از جلوی کاربر برمی‌دارم. بعد اگر خواستید، Google native را جداگانه و درست برمی‌گردانم.
+Note
+- After this change you will need to `git pull`, `npm install`, `npm run build`, then `npx cap sync ios` and rebuild the iOS app for the new `@capacitor/browser` native plugin to be linked.
