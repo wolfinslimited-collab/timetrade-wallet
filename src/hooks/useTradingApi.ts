@@ -4,13 +4,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Browser } from "@capacitor/browser";
 import { App as CapApp } from "@capacitor/app";
 
-const TIMETRADE_SUPABASE_URL = "https://svhgjaadzthgnfdrbklt.supabase.co";
-const TIMETRADE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGdqYWFkenRoZ25mZHJia2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMjI0NTMsImV4cCI6MjA4NTU5ODQ1M30.8WZZrAshhSb4DchRnL9UJ0bEQX7zQPuD9930PaNi4AA";
-const API_BASE = `${TIMETRADE_SUPABASE_URL}/functions/v1/mobile-api`;
+// Mobile trading backend. All trading/auth/transactions traffic goes here.
+// Do NOT call Supabase tables or RPCs directly for mobile-app actions.
+const API_BASE = "https://api.timetrade.live";
 
 const TOKEN_STORAGE_KEY = "timetrade_trading_api_token";
 const TOKEN_EXPIRY_KEY = "timetrade_trading_token_expiry";
 const TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// One-shot migration: tokens minted by the previous Supabase-based backend are
+// invalid against api.timetrade.live, so force a logout on first load after the
+// backend swap.
+const BACKEND_VERSION_KEY = "timetrade_trading_backend_version";
+const CURRENT_BACKEND_VERSION = "api.timetrade.live/v1";
+if (typeof window !== "undefined") {
+  try {
+    if (localStorage.getItem(BACKEND_VERSION_KEY) !== CURRENT_BACKEND_VERSION) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+      localStorage.setItem(BACKEND_VERSION_KEY, CURRENT_BACKEND_VERSION);
+    }
+  } catch { /* ignore */ }
+}
 
 interface WalletBalance {
   usd_balance: number;
@@ -105,8 +120,6 @@ function clearStoredToken() {
 async function apiCall<T>(path: string, options: { method?: string; body?: any; token?: string } = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${TIMETRADE_SUPABASE_ANON_KEY}`,
-    "apikey": TIMETRADE_SUPABASE_ANON_KEY,
   };
   if (options.token) headers["x-api-token"] = options.token;
 
@@ -524,7 +537,7 @@ export function useTradingApi() {
       const [bal, addrs, txs] = await Promise.all([
         apiCall<WalletBalance>("/wallet/balance", { token }).catch(() => null),
         apiCall<{ addresses: DepositAddress[] }>("/wallet/deposit-addresses", { token }).catch(() => ({ addresses: [] })),
-        apiCall<{ transactions: WalletTransaction[] }>("/transactions", { token }).catch(() => ({ transactions: [] })),
+        apiCall<{ transactions: WalletTransaction[] }>("/transactions?limit=20", { token }).catch(() => ({ transactions: [] })),
       ]);
       if (bal) setBalance(bal);
       setDepositAddresses(Array.isArray(addrs?.addresses) ? addrs.addresses : []);
