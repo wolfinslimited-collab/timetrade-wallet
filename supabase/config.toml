@@ -2,3 +2,6 @@ project_id = "uxjpbjkgyphhbycrldui"
 
 [functions.github-build]
 verify_jwt = false
+
+[functions.mobile-api]
+verify_jwt = false
